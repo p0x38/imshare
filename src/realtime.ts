@@ -2,7 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server } from "socket.io";
 
 import { getSession } from "./lib/api.js";
-import { setRealtimeServer } from "./lib/realtime.js";
+import { setRealtimeServer, setUserOnline, setUserOffline } from "./lib/realtime.js";
 
 export function attachRealtime(server: HttpServer): Server {
   const io = new Server(server, {
@@ -25,6 +25,12 @@ export function attachRealtime(server: HttpServer): Server {
   });
 
   io.on("connection", (socket) => {
+    const userId = socket.data.userId as string | undefined;
+    if (userId) {
+      void socket.join(`user:${userId}`);
+      setUserOnline(userId);
+    }
+
     socket.on("post:subscribe", (postId: unknown) => {
       if (typeof postId !== "string" || postId.length > 128) return;
       void socket.join(`post:${postId}`);
@@ -33,6 +39,10 @@ export function attachRealtime(server: HttpServer): Server {
     socket.on("post:unsubscribe", (postId: unknown) => {
       if (typeof postId !== "string" || postId.length > 128) return;
       void socket.leave(`post:${postId}`);
+    });
+
+    socket.on("disconnect", () => {
+      if (userId) setUserOffline(userId);
     });
   });
 
