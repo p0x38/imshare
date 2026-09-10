@@ -13,15 +13,26 @@ const publicUserSelect = {
   bio: true,
   websiteUrl: true,
   githubUrl: true,
+  avatarMode: true,
+  avatarValue: true,
   createdAt: true,
   _count: { select: { posts: true } },
 } as const;
+
+async function publicUser(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { ...publicUserSelect, profileLinks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
+  });
+  if (!user) return undefined;
+  return { ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` };
+}
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/me", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    return ok(user);
+    return ok(await publicUser(user.id));
   });
 
   fastify.get("/v1/me/posts", async (request, reply) => {
@@ -46,7 +57,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) }, select: publicUserSelect }),
       prisma.user.count({ where }),
     ]);
-    return collection(users, p.page, p.limit, total);
+    return collection(users.map((user) => ({ ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` })), p.page, p.limit, total);
   });
 
   fastify.post("/v1/users", { schema: userCreateSchema }, async (request, reply) => {
@@ -66,7 +77,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
 
   fastify.get("/v1/users/:userId", async (request, reply) => {
     const { userId } = request.params as { userId: string };
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: publicUserSelect });
+    const user = await publicUser(userId);
     if (!user) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
     return ok(user);
   });
@@ -76,14 +87,20 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     if (!me) return;
     const { userId } = request.params as { userId: string };
     if (me.id !== userId) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot modify this user." } });
-    const body = request.body as { name?: string; image?: string | null; bio?: string | null; websiteUrl?: string | null; githubUrl?: string | null };
-    return ok(await prisma.user.update({ where: { id: userId }, data: {
+    const body = request.body as { name?: string; image?: string | null; bio?: string | null; websiteUrl?: string | null; githubUrl?: string | null; avatarMode?: string; avatarValue?: string | null };
+    if (body.avatarMode !== undefined && !["default", "initials", "identicon", "gravatar", "custom"].includes(body.avatarMode)) {
+      return reply.code(400).send({ error: { code: "INVALID_AVATAR_MODE", message: "Unsupported avatar mode." } });
+    }
+    const updated = await prisma.user.update({ where: { id: userId }, data: {
       ...(body.name !== undefined ? { name: body.name.trim() } : {}),
       ...(body.image !== undefined ? { image: body.image } : {}),
       ...(body.bio !== undefined ? { bio: body.bio?.trim() || null } : {}),
       ...(body.websiteUrl !== undefined ? { websiteUrl: body.websiteUrl?.trim() || null } : {}),
       ...(body.githubUrl !== undefined ? { githubUrl: body.githubUrl?.trim() || null } : {}),
-    } }));
+      ...(body.avatarMode !== undefined ? { avatarMode: body.avatarMode } : {}),
+      ...(body.avatarValue !== undefined ? { avatarValue: body.avatarValue?.trim() || null } : {}),
+    } });
+    return ok({ ...updated, avatarUrl: `/v1/users/${encodeURIComponent(updated.id)}/avatar` });
   });
 
   fastify.delete("/v1/users/:userId", async (request, reply) => {
