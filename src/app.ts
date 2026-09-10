@@ -2,6 +2,7 @@ import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "./lib/config.js";
@@ -14,6 +15,8 @@ export async function buildApp() {
   const rootDir = process.cwd();
   const publicDir = path.join(rootDir, "public");
   const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
+
+  await mkdir(uploadDir, { recursive: true });
 
   await app.register(cookie);
   await app.register(multipart, {
