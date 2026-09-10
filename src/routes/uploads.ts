@@ -1,9 +1,9 @@
 import type { FastifyPluginAsync } from "fastify";
+import { randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, unlink } from "node:fs/promises";
+import { mkdir, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { randomUUID } from "node:crypto";
 
 import { prisma } from "../lib/auth.js";
 import { requireUser, ok } from "../lib/api.js";
@@ -14,6 +14,29 @@ const IMAGE_TYPES = new Map([
   [".gif", "image/gif"], [".webp", "image/webp"], [".bmp", "image/bmp"],
   [".avif", "image/avif"],
 ]);
+
+function hasImageSignature(buffer: Buffer, extension: string): boolean {
+  switch (extension) {
+    case ".jpg":
+    case ".jpeg":
+      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    case ".png":
+      return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    case ".gif":
+      return buffer.subarray(0, 6).equals(Buffer.from("GIF87a")) || buffer.subarray(0, 6).equals(Buffer.from("GIF89a"));
+    case ".webp":
+      return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+    case ".bmp":
+      return buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d;
+    case ".avif": {
+      if (buffer.length < 12 || buffer.subarray(4, 8).toString("ascii") !== "ftyp") return false;
+      const brands = buffer.subarray(8).toString("ascii");
+      return brands.includes("avif") || brands.includes("avis");
+    }
+    default:
+      return false;
+  }
+}
 
 export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
   const config = await loadConfig();
@@ -40,6 +63,11 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         if (part.file.truncated) {
           await unlink(destination).catch(() => undefined);
           return reply.code(413).send({ error: { code: "FILE_TOO_LARGE", message: "Maximum file size exceeded." } });
+        }
+        const header = await readFile(destination, { encoding: null });
+        if (!hasImageSignature(header.subarray(0, 32), ext)) {
+          await unlink(destination).catch(() => undefined);
+          return reply.code(400).send({ error: { code: "INVALID_FILE", message: "File content does not match its image type." } });
         }
         saved = { filename, originalName: part.filename, mimeType: part.mimetype, size: Number(part.file.bytesRead) };
       }
