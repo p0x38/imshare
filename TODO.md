@@ -6,8 +6,8 @@
 - [x] Favorites
 - [x] Saves
 - [x] Realtime post reaction events
-- [ ] Notifications for new reactions and other user events
-- [ ] Commenting
+- [x] Notifications for new reactions and other user events
+- [x] Commenting
 
 ## Profiles
 
@@ -17,8 +17,8 @@
 - [x] Identicon avatar
 - [x] Gravatar support
 - [x] Custom avatar reference
-- [ ] Profile settings UI for avatar mode and links
-- [ ] Profile banner / accent color
+- [x] Profile settings UI for avatar mode and links
+- [x] Profile banner / accent color
 
 ## Images and uploads
 
@@ -28,26 +28,26 @@
 - [x] Lazy-loaded post thumbnails
 - [x] Lazy-loaded post images
 - [x] Upload progress indicator
-- [ ] Persistent transformed-image cache
-- [ ] Background thumbnail generation
-- [ ] Upload cancellation
-- [ ] Multiple-file uploads
-- [ ] Duplicate-content deduplication at the database layer
+- [x] Persistent transformed-image cache
+- [x] Background thumbnail generation
+- [x] Upload cancellation
+- [x] Multiple-file uploads
+- [x] Duplicate-content deduplication at the database layer
 
 ## Realtime
 
 - [x] Socket.IO server
 - [x] Post rooms
 - [x] Reaction broadcasts
-- [ ] Presence / online state
-- [ ] Live upload status
-- [ ] Server-side notification events
+- [x] Presence / online state
+- [x] Live upload status
+- [x] Server-side notification events
 
 ## Frontend
 
 - [x] Dark mode via system preference
 - [x] Responsive image sizes
-- [ ] Shared client-side API helper
+- [x] Shared client-side API helper
 - [ ] Shared components / partials
 - [ ] Template engine evaluation
 - [ ] Better error pages
@@ -56,8 +56,8 @@
 ## Infrastructure
 
 - [ ] Regenerate and commit `pnpm-lock.yaml` after dependency changes
-- [ ] Add realtime integration tests
+- [x] Add realtime integration tests
 - [ ] Add image upload/proxy tests
 - [ ] Add profile-link tests
 - [ ] Add reaction API tests
-- [ ] Add migration CI check
+- [x] Add migration CI check
