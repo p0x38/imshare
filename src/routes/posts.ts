@@ -25,13 +25,22 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     if (!user) return;
     const body = request.body as { title?: string; description?: string; sourceUrl?: string; tags?: string[]; categoryId?: string | null; uploadIds?: string[] };
     if (!body.title?.trim()) return reply.code(400).send({ error: { code: "INVALID_POST", message: "title is required." } });
+
+    const uploadIds = [...new Set(body.uploadIds ?? [])];
+    if (uploadIds.length > 0) {
+      const ownedUploads = await prisma.upload.count({ where: { id: { in: uploadIds }, userId: user.id, postId: null } });
+      if (ownedUploads !== uploadIds.length) {
+        return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You can only attach your own unused uploads." } });
+      }
+    }
+
     const tags = await findTags(body.tags ?? []);
     const post = await prisma.post.create({
       data: {
         title: body.title.trim(), description: body.description, sourceUrl: body.sourceUrl,
         categoryId: body.categoryId, userId: user.id,
         tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
-        uploads: body.uploadIds?.length ? { connect: body.uploadIds.map((id) => ({ id })) } : undefined,
+        uploads: uploadIds.length ? { connect: uploadIds.map((id) => ({ id })) } : undefined,
       },
       include: postInclude,
     });
@@ -53,9 +62,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     if (!existing) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
     if (existing.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
     const body = request.body as { title?: string; description?: string; sourceUrl?: string | null; categoryId?: string | null; tags?: string[] };
-    if (body.tags) {
-      await prisma.postTag.deleteMany({ where: { postId } });
-    }
+    if (body.tags) await prisma.postTag.deleteMany({ where: { postId } });
     const tags = body.tags ? await findTags(body.tags) : [];
     const post = await prisma.post.update({
       where: { id: postId },
