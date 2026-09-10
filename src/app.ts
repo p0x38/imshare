@@ -5,6 +5,7 @@ import fastifyStatic from "@fastify/static";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./lib/config.js";
+import { renderTemplate } from "./lib/template.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 
@@ -23,7 +24,7 @@ export async function buildApp() {
   app.get("/account/logout/", async (request, reply) => { const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, { method: "POST", headers: { cookie: request.headers.cookie ?? "" } }); response.headers.forEach((value, key) => reply.header(key, value)); return reply.redirect("/"); });
   app.get("/dashboard/", sendPage("dashboard/index.html")); app.get("/dashboard/posts/", sendPage("dashboard/posts/index.html")); app.get("/dashboard/posts/new/", sendPage("posts/new/index.html")); app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.html")); app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.html")); app.get("/dashboard/tags/", sendPage("dashboard/tags.html")); app.get("/dashboard/categories/", sendPage("dashboard/categories.html")); app.get("/dashboard/settings/", sendPage("dashboard/settings.html"));
   app.get("/about/", sendPage("about.html")); app.get("/privacy/", sendPage("privacy.html")); app.get("/terms/", sendPage("terms.html"));
-  app.setNotFoundHandler((_request, reply) => reply.code(404).send({ error: { code: "NOT_FOUND", message: "The requested page or resource was not found." } }));
-  app.setErrorHandler((error, request, reply) => { request.log.error(error); if (reply.sent) return; const status = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500; return reply.code(status).send({ error: { code: error.code ?? "INTERNAL_ERROR", message: status < 500 ? error.message : "Something went wrong while processing your request." } }); });
+  app.setNotFoundHandler(async (request, reply) => { if ((request.headers.accept ?? "").includes("text/html")) return reply.code(404).type("text/html").send(await renderTemplate("error.html", { status: 404, title: "Page not found", message: "The page you requested does not exist." })); return reply.code(404).send({ error: { code: "NOT_FOUND", message: "The requested page or resource was not found." } }); });
+  app.setErrorHandler(async (error, request, reply) => { request.log.error(error); if (reply.sent) return; const status = error.statusCode && error.statusCode >= 400 ? error.statusCode : 500; if ((request.headers.accept ?? "").includes("text/html")) return reply.code(status).type("text/html").send(await renderTemplate("error.html", { status, title: status === 404 ? "Page not found" : "Something went wrong", message: status < 500 ? error.message : "Something went wrong while processing your request." })); return reply.code(status).send({ error: { code: error.code ?? "INTERNAL_ERROR", message: status < 500 ? error.message : "Something went wrong while processing your request." } }); });
   return app;
 }
