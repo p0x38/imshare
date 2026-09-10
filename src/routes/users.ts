@@ -28,11 +28,24 @@ async function publicUser(userId: string) {
   return { ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` };
 }
 
+async function currentUser(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      ...publicUserSelect,
+      email: true,
+      profileLinks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] },
+    },
+  });
+  if (!user) return undefined;
+  return { ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` };
+}
+
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/me", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    return ok(await publicUser(user.id));
+    return ok(await currentUser(user.id));
   });
 
   fastify.get("/v1/me/posts", async (request, reply) => {
