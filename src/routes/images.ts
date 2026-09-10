@@ -26,7 +26,6 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     let width: number | undefined; let height: number | undefined; let fit: Fit; let format: ImageFormat | undefined;
     try { width = parseDimension(query.width); height = parseDimension(query.height); fit = parseFit(query.fit); format = parseFormat(query.format); } catch (error) { const code = error instanceof Error ? error.message : "INVALID_IMAGE_PARAMETER"; return reply.code(400).send({ error: { code, message: "Invalid image transformation parameters." } }); }
     const transformed = width !== undefined || height !== undefined || format !== undefined;
-    const sessionUser = request.headers.cookie ? undefined : undefined;
     if (query.download === "true" && upload.post && !upload.post.allowDownload) return reply.code(403).send({ error: { code: "DOWNLOAD_DISABLED", message: "The creator has disabled downloads for this image." } });
     reply.header("Cache-Control", "public, max-age=31536000, immutable"); reply.header("X-Content-Type-Options", "nosniff");
     if (!transformed) { reply.type(upload.mimeType); if (query.download === "true") reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(upload.originalName)}`); return reply.send(createReadStream(source)); }
