@@ -9,9 +9,26 @@ import { loadConfig } from "./lib/config.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 
+const logger = process.stdout.isTTY
+  ? {
+      transport: {
+        target: "pino-pretty",
+        options: {
+          colorize: true,
+          translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l",
+          ignore: "pid,hostname",
+          singleLine: true,
+        },
+      },
+    }
+  : true;
+
 export async function buildApp() {
   const config = await loadConfig();
-  const app = Fastify({ logger: true });
+  const app = Fastify({
+    logger,
+    disableRequestLogging: false,
+  });
   const rootDir = process.cwd();
   const publicDir = path.join(rootDir, "public");
   const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
