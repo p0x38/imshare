@@ -9,7 +9,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: file:./dev.db
+      DATABASE_URL: file:./ci.db
       BETTER_AUTH_SECRET: ci-only-test-secret-change-me
     steps:
       - uses: actions/checkout@v4
@@ -22,7 +22,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:validate
-      - run: pnpm prisma migrate status
+      - run: pnpm prisma migrate deploy
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
