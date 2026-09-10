@@ -7,9 +7,13 @@ export const postInclude = {
   category: true,
   tags: { include: { tag: true } },
   uploads: true,
+  reactions: { select: { type: true } },
 } as const;
 
 export function postView(post: any) {
+  const reactionCounts = Object.fromEntries(
+    ["like", "favorite", "save"].map((type) => [type, post.reactions?.filter((reaction: any) => reaction.type === type).length ?? 0]),
+  );
   return {
     id: post.id,
     title: post.title,
@@ -17,7 +21,7 @@ export function postView(post: any) {
     sourceUrl: post.sourceUrl,
     createdAt: post.createdAt,
     updatedAt: post.updatedAt,
-    author: post.user,
+    author: { ...post.user, avatarUrl: `/v1/users/${encodeURIComponent(post.user.id)}/avatar` },
     category: post.category,
     tags: post.tags.map((x: any) => x.tag),
     uploads: post.uploads.map((x: any) => ({
@@ -29,6 +33,7 @@ export function postView(post: any) {
       createdAt: x.createdAt,
       url: `/v1/posts/image/${encodeURIComponent(x.id)}`,
     })),
+    reactions: reactionCounts,
   };
 }
 
