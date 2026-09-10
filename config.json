@@ -10,5 +10,8 @@
   "site": {
     "name": "imshare",
     "version": "1.0.0"
+  },
+  "auth": {
+    "baseUrl": "http://localhost:3000"
   }
 }
