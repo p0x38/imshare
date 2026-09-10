@@ -31,7 +31,8 @@ export const postCreateSchema = {
     type: "object", additionalProperties: false, required: ["title"],
     properties: {
       title: { type: "string", minLength: 1, maxLength: 500 }, description: { type: "string", maxLength: 10000 },
-      sourceUrl: { type: "string", maxLength: 4096 }, tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
+      caption: { type: "string", maxLength: 10000 }, sourceUrl: { type: "string", maxLength: 4096 },
+      allowDownload: { type: "boolean" }, tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
       categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] }, uploadIds: { type: "array", maxItems: 100, items: { type: "string", minLength: 1 } },
     },
   },
@@ -42,6 +43,7 @@ export const postUpdateSchema = {
     type: "object", additionalProperties: false, minProperties: 1,
     properties: {
       title: { type: "string", minLength: 1, maxLength: 500 }, description: { anyOf: [{ type: "string", maxLength: 10000 }, { type: "null" }] },
+      caption: { anyOf: [{ type: "string", maxLength: 10000 }, { type: "null" }] }, allowDownload: { type: "boolean" },
       sourceUrl: { anyOf: [{ type: "string", maxLength: 4096 }, { type: "null" }] }, categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
       tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
     },
