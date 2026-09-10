@@ -1,7 +1,7 @@
 {
   "server": {
     "host": "0.0.0.0",
-    "port": 3000
+    "port": 5454
   },
   "storage": {
     "uploadDirectory": "uploads",
@@ -12,6 +12,6 @@
     "version": "1.0.0"
   },
   "auth": {
-    "baseUrl": "http://localhost:3000"
+    "baseUrl": "http://localhost:5454"
   }
 }
