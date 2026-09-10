@@ -11,12 +11,16 @@ import { categoryRoutes } from "./categories.js";
 import { searchRoutes } from "./search.js";
 import { uploadRoutes } from "./uploads.js";
 import { imageRoutes } from "./images.js";
+import { commentRoutes } from "./comments.js";
+import { notificationRoutes } from "./notifications.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(healthRoutes);
   await fastify.register(userRoutes);
   await fastify.register(postRoutes);
   await fastify.register(reactionRoutes);
+  await fastify.register(commentRoutes);
+  await fastify.register(notificationRoutes);
   await fastify.register(profileLinkRoutes);
   await fastify.register(avatarRoutes);
   await fastify.register(tagRoutes);
