@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Art Archive</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: [
+              "Inter",
+              "ui-sans-serif",
+              "system-ui",
+              "sans-serif"
+            ]
+          }
+        }
+      }
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
+  <div id="app">
+    <div class="flex min-h-screen items-center justify-center">
+      <div class="text-center">
+        <div
+          class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-zinc-700 border-t-zinc-200"
+        ></div>
+        <p class="text-sm text-zinc-500">
+          Loading...
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    "use strict";
+
+    const state = {
+      user: null,
+      artworks: [],
+      search: "",
+      mode: "login",
+      loading: false
+    };
+
+    const app = document.getElementById("app");
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        credentials: "include",
+        ...options,
+        headers: {
+          ...(options.body instanceof FormData
+            ? {}
+            : { "Content-Type": "application/json" }),
+          ...(options.headers || {})
+        }
+      });
+
+      let data = null;
+
+      const contentType =
+        response.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        data = await response.json().catch(() => null);
+      } else {
+        data = await response.text().catch(() => null);
+      }
+
+      if (!response.ok) {
+        const message =
+          data?.message ||
+          data?.error ||
+          `Request failed (${response.status})`;
+
+        throw new Error(message);
+      }
+
+      return data;
+    }
+
+    async function getSession() {
+      try {
+        const data = await api("/api/auth/get-session");
+
+        state.user = data?.user ?? null;
+      } catch {
+        state.user = null;
+      }
+    }
+
+    async function login(email, password) {
+      return api("/api/auth/sign-in/email", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+    }
+
+    async function signup(name, email, password) {
+      return api("/api/auth/sign-up/email", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          email,
+          password
+        })
+      });
+    }
+
+    async function logout() {
+      await api("/api/auth/sign-out", {
+        method: "POST",
+        body: JSON.stringify({})
+      });
+
+      state.user = null;
+      state.artworks = [];
+      render();
+    }
+
+    async function loadArtworks() {
+      const data = await api("/api/artworks");
+
+      state.artworks = data.artworks || [];
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderAuth() {
+      const loginMode = state.mode === "login";
+
+      app.innerHTML = `
+        <main class="flex min-h-screen items-center justify-center px-4 py-12">
+          <section class="w-full max-w-md">
+            <div class="mb-8">
+              <div
+                class="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-xl text-zinc-950"
+              >
+                A
+              </div>
+
+              <h1 class="text-3xl font-semibold tracking-tight">
+                Art Archive
+              </h1>
+
+              <p class="mt-2 text-sm leading-6 text-zinc-500">
+                自分のアートワークを保存・整理する個人ギャラリー
+              </p>
+            </div>
+
+            <div
+              class="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-2xl shadow-black/20"
+            >
+              <div class="mb-6 flex rounded-xl bg-zinc-950 p-1">
+                <button
+                  id="login-tab"
+                  class="flex-1 rounded-lg px-3 py-2 text-sm transition ${
+                    loginMode
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }"
+                >
+                  ログイン
+                </button>
+
+                <button
+                  id="signup-tab"
+                  class="flex-1 rounded-lg px-3 py-2 text-sm transition ${
+                    !loginMode
+                      ? "bg-zinc-800 text-white"
+                      : "text-zinc-500 hover:text-zinc-300"
+                  }"
+                >
+                  アカウント作成
+                </button>
+              </div>
+
+              <form id="auth-form" class="space-y-4">
+                ${
+                  !loginMode
+                    ? `
+                      <label class="block">
+                        <span class="mb-2 block text-sm text-zinc-400">
+                          名前
+                        </span>
+                        <input
+                          name="name"
+                          required
+                          autocomplete="name"
+                          class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none transition focus:border-zinc-500"
+                          placeholder="Your name"
+                        >
+                      </label>
+                    `
+                    : ""
+                }
+
+                <label class="block">
+                  <span class="mb-2 block text-sm text-zinc-400">
+                    メールアドレス
+                  </span>
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    autocomplete="email"
+                    class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none transition focus:border-zinc-500"
+                    placeholder="you@example.com"
+                  >
+                </label>
+
+                <label class="block">
+                  <span class="mb-2 block text-sm text-zinc-400">
+                    パスワード
+                  </span>
+                  <input
+                    name="password"
+                    type="password"
+                    required
+                    minlength="8"
+                    autocomplete="${
+                      loginMode ? "current-password" : "new-password"
+                    }"
+                    class="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 outline-none transition focus:border-zinc-500"
+                    placeholder="••••••••"
+                  >
+                </label>
+
+                <p
+                  id="auth-error"
+                  class="hidden rounded-xl border border-red-900/50 bg-red-950/30 px-4 py-3 text-sm text-red-300"
+                ></p>
+
+                <button
+                  type="submit"
+                  class="w-full rounded-xl bg-white px-4 py-3 font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ${loginMode ? "ログイン" : "アカウントを作成"}
+                </button>
+              </form>
+            </div>
+          </section>
+        </main>
+      `;
+
+      document
+        .getElementById("login-tab")
+        .addEventListener("click", () => {
+          state.mode = "login";
+          render();
+        });
+
+      document
+        .getElementById("signup-tab")
+        .addEventListener("click", () => {
+          state.mode = "signup";
+          render();
+        });
+
+      document
+        .getElementById("auth-form")
+        .addEventListener("submit", handleAuth);
+    }
+
+    async function handleAuth(event) {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+      const button = form.querySelector("button[type=submit]");
+      const errorElement = document.getElementById("auth-error");
+
+      const formData = new FormData(form);
+
+      const email = String(formData.get("email") || "");
+      const password = String(formData.get("password") || "");
+      const name = String(formData.get("name") || "");
+
+      button.disabled = true;
+      errorElement.classList.add("hidden");
+
+      try {
+        if (state.mode === "login") {
+          await login(email, password);
+        } else {
+          await signup(name, email, password);
+        }
+
+        await getSession();
+
+        if (!state.user) {
+          throw new Error(
+            "認証は成功しましたが、セッションを取得できませんでした"
+          );
+        }
+
+        await loadArtworks();
+        render();
+      } catch (error) {
+        errorElement.textContent =
+          error instanceof Error
+            ? error.message
+            : "認証に失敗しました";
+
+        errorElement.classList.remove("hidden");
+        button.disabled = false;
+      }
+    }
+
+    function renderGallery() {
+      const query = state.search
+        .trim()
+        .toLowerCase();
+
+      const filtered = state.artworks.filter((artwork) => {
+        if (!query) {
+          return true;
+        }
+
+        return artwork.tags.some((tag) =>
+          tag.toLowerCase().includes(query)
+        );
+      });
+
+      const cards = filtered.length
+        ? filtered.map(renderArtworkCard).join("")
+        : `
+          <div
+            class="col-span-full rounded-3xl border border-dashed border-zinc-800 py-20 text-center"
+          >
+            <p class="text-sm text-zinc-500">
+              ${
+                state.artworks.length
+                  ? "検索条件に一致するアートはありません"
+                  : "まだアートワークがありません"
+              }
+            </p>
+          </div>
+        `;
+
+      app.innerHTML = `
+        <div class="min-h-screen">
+          <header
+            class="sticky top-0 z-20 border-b border-zinc-900/80 bg-zinc-950/90 backdrop-blur-xl"
+          >
+            <div
+              class="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:px-6"
+            >
+              <div class="mr-auto">
+                <h1 class="font-semibold tracking-tight">
+                  Art Archive
+                </h1>
+                <p class="hidden text-xs text-zinc-600 sm:block">
+                  ${escapeHtml(state.user.name)}
+                </p>
+              </div>
+
+              <input
+                id="search"
+                type="search"
+                value="${escapeHtml(state.search)}"
+                placeholder="タグを検索..."
+                class="w-40 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2.5 text-sm outline-none transition placeholder:text-zinc-600 focus:border-zinc-600 sm:w-64"
+              >
+
+              <button
+                id="logout"
+                class="rounded-xl border border-zinc-800 px-4 py-2.5 text-sm text-zinc-400 transition hover:border-zinc-700 hover:text-white"
+              >
+                ログアウト
+              </button>
+            </div>
+          </header>
+
+          <main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+            <section
+              class="mb-10 rounded-3xl border border-zinc-800 bg-gradient-to-br from-zinc-900 to-zinc-950 p-6"
+            >
+              <div class="mb-6">
+                <h2 class="text-xl font-semibold">
+                  Upload artwork
+                </h2>
+
+                <p class="mt-1 text-sm text-zinc-500">
+                  最大25 MiBの画像を保存できます
+                </p>
+              </div>
+
+              <form
+                id="upload-form"
+                class="grid gap-4 md:grid-cols-2"
+              >
+                <label
+                  class="md:col-span-2 block rounded-2xl border border-dashed border-zinc-700 bg-zinc-950/50 p-6 text-center transition hover:border-zinc-500"
+                >
+                  <input
+                    id="file"
+                    name="file"
+                    type="file"
+                    accept="image/*"
+                    required
+                    class="hidden"
+                  >
+
+                  <span
+                    id="file-label"
+                    class="cursor-pointer text-sm text-zinc-400"
+                  >
+                    画像を選択
+                  </span>
+                </label>
+
+                <input
+                  name="sourceUrl"
+                  type="url"
+                  placeholder="元アートのURL（任意）"
+                  class="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm outline-none focus:border-zinc-600"
+                >
+
+                <input
+                  name="tags"
+                  type="text"
+                  placeholder="タグ（カンマ区切り）"
+                  class="rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm outline-none focus:border-zinc-600"
+                >
+
+                <div class="md:col-span-2 flex items-center gap-3">
+                  <button
+                    id="upload-button"
+                    type="submit"
+                    class="rounded-xl bg-white px-5 py-3 text-sm font-medium text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    アップロード
+                  </button>
+
+                  <p
+                    id="upload-status"
+                    class="text-sm text-zinc-500"
+                  ></p>
+                </div>
+              </form>
+            </section>
+
+            <section>
+              <div class="mb-5 flex items-end justify-between">
+                <div>
+                  <h2 class="text-xl font-semibold">
+                    Gallery
+                  </h2>
+
+                  <p class="mt-1 text-sm text-zinc-600">
+                    ${filtered.length} / ${state.artworks.length} artworks
+                  </p>
+                </div>
+              </div>
+
+              <div
+                class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              >
+                ${cards}
+              </div>
+            </section>
+          </main>
+        </div>
+      `;
+
+      document
+        .getElementById("search")
+        .addEventListener("input", (event) => {
+          state.search = event.target.value;
+          renderGallery();
+        });
+
+      document
+        .getElementById("logout")
+        .addEventListener("click", async () => {
+          const button = document.getElementById("logout");
+          button.disabled = true;
+
+          try {
+            await logout();
+          } catch {
+            button.disabled = false;
+          }
+        });
+
+      const fileInput = document.getElementById("file");
+      const fileLabel = document.getElementById("file-label");
+
+      fileInput.addEventListener("change", () => {
+        const file = fileInput.files?.[0];
+
+        fileLabel.textContent = file
+          ? file.name
+          : "画像を選択";
+      });
+
+      document
+        .getElementById("upload-form")
+        .addEventListener("submit", handleUpload);
+    }
+
+    function renderArtworkCard(artwork) {
+      const tags = artwork.tags
+        .map(
+          (tag) => `
+            <span
+              class="rounded-full bg-zinc-800 px-2.5 py-1 text-xs text-zinc-400"
+            >
+              ${escapeHtml(tag)}
+            </span>
+          `
+        )
+        .join("");
+
+      const sourceLink = artwork.sourceUrl
+        ? `
+          <a
+            href="${escapeHtml(artwork.sourceUrl)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-xs text-zinc-500 transition hover:text-white"
+          >
+            Source ↗
+          </a>
+        `
+        : "";
+
+      return `
+        <article
+          class="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 transition hover:-translate-y-0.5 hover:border-zinc-700"
+        >
+          <a
+            href="${escapeHtml(artwork.url)}"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="block aspect-square overflow-hidden bg-zinc-950"
+          >
+            <img
+              src="${escapeHtml(artwork.url)}"
+              alt="${escapeHtml(artwork.filename)}"
+              loading="lazy"
+              class="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+              onerror="this.parentElement.innerHTML='<div class=\\'flex h-full items-center justify-center text-sm text-zinc-700\\'>Image unavailable</div>'"
+            >
+          </a>
+
+          <div class="p-4">
+            <div class="mb-3 flex flex-wrap gap-1.5">
+              ${tags || '<span class="text-xs text-zinc-700">no tags</span>'}
+            </div>
+
+            <div class="flex items-center justify-between gap-3">
+              <span
+                class="truncate text-xs text-zinc-600"
+                title="${escapeHtml(artwork.filename)}"
+              >
+                ${escapeHtml(artwork.filename)}
+              </span>
+
+              ${sourceLink}
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    async function handleUpload(event) {
+      event.preventDefault();
+
+      const form = event.currentTarget;
+      const fileInput = document.getElementById("file");
+      const button = document.getElementById("upload-button");
+      const status = document.getElementById("upload-status");
+
+      if (!fileInput.files?.length) {
+        status.textContent = "画像を選択してください";
+        return;
+      }
+
+      const formData = new FormData(form);
+
+      button.disabled = true;
+      status.textContent = "アップロード中...";
+
+      try {
+        await api("/api/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        form.reset();
+
+        document.getElementById("file-label").textContent =
+          "画像を選択";
+
+        await loadArtworks();
+
+        status.textContent = "アップロードしました";
+
+        renderGallery();
+      } catch (error) {
+        status.textContent =
+          error instanceof Error
+            ? error.message
+            : "アップロードに失敗しました";
+      } finally {
+        const currentButton =
+          document.getElementById("upload-button");
+
+        if (currentButton) {
+          currentButton.disabled = false;
+        }
+      }
+    }
+
+    async function init() {
+      await getSession();
+
+      if (!state.user) {
+        renderAuth();
+        return;
+      }
+
+      try {
+        await loadArtworks();
+      } catch (error) {
+        console.error(error);
+      }
+
+      renderGallery();
+    }
+
+    init();
+  </script>
+</body>
+</html>
