@@ -4,7 +4,7 @@
 <body>
 <header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/account/">Account</a><a href="/dashboard/">Dashboard</a></nav></header>
 <main><h1>Dashboard</h1><div id="content" class="box">Loading…</div></main>
-<script>
+<script type="module">
 const content = document.querySelector('#content');
 try {
  const response = await fetch('/v1/me');
