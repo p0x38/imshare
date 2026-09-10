@@ -22,6 +22,12 @@ export async function buildApp() {
   await app.register(multipart, {
     limits: { fileSize: config.storage.maxFileSize, files: 1 },
   });
+
+  // Register API routes before the static fallback so API requests are always
+  // handled by the application rather than the public-file server.
+  await app.register(authRoutes);
+  await app.register(apiRoutes);
+
   await app.register(fastifyStatic, {
     root: uploadDir,
     prefix: "/uploads/",
@@ -32,9 +38,6 @@ export async function buildApp() {
     prefix: "/",
     decorateReply: true,
   });
-
-  await app.register(authRoutes);
-  await app.register(apiRoutes);
 
   const sendPage = (file: string) =>
     async (_request: FastifyRequest, reply: FastifyReply) => reply.sendFile(file);
