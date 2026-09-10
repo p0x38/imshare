@@ -3,7 +3,12 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
 
-const MODES = new Set(["default", "initials", "identicon", "gravatar", "custom"]);
+const MODES = ["default", "initials", "identicon", "gravatar", "custom"] as const;
+type AvatarMode = (typeof MODES)[number];
+
+function isAvatarMode(value: string): value is AvatarMode {
+  return (MODES as readonly string[]).includes(value);
+}
 
 function escapeXml(value: string): string {
   return value.replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&apos;" })[char] ?? char);
@@ -11,22 +16,28 @@ function escapeXml(value: string): string {
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
-  return (parts.length > 1 ? `${parts[0][0]}${parts.at(-1)?.[0] ?? ""}` : parts[0]?.slice(0, 2) ?? "?").toUpperCase();
+  if (parts.length > 1) {
+    const first = parts[0]?.[0] ?? "";
+    const last = parts.at(-1)?.[0] ?? "";
+    return `${first}${last}`.toUpperCase();
+  }
+  return (parts[0]?.slice(0, 2) ?? "?").toUpperCase();
 }
 
-function avatarSvg(name: string, mode: string): string {
+function avatarSvg(name: string, mode: AvatarMode): string {
   const text = initials(name);
   if (mode === "default") {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" fill="#888"/><circle cx="64" cy="48" r="24" fill="#eee"/><path d="M24 116c4-29 18-43 40-43s36 14 40 43" fill="#eee"/></svg>`;
   }
   const hash = createHash("sha256").update(name).digest();
-  const hue = hash[0] * 1.41;
+  const hue = (hash[0] ?? 0) * 1.41;
   const background = `hsl(${hue.toFixed(0)} 55% 45%)`;
   if (mode === "identicon") {
     const cells = Array.from({ length: 15 }, (_, index) => {
       const column = index % 5;
       const row = Math.floor(index / 5);
-      return hash[index % hash.length] % 2 === 0
+      const value = hash[index % hash.length] ?? 0;
+      return value % 2 === 0
         ? `<rect x="${27 + column * 15}" y="${27 + row * 15}" width="15" height="15"/>`
         : "";
     }).join("");
@@ -41,7 +52,7 @@ export const avatarRoutes: FastifyPluginAsync = async (fastify) => {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, avatarMode: true, avatarValue: true } });
     if (!user) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
 
-    const mode = MODES.has(user.avatarMode) ? user.avatarMode : "initials";
+    const mode: AvatarMode = isAvatarMode(user.avatarMode) ? user.avatarMode : "initials";
     if (mode === "gravatar") {
       const hash = createHash("md5").update(user.email.trim().toLowerCase()).digest("hex");
       return reply.redirect(`https://www.gravatar.com/avatar/${hash}?s=256&d=404`);
