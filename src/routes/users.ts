@@ -1,0 +1,84 @@
+import type { FastifyPluginAsync } from "fastify";
+import { randomUUID } from "node:crypto";
+
+import { prisma } from "../lib/auth.js";
+import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
+import { postInclude, postView } from "./_shared.js";
+
+export const userRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get("/v1/me", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    return ok(user);
+  });
+
+  fastify.get("/v1/me/posts", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const q = request.query as Record<string, unknown>;
+    const p = parsePagination(q);
+    const where = { userId: user.id };
+    const [items, total] = await Promise.all([
+      prisma.post.findMany({ where, include: postInclude, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) } }),
+      prisma.post.count({ where }),
+    ]);
+    return collection(items.map(postView), p.page, p.limit, total);
+  });
+
+  fastify.get("/v1/users", async (request) => {
+    const q = request.query as Record<string, unknown>;
+    const p = parsePagination(q);
+    const search = typeof q.search === "string" ? q.search : undefined;
+    const where = search ? { OR: [{ name: { contains: search } }, { email: { contains: search } }] } : {};
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) }, select: { id: true, name: true, image: true, createdAt: true, _count: { select: { posts: true } } } }),
+      prisma.user.count({ where }),
+    ]);
+    return collection(users, p.page, p.limit, total);
+  });
+
+  fastify.post("/v1/users", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
+    const body = request.body as { name?: string; email?: string; image?: string };
+    if (!body.name || !body.email) return reply.code(400).send({ error: { code: "INVALID_USER", message: "name and email are required." } });
+    return reply.code(201).send(ok(await prisma.user.create({ data: { id: randomUUID(), name: body.name, email: body.email, image: body.image } })));
+  });
+
+  fastify.get("/v1/users/:userId", async (request, reply) => {
+    const { userId } = request.params as { userId: string };
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, image: true, createdAt: true, _count: { select: { posts: true } } } });
+    if (!user) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
+    return ok(user);
+  });
+
+  fastify.patch("/v1/users/:userId", async (request, reply) => {
+    const me = await requireUser(request, reply);
+    if (!me) return;
+    const { userId } = request.params as { userId: string };
+    if (me.id !== userId) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot modify this user." } });
+    const body = request.body as { name?: string; image?: string | null };
+    return ok(await prisma.user.update({ where: { id: userId }, data: { name: body.name, image: body.image } }));
+  });
+
+  fastify.delete("/v1/users/:userId", async (request, reply) => {
+    const me = await requireUser(request, reply);
+    if (!me) return;
+    const { userId } = request.params as { userId: string };
+    if (me.id !== userId) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot delete this user." } });
+    await prisma.user.delete({ where: { id: userId } });
+    return reply.code(204).send();
+  });
+
+  fastify.get("/v1/users/:userId/posts", async (request) => {
+    const { userId } = request.params as { userId: string };
+    const q = request.query as Record<string, unknown>;
+    const p = parsePagination(q);
+    const where = { userId };
+    const [items, total] = await Promise.all([
+      prisma.post.findMany({ where, include: postInclude, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) } }),
+      prisma.post.count({ where }),
+    ]);
+    return collection(items.map(postView), p.page, p.limit, total);
+  });
+};
