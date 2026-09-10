@@ -15,9 +15,14 @@ const publicUserSelect = {
   githubUrl: true,
   avatarMode: true,
   avatarValue: true,
+  updatedAt: true,
   createdAt: true,
   _count: { select: { posts: true } },
 } as const;
+
+function avatarUrl(userId: string, updatedAt: Date) {
+  return `/v1/users/${encodeURIComponent(userId)}/avatar?v=${encodeURIComponent(updatedAt.toISOString())}`;
+}
 
 async function publicUser(userId: string) {
   const user = await prisma.user.findUnique({
@@ -25,7 +30,7 @@ async function publicUser(userId: string) {
     select: { ...publicUserSelect, profileLinks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
   });
   if (!user) return undefined;
-  return { ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` };
+  return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt) };
 }
 
 async function currentUser(userId: string) {
@@ -38,7 +43,7 @@ async function currentUser(userId: string) {
     },
   });
   if (!user) return undefined;
-  return { ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` };
+  return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt) };
 }
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
@@ -70,7 +75,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) }, select: publicUserSelect }),
       prisma.user.count({ where }),
     ]);
-    return collection(users.map((user) => ({ ...user, avatarUrl: `/v1/users/${encodeURIComponent(user.id)}/avatar` })), p.page, p.limit, total);
+    return collection(users.map((user) => ({ ...user, avatarUrl: avatarUrl(user.id, user.updatedAt) })), p.page, p.limit, total);
   });
 
   fastify.post("/v1/users", { schema: userCreateSchema }, async (request, reply) => {
@@ -113,7 +118,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
       ...(body.avatarMode !== undefined ? { avatarMode: body.avatarMode } : {}),
       ...(body.avatarValue !== undefined ? { avatarValue: body.avatarValue?.trim() || null } : {}),
     } });
-    return ok({ ...updated, avatarUrl: `/v1/users/${encodeURIComponent(updated.id)}/avatar` });
+    return ok({ ...updated, avatarUrl: avatarUrl(updated.id, updated.updatedAt) });
   });
 
   fastify.delete("/v1/users/:userId", async (request, reply) => {
