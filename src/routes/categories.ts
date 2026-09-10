@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
+import { categoryCreateSchema, categoryUpdateSchema } from "./schemas.js";
 
 export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/categories", async (request) => {
@@ -15,10 +16,11 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
     return collection(items, p.page, p.limit, total);
   });
 
-  fastify.post("/v1/categories", async (request, reply) => {
+  fastify.post("/v1/categories", { schema: categoryCreateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    return reply.code(201).send(ok(await prisma.category.create({ data: request.body as { name: string; slug: string; description?: string } })));
+    const body = request.body as { name: string; slug: string; description?: string };
+    return reply.code(201).send(ok(await prisma.category.create({ data: { name: body.name.trim(), slug: body.slug, description: body.description } })));
   });
 
   fastify.get("/v1/categories/:categoryId", async (request, reply) => {
@@ -28,12 +30,13 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(category);
   });
 
-  fastify.patch("/v1/categories/:categoryId", async (request, reply) => {
+  fastify.patch("/v1/categories/:categoryId", { schema: categoryUpdateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { categoryId } = request.params as { categoryId: string };
+    const body = request.body as { name?: string; slug?: string; description?: string | null };
     try {
-      return ok(await prisma.category.update({ where: { id: categoryId }, data: request.body as { name?: string; slug?: string; description?: string } }));
+      return ok(await prisma.category.update({ where: { id: categoryId }, data: { name: body.name?.trim(), slug: body.slug, description: body.description } }));
     } catch {
       return reply.code(404).send({ error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." } });
     }
