@@ -19,14 +19,17 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
   const config = await loadConfig(); const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory); const cacheDir = path.join(uploadDir, ".cache"); await mkdir(cacheDir, { recursive: true });
   fastify.get("/v1/posts/image/:uploadId", async (request, reply) => {
     const { uploadId } = request.params as { uploadId: string }; const query = request.query as Record<string, unknown>;
-    const upload = await prisma.upload.findUnique({ where: { id: uploadId } }); if (!upload) return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+    const upload = await prisma.upload.findUnique({ where: { id: uploadId }, include: { post: { select: { allowDownload: true, userId: true } } } });
+    if (!upload) return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
     const source = path.resolve(uploadDir, upload.filename); const relative = path.relative(uploadDir, source); if (relative.startsWith("..") || path.isAbsolute(relative)) return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
     try { await access(source); } catch { return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } }); }
     let width: number | undefined; let height: number | undefined; let fit: Fit; let format: ImageFormat | undefined;
     try { width = parseDimension(query.width); height = parseDimension(query.height); fit = parseFit(query.fit); format = parseFormat(query.format); } catch (error) { const code = error instanceof Error ? error.message : "INVALID_IMAGE_PARAMETER"; return reply.code(400).send({ error: { code, message: "Invalid image transformation parameters." } }); }
     const transformed = width !== undefined || height !== undefined || format !== undefined;
+    const sessionUser = request.headers.cookie ? undefined : undefined;
+    if (query.download === "true" && upload.post && !upload.post.allowDownload) return reply.code(403).send({ error: { code: "DOWNLOAD_DISABLED", message: "The creator has disabled downloads for this image." } });
     reply.header("Cache-Control", "public, max-age=31536000, immutable"); reply.header("X-Content-Type-Options", "nosniff");
-    if (!transformed) { reply.type(upload.mimeType); return reply.send(createReadStream(source)); }
+    if (!transformed) { reply.type(upload.mimeType); if (query.download === "true") reply.header("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(upload.originalName)}`); return reply.send(createReadStream(source)); }
     const key = cacheKey(upload.id, width, height, fit, format); const cached = path.join(cacheDir, key);
     try { const output = await readFile(cached); reply.type(format ? FORMATS[format].mime : upload.mimeType); return reply.send(output); } catch {}
     try {
