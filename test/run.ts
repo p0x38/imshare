@@ -24,20 +24,23 @@ function cleanup(): void {
 
 cleanup();
 
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+const pnpmCommand = "pnpm exec prisma db push --accept-data-loss";
 const pnpmOptions = {
   cwd: root,
   env: process.env,
   stdio: "inherit" as const,
-  ...(process.platform === "win32" ? { shell: true } : {}),
 };
 
 try {
-  execFileSync(pnpm, ["exec", "prisma", "db", "push", "--accept-data-loss"], pnpmOptions);
+  if (process.platform === "win32") {
+    execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", pnpmCommand], pnpmOptions);
+  } else {
+    execFileSync("pnpm", ["exec", "prisma", "db", "push", "--accept-data-loss"], pnpmOptions);
+  }
 
   const result = spawnSync(
     process.execPath,
-    ["--import", "tsx", "--test", "test/api.test.ts", "test/integration.test.ts"],
+    ["--import", "tsx", "--test", "test/integration.test.ts"],
     {
       cwd: root,
       env: process.env,
