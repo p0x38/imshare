@@ -5,10 +5,32 @@
 <header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/account/">Account</a></nav></header>
 <main><h1>Create account</h1><form id="register" class="box"><label for="name">Name</label><input id="name" name="name" required><label for="email">Email</label><input id="email" name="email" type="email" required><label for="password">Password</label><input id="password" name="password" type="password" required><button>Create account</button><p id="error" class="error" hidden></p></form><p>Already registered? <a href="/account/login/">Log in</a>.</p></main>
 <script>
-document.querySelector('#register').addEventListener('submit', async event => {
-  event.preventDefault(); const error = document.querySelector('#error'); error.hidden = true;
-  const response = await fetch('/v1/auth/sign-up/email', { method: 'POST', headers: {'content-type':'application/json'}, body: JSON.stringify({name: name.value, email: email.value, password: password.value}) });
-  if (response.ok) location.href = '/dashboard/'; else { error.textContent = 'Registration failed.'; error.hidden = false; }
+const registerForm = document.querySelector('#register');
+const nameInput = document.querySelector('#name');
+const emailInput = document.querySelector('#email');
+const passwordInput = document.querySelector('#password');
+const error = document.querySelector('#error');
+
+registerForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  error.hidden = true;
+
+  const response = await fetch('/v1/auth/sign-up/email', {
+    method: 'POST',
+    headers: {'content-type':'application/json'},
+    body: JSON.stringify({
+      name: nameInput.value,
+      email: emailInput.value,
+      password: passwordInput.value,
+    }),
+  });
+
+  if (response.ok) {
+    location.href = '/dashboard/';
+  } else {
+    error.textContent = 'Registration failed.';
+    error.hidden = false;
+  }
 });
 </script>
 </body>
