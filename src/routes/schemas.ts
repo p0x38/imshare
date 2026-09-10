@@ -25,6 +25,8 @@ export const userUpdateSchema = {
       bio: { anyOf: [{ type: "string", maxLength: 2000 }, { type: "null" }] },
       websiteUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
       githubUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
+      avatarMode: { type: "string", enum: ["default", "initials", "identicon", "gravatar", "custom"] },
+      avatarValue: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
     },
   },
 } as const;
