@@ -4,4 +4,3 @@ node_modules/
 uploads/
 dist/
 **/*.db
-prisma/migrations/
