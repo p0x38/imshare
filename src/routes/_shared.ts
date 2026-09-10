@@ -27,7 +27,7 @@ export function postView(post: any) {
       mimeType: x.mimeType,
       size: x.size,
       createdAt: x.createdAt,
-      url: `/uploads/${encodeURIComponent(x.filename)}`,
+      url: `/v1/posts/image/${encodeURIComponent(x.id)}`,
     })),
   };
 }
