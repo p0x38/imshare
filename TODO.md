@@ -29,7 +29,7 @@
 - [x] Lazy-loaded post images
 - [x] Upload progress indicator
 - [x] Persistent transformed-image cache
-- [x] Background thumbnail generation
+- [ ] Background thumbnail generation
 - [x] Upload cancellation
 - [x] Multiple-file uploads
 - [x] Duplicate-content deduplication at the database layer
@@ -40,7 +40,7 @@
 - [x] Post rooms
 - [x] Reaction broadcasts
 - [x] Presence / online state
-- [x] Live upload status
+- [ ] Live upload status
 - [x] Server-side notification events
 
 ## Frontend
@@ -56,7 +56,7 @@
 ## Infrastructure
 
 - [ ] Regenerate and commit `pnpm-lock.yaml` after dependency changes
-- [x] Add realtime integration tests
+- [ ] Add realtime integration tests
 - [ ] Add image upload/proxy tests
 - [ ] Add profile-link tests
 - [ ] Add reaction API tests
