@@ -15,6 +15,8 @@ model User {
   bio           String?
   websiteUrl    String?
   githubUrl     String?
+  avatarMode    String     @default("initials")
+  avatarValue   String?
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
@@ -22,6 +24,8 @@ model User {
   accounts      Account[]
   posts         Post[]
   uploads       Upload[]
+  profileLinks  ProfileLink[]
+  reactions     PostReaction[]
 
   @@map("user")
 }
@@ -86,10 +90,11 @@ model Post {
   userId      String
   categoryId  String?
 
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  uploads  Upload[]
-  tags     PostTag[]
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  uploads     Upload[]
+  tags        PostTag[]
+  reactions   PostReaction[]
 
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
@@ -112,6 +117,37 @@ model Upload {
   @@index([userId, createdAt])
   @@index([postId])
   @@map("upload")
+}
+
+model PostReaction {
+  id        String   @id @default(cuid())
+  type      String
+  createdAt DateTime @default(now())
+  userId    String
+  postId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId, type])
+  @@index([postId, type])
+  @@index([userId, type])
+  @@map("post_reaction")
+}
+
+model ProfileLink {
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+  @@map("profile_link")
 }
 
 model Tag {
