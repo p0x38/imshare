@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
-import { randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
@@ -57,17 +57,27 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
           part.file.resume();
           return reply.code(400).send({ error: { code: "INVALID_FILE", message: "Unsupported image type." } });
         }
-        const filename = `${randomUUID()}${ext}`;
-        const destination = path.join(uploadDir, filename);
-        await pipeline(part.file, createWriteStream(destination, { flags: "wx" }));
+        const temporaryName = `.upload-${crypto.randomUUID()}${ext}`;
+        const temporaryPath = path.join(uploadDir, temporaryName);
+        await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
         if (part.file.truncated) {
-          await unlink(destination).catch(() => undefined);
+          await unlink(temporaryPath).catch(() => undefined);
           return reply.code(413).send({ error: { code: "FILE_TOO_LARGE", message: "Maximum file size exceeded." } });
         }
-        const header = await readFile(destination, { encoding: null });
-        if (!hasImageSignature(header.subarray(0, 32), ext)) {
-          await unlink(destination).catch(() => undefined);
+        const content = await readFile(temporaryPath);
+        if (!hasImageSignature(content.subarray(0, 32), ext)) {
+          await unlink(temporaryPath).catch(() => undefined);
           return reply.code(400).send({ error: { code: "INVALID_FILE", message: "File content does not match its image type." } });
+        }
+        const hash = createHash("sha256").update(content).digest("hex");
+        const filename = `${hash}${ext}`;
+        const destination = path.join(uploadDir, filename);
+        if (temporaryPath !== destination) {
+          try {
+            await rename(temporaryPath, destination);
+          } catch {
+            await unlink(temporaryPath).catch(() => undefined);
+          }
         }
         saved = { filename, originalName: part.filename, mimeType: part.mimetype, size: Number(part.file.bytesRead) };
       }
@@ -77,7 +87,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
     }
     if (!saved) return reply.code(400).send({ error: { code: "NO_FILE", message: "An image file is required." } });
     const upload = await prisma.upload.create({ data: { ...saved, userId: user.id } });
-    return reply.code(201).send(ok({ ...upload, url: `/uploads/${encodeURIComponent(upload.filename)}` }));
+    return reply.code(201).send(ok({ ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` }));
   });
 
   fastify.get("/v1/uploads/:uploadId", async (request, reply) => {
@@ -87,7 +97,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
     const upload = await prisma.upload.findUnique({ where: { id: uploadId } });
     if (!upload) return reply.code(404).send({ error: { code: "UPLOAD_NOT_FOUND", message: "Upload not found." } });
     if (upload.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this upload." } });
-    return ok({ ...upload, url: `/uploads/${encodeURIComponent(upload.filename)}` });
+    return ok({ ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` });
   });
 
   fastify.delete("/v1/uploads/:uploadId", async (request, reply) => {
