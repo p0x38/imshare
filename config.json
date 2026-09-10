@@ -1,0 +1,14 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 3000
+  },
+  "storage": {
+    "uploadDirectory": "uploads",
+    "maxFileSize": 26214400
+  },
+  "site": {
+    "name": "imshare",
+    "version": "1.0.0"
+  }
+}
