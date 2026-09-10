@@ -1,4 +1,4 @@
-import Fastify, { type FastifyReply, type FastifyRequest } from "fastify";
+import Fastify, { LogController, type FastifyReply, type FastifyRequest } from "fastify";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -11,21 +11,25 @@ import { apiRoutes } from "./routes/api.js";
 
 const logger = process.stdout.isTTY
   ? {
-      transport: {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l",
-          ignore: "pid,hostname",
-          singleLine: true,
-        },
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l",
+        ignore: "pid,hostname",
+        singleLine: true,
       },
-    }
+    },
+  }
   : true;
 
 export async function buildApp() {
   const config = await loadConfig();
-  const app = Fastify({ logger, disableRequestLogging: false });
+  const app = Fastify({
+    logger, logController: new LogController({
+      disableRequestLogging: true,
+    }),
+  });
   const rootDir = process.cwd();
   const publicDir = path.join(rootDir, "public");
   const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
