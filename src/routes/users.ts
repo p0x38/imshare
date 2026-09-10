@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/auth.js";
 import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
+import { userCreateSchema, userUpdateSchema } from "./schemas.js";
 
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/me", async (request, reply) => {
@@ -37,12 +38,11 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     return collection(users, p.page, p.limit, total);
   });
 
-  fastify.post("/v1/users", async (request, reply) => {
+  fastify.post("/v1/users", { schema: userCreateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    const body = request.body as { name?: string; email?: string; image?: string };
-    if (!body.name || !body.email) return reply.code(400).send({ error: { code: "INVALID_USER", message: "name and email are required." } });
-    return reply.code(201).send(ok(await prisma.user.create({ data: { id: randomUUID(), name: body.name, email: body.email, image: body.image } })));
+    const body = request.body as { name: string; email: string; image?: string };
+    return reply.code(201).send(ok(await prisma.user.create({ data: { id: randomUUID(), name: body.name.trim(), email: body.email.trim(), image: body.image } })));
   });
 
   fastify.get("/v1/users/:userId", async (request, reply) => {
@@ -52,13 +52,13 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(user);
   });
 
-  fastify.patch("/v1/users/:userId", async (request, reply) => {
+  fastify.patch("/v1/users/:userId", { schema: userUpdateSchema }, async (request, reply) => {
     const me = await requireUser(request, reply);
     if (!me) return;
     const { userId } = request.params as { userId: string };
     if (me.id !== userId) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot modify this user." } });
     const body = request.body as { name?: string; image?: string | null };
-    return ok(await prisma.user.update({ where: { id: userId }, data: { name: body.name, image: body.image } }));
+    return ok(await prisma.user.update({ where: { id: userId }, data: { name: body.name?.trim(), image: body.image } }));
   });
 
   fastify.delete("/v1/users/:userId", async (request, reply) => {
