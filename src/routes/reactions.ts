@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
 import { getSession, ok, requireUser } from "../lib/api.js";
+import { createNotification } from "../lib/notifications.js";
 import { broadcastPostReaction } from "../lib/realtime.js";
 
 const TYPES = ["like", "favorite", "save"] as const;
@@ -12,20 +13,11 @@ function isReactionType(value: string): value is ReactionType {
 }
 
 async function reactionState(postId: string, userId?: string) {
-  const grouped = await prisma.postReaction.groupBy({
-    by: ["type"],
-    where: { postId },
-    _count: { _all: true },
-  });
-  const counts = Object.fromEntries(
-    TYPES.map((type) => [type, grouped.find((item) => item.type === type)?._count._all ?? 0]),
-  );
+  const grouped = await prisma.postReaction.groupBy({ by: ["type"], where: { postId }, _count: { _all: true } });
+  const counts = Object.fromEntries(TYPES.map((type) => [type, grouped.find((item) => item.type === type)?._count._all ?? 0]));
   const active: Record<string, boolean> = Object.fromEntries(TYPES.map((type) => [type, false]));
   if (userId) {
-    const rows = await prisma.postReaction.findMany({
-      where: { userId, postId, type: { in: [...TYPES] } },
-      select: { type: true },
-    });
+    const rows = await prisma.postReaction.findMany({ where: { userId, postId, type: { in: [...TYPES] } }, select: { type: true } });
     for (const row of rows) active[row.type] = true;
   }
   return { counts, active };
@@ -45,14 +37,11 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
     if (!user) return;
     const { postId, type } = request.params as { postId: string; type: string };
     if (!isReactionType(type)) return reply.code(400).send({ error: { code: "INVALID_REACTION", message: "Supported reactions are like, favorite, and save." } });
-    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true, userId: true, title: true } });
     if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-    await prisma.postReaction.upsert({
-      where: { userId_postId_type: { userId: user.id, postId, type } },
-      update: {},
-      create: { userId: user.id, postId, type },
-    });
+    await prisma.postReaction.upsert({ where: { userId_postId_type: { userId: user.id, postId, type } }, update: {}, create: { userId: user.id, postId, type } });
     const state = await reactionState(postId, user.id);
+    await createNotification({ recipientId: post.userId, actorId: user.id, type: "reaction", message: `${user.name} reacted to ${post.title}`, postId, reactionType: type });
     broadcastPostReaction({ postId, type, active: true, counts: state.counts });
     return ok(state);
   });
@@ -62,6 +51,8 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
     if (!user) return;
     const { postId, type } = request.params as { postId: string; type: string };
     if (!isReactionType(type)) return reply.code(400).send({ error: { code: "INVALID_REACTION", message: "Supported reactions are like, favorite, and save." } });
+    const post = await prisma.post.findUnique({ where: { id: postId }, select: { id: true } });
+    if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
     await prisma.postReaction.deleteMany({ where: { userId: user.id, postId, type } });
     const state = await reactionState(postId, user.id);
     broadcastPostReaction({ postId, type, active: false, counts: state.counts });
