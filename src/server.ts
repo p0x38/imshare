@@ -1,11 +1,14 @@
 import { prisma } from "./lib/auth.js";
 import { loadConfig } from "./lib/config.js";
 import { buildApp } from "./app.js";
+import { attachRealtime } from "./realtime.js";
 
 const config = await loadConfig();
 const app = await buildApp();
+const io = attachRealtime(app.server);
 
 const shutdown = async () => {
+  await io.close();
   await app.close();
   await prisma.$disconnect();
 };
@@ -20,6 +23,7 @@ try {
   );
 } catch (error) {
   app.log.error(error);
+  await io.close();
   await prisma.$disconnect();
   process.exit(1);
 }
