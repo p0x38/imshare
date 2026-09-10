@@ -7,128 +7,124 @@ datasource db {
 }
 
 model User {
-  id            String     @id
-  name          String
-  email         String     @unique
-  emailVerified Boolean    @default(false)
-  image         String?
-  bio           String?
-  websiteUrl    String?
-  githubUrl     String?
-  avatarMode    String     @default("initials")
-  avatarValue   String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-
-  sessions      Session[]
-  accounts      Account[]
-  posts         Post[]
-  uploads       Upload[]
-  profileLinks  ProfileLink[]
-  reactions     PostReaction[]
-
+  id String @id
+  name String
+  email String @unique
+  emailVerified Boolean @default(false)
+  image String?
+  bio String?
+  websiteUrl String?
+  githubUrl String?
+  avatarMode String @default("initials")
+  avatarValue String?
+  profileBannerUrl String?
+  accentColor String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  accounts Account[]
+  posts Post[]
+  uploads Upload[]
+  profileLinks ProfileLink[]
+  reactions PostReaction[]
+  comments Comment[]
+  notifications Notification[] @relation("notificationRecipient")
+  actedNotifications Notification[] @relation("notificationActor")
   @@map("user")
 }
 
 model Session {
-  id        String   @id
+  id String @id
   expiresAt DateTime
-  token     String   @unique
+  token String @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId    String
-
+  userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId])
   @@map("session")
 }
 
 model Account {
-  id                   String    @id
-  accountId            String
-  providerId           String
-  userId               String
-  accessToken          String?
-  refreshToken         String?
+  id String @id
+  accountId String
+  providerId String
+  userId String
+  accessToken String?
+  refreshToken String?
   accessTokenExpiresAt DateTime?
   refreshTokenExpiresAt DateTime?
-  scope                String?
-  idToken              String?
-  password             String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-
+  scope String?
+  idToken String?
+  password String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId])
   @@index([providerId, accountId])
   @@map("account")
 }
 
 model Verification {
-  id         String   @id
+  id String @id
   identifier String
-  value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
+  value String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@index([identifier])
   @@map("verification")
 }
 
 model Post {
-  id          String     @id @default(cuid())
-  title       String
+  id String @id @default(cuid())
+  title String
   description String?
-  sourceUrl   String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  userId      String
-  categoryId  String?
-
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    Category?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  uploads     Upload[]
-  tags        PostTag[]
-  reactions   PostReaction[]
-
+  sourceUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  categoryId String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  uploads Upload[]
+  tags PostTag[]
+  reactions PostReaction[]
+  comments Comment[]
+  notifications Notification[]
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@map("post")
 }
 
 model Upload {
-  id           String   @id @default(cuid())
-  filename     String
+  id String @id @default(cuid())
+  filename String
   originalName String
-  mimeType     String
-  size         Int
-  createdAt    DateTime @default(now())
-  userId       String
-  postId       String?
-
-  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mimeType String
+  size Int
+  contentHash String?
+  createdAt DateTime @default(now())
+  userId String
+  postId String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
-
   @@index([userId, createdAt])
   @@index([postId])
+  @@unique([userId, contentHash])
   @@map("upload")
 }
 
 model PostReaction {
-  id        String   @id @default(cuid())
-  type      String
+  id String @id @default(cuid())
+  type String
   createdAt DateTime @default(now())
-  userId    String
-  postId    String
-
+  userId String
+  postId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-
   @@unique([userId, postId, type])
   @@index([postId, type])
   @@index([userId, type])
@@ -136,51 +132,79 @@ model PostReaction {
 }
 
 model ProfileLink {
-  id        String   @id @default(cuid())
-  label     String
-  url       String
-  position  Int      @default(0)
+  id String @id @default(cuid())
+  label String
+  url String
+  position Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String
-
+  userId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
   @@index([userId, position])
   @@map("profile_link")
 }
 
-model Tag {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  posts     PostTag[]
+model Comment {
+  id String @id @default(cuid())
+  body String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  postId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+  @@map("comment")
+}
 
+model Notification {
+  id String @id @default(cuid())
+  type String
+  message String
+  createdAt DateTime @default(now())
+  readAt DateTime?
+  actorId String?
+  recipientId String
+  postId String?
+  commentId String?
+  reactionType String?
+  actor User? @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  recipient User @relation("notificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  @@index([recipientId, readAt, createdAt])
+  @@index([postId])
+  @@map("notification")
+}
+
+model Tag {
+  id String @id @default(cuid())
+  name String @unique
+  slug String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts PostTag[]
   @@map("tag")
 }
 
 model PostTag {
   postId String
-  tagId  String
-
+  tagId String
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
+  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
   @@id([postId, tagId])
   @@index([tagId, postId])
-  @@map("post_tag")
 }
 
 model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
+  id String @id @default(cuid())
+  name String @unique
+  slug String @unique
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  posts       Post[]
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts Post[]
   @@map("category")
 }
