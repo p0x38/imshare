@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard · imshare</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/account/">Account</a><a href="/dashboard/">Dashboard</a></nav></header>
+<main><h1>Dashboard</h1><div id="content" class="box">Loading…</div></main>
+<script>
+const content = document.querySelector('#content');
+try {
+ const response = await fetch('/v1/me');
+ if (response.status === 401) location.href = '/account/login/';
+ else if (!response.ok) throw new Error();
+ const {data} = await response.json();
+ content.innerHTML = `<h2>Welcome, <span id="name"></span></h2><p><a class="button" href="/dashboard/posts/">My posts</a> <a class="button" href="/dashboard/posts/new/">New post</a></p><p><a href="/dashboard/tags/">Manage tags</a> · <a href="/dashboard/categories/">Manage categories</a> · <a href="/account/">Account</a></p>`;
+ document.querySelector('#name').textContent = data.name || data.email || 'user';
+} catch { content.textContent = 'Unable to load your dashboard.'; }
+</script>
+</body>
+</html>
