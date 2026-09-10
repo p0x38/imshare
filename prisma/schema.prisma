@@ -28,6 +28,8 @@ model User {
   profileLinks ProfileLink[]
   reactions PostReaction[]
   comments Comment[]
+  commentReactions CommentReaction[]
+  reports Report[]
   notifications Notification[] @relation("notificationRecipient")
   actedNotifications Notification[] @relation("notificationActor")
   @@map("user")
@@ -82,7 +84,9 @@ model Post {
   id String @id @default(cuid())
   title String
   description String?
+  caption String?
   sourceUrl String?
+  allowDownload Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId String
@@ -93,6 +97,7 @@ model Post {
   tags PostTag[]
   reactions PostReaction[]
   comments Comment[]
+  reports Report[]
   notifications Notification[]
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
@@ -131,19 +136,6 @@ model PostReaction {
   @@map("post_reaction")
 }
 
-model ProfileLink {
-  id String @id @default(cuid())
-  label String
-  url String
-  position Int @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  @@index([userId, position])
-  @@map("profile_link")
-}
-
 model Comment {
   id String @id @default(cuid())
   body String
@@ -153,10 +145,43 @@ model Comment {
   postId String
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reactions CommentReaction[]
   notifications Notification[]
+  reports Report[]
   @@index([postId, createdAt])
   @@index([userId, createdAt])
   @@map("comment")
+}
+
+model CommentReaction {
+  id String @id @default(cuid())
+  type String @default("like")
+  createdAt DateTime @default(now())
+  userId String
+  commentId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@unique([userId, commentId, type])
+  @@index([commentId, type])
+  @@map("comment_reaction")
+}
+
+model Report {
+  id String @id @default(cuid())
+  reason String
+  details String?
+  status String @default("open")
+  createdAt DateTime @default(now())
+  reporterId String
+  postId String?
+  commentId String?
+  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+  @@index([postId])
+  @@index([commentId])
+  @@map("report")
 }
 
 model Notification {
@@ -177,6 +202,19 @@ model Notification {
   @@index([recipientId, readAt, createdAt])
   @@index([postId])
   @@map("notification")
+}
+
+model ProfileLink {
+  id String @id @default(cuid())
+  label String
+  url String
+  position Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, position])
+  @@map("profile_link")
 }
 
 model Tag {
