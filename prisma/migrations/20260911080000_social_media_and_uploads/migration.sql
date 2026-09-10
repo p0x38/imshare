@@ -33,5 +33,4 @@ CREATE TABLE "notification" (
 );
 CREATE INDEX "notification_recipientId_readAt_createdAt_idx" ON "notification"("recipientId", "readAt", "createdAt");
 CREATE INDEX "notification_postId_idx" ON "notification"("postId");
-
-CREATE INDEX "upload_userId_contentHash_idx" ON "upload"("userId", "contentHash");
+CREATE UNIQUE INDEX "upload_userId_contentHash_key" ON "upload"("userId", "contentHash");
