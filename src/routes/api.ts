@@ -4,6 +4,8 @@ import { healthRoutes } from "./health.js";
 import { userRoutes } from "./users.js";
 import { postRoutes } from "./posts.js";
 import { reactionRoutes } from "./reactions.js";
+import { commentRoutes } from "./comments.js";
+import { notificationRoutes } from "./notifications.js";
 import { profileLinkRoutes } from "./profile-links.js";
 import { avatarRoutes } from "./avatars.js";
 import { tagRoutes } from "./tags.js";
@@ -11,8 +13,7 @@ import { categoryRoutes } from "./categories.js";
 import { searchRoutes } from "./search.js";
 import { uploadRoutes } from "./uploads.js";
 import { imageRoutes } from "./images.js";
-import { commentRoutes } from "./comments.js";
-import { notificationRoutes } from "./notifications.js";
+import { reportRoutes } from "./reports.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(healthRoutes);
@@ -28,4 +29,5 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(searchRoutes);
   await fastify.register(uploadRoutes);
   await fastify.register(imageRoutes);
+  await fastify.register(reportRoutes);
 };
