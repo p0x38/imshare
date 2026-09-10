@@ -17,6 +17,7 @@ export const auth = betterAuth({
   }),
 
   secret: env.betterAuthSecret,
+  baseURL: env.betterAuthUrl,
 
   emailAndPassword: {
     enabled: true,
