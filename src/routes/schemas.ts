@@ -7,6 +7,9 @@ export const userCreateSchema = {
       name: { type: "string", minLength: 1, maxLength: 100 },
       email: { type: "string", minLength: 3, maxLength: 320 },
       image: { type: "string", maxLength: 2048 },
+      bio: { type: "string", maxLength: 2000 },
+      websiteUrl: { type: "string", maxLength: 2048 },
+      githubUrl: { type: "string", maxLength: 2048 },
     },
   },
 } as const;
@@ -19,6 +22,9 @@ export const userUpdateSchema = {
     properties: {
       name: { type: "string", minLength: 1, maxLength: 100 },
       image: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
+      bio: { anyOf: [{ type: "string", maxLength: 2000 }, { type: "null" }] },
+      websiteUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
+      githubUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
     },
   },
 } as const;
@@ -71,7 +77,7 @@ export const postCategorySchema = {
     additionalProperties: false,
     required: ["categoryId"],
     properties: {
-      categoryId: { type: "string", minLength: 1 },
+      categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
     },
   },
 } as const;
