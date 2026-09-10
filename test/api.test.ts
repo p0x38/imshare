@@ -48,3 +48,31 @@ test("health and version routes are publicly available", async () => {
     await app.close();
   }
 });
+
+test("request schemas reject malformed post bodies", async () => {
+  const app = await buildApp();
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/posts",
+      payload: { title: "", unexpected: true },
+    });
+    assert.equal(response.statusCode, 400);
+  } finally {
+    await app.close();
+  }
+});
+
+test("request schemas reject malformed user bodies", async () => {
+  const app = await buildApp();
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/users",
+      payload: { name: "test" },
+    });
+    assert.equal(response.statusCode, 400);
+  } finally {
+    await app.close();
+  }
+});
