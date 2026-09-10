@@ -12,7 +12,8 @@ const databaseFiles = [
 ];
 
 process.env.DATABASE_URL = "file:./test.db";
-process.env.BETTER_AUTH_SECRET = "imshare-integration-test-secret";
+process.env.BETTER_AUTH_SECRET =
+  "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
 
 function cleanup(): void {
   for (const file of databaseFiles) {
