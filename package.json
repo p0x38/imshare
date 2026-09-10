@@ -10,7 +10,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:validate": "prisma validate",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "lint": "eslint .",
     "test": "node --import tsx --test test/api.test.ts",
     "test:integration": "tsx test/run.ts",
@@ -28,7 +28,6 @@
     "@types/node": "^22.20.1",
     "@types/better-sqlite3": "^7.6.13",
     "eslint": "^9.39.1",
-    "prisma": "7.10.0",
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "typescript-eslint": "^8.42.0"
