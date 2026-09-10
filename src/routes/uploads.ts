@@ -6,36 +6,28 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 
 import { prisma } from "../lib/auth.js";
-import { requireUser, ok } from "../lib/api.js";
+import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
 
 const IMAGE_TYPES = new Map([
-  [".jpg", "image/jpeg"], [".jpeg", "image/jpeg"], [".png", "image/png"],
-  [".gif", "image/gif"], [".webp", "image/webp"], [".bmp", "image/bmp"],
-  [".avif", "image/avif"],
+  [".jpg", "image/jpeg"], [".jpeg", "image/jpeg"], [".png", "image/png"], [".gif", "image/gif"],
+  [".webp", "image/webp"], [".bmp", "image/bmp"], [".avif", "image/avif"],
 ]);
 
 function hasImageSignature(buffer: Buffer, extension: string): boolean {
   switch (extension) {
-    case ".jpg":
-    case ".jpeg":
-      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
-    case ".png":
-      return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-    case ".gif":
-      return buffer.subarray(0, 6).equals(Buffer.from("GIF87a")) || buffer.subarray(0, 6).equals(Buffer.from("GIF89a"));
-    case ".webp":
-      return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
-    case ".bmp":
-      return buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d;
-    case ".avif": {
-      if (buffer.length < 12 || buffer.subarray(4, 8).toString("ascii") !== "ftyp") return false;
-      const brands = buffer.subarray(8).toString("ascii");
-      return brands.includes("avif") || brands.includes("avis");
-    }
-    default:
-      return false;
+    case ".jpg": case ".jpeg": return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    case ".png": return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    case ".gif": return buffer.subarray(0, 6).equals(Buffer.from("GIF87a")) || buffer.subarray(0, 6).equals(Buffer.from("GIF89a"));
+    case ".webp": return buffer.length >= 12 && buffer.subarray(0, 4).toString("ascii") === "RIFF" && buffer.subarray(8, 12).toString("ascii") === "WEBP";
+    case ".bmp": return buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d;
+    case ".avif": return buffer.length >= 12 && buffer.subarray(4, 8).toString("ascii") === "ftyp" && (buffer.subarray(8).toString("ascii").includes("avif") || buffer.subarray(8).toString("ascii").includes("avis"));
+    default: return false;
   }
+}
+
+function uploadView(upload: any) {
+  return { ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` };
 }
 
 export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
@@ -46,8 +38,10 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post("/v1/uploads", async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    const parts = request.parts({ limits: { files: 1, fileSize: config.storage.maxFileSize, fields: 4 } });
-    let saved: { filename: string; originalName: string; mimeType: string; size: number } | undefined;
+    const query = request.query as Record<string, unknown>;
+    const multiple = query.multiple === "true";
+    const parts = request.parts({ limits: { files: multiple ? 20 : 1, fileSize: config.storage.maxFileSize, fields: 4 } });
+    const uploads: any[] = [];
     try {
       for await (const part of parts) {
         if (part.type !== "file") continue;
@@ -57,9 +51,16 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
           part.file.resume();
           return reply.code(400).send({ error: { code: "INVALID_FILE", message: "Unsupported image type." } });
         }
-        const temporaryName = `.upload-${randomUUID()}${ext}`;
-        const temporaryPath = path.join(uploadDir, temporaryName);
-        await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
+        const temporaryPath = path.join(uploadDir, `.upload-${randomUUID()}${ext}`);
+        try {
+          await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
+        } catch (error) {
+          await unlink(temporaryPath).catch(() => undefined);
+          if ((error as NodeJS.ErrnoException).name === "AbortError" || (request.raw.destroyed && !part.file.truncated)) {
+            return reply.code(499).send({ error: { code: "UPLOAD_CANCELLED", message: "Upload cancelled." } });
+          }
+          throw error;
+        }
         if (part.file.truncated) {
           await unlink(temporaryPath).catch(() => undefined);
           return reply.code(413).send({ error: { code: "FILE_TOO_LARGE", message: "Maximum file size exceeded." } });
@@ -69,45 +70,52 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
           await unlink(temporaryPath).catch(() => undefined);
           return reply.code(400).send({ error: { code: "INVALID_FILE", message: "File content does not match its image type." } });
         }
-        const hash = createHash("sha256").update(content).digest("hex");
-        const filename = `${hash}${ext}`;
-        const destination = path.join(uploadDir, filename);
-        try {
-          await rename(temporaryPath, destination);
-        } catch {
+        const contentHash = createHash("sha256").update(content).digest("hex");
+        const existing = await prisma.upload.findFirst({ where: { userId: user.id, contentHash } });
+        if (existing) {
           await unlink(temporaryPath).catch(() => undefined);
+          uploads.push(existing);
+          continue;
         }
-        saved = { filename, originalName: part.filename, mimeType: part.mimetype, size: Number(part.file.bytesRead) };
+        const filename = `${contentHash}${ext}`;
+        const destination = path.join(uploadDir, filename);
+        try { await rename(temporaryPath, destination); } catch { await unlink(temporaryPath).catch(() => undefined); }
+        try {
+          const upload = await prisma.upload.create({ data: { filename, originalName: part.filename, mimeType: part.mimetype, size: content.byteLength, contentHash, userId: user.id } });
+          uploads.push(upload);
+        } catch (error) {
+          await unlink(destination).catch(() => undefined);
+          const duplicate = await prisma.upload.findFirst({ where: { userId: user.id, contentHash } });
+          if (duplicate) uploads.push(duplicate); else throw error;
+        }
       }
     } catch (error) {
       request.log.error(error);
       return reply.code(500).send({ error: { code: "UPLOAD_FAILED", message: "Upload failed." } });
     }
-    if (!saved) return reply.code(400).send({ error: { code: "NO_FILE", message: "An image file is required." } });
-    const upload = await prisma.upload.create({ data: { ...saved, userId: user.id } });
-    return reply.code(201).send(ok({ ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` }));
+    if (!uploads.length) return reply.code(400).send({ error: { code: "NO_FILE", message: "An image file is required." } });
+    return reply.code(201).send(ok(multiple ? uploads.map(uploadView) : uploadView(uploads[0])));
   });
 
   fastify.get("/v1/uploads/:uploadId", async (request, reply) => {
-    const user = await requireUser(request, reply);
-    if (!user) return;
+    const user = await requireUser(request, reply); if (!user) return;
     const { uploadId } = request.params as { uploadId: string };
     const upload = await prisma.upload.findUnique({ where: { id: uploadId } });
     if (!upload) return reply.code(404).send({ error: { code: "UPLOAD_NOT_FOUND", message: "Upload not found." } });
     if (upload.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this upload." } });
-    return ok({ ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` });
+    return ok(uploadView(upload));
   });
 
   fastify.delete("/v1/uploads/:uploadId", async (request, reply) => {
-    const user = await requireUser(request, reply);
-    if (!user) return;
+    const user = await requireUser(request, reply); if (!user) return;
     const { uploadId } = request.params as { uploadId: string };
     const upload = await prisma.upload.findUnique({ where: { id: uploadId } });
     if (!upload) return reply.code(404).send({ error: { code: "UPLOAD_NOT_FOUND", message: "Upload not found." } });
     if (upload.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this upload." } });
     if (upload.postId) return reply.code(409).send({ error: { code: "UPLOAD_IN_USE", message: "Upload is attached to a post." } });
     await prisma.upload.delete({ where: { id: uploadId } });
-    await unlink(path.join(uploadDir, upload.filename)).catch(() => undefined);
+    const stillReferenced = await prisma.upload.count({ where: { filename: upload.filename } });
+    if (!stillReferenced) await unlink(path.join(uploadDir, upload.filename)).catch(() => undefined);
     return reply.code(204).send();
   });
 };
