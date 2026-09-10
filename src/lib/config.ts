@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readFileSync } from "node:fs";
 import path from "node:path";
 
 export interface ServerConfig {
@@ -14,12 +14,23 @@ export interface ServerConfig {
     name: string;
     version: string;
   };
+  auth: {
+    baseUrl: string;
+  };
 }
 
 const configPath = path.resolve(process.cwd(), "config.json");
 
 export async function loadConfig(): Promise<ServerConfig> {
   const content = await readFile(configPath, "utf8");
+  return parseConfig(content);
+}
+
+export function loadConfigSync(): ServerConfig {
+  return parseConfig(readFileSync(configPath, "utf8"));
+}
+
+function parseConfig(content: string): ServerConfig {
   const config: unknown = JSON.parse(content);
 
   if (!isServerConfig(config)) {
@@ -36,6 +47,7 @@ function isServerConfig(value: unknown): value is ServerConfig {
   const server = config.server;
   const storage = config.storage;
   const site = config.site;
+  const auth = config.auth;
 
   return (
     isObject(server) &&
@@ -52,7 +64,10 @@ function isServerConfig(value: unknown): value is ServerConfig {
     storage.maxFileSize > 0 &&
     isObject(site) &&
     typeof site.name === "string" &&
-    typeof site.version === "string"
+    typeof site.version === "string" &&
+    isObject(auth) &&
+    typeof auth.baseUrl === "string" &&
+    auth.baseUrl.length > 0
   );
 }
 
