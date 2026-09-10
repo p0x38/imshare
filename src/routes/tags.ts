@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
+import { tagCreateSchema, tagUpdateSchema } from "./schemas.js";
 
 export const tagRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/tags", async (request) => {
@@ -16,12 +17,11 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
     return collection(items, p.page, p.limit, total);
   });
 
-  fastify.post("/v1/tags", async (request, reply) => {
+  fastify.post("/v1/tags", { schema: tagCreateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    const body = request.body as { name?: string; slug?: string };
-    if (!body.name || !body.slug) return reply.code(400).send({ error: { code: "INVALID_TAG", message: "name and slug are required." } });
-    return reply.code(201).send(ok(await prisma.tag.create({ data: { name: body.name, slug: body.slug } })));
+    const body = request.body as { name: string; slug: string };
+    return reply.code(201).send(ok(await prisma.tag.create({ data: { name: body.name.trim(), slug: body.slug } })));
   });
 
   fastify.get("/v1/tags/:tagId", async (request, reply) => {
@@ -31,12 +31,13 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(tag);
   });
 
-  fastify.patch("/v1/tags/:tagId", async (request, reply) => {
+  fastify.patch("/v1/tags/:tagId", { schema: tagUpdateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { tagId } = request.params as { tagId: string };
+    const body = request.body as { name?: string; slug?: string };
     try {
-      return ok(await prisma.tag.update({ where: { id: tagId }, data: request.body as { name?: string; slug?: string } }));
+      return ok(await prisma.tag.update({ where: { id: tagId }, data: { name: body.name?.trim(), slug: body.slug } }));
     } catch {
       return reply.code(404).send({ error: { code: "TAG_NOT_FOUND", message: "Tag not found." } });
     }
