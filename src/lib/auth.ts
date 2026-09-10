@@ -22,6 +22,14 @@ export const auth = betterAuth({
   baseURL: config.auth.baseUrl,
   basePath: "/v1/auth",
 
+  user: {
+    additionalFields: {
+      bio: { type: "string", required: false },
+      websiteUrl: { type: "string", required: false },
+      githubUrl: { type: "string", required: false },
+    },
+  },
+
   emailAndPassword: {
     enabled: true,
   },
