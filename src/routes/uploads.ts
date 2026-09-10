@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
@@ -57,7 +57,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
           part.file.resume();
           return reply.code(400).send({ error: { code: "INVALID_FILE", message: "Unsupported image type." } });
         }
-        const temporaryName = `.upload-${crypto.randomUUID()}${ext}`;
+        const temporaryName = `.upload-${randomUUID()}${ext}`;
         const temporaryPath = path.join(uploadDir, temporaryName);
         await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
         if (part.file.truncated) {
@@ -72,12 +72,10 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         const hash = createHash("sha256").update(content).digest("hex");
         const filename = `${hash}${ext}`;
         const destination = path.join(uploadDir, filename);
-        if (temporaryPath !== destination) {
-          try {
-            await rename(temporaryPath, destination);
-          } catch {
-            await unlink(temporaryPath).catch(() => undefined);
-          }
+        try {
+          await rename(temporaryPath, destination);
+        } catch {
+          await unlink(temporaryPath).catch(() => undefined);
         }
         saved = { filename, originalName: part.filename, mimeType: part.mimetype, size: Number(part.file.bytesRead) };
       }
