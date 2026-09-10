@@ -13,11 +13,14 @@ for (const file of [databasePath, `${databasePath}-journal`, `${databasePath}-wa
 }
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-execFileSync(pnpm, ["exec", "prisma", "db", "push", "--skip-generate", "--accept-data-loss"], {
+const pnpmOptions = {
   cwd: root,
   env: process.env,
-  stdio: "inherit",
-});
+  stdio: "inherit" as const,
+  ...(process.platform === "win32" ? { shell: true } : {}),
+};
+
+execFileSync(pnpm, ["exec", "prisma", "db", "push", "--skip-generate", "--accept-data-loss"], pnpmOptions);
 
 const result = spawnSync(process.execPath, ["--import", "tsx", "--test", "test/api.test.ts", "test/integration.test.ts"], {
   cwd: root,
