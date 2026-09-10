@@ -14,6 +14,7 @@ import { searchRoutes } from "./search.js";
 import { uploadRoutes } from "./uploads.js";
 import { imageRoutes } from "./images.js";
 import { reportRoutes } from "./reports.js";
+import { recommendationRoutes } from "./recommendations.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(healthRoutes);
@@ -30,4 +31,5 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(uploadRoutes);
   await fastify.register(imageRoutes);
   await fastify.register(reportRoutes);
+  await fastify.register(recommendationRoutes);
 };
