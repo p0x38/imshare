@@ -6,6 +6,17 @@ import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib
 import { postInclude, postView } from "./_shared.js";
 import { userCreateSchema, userUpdateSchema } from "./schemas.js";
 
+const publicUserSelect = {
+  id: true,
+  name: true,
+  image: true,
+  bio: true,
+  websiteUrl: true,
+  githubUrl: true,
+  createdAt: true,
+  _count: { select: { posts: true } },
+} as const;
+
 export const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/me", async (request, reply) => {
     const user = await requireUser(request, reply);
@@ -32,7 +43,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     const search = typeof q.search === "string" ? q.search : undefined;
     const where = search ? { OR: [{ name: { contains: search } }, { email: { contains: search } }] } : {};
     const [users, total] = await Promise.all([
-      prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) }, select: { id: true, name: true, image: true, createdAt: true, _count: { select: { posts: true } } } }),
+      prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) }, select: publicUserSelect }),
       prisma.user.count({ where }),
     ]);
     return collection(users, p.page, p.limit, total);
@@ -41,13 +52,21 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post("/v1/users", { schema: userCreateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    const body = request.body as { name: string; email: string; image?: string };
-    return reply.code(201).send(ok(await prisma.user.create({ data: { id: randomUUID(), name: body.name.trim(), email: body.email.trim(), image: body.image } })));
+    const body = request.body as { name: string; email: string; image?: string; bio?: string; websiteUrl?: string; githubUrl?: string };
+    return reply.code(201).send(ok(await prisma.user.create({ data: {
+      id: randomUUID(),
+      name: body.name.trim(),
+      email: body.email.trim(),
+      image: body.image,
+      bio: body.bio?.trim() || undefined,
+      websiteUrl: body.websiteUrl?.trim() || undefined,
+      githubUrl: body.githubUrl?.trim() || undefined,
+    } })));
   });
 
   fastify.get("/v1/users/:userId", async (request, reply) => {
     const { userId } = request.params as { userId: string };
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, image: true, createdAt: true, _count: { select: { posts: true } } } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: publicUserSelect });
     if (!user) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
     return ok(user);
   });
@@ -57,8 +76,14 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
     if (!me) return;
     const { userId } = request.params as { userId: string };
     if (me.id !== userId) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot modify this user." } });
-    const body = request.body as { name?: string; image?: string | null };
-    return ok(await prisma.user.update({ where: { id: userId }, data: { name: body.name?.trim(), image: body.image } }));
+    const body = request.body as { name?: string; image?: string | null; bio?: string | null; websiteUrl?: string | null; githubUrl?: string | null };
+    return ok(await prisma.user.update({ where: { id: userId }, data: {
+      ...(body.name !== undefined ? { name: body.name.trim() } : {}),
+      ...(body.image !== undefined ? { image: body.image } : {}),
+      ...(body.bio !== undefined ? { bio: body.bio?.trim() || null } : {}),
+      ...(body.websiteUrl !== undefined ? { websiteUrl: body.websiteUrl?.trim() || null } : {}),
+      ...(body.githubUrl !== undefined ? { githubUrl: body.githubUrl?.trim() || null } : {}),
+    } }));
   });
 
   fastify.delete("/v1/users/:userId", async (request, reply) => {
