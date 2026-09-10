@@ -5,6 +5,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
+import { queueThumbnailGeneration } from "../lib/thumbnails.js";
 
 const MAX_DIMENSION = 4096; const MIN_DIMENSION = 16;
 const FORMATS = { webp: { mime: "image/webp" }, jpeg: { mime: "image/jpeg" }, jpg: { mime: "image/jpeg" }, png: { mime: "image/png" }, avif: { mime: "image/avif" } } as const;
@@ -29,6 +30,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     const key = cacheKey(upload.id, width, height, fit, format); const cached = path.join(cacheDir, key);
     try { const output = await readFile(cached); reply.type(format ? FORMATS[format].mime : upload.mimeType); return reply.send(output); } catch {}
     try {
+      if (width !== undefined && height === undefined && fit === "inside" && format === "webp" && [320, 640, 1280].includes(width)) queueThumbnailGeneration(source, cacheDir, upload.id);
       let pipeline = sharp(source, { animated: false }); if (width !== undefined || height !== undefined) pipeline = pipeline.resize({ width, height, fit, withoutEnlargement: true });
       if (format !== undefined) { pipeline = pipeline.toFormat(format === "jpg" ? "jpeg" : format); reply.type(FORMATS[format].mime); } else reply.type(upload.mimeType);
       const output = await pipeline.toBuffer(); await writeFile(cached, output, { flag: "wx" }).catch(async (error) => { if ((error as NodeJS.ErrnoException).code === "EEXIST") return; throw error; }); return reply.send(output);
