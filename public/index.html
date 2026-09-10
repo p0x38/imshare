@@ -4,44 +4,64 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>imshare</title>
+  <link rel="stylesheet" href="/style.css">
 </head>
-<body class="min-h-screen bg-zinc-950 text-zinc-100">
-  <header class="border-b border-zinc-800">
-    <nav class="mx-auto flex max-w-6xl items-center gap-6 px-6 py-4">
-      <a class="text-xl font-bold" href="/">imshare</a>
+<body>
+  <header>
+    <nav>
+      <a class="brand" href="/">imshare</a>
       <a href="/posts/">Posts</a><a href="/users/">Users</a>
       <a href="/tags/">Tags</a><a href="/categories/">Categories</a>
-      <a href="/search/">Search</a><span class="flex-1"></span><a href="/account/">Account</a>
+      <a href="/search/">Search</a><a href="/account/">Account</a>
     </nav>
   </header>
-  <main class="mx-auto max-w-6xl px-6 py-10">
-    <div class="mb-8 flex items-end justify-between"><div><h1 class="text-4xl font-bold">Recent artwork</h1><p class="mt-2 text-zinc-400">A self-hosted image archive.</p></div><a class="rounded-lg bg-white px-4 py-2 font-medium text-black" href="/dashboard/posts/new/">New post</a></div>
-    <section id="posts" class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"></section>
-    <p id="status" class="py-12 text-center text-zinc-500">Loading…</p>
+  <main>
+    <div class="box">
+      <h1>Recent artwork</h1>
+      <p>A self-hosted image archive.</p>
+      <p><a class="button" href="/dashboard/posts/new/">New post</a></p>
+    </div>
+    <section id="posts" class="grid"></section>
+    <p id="status" class="notice">Loading…</p>
   </main>
-  <script type="module">
+  <script>
     const root = document.querySelector('#posts');
     const status = document.querySelector('#status');
-    try {
-      const response = await fetch('/v1/posts?limit=24');
-      if (!response.ok) throw new Error('API request failed');
-      const { data } = await response.json();
-      status.remove();
-      if (!data.length) { root.innerHTML = '<p class="col-span-full text-zinc-500">No posts yet.</p>'; }
-      for (const post of data) {
-        const image = post.uploads?.[0];
-        const card = document.createElement('a');
-        card.href = `/posts/${encodeURIComponent(post.id)}`;
-        card.className = 'overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900 hover:border-zinc-600';
-        card.innerHTML = `${image ? `<img class="aspect-square w-full object-cover" src="${image.url}" alt="">` : '<div class="aspect-square bg-zinc-800"></div>'}<div class="p-4"><h2 class="font-semibold"></h2><p class="mt-1 text-sm text-zinc-500"></p></div>`;
-        card.querySelector('h2').textContent = post.title;
-        card.querySelector('p').textContent = post.author?.name ?? 'Unknown author';
-        root.append(card);
+    (async () => {
+      try {
+        const response = await fetch('/v1/posts?limit=24');
+        if (!response.ok) throw new Error('API request failed');
+        const { data } = await response.json();
+        status.remove();
+        if (!data.length) {
+          root.innerHTML = '<p>No posts yet.</p>';
+          return;
+        }
+        for (const post of data) {
+          const image = post.uploads?.[0];
+          const card = document.createElement('a');
+          card.href = `/posts/${encodeURIComponent(post.id)}`;
+          card.className = 'card';
+          if (image) {
+            const img = document.createElement('img');
+            img.src = image.url;
+            img.alt = post.title || '';
+            card.append(img);
+          }
+          const heading = document.createElement('h2');
+          heading.textContent = post.title;
+          card.append(heading);
+          const meta = document.createElement('p');
+          meta.className = 'meta';
+          meta.textContent = post.author?.name ?? 'Unknown author';
+          card.append(meta);
+          root.append(card);
+        }
+      } catch (error) {
+        status.textContent = 'Unable to load posts.';
+        console.error(error);
       }
-    } catch (error) {
-      status.textContent = 'Unable to load posts.';
-      console.error(error);
-    }
+    })();
   </script>
 </body>
 </html>
