@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
 import { findTags, postInclude, postView } from "./_shared.js";
+import { postCategorySchema, postCreateSchema, postTagSchema, postUpdateSchema } from "./schemas.js";
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/posts", async (request) => {
@@ -20,11 +21,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     return collection(items.map(postView), p.page, p.limit, total);
   });
 
-  fastify.post("/v1/posts", async (request, reply) => {
+  fastify.post("/v1/posts", { schema: postCreateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
-    const body = request.body as { title?: string; description?: string; sourceUrl?: string; tags?: string[]; categoryId?: string | null; uploadIds?: string[] };
-    if (!body.title?.trim()) return reply.code(400).send({ error: { code: "INVALID_POST", message: "title is required." } });
+    const body = request.body as { title: string; description?: string; sourceUrl?: string; tags?: string[]; categoryId?: string | null; uploadIds?: string[] };
+    if (!body.title.trim()) return reply.code(400).send({ error: { code: "INVALID_POST", message: "title is required." } });
 
     const uploadIds = [...new Set(body.uploadIds ?? [])];
     if (uploadIds.length > 0) {
@@ -54,19 +55,20 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(postView(post));
   });
 
-  fastify.patch("/v1/posts/:postId", async (request, reply) => {
+  fastify.patch("/v1/posts/:postId", { schema: postUpdateSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { postId } = request.params as { postId: string };
     const existing = await prisma.post.findUnique({ where: { id: postId } });
     if (!existing) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
     if (existing.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-    const body = request.body as { title?: string; description?: string; sourceUrl?: string | null; categoryId?: string | null; tags?: string[] };
+    const body = request.body as { title?: string; description?: string | null; sourceUrl?: string | null; categoryId?: string | null; tags?: string[] };
+    if (body.title !== undefined && !body.title.trim()) return reply.code(400).send({ error: { code: "INVALID_POST", message: "title cannot be empty." } });
     if (body.tags) await prisma.postTag.deleteMany({ where: { postId } });
     const tags = body.tags ? await findTags(body.tags) : [];
     const post = await prisma.post.update({
       where: { id: postId },
-      data: { title: body.title, description: body.description, sourceUrl: body.sourceUrl, categoryId: body.categoryId, ...(body.tags ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } } : {}) },
+      data: { title: body.title?.trim(), description: body.description, sourceUrl: body.sourceUrl, categoryId: body.categoryId, ...(body.tags ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } } : {}) },
       include: postInclude,
     });
     return ok(postView(post));
@@ -88,15 +90,14 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(await prisma.postTag.findMany({ where: { postId }, include: { tag: true } }).then((items) => items.map((item) => item.tag)));
   });
 
-  fastify.post("/v1/posts/:postId/tags", async (request, reply) => {
+  fastify.post("/v1/posts/:postId/tags", { schema: postTagSchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { postId } = request.params as { postId: string };
-    const body = request.body as { tagId?: string };
+    const body = request.body as { tagId: string };
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
     if (post.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-    if (!body.tagId) return reply.code(400).send({ error: { code: "INVALID_TAG", message: "tagId is required." } });
     const relation = await prisma.postTag.upsert({ where: { postId_tagId: { postId, tagId: body.tagId } }, update: {}, create: { postId, tagId: body.tagId }, include: { tag: true } });
     return reply.code(201).send(ok(relation.tag));
   });
@@ -119,11 +120,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
     return ok(post.category);
   });
 
-  fastify.put("/v1/posts/:postId/category", async (request, reply) => {
+  fastify.put("/v1/posts/:postId/category", { schema: postCategorySchema }, async (request, reply) => {
     const user = await requireUser(request, reply);
     if (!user) return;
     const { postId } = request.params as { postId: string };
-    const body = request.body as { categoryId?: string };
+    const body = request.body as { categoryId: string };
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
     if (post.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
