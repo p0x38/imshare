@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
-import { ok, parsePagination } from "../lib/api.js";
+import { collection, ok, parseOrder, parsePagination } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
 
 export const searchRoutes: FastifyPluginAsync = async (fastify) => {
@@ -10,27 +10,50 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     const p = parsePagination(q);
     const term = typeof q.q === "string" ? q.q : "";
     const type = typeof q.type === "string" ? q.type : "all";
+    const order = parseOrder(q.order);
     const result: Record<string, unknown> = {};
 
     if (type === "posts" || type === "all") {
-      result.posts = (await prisma.post.findMany({
-        where: term ? { OR: [{ title: { contains: term } }, { description: { contains: term } }] } : {},
-        take: p.limit,
-        include: postInclude,
-      })).map(postView);
+      const where: Record<string, unknown> = term ? { OR: [{ title: { contains: term } }, { description: { contains: term } }] } : {};
+      if (typeof q.user === "string") where.userId = q.user;
+      if (typeof q.category === "string") where.categoryId = q.category;
+      if (typeof q.tag === "string") where.tags = { some: { tag: { slug: q.tag } } };
+      const [items, total] = await Promise.all([
+        prisma.post.findMany({ where: where as never, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, include: postInclude }),
+        prisma.post.count({ where: where as never }),
+      ]);
+      result.posts = items.map(postView);
+      if (type === "posts") return collection(items.map(postView), p.page, p.limit, total);
     }
+
     if (type === "users" || type === "all") {
-      result.users = await prisma.user.findMany({
-        where: term ? { name: { contains: term } } : {},
-        take: p.limit,
-        select: { id: true, name: true, image: true },
-      });
+      const where = term ? { name: { contains: term } } : {};
+      const [items, total] = await Promise.all([
+        prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, select: { id: true, name: true, image: true, createdAt: true } }),
+        prisma.user.count({ where }),
+      ]);
+      result.users = items;
+      if (type === "users") return collection(items, p.page, p.limit, total);
     }
+
     if (type === "tags" || type === "all") {
-      result.tags = await prisma.tag.findMany({ where: term ? { name: { contains: term } } : {}, take: p.limit });
+      const where = term ? { name: { contains: term } } : {};
+      const [items, total] = await Promise.all([
+        prisma.tag.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
+        prisma.tag.count({ where }),
+      ]);
+      result.tags = items;
+      if (type === "tags") return collection(items, p.page, p.limit, total);
     }
+
     if (type === "categories" || type === "all") {
-      result.categories = await prisma.category.findMany({ where: term ? { name: { contains: term } } : {}, take: p.limit });
+      const where = term ? { name: { contains: term } } : {};
+      const [items, total] = await Promise.all([
+        prisma.category.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
+        prisma.category.count({ where }),
+      ]);
+      result.categories = items;
+      if (type === "categories") return collection(items, p.page, p.limit, total);
     }
 
     return ok(result);
