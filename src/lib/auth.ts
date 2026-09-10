@@ -20,6 +20,7 @@ export const auth = betterAuth({
 
   secret: env.betterAuthSecret,
   baseURL: config.auth.baseUrl,
+  basePath: "/v1/auth",
 
   emailAndPassword: {
     enabled: true,
