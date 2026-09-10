@@ -169,7 +169,10 @@ test("API integration: authentication, users, posts, tags, categories, and searc
     const logout = await request({
       method: "POST",
       url: "/v1/auth/sign-out",
-      headers: { cookie },
+      headers: {
+        cookie,
+        origin: "http://localhost:5454",
+      },
     });
     assert.equal(logout.statusCode, 200);
 
