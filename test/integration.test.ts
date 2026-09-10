@@ -125,6 +125,15 @@ test("API integration: authentication, users, posts, tags, categories, and searc
     assert.equal(update.statusCode, 200);
     assert.equal(update.json().data.title, "Updated Integration Post");
 
+    const ownUserUpdate = await request({
+      method: "PATCH",
+      url: `/v1/users/${userId}`,
+      headers: { cookie },
+      payload: { name: "Renamed Integration User" },
+    });
+    assert.equal(ownUserUpdate.statusCode, 200);
+    assert.equal(ownUserUpdate.json().data.name, "Renamed Integration User");
+
     const secondSignup = await request({
       method: "POST",
       url: "/v1/auth/sign-up/email",
@@ -148,15 +157,6 @@ test("API integration: authentication, users, posts, tags, categories, and searc
       headers: { cookie: secondCookie },
     });
     assert.equal(forbiddenPostDelete.statusCode, 403);
-
-    const ownUserUpdate = await request({
-      method: "PATCH",
-      url: `/v1/users/${userId}`,
-      headers: { cookie },
-      payload: { name: "Renamed Integration User" },
-    });
-    assert.equal(ownUserUpdate.statusCode, 200);
-    assert.equal(ownUserUpdate.json().data.name, "Renamed Integration User");
 
     const tagPosts = await request({ method: "GET", url: `/v1/tags/${tagId}/posts` });
     assert.equal(tagPosts.statusCode, 200);
