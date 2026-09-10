@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
-import test from "node:test";
+import test, { after } from "node:test";
 
 const root = process.cwd();
 const databasePath = path.join(root, "test-api.db");
@@ -32,9 +32,11 @@ if (process.platform === "win32") {
 }
 
 const { collection, ok, parseOrder, parsePagination } = await import("../src/lib/api.js");
+const { prisma } = await import("../src/lib/auth.js");
 const { buildApp } = await import("../src/app.js");
 
-process.on("exit", () => {
+after(async () => {
+  await prisma.$disconnect();
   for (const file of databaseFiles) {
     if (existsSync(file)) rmSync(file, { force: true });
   }
