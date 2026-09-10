@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account · imshare</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/users/">Users</a><a href="/tags/">Tags</a><a href="/categories/">Categories</a><a href="/search/">Search</a><a href="/account/">Account</a></nav></header>
+<main><h1>Account</h1><div id="content" class="box">Checking session…</div></main>
+<script>
+const content = document.querySelector('#content');
+try {
+  const response = await fetch('/v1/auth/get-session');
+  const session = response.ok ? await response.json() : null;
+  const user = session?.user;
+  if (!user) {
+    content.innerHTML = '<p>You are not signed in.</p><p><a class="button" href="/account/login/">Log in</a> <a class="button" href="/account/register/">Create account</a></p>';
+  } else {
+    content.replaceChildren();
+    const heading = document.createElement('h2'); heading.textContent = user.name || 'Account'; content.append(heading);
+    const email = document.createElement('p'); email.textContent = user.email || ''; content.append(email);
+    const links = document.createElement('p'); links.innerHTML = '<a class="button" href="/dashboard/">Dashboard</a> <a class="button" href="/account/logout/">Log out</a>'; content.append(links);
+  }
+} catch { content.textContent = 'Unable to load account information.'; }
+</script>
+</body>
+</html>
