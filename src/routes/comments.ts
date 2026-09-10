@@ -8,7 +8,9 @@ function view(comment: any) {
 }
 
 export const commentRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/v1/posts/:postId/comments", async (request) => {
+  fastify.get("/v1/posts/:postId/comments", async (request, reply) => {
+    const user = await requireUser(request, reply);
+    if (!user) return;
     const { postId } = request.params as { postId: string }; const q = request.query as Record<string, unknown>; const p = parsePagination(q); const where = { postId };
     const [comments, total] = await Promise.all([
       prisma.comment.findMany({ where, include: { user: { select: { id: true, name: true, avatarMode: true, avatarValue: true, updatedAt: true } } }, skip: p.skip, take: p.limit, orderBy: { createdAt: "asc" } }),
