@@ -1,1 +1,53 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tagged Posts · imshare</title><link rel="stylesheet" href="/style.css"></head><body><header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/tags/">Tags</a></nav></header><main><h1>Tagged Posts</h1><div id="posts" class="grid">Loading…</div></main><script type="module">const id=location.pathname.split('/').filter(Boolean).at(-2),root=document.querySelector('#posts');try{const r=await fetch('/v1/tags/'+encodeURIComponent(id)+'/posts?limit=100');if(!r.ok)throw new Error();const {data}=await r.json();root.replaceChildren();for(const p of data){const c=document.createElement('article');c.className='card';if(p.uploads?.[0]){const i=document.createElement('img');i.src=p.uploads[0].url;i.alt=p.title;c.append(i);}const h=document.createElement('h2');h.textContent=p.title;c.append(h);const a=document.createElement('a');a.href='/posts/'+encodeURIComponent(p.id);a.textContent='View';c.append(a);root.append(c);}}catch{root.textContent='Unable to load posts.';}</script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Tagged Posts · imshare</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a class="brand" href="/">imshare</a><a href="/posts/">Posts</a
+        ><a href="/tags/">Tags</a>
+      </nav>
+    </header>
+    <main>
+      <h1>Tagged Posts</h1>
+      <div id="posts" class="grid">Loading…</div>
+    </main>
+    <script type="module">
+      const id = location.pathname.split("/").filter(Boolean).at(-2),
+        root = document.querySelector("#posts");
+      try {
+        const r = await fetch(
+          "/v1/tags/" + encodeURIComponent(id) + "/posts?limit=100",
+        );
+        if (!r.ok) throw new Error();
+        const { data } = await r.json();
+        root.replaceChildren();
+        for (const p of data) {
+          const c = document.createElement("article");
+          c.className = "card";
+          if (p.uploads?.[0]) {
+            const i = document.createElement("img");
+            i.src = p.uploads[0].url;
+            i.alt = p.title;
+            c.append(i);
+          }
+          const h = document.createElement("h2");
+          h.textContent = p.title;
+          c.append(h);
+          const a = document.createElement("a");
+          a.href = "/posts/" + encodeURIComponent(p.id);
+          a.textContent = "View";
+          c.append(a);
+          root.append(c);
+        }
+      } catch {
+        root.textContent = "Unable to load posts.";
+      }
+    </script>
+  </body>
+</html>

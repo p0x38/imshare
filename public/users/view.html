@@ -1,1 +1,106 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>User · imshare</title><link rel="stylesheet" href="/style.css"></head><body><header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/users/">Users</a><a href="/tags/">Tags</a><a href="/categories/">Categories</a><a href="/search/">Search</a><a href="/account/">Account</a></nav></header><main><div id="user" class="box">Loading…</div><h2>Posts</h2><div id="posts" class="grid"></div></main><script type="module">const id=location.pathname.split('/').filter(Boolean).at(-1);const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));try{const [ur,pr]=await Promise.all([fetch('/v1/users/'+encodeURIComponent(id)),fetch('/v1/users/'+encodeURIComponent(id)+'/posts?limit=100')]);if(!ur.ok)throw new Error();const {data:u}=await ur.json();const profile=document.querySelector('#user');const links=(u.profileLinks||[]).map(link=>'<a href="'+esc(link.url)+'" rel="noopener noreferrer nofollow">'+esc(link.label)+'</a>').join('');profile.innerHTML='<div class="profile"><img class="avatar" src="'+esc(u.avatarUrl)+'" alt="" loading="lazy" decoding="async"><div><h1>'+esc(u.name)+'</h1><p class="meta">'+u._count.posts+' post(s) · Joined '+new Date(u.createdAt).toLocaleDateString()+'</p>'+(u.bio?'<p>'+esc(u.bio)+'</p>':'')+'<div class="profile-links">'+(u.websiteUrl?'<a href="'+esc(u.websiteUrl)+'" rel="noopener noreferrer nofollow">Website</a>':'')+(u.githubUrl?'<a href="'+esc(u.githubUrl)+'" rel="noopener noreferrer nofollow">GitHub</a>':'')+links+'</div></div></div>';const root=document.querySelector('#posts');const posts=(await pr.json()).data||[];for(const p of posts){const card=document.createElement('article');card.className='card';if(p.uploads?.[0]){const img=document.createElement('img');img.src=p.uploads[0].url+'?width=480&format=webp';img.alt=p.title;img.loading='lazy';img.decoding='async';card.append(img)}const h=document.createElement('h3');h.textContent=p.title;card.append(h);const a=document.createElement('a');a.href='/posts/'+encodeURIComponent(p.id);a.textContent='View';card.append(a);root.append(card)}}catch{document.querySelector('#user').textContent='User not found.'}</script></body></html>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>User · imshare</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a class="brand" href="/">imshare</a><a href="/posts/">Posts</a
+        ><a href="/users/">Users</a><a href="/tags/">Tags</a
+        ><a href="/categories/">Categories</a><a href="/search/">Search</a
+        ><a href="/account/">Account</a>
+      </nav>
+    </header>
+    <main>
+      <div id="user" class="box">Loading…</div>
+      <h2>Posts</h2>
+      <div id="posts" class="grid"></div>
+    </main>
+    <script type="module">
+      const id = location.pathname.split("/").filter(Boolean).at(-1);
+      const esc = (v) =>
+        String(v ?? "").replace(
+          /[&<>"']/g,
+          (c) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[c],
+        );
+      try {
+        const [ur, pr] = await Promise.all([
+          fetch("/v1/users/" + encodeURIComponent(id)),
+          fetch("/v1/users/" + encodeURIComponent(id) + "/posts?limit=100"),
+        ]);
+        if (!ur.ok) throw new Error();
+        const { data: u } = await ur.json();
+        const profile = document.querySelector("#user");
+        const links = (u.profileLinks || [])
+          .map(
+            (link) =>
+              '<a href="' +
+              esc(link.url) +
+              '" rel="noopener noreferrer nofollow">' +
+              esc(link.label) +
+              "</a>",
+          )
+          .join("");
+        profile.innerHTML =
+          '<div class="profile"><img class="avatar" src="' +
+          esc(u.avatarUrl) +
+          '" alt="" loading="lazy" decoding="async"><div><h1>' +
+          esc(u.name) +
+          '</h1><p class="meta">' +
+          u._count.posts +
+          " post(s) · Joined " +
+          new Date(u.createdAt).toLocaleDateString() +
+          "</p>" +
+          (u.bio ? "<p>" + esc(u.bio) + "</p>" : "") +
+          '<div class="profile-links">' +
+          (u.websiteUrl
+            ? '<a href="' +
+              esc(u.websiteUrl) +
+              '" rel="noopener noreferrer nofollow">Website</a>'
+            : "") +
+          (u.githubUrl
+            ? '<a href="' +
+              esc(u.githubUrl) +
+              '" rel="noopener noreferrer nofollow">GitHub</a>'
+            : "") +
+          links +
+          "</div></div></div>";
+        const root = document.querySelector("#posts");
+        const posts = (await pr.json()).data || [];
+        for (const p of posts) {
+          const card = document.createElement("article");
+          card.className = "card";
+          if (p.uploads?.[0]) {
+            const img = document.createElement("img");
+            img.src = p.uploads[0].url + "?width=480&format=webp";
+            img.alt = p.title;
+            img.loading = "lazy";
+            img.decoding = "async";
+            card.append(img);
+          }
+          const h = document.createElement("h3");
+          h.textContent = p.title;
+          card.append(h);
+          const a = document.createElement("a");
+          a.href = "/posts/" + encodeURIComponent(p.id);
+          a.textContent = "View";
+          card.append(a);
+          root.append(card);
+        }
+      } catch {
+        document.querySelector("#user").textContent = "User not found.";
+      }
+    </script>
+  </body>
+</html>
