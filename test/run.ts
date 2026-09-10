@@ -4,13 +4,25 @@ import path from "node:path";
 
 const root = process.cwd();
 const databasePath = path.join(root, "test.db");
+const databaseFiles = [
+  databasePath,
+  `${databasePath}-journal`,
+  `${databasePath}-wal`,
+  `${databasePath}-shm`,
+];
 
 process.env.DATABASE_URL = "file:./test.db";
 process.env.BETTER_AUTH_SECRET = "imshare-integration-test-secret";
 
-for (const file of [databasePath, `${databasePath}-journal`, `${databasePath}-wal`, `${databasePath}-shm`]) {
-  if (existsSync(file)) rmSync(file, { force: true });
+function cleanup(): void {
+  for (const file of databaseFiles) {
+    if (existsSync(file)) {
+      rmSync(file, { force: true });
+    }
+  }
 }
+
+cleanup();
 
 const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 const pnpmOptions = {
@@ -20,16 +32,20 @@ const pnpmOptions = {
   ...(process.platform === "win32" ? { shell: true } : {}),
 };
 
-execFileSync(pnpm, ["exec", "prisma", "db", "push", "--skip-generate", "--accept-data-loss"], pnpmOptions);
+try {
+  execFileSync(pnpm, ["exec", "prisma", "db", "push", "--accept-data-loss"], pnpmOptions);
 
-const result = spawnSync(process.execPath, ["--import", "tsx", "--test", "test/api.test.ts", "test/integration.test.ts"], {
-  cwd: root,
-  env: process.env,
-  stdio: "inherit",
-});
+  const result = spawnSync(
+    process.execPath,
+    ["--import", "tsx", "--test", "test/api.test.ts", "test/integration.test.ts"],
+    {
+      cwd: root,
+      env: process.env,
+      stdio: "inherit",
+    },
+  );
 
-for (const file of [databasePath, `${databasePath}-journal`, `${databasePath}-wal`, `${databasePath}-shm`]) {
-  if (existsSync(file)) rmSync(file, { force: true });
+  process.exitCode = result.status ?? 1;
+} finally {
+  cleanup();
 }
-
-process.exit(result.status ?? 1);
