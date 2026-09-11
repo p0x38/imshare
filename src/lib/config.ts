@@ -16,7 +16,7 @@ export interface ServerConfig {
     version: string;
   };
   auth: {
-    baseUrl: string;
+    baseUrl?: string;
   };
 }
 
@@ -29,6 +29,41 @@ export async function loadConfig(): Promise<ServerConfig> {
 
 export function loadConfigSync(): ServerConfig {
   return parseConfig(readFileSync(configPath, "utf8"));
+}
+
+export function resolveBaseUrl(config: ServerConfig): string {
+  const baseUrl = config.auth.baseUrl?.trim();
+
+  if (!baseUrl) {
+    const host = config.server.host.includes(":") && !config.server.host.startsWith("[")
+      ? `[${config.server.host}]`
+      : config.server.host;
+
+    return `http://${host}:${config.server.port}`;
+  }
+
+  const url = new URL(baseUrl);
+
+  if (hasExplicitPort(baseUrl)) {
+    return baseUrl.replace(/\/+$/, "");
+  }
+
+  url.port = String(config.server.port);
+  return url.toString().replace(/\/$/, "");
+}
+
+function hasExplicitPort(value: string): boolean {
+  const authority = value.match(/^[a-z][a-z\d+.-]*:\/\/([^/?#]*)/i)?.[1];
+
+  if (!authority) return false;
+
+  const host = authority.slice(authority.lastIndexOf("@") + 1);
+
+  if (host.startsWith("[")) {
+    return /^\[[^\]]+\]:\d+$/.test(host);
+  }
+
+  return /:\d+$/.test(host);
 }
 
 function parseConfig(content: string): ServerConfig {
@@ -67,8 +102,8 @@ function isServerConfig(value: unknown): value is ServerConfig {
     typeof site.name === "string" &&
     typeof site.version === "string" &&
     isObject(auth) &&
-    typeof auth.baseUrl === "string" &&
-    auth.baseUrl.length > 0
+    (auth.baseUrl === undefined ||
+      (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0))
   );
 }
 
