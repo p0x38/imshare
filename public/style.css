@@ -330,6 +330,16 @@ samp {
     margin: 4px 0;
     text-align: center;
 }
+#drop-zone {
+    border-style: dashed;
+    text-align: center;
+    cursor: pointer;
+}
+#drop-zone[data-dragging="true"] {
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
+    background: var(--notice);
+}
 .caption {
     font-size: 1.05rem;
     white-space: pre-wrap;
