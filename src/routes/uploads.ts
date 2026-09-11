@@ -4,6 +4,7 @@ import { createWriteStream } from "node:fs";
 import { mkdir, readFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
+import sharp from "sharp";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
@@ -146,6 +147,23 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             },
                         });
                 }
+                const metadata = await sharp(content, { animated: true }).metadata();
+                if (!metadata.width || !metadata.height) {
+                    await unlink(temporaryPath).catch(() => undefined);
+                    broadcastUploadStatus(user.id, {
+                        uploadId,
+                        status: "failed",
+                        error: "Unable to read image dimensions.",
+                    });
+                    return reply
+                        .code(400)
+                        .send({
+                            error: {
+                                code: "INVALID_IMAGE",
+                                message: "Unable to read image dimensions.",
+                            },
+                        });
+                }
                 const contentHash = createHash("sha256").update(content).digest("hex");
                 const existing = await prisma.upload.findFirst({
                     where: { userId: user.id, contentHash },
@@ -177,6 +195,8 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             originalName: part.filename,
                             mimeType: part.mimetype,
                             size: content.byteLength,
+                            width: metadata.width,
+                            height: metadata.height,
                             contentHash,
                             thumbhash,
                             userId: user.id,
