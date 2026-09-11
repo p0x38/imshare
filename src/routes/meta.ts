@@ -1,18 +1,18 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
-import { loadConfig } from "../lib/config.js";
+import { loadConfig, resolveBaseUrl } from "../lib/config.js";
 
 function escapeXml(value: string): string {
     return value.replace(
-        /[<>&'"]/g,
+        /[<>&'\"]/g,
         (character) =>
             ({
                 "<": "&lt;",
                 ">": "&gt;",
                 "&": "&amp;",
                 "'": "&apos;",
-                '"': "&quot;",
+                '\"': "&quot;",
             })[character] ?? character,
     );
 }
@@ -23,7 +23,7 @@ function absoluteUrl(baseUrl: string, pathname: string): string {
 
 export const metaRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
-    const baseUrl = config.auth.baseUrl.replace(/\/$/, "");
+    const baseUrl = resolveBaseUrl(config);
 
     fastify.get("/sitemap.xml", async (_request, reply) => {
         const [users, posts, tags, categories] = await Promise.all([
@@ -43,81 +43,22 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                 },
             }),
-            prisma.tag.findMany({
-                select: { slug: true, updatedAt: true },
-            }),
-            prisma.category.findMany({
-                select: { slug: true, updatedAt: true },
-            }),
+            prisma.tag.findMany({ select: { slug: true, updatedAt: true } }),
+            prisma.category.findMany({ select: { slug: true, updatedAt: true } }),
         ]);
 
-        const staticPaths = [
-            "/",
-            "/posts/",
-            "/users/",
-            "/tags/",
-            "/categories/",
-            "/search/",
-            "/about/",
-            "/faq/",
-            "/github/",
-            "/privacy/",
-            "/terms/",
+        const urls = [
+            { loc: absoluteUrl(baseUrl, "/"), lastmod: new Date() },
+            ...users.map((user) => ({ loc: absoluteUrl(baseUrl, `/users/${encodeURIComponent(user.id)}`), lastmod: user.updatedAt })),
+            ...posts.map((post) => ({ loc: absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`), lastmod: post.updatedAt })),
+            ...tags.map((tag) => ({ loc: absoluteUrl(baseUrl, `/tags/${encodeURIComponent(tag.slug)}`), lastmod: tag.updatedAt })),
+            ...categories.map((category) => ({ loc: absoluteUrl(baseUrl, `/categories/${encodeURIComponent(category.slug)}`), lastmod: category.updatedAt })),
         ];
-
-        const entries = [
-            ...staticPaths.map(
-                (pathname) => `<url><loc>${escapeXml(absoluteUrl(baseUrl, pathname))}</loc></url>`,
-            ),
-            ...users.map(
-                (user) =>
-                    `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/users/${encodeURIComponent(user.id)}`))}</loc><lastmod>${user.updatedAt.toISOString()}</lastmod></url>`,
-            ),
-            ...posts.map((post) => {
-                const images = post.uploads
-                    .map(
-                        (upload) =>
-                            `<image:image><image:loc>${escapeXml(absoluteUrl(baseUrl, `/v1/posts/image/${encodeURIComponent(upload.id)}`))}</image:loc></image:image>`,
-                    )
-                    .join("");
-
-                return `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod>${images}</url>`;
-            }),
-            ...tags.map(
-                (tag) =>
-                    `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/tags/${encodeURIComponent(tag.slug)}`))}</loc><lastmod>${tag.updatedAt.toISOString()}</lastmod></url>`,
-            ),
-            ...categories.map(
-                (category) =>
-                    `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/categories/${encodeURIComponent(category.slug)}`))}</loc><lastmod>${category.updatedAt.toISOString()}</lastmod></url>`,
-            ),
-        ];
-
-        const xml =
-            `<?xml version="1.0" encoding="UTF-8"?>\n` +
-            `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${entries.join("")}</urlset>\n`;
-
+        const body = urls
+            .map(({ loc, lastmod }) => `<url><loc>${escapeXml(loc)}</loc><lastmod>${lastmod.toISOString()}</lastmod></url>`)
+            .join("");
         return reply
             .type("application/xml; charset=utf-8")
-            .header("cache-control", "public, max-age=3600")
-            .send(xml);
-    });
-
-    fastify.get("/robots.txt", async (_request, reply) => {
-        const body = [
-            "User-agent: *",
-            "Allow: /",
-            "Disallow: /v1/",
-            "Disallow: /dashboard/",
-            "Disallow: /account/",
-            "Disallow: /admin/",
-            `Sitemap: ${absoluteUrl(baseUrl, "/sitemap.xml")}`,
-            "",
-        ].join("\n");
-
-        return reply
-            .type("text/plain; charset=utf-8")
-            .header("cache-control", "public, max-age=3600")
-            .send(body);
+            .send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${body}</urlset>`);
     });
 };
