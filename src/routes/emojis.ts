@@ -3,6 +3,7 @@ import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 
 const NAME_RE = /^[a-z0-9_+-]{1,32}$/;
+const UPLOAD_URL_RE = /^\/v1\/posts\/image\/([^/]+)$/;
 
 export const emojiRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.get("/v1/emojis", async () => ok(await prisma.emoji.findMany({ orderBy: [{ name: "asc" }] })));
@@ -14,7 +15,11 @@ export const emojiRoutes: FastifyPluginAsync = async (fastify) => {
     const name = typeof body.name === "string" ? body.name.trim().toLowerCase() : "";
     const url = typeof body.url === "string" ? body.url.trim() : "";
     if (!NAME_RE.test(name)) return reply.code(400).send({ error: { code: "INVALID_EMOJI_NAME", message: "Emoji names may contain lowercase letters, numbers, underscores, plus, and hyphens." } });
-    if (!url.startsWith("/v1/posts/image/")) return reply.code(400).send({ error: { code: "INVALID_EMOJI_URL", message: "Emoji images must use an imshare image URL." } });
+    const match = UPLOAD_URL_RE.exec(url);
+    if (!match) return reply.code(400).send({ error: { code: "INVALID_EMOJI_URL", message: "Emoji images must use an imshare image URL." } });
+    const upload = await prisma.upload.findUnique({ where: { id: decodeURIComponent(match[1]) } });
+    if (!upload) return reply.code(404).send({ error: { code: "UPLOAD_NOT_FOUND", message: "The emoji image upload was not found." } });
+    if (upload.userId !== user.id) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You can only use your own uploads for custom emojis." } });
     try {
       return reply.code(201).send(ok(await prisma.emoji.create({ data: { name, url, creatorId: user.id } })));
     } catch (error: any) {
