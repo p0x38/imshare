@@ -169,6 +169,7 @@ model Upload {
   height Int?
   contentHash String?
   thumbhash String?
+  metadataJson String?
   createdAt DateTime @default(now())
   userId String
   postId String?
