@@ -245,7 +245,7 @@ export async function buildApp() {
     await app.register(authRoutes);
     await app.register(apiRoutes);
 
-    app.get("/", async (_request, reply) => sendPage(_request, reply, "home/index.ejs"));
+    app.get("/", async (_request, reply) => sendPage(_request, reply, "index.ejs"));
     app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
     app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
