@@ -8,7 +8,7 @@ import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
 import { broadcastUploadStatus } from "../lib/realtime.js";
-import { queueThumbnailGeneration } from "../lib/thumbnails.js";
+import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 
 const IMAGE_TYPES = new Map([[".jpg", "image/jpeg"], [".jpeg", "image/jpeg"], [".png", "image/png"], [".gif", "image/gif"], [".webp", "image/webp"], [".bmp", "image/bmp"], [".avif", "image/avif"]]);
 function hasImageSignature(buffer: Buffer, extension: string): boolean { switch (extension) { case ".jpg": case ".jpeg": return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff; case ".png": return buffer.subarray(0, 8).equals(Buffer.from([0x89,0x50,0x4e,0x47,0x0d,0x0a,0x1a,0x0a])); case ".gif": return buffer.subarray(0, 6).equals(Buffer.from("GIF87a")) || buffer.subarray(0, 6).equals(Buffer.from("GIF89a")); case ".webp": return buffer.length >= 12 && buffer.subarray(0,4).toString() === "RIFF" && buffer.subarray(8,12).toString() === "WEBP"; case ".bmp": return buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d; case ".avif": return buffer.length >= 12 && buffer.subarray(4,8).toString() === "ftyp" && (buffer.subarray(8).toString().includes("avif") || buffer.subarray(8).toString().includes("avis")); default: return false; } }
@@ -30,8 +30,11 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
       const contentHash = createHash("sha256").update(content).digest("hex"); const existing = await prisma.upload.findFirst({ where: { userId: user.id, contentHash } });
       if (existing) { await unlink(temporaryPath).catch(() => undefined); uploads.push(existing); broadcastUploadStatus(user.id, { uploadId, status: "ready", progress: 100, url: uploadView(existing).url }); continue; }
       const filename = `${contentHash}${ext}`; const destination = path.join(uploadDir, filename); try { await rename(temporaryPath, destination); } catch { await unlink(temporaryPath).catch(() => undefined); }
-      try { const upload = await prisma.upload.create({ data: { id: uploadId, filename, originalName: part.filename, mimeType: part.mimetype, size: content.byteLength, contentHash, userId: user.id } }); uploads.push(upload); broadcastUploadStatus(user.id, { uploadId, status: "ready", progress: 100, url: uploadView(upload).url }); queueThumbnailGeneration(destination, cacheDir, upload.id); }
-      catch (error) { await unlink(destination).catch(() => undefined); const duplicate = await prisma.upload.findFirst({ where: { userId: user.id, contentHash } }); if (duplicate) { uploads.push(duplicate); broadcastUploadStatus(user.id, { uploadId, status: "ready", progress: 100, url: uploadView(duplicate).url }); } else { broadcastUploadStatus(user.id, { uploadId, status: "failed", error: "Upload failed." }); throw error; } }
+      try {
+        const thumbhash = await generateThumbHash(destination);
+        const upload = await prisma.upload.create({ data: { id: uploadId, filename, originalName: part.filename, mimeType: part.mimetype, size: content.byteLength, contentHash, thumbhash, userId: user.id } });
+        uploads.push(upload); broadcastUploadStatus(user.id, { uploadId, status: "ready", progress: 100, url: uploadView(upload).url }); queueThumbnailGeneration(destination, cacheDir, upload.id);
+      } catch (error) { await unlink(destination).catch(() => undefined); const duplicate = await prisma.upload.findFirst({ where: { userId: user.id, contentHash } }); if (duplicate) { uploads.push(duplicate); broadcastUploadStatus(user.id, { uploadId, status: "ready", progress: 100, url: uploadView(duplicate).url }); } else { broadcastUploadStatus(user.id, { uploadId, status: "failed", error: "Upload failed." }); throw error; } }
     } } catch (error) { request.log.error(error); return reply.code(500).send({ error: { code: "UPLOAD_FAILED", message: "Upload failed." } }); }
     if (!uploads.length) return reply.code(400).send({ error: { code: "NO_FILE", message: "An image file is required." } }); return reply.code(201).send(ok(multiple ? uploads.map(uploadView) : uploadView(uploads[0])));
   });
