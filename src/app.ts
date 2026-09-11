@@ -85,7 +85,8 @@ export async function buildApp() {
                     });
             return;
         }
-        if (request.method === "GET" && !request.url.startsWith("/v1/health") && !request.url.startsWith("/v1/ready")) {
+        const pathname = request.url.split("?", 1)[0];
+        if (request.method === "GET" && pathname.startsWith("/v1/") && !pathname.startsWith("/v1/health") && !pathname.startsWith("/v1/ready")) {
             const result = viewLimiter.consume(key);
             reply
                 .header("X-RateLimit-Limit", "75")
@@ -126,69 +127,16 @@ export async function buildApp() {
             .send(await errorPage(status, fallbackTitle, message));
 
     app.addHook("onSend", async (request, reply, payload) => {
-        reply.header("X-Content-Type-Options", "nosniff");
-        reply.header("X-Frame-Options", "SAMEORIGIN");
-        reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
-        reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
-
-        const contentType = reply.getHeader("content-type");
-        if (
-            (request.headers.accept ?? "").includes("text/html") &&
-            reply.statusCode >= 400 &&
-            typeof contentType === "string" &&
-            contentType.includes("application/json")
-        ) {
-            reply.type("text/html");
-            return errorPage(
-                reply.statusCode,
-                reply.statusCode === 404 ? "Page not found" : "Something went wrong",
-                "The requested resource could not be served as HTML.",
-            );
-        }
-        if (
-            typeof contentType !== "string" ||
-            !contentType.includes("text/html") ||
-            typeof payload !== "string"
-        )
+        if (typeof payload !== "string" || !reply.getHeader("content-type")?.toString().includes("text/html"))
             return payload;
-        const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
-        const description = `${config.site.name} — self-hosted image archive and sharing server`;
-        const origin = `${request.protocol}://${request.hostname}`;
-        const canonical = `${origin}${request.url.split("?", 1)[0]}`;
-        let metaTitle = title;
-        let metaDescription = description;
-        let metaAuthor = "";
-        let metaKeywords = "";
-        let metaImage = "";
-        let metaType = "website";
-
-        const postMatch = request.url.split("?", 1)[0]?.match(/^\/posts\/([^/]+)\/?$/);
-        if (postMatch) {
-            try {
-                const post = await prisma.post.findUnique({
-                    where: { id: decodeURIComponent(postMatch[1]!) },
-                    select: {
-                        title: true,
-                        description: true,
-                        user: { select: { name: true } },
-                        tags: { select: { tag: { select: { name: true } } } },
-                        uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
-                    },
-                });
-                if (post) {
-                    metaTitle = `${post.title} · ${config.site.name}`;
-                    metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
-                    metaAuthor = post.user.name;
-                    metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
-                    if (post.uploads[0])
-                        metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
-                    metaType = "article";
-                }
-            } catch {
-                // Keep the generic site metadata when the post cannot be loaded.
-            }
-        }
-
+        const url = new URL(request.url, `${request.protocol}://${request.headers.host ?? "localhost"}`);
+        const canonical = `${config.auth.baseUrl}${url.pathname}`;
+        const metaTitle = typeof reply.getHeader("x-page-title") === "string" ? String(reply.getHeader("x-page-title")) : config.site.name;
+        const metaDescription = config.site.description;
+        const metaType = url.pathname.startsWith("/posts/") ? "article" : "website";
+        const metaAuthor = "";
+        const metaImage = "";
+        const metaKeywords = "";
         const tags = [
             `<meta name="description" content="${escapeMeta(metaDescription)}">`,
             metaAuthor ? `<meta name="author" content="${escapeMeta(metaAuthor)}">` : "",
