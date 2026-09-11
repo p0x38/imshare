@@ -1,6 +1,6 @@
-<%- include("partials/head", { title: "Post · imshare" }) %>
+<%- include("../partials/head", { title: "Post · imshare" }) %>
 <script src="/socket.io/socket.io.js"></script>
-<%- include("partials/header") %>
+<%- include("../partials/header") %>
 <main>
     <p><a href="/posts/">&larr; Back to posts</a></p>
     <div id="content" class="box">Loading…</div>
@@ -9,7 +9,7 @@
         <div id="recommended" class="grid"></div>
     </section>
 </main>
-<%- include("partials/footer") %>
+<%- include("../partials/footer") %>
 <script type="module">
     import { api, escapeHtml, imageUrl } from "/app.js";
     import { loadEmojiCatalog, renderEmojiText } from "/emoji.js";
