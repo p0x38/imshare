@@ -122,6 +122,8 @@ model Upload {
   originalName String
   mimeType String
   size Int
+  width Int?
+  height Int?
   contentHash String?
   thumbhash String?
   createdAt DateTime @default(now())
