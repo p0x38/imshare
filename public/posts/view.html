@@ -5,7 +5,6 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Post · imshare</title>
         <link rel="stylesheet" href="/style.css" />
-        <script src="/components.js" defer></script>
         <script type="module">
             import "/mui.js";
 
@@ -27,9 +26,9 @@
                 try {
                     const response = await window.imshareUI.api(`/v1/posts/${encodeURIComponent(postId)}`);
                     const post = formatPost(response.data);
-                    window.imshareMUI.mount(root, window.React.createElement(window.imshareMUI.PostPage, { post }));
+                    window.imshareMUI.mount(root, React.createElement(window.imshareMUI.PostPage, { post }));
                 } catch (error) {
-                    window.imshareMUI.mount(root, window.React.createElement(window.imshareMUI.ErrorState, {
+                    window.imshareMUI.mount(root, React.createElement(window.imshareMUI.ErrorState, {
                         title: "Unable to load post",
                         description: error instanceof Error ? error.message : "Please try again later.",
                     }));
