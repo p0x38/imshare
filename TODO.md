@@ -10,7 +10,7 @@
 - [x] Report abuse stuff
 - [x] Recommended for you (or recommended sidebar on individual pages such as post, category, and tag page)
 - [x] Image caption stuff (under the image on post page)
-- [x] Accessibility support (in case)
+- [ ] Accessibility support (in case)
 - [x] Ability to download the image (if image creator allows)
 
 ## Profiles
@@ -23,9 +23,9 @@
 - [x] Custom avatar reference
 - [x] Profile settings UI for avatar mode and links
 - [x] Profile banner / accent color
-- [x] Updated pages
+- [ ] Updated pages
     - [x] Profile page
-        - [x] Customizable Widgets (Prebuilt / Community / Custom)
+        - [ ] Customizable Widgets (Prebuilt / Community / Custom)
             - [x] Basic information (Join date, total views, description and etc)
             - [x] Recent posts
             - [x] Popular posts
@@ -62,8 +62,9 @@
 - [x] Shared client-side API helper
 - [x] Shared components / partials
 - [x] Template engine evaluation
-- [x] Better error page system
-    - [x] Make some well-known error pages (such as 404, 500, 400, 403, 401, and 429)
+- [ ] Better error page system
+    - [x] HTML/JSON error handling
+    - [ ] Make dedicated well-known error pages (such as 404, 500, 400, 403, 401, and 429)
 - [x] Add some pages (or just add it on navigation bar)
     - [x] About (or version of the webapp)
     - [x] FAQ
@@ -73,8 +74,8 @@
     - [x] View rate limit (50 ~ 75+ per minute followed by server performance i guess)
 - [x] Infinite scroll or pagination controls
 - [x] Unification of header and footer
-- [ ] SEO / OpenGraph stuff for each pages
-- [x] Accessibility support
+- [x] SEO / OpenGraph stuff for each pages
+- [ ] Accessibility support
 
 ## Infrastructure
 
