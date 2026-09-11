@@ -7,11 +7,11 @@
     - [x] Edit a comment
     - [x] Remove a comment (commenter or original image poster himself)
     - [x] Likes
-    - [ ] Custom emoji / emoticon support
+    - [x] Custom emoji / emoticon support
 - [x] Report abuse stuff
 - [x] Recommended for you (or recommended sidebar on individual pages such as post, category, and tag page)
 - [x] Image caption stuff (under the image on post page)
-- [ ] Accessibility support (in case)
+- [x] Accessibility support (in case)
 - [x] Ability to download the image (if image creator allows)
 
 ## Profiles
@@ -46,7 +46,7 @@
 - [x] Duplicate-content deduplication at the database layer
 - [x] Responsive thumbnail variants
     - [x] "Fit" thumbnail, or just scale it to 64 ~ 128 px around for grid stuff
-    - [ ] Use thumbhash while loading if possible (https://evanw.github.io/thumbhash/)
+    - [x] Use thumbhash while loading if possible (https://evanw.github.io/thumbhash/)
 
 ## Realtime
 
@@ -63,9 +63,9 @@
 - [x] Shared client-side API helper
 - [x] Shared components / partials
 - [x] Template engine evaluation
-- [ ] Better error page system
+- [x] Better error page system
     - [x] HTML/JSON error handling
-    - [ ] Make dedicated well-known error pages (such as 404, 500, 400, 403, 401, and 429)
+    - [x] Make dedicated well-known error pages (such as 404, 500, 400, 403, 401, and 429)
 - [x] Add some pages (or just add it on navigation bar)
     - [x] About (or version of the webapp)
     - [x] FAQ
@@ -76,7 +76,7 @@
 - [x] Infinite scroll or pagination controls
 - [x] Unification of header and footer
 - [x] SEO / OpenGraph stuff for each pages
-- [ ] Accessibility support
+- [x] Accessibility support
 
 ## Infrastructure
 
