@@ -45,6 +45,7 @@ model User {
   moderationActions ModerationLog[] @relation("moderationActor")
   moderationTargets ModerationLog[] @relation("moderationTarget")
   postRevisions PostRevision[]
+  postViews PostView[]
   @@map("user")
 }
 
@@ -119,6 +120,7 @@ model Post {
   reports Report[]
   notifications Notification[]
   revisions PostRevision[]
+  views PostView[]
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@index([status, visibility, scheduledAt])
@@ -143,6 +145,18 @@ model PostRevision {
   @@index([postId, createdAt])
   @@index([createdById, createdAt])
   @@map("post_revision")
+}
+
+model PostView {
+  id String @id @default(cuid())
+  postId String
+  userId String?
+  viewedAt DateTime @default(now())
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([postId, viewedAt])
+  @@index([userId, viewedAt])
+  @@map("post_view")
 }
 
 model Upload {
