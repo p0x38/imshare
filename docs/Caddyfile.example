@@ -1,0 +1,19 @@
+# Replace example.com with the public hostname of the imshare instance.
+# Caddy handles HTTPS automatically when DNS points at this server.
+example.com {
+    encode zstd gzip
+
+    reverse_proxy 127.0.0.1:5454
+
+    header {
+        # Avoid MIME sniffing and framing surprises.
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+}
+
+# Passkeys/WebAuthn are application-layer authentication, not a Caddy
+# reverse-proxy feature. Keep the app's public origin stable and use HTTPS.
+# The browser will use https://example.com as the WebAuthn RP origin.
+# Do not proxy passkey requests to a different hostname.
