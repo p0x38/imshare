@@ -5,8 +5,8 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Notifications · imshare</title>
         <link rel="stylesheet" href="/style.css" />
+        <script src="/imshare-ui.js" defer></script>
         <script src="/socket.io/socket.io.js"></script>
-        <script type="module" src="/mui.js"></script>
     </head>
     <body>
         <header>
@@ -25,7 +25,7 @@
             <div id="notifications" class="box"></div>
         </main>
         <script type="module">
-            import { api, escapeHtml, showSnackbar } from "/app.js";
+            const { api, escapeHtml, showSnackbar } = window.imshareUI;
             const root = document.querySelector("#notifications");
             const markAll = document.querySelector("#mark-all");
             function render(items) {
