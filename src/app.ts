@@ -267,3 +267,13 @@ export async function buildApp() {
     app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
     app.get("/posts/:postId", sendReactPostPage);
     app.get("/posts/:postId/", sendReactPostPage);
+    app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
+    app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
+    app.get("/dashboard/posts/:postId/", async (request, reply) => sendPage(request, reply, "dashboard/post.ejs"));
+    app.get("/dashboard/posts/:postId/edit/", async (request, reply) => sendPage(request, reply, "dashboard/post-editor.ejs"));
+    app.get("/dashboard/tags/", async (request, reply) => sendPage(request, reply, "dashboard/tags.ejs"));
+    app.get("/dashboard/categories/", async (request, reply) => sendPage(request, reply, "dashboard/categories.ejs"));
+    app.get("/dashboard/settings/", async (request, reply) => sendPage(request, reply, "dashboard/settings.ejs"));
+
+    return app;
+}
