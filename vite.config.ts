@@ -5,6 +5,7 @@ import path from "node:path";
 export default defineConfig({
     plugins: [react()],
     publicDir: false,
+    base: "/build/",
     build: {
         outDir: path.resolve(process.cwd(), "public/build"),
         emptyOutDir: true,
