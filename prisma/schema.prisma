@@ -24,6 +24,10 @@ model User {
   showEmail Boolean @default(false)
   showPosts Boolean @default(true)
   showProfile Boolean @default(true)
+  isBanned Boolean @default(false)
+  banReason String?
+  bannedAt DateTime?
+  bannedUntil DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   sessions Session[]
@@ -38,6 +42,8 @@ model User {
   notifications Notification[] @relation("notificationRecipient")
   actedNotifications Notification[] @relation("notificationActor")
   emojis Emoji[]
+  moderationActions ModerationLog[] @relation("moderationActor")
+  moderationTargets ModerationLog[] @relation("moderationTarget")
   @@map("user")
 }
 
@@ -264,4 +270,19 @@ model Category {
   updatedAt DateTime @updatedAt
   posts Post[]
   @@map("category")
+}
+
+model ModerationLog {
+  id String @id @default(cuid())
+  action String
+  reason String?
+  createdAt DateTime @default(now())
+  expiresAt DateTime?
+  actorId String
+  targetUserId String
+  actor User @relation("moderationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetUser User @relation("moderationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  @@index([createdAt])
+  @@index([targetUserId, createdAt])
+  @@map("moderation_log")
 }
