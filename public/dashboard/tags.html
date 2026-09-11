@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Manage tags · imshare</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/imshare-ui.js" defer></script>
+</head>
+<body>
+<header><nav><a class="brand" href="/">imshare</a><a href="/dashboard/">Dashboard</a><a href="/dashboard/posts/">Posts</a><a href="/dashboard/categories/">Categories</a><a href="/account/">Account</a></nav></header>
+<main>
+    <h1>Manage tags</h1>
+    <form id="create" class="box">
+        <label for="name">Name</label>
+        <input id="name" maxlength="100" required />
+        <label for="slug">Slug</label>
+        <input id="slug" maxlength="100" required pattern="[a-z0-9-]+" />
+        <button type="submit">Create tag</button>
+    </form>
+    <p id="status">Loading…</p>
+    <div id="items" class="grid"></div>
+</main>
+<script type="module">
+const { api, escapeHtml, showSnackbar } = window.imshareUI;
+const items = document.querySelector("#items");
+async function load() {
+    const result = await api("/v1/tags?limit=100");
+    items.innerHTML = result.data.length ? result.data.map(tag => `<article class="card"><h2>${escapeHtml(tag.name)}</h2><p class="meta">${escapeHtml(tag.slug)} · ${tag._count?.posts ?? 0} post(s)</p><button type="button" data-delete="${escapeHtml(tag.id)}">Delete</button></article>`).join("") : "<p>No tags yet.</p>";
+    document.querySelector("#status").textContent = `${result.pagination.total} tag(s)`;
+}
+document.querySelector("#create").addEventListener("submit", async event => {
+    event.preventDefault();
+    try {
+        await api("/v1/tags", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: document.querySelector("#name").value, slug: document.querySelector("#slug").value }) });
+        event.target.reset();
+        await load();
+        showSnackbar("Tag created.", "success");
+    } catch (error) {
+        showSnackbar(error instanceof Error ? error.message : "Unable to create tag.", "error");
+    }
+});
+items.addEventListener("click", async event => {
+    const button = event.target.closest("[data-delete]");
+    if (!button || !confirm("Delete this tag?")) return;
+    try {
+        await api(`/v1/tags/${encodeURIComponent(button.dataset.delete)}`, { method: "DELETE" });
+        await load();
+        showSnackbar("Tag deleted.", "success");
+    } catch (error) {
+        showSnackbar(error instanceof Error ? error.message : "Unable to delete tag.", "error");
+    }
+});
+try { await load(); } catch (error) { document.querySelector("#status").textContent = error.status === 401 ? "Please sign in." : "Unable to load tags."; }
+</script>
+</body>
+</html>
