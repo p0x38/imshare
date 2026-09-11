@@ -156,10 +156,11 @@ export async function buildApp() {
             typeof payload !== "string"
         )
             return payload;
+        const pathname = request.url.split("?", 1)[0] ?? "/";
         const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
         const description = `${config.site.name} — self-hosted image archive and sharing server`;
         const origin = `${request.protocol}://${request.hostname}`;
-        const canonical = `${origin}${request.url.split("?", 1)[0]}`;
+        const canonical = `${origin}${pathname}`;
         let metaTitle = title;
         let metaDescription = description;
         let metaAuthor = "";
@@ -167,7 +168,7 @@ export async function buildApp() {
         let metaImage = "";
         let metaType = "website";
 
-        const postMatch = request.url.split("?", 1)[0]?.match(/^\/posts\/([^/]+)\/?$/);
+        const postMatch = pathname.match(/^\/posts\/([^/]+)\/?$/);
         if (postMatch) {
             try {
                 const post = await prisma.post.findUnique({
@@ -213,7 +214,8 @@ export async function buildApp() {
         let enhanced = payload.includes('property="og:title"')
             ? payload
             : payload.replace(/<\/head>/i, `${tags}</head>`);
-        if (!enhanced.includes('src="/components.js"'))
+        const isReactPostPage = /^\/posts\/[^/]+\/?$/.test(pathname);
+        if (!isReactPostPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
                 /<\/head>/i,
                 '<script src="/components.js" defer></script></head>',
