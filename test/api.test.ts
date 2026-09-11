@@ -64,15 +64,37 @@ test("parseOrder defaults to descending", () => {
     assert.equal(parseOrder("invalid"), "desc");
 });
 
-test("health and version routes are publicly available", async () => {
+test("health, readiness, and version routes are publicly available", async () => {
     const app = await buildApp();
     try {
         const health = await app.inject({ method: "GET", url: "/v1/health" });
         assert.equal(health.statusCode, 200);
         assert.deepEqual(health.json(), { status: "ok" });
+        const ready = await app.inject({ method: "GET", url: "/v1/ready" });
+        assert.equal(ready.statusCode, 200);
+        assert.deepEqual(ready.json(), { status: "ready" });
         const version = await app.inject({ method: "GET", url: "/v1/version" });
         assert.equal(version.statusCode, 200);
         assert.deepEqual(version.json(), { data: { api: "v1", version: "1.0.0" } });
+    } finally {
+        await app.close();
+    }
+});
+
+test("security headers are present on API and HTML responses", async () => {
+    const app = await buildApp();
+    try {
+        const api = await app.inject({ method: "GET", url: "/v1/health" });
+        assert.equal(api.headers["x-content-type-options"], "nosniff");
+        assert.equal(api.headers["x-frame-options"], "SAMEORIGIN");
+        assert.equal(api.headers["referrer-policy"], "strict-origin-when-cross-origin");
+        assert.equal(api.headers["permissions-policy"], "camera=(), microphone=(), geolocation=()");
+
+        const page = await app.inject({ method: "GET", url: "/", headers: { accept: "text/html" } });
+        assert.equal(page.headers["x-content-type-options"], "nosniff");
+        assert.equal(page.headers["x-frame-options"], "SAMEORIGIN");
+        assert.equal(page.headers["referrer-policy"], "strict-origin-when-cross-origin");
+        assert.equal(page.headers["permissions-policy"], "camera=(), microphone=(), geolocation=()");
     } finally {
         await app.close();
     }
