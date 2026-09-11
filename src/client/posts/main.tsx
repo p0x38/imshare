@@ -445,26 +445,31 @@ function PostPage({ post, recommendations }: { post: Post; recommendations: Reco
                 </Toolbar>
             </AppBar>
 
-            <Container maxWidth="lg" sx={{ py: { xs: 1, md: 3 }, mx: "auto" }}>
+            <Container maxWidth="xl" sx={{ py: { xs: 1, md: 3 } }}>
                 <Box
                     sx={{
+                        width: "100%",
+                        maxWidth: "1036px",
+                        mx: "auto",
                         display: { xs: "flex", md: "grid" },
                         flexDirection: "column",
-                        gridTemplateColumns: "minmax(0, 1fr) 320px",
+                        gridTemplateColumns: { md: "minmax(0, 700px) 300px" },
                         gap: 3,
                         alignItems: "start",
                     }}
                 >
                     <Stack spacing={2} sx={{ minWidth: 0, width: "100%", gridColumn: { md: "1" } }}>
                         <Card variant="outlined">
-                            {image ? (
-                                <CardMedia
-                                    component="img"
-                                    image={imageUrl(image)}
-                                    alt={post.caption || post.title || image.originalName || "Image"}
-                                    sx={{ width: "100%", maxHeight: { xs: "70vh", md: "80vh" }, objectFit: "contain" }}
-                                />
-                            ) : null}
+                            <Box sx={{ display: "flex", justifyContent: "center", width: "100%" }}>
+                                {image ? (
+                                    <CardMedia
+                                        component="img"
+                                        image={imageUrl(image)}
+                                        alt={post.caption || post.title || image.originalName || "Image"}
+                                        sx={{ width: "100%", maxWidth: 500, maxHeight: { xs: "70vh", md: "80vh" }, objectFit: "contain" }}
+                                    />
+                                ) : null}
+                            </Box>
                             {post.caption ? (
                                 <CardContent>
                                     <Typography variant="body1">{post.caption}</Typography>
