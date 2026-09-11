@@ -2,7 +2,7 @@ import Fastify, { LogController, type FastifyReply, type FastifyRequest } from "
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./lib/config.js";
 import { renderTemplate } from "./lib/template.js";
@@ -11,6 +11,8 @@ import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 
 const logger = process.stdout.isTTY ? { transport: { target: "pino-pretty", options: { colorize: true, translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l", ignore: "pid,hostname", singleLine: true } } } : true;
+
+function escapeAttribute(value: string) { return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c)); }
 
 export async function buildApp() {
   const config = await loadConfig();
@@ -23,9 +25,19 @@ export async function buildApp() {
     if (request.method === "GET" && !request.url.startsWith("/v1/health")) { const result = viewLimiter.consume(key); reply.header("X-RateLimit-Limit", "75").header("X-RateLimit-Remaining", String(result.remaining)); if (!result.allowed) return reply.code(429).header("Retry-After", String(result.retryAfter)).send({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } }); }
     viewLimiter.prune(); uploadLimiter.prune();
   });
+  app.addHook("onSend", async (request, reply, payload) => {
+    const contentType = reply.getHeader("content-type");
+    if (typeof contentType !== "string" || !contentType.includes("text/html") || typeof payload !== "string") return payload;
+    const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
+    const description = `${config.site.name} — self-hosted image archive and sharing server`;
+    const origin = `${request.protocol}://${request.hostname}`;
+    const canonical = `${origin}${request.url.split("?", 1)[0]}`;
+    const tags = `<meta name="description" content="${escapeAttribute(description)}"><meta property="og:type" content="website"><meta property="og:site_name" content="${escapeAttribute(config.site.name)}"><meta property="og:title" content="${escapeAttribute(title)}"><meta property="og:description" content="${escapeAttribute(description)}"><meta property="og:url" content="${escapeAttribute(canonical)}"><link rel="canonical" href="${escapeAttribute(canonical)}">`;
+    return payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
+  });
   await mkdir(uploadDir, { recursive: true }); await app.register(cookie); await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize, files: 20 } }); await app.register(authRoutes); await app.register(apiRoutes);
   await app.register(fastifyStatic, { root: uploadDir, prefix: "/uploads/", decorateReply: false }); await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: true });
-  const sendPage = (file: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.sendFile(file);
+  const sendPage = (file: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.type("text/html").send(await readFile(path.join(publicDir, file), "utf8"));
   app.get("/", sendPage("index.html")); app.get("/posts/", sendPage("posts/index.html")); app.get("/posts/:postId", sendPage("posts/view.html")); app.get("/users/", sendPage("users/index.html")); app.get("/users/:userId", sendPage("users/view.html")); app.get("/users/:userId/posts", sendPage("users/posts.html")); app.get("/tags/", sendPage("tags/index.html")); app.get("/tags/:tagId", sendPage("tags/view.html")); app.get("/tags/:tagId/posts", sendPage("tags/posts.html")); app.get("/categories/", sendPage("categories/index.html")); app.get("/categories/:categoryId", sendPage("categories/view.html")); app.get("/categories/:categoryId/posts", sendPage("categories/posts.html")); app.get("/search/", sendPage("search/index.html")); app.get("/account/", sendPage("account/index.html")); app.get("/account/login/", sendPage("account/login/index.html")); app.get("/account/register/", sendPage("account/register/index.html")); app.get("/notifications/", sendPage("account/notifications.html")); app.get("/account/profile/", sendPage("account/profile.html"));
   app.get("/account/logout/", async (request, reply) => { const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, { method: "POST", headers: { cookie: request.headers.cookie ?? "" } }); response.headers.forEach((value, key) => reply.header(key, value)); return reply.redirect("/"); });
   app.get("/dashboard/", sendPage("dashboard/index.html")); app.get("/dashboard/posts/", sendPage("dashboard/posts/index.html")); app.get("/dashboard/posts/new/", sendPage("posts/new/index.html")); app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.html")); app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.html")); app.get("/dashboard/tags/", sendPage("dashboard/tags.html")); app.get("/dashboard/categories/", sendPage("dashboard/categories.html")); app.get("/dashboard/settings/", sendPage("dashboard/settings.html")); app.get("/about/", sendPage("about.html")); app.get("/faq/", sendPage("faq.html")); app.get("/github/", sendPage("github.html")); app.get("/privacy/", sendPage("privacy.html")); app.get("/terms/", sendPage("terms.html"));
