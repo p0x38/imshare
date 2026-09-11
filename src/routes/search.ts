@@ -4,32 +4,67 @@ import { prisma } from "../lib/auth.js";
 import { collection, parseOrder, parsePagination } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
 
+function parseDate(value: unknown): Date | undefined {
+    if (typeof value !== "string" || !value) return undefined;
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
 export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/search", async (request) => {
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        const term = typeof q.q === "string" ? q.q : "";
+        const term = typeof q.q === "string" ? q.q.trim() : "";
         const type = typeof q.type === "string" ? q.type : "all";
         const order = parseOrder(q.order);
         const result: Record<string, unknown> = {};
         let total = 0;
 
         if (type === "posts" || type === "all") {
-            const where: Record<string, unknown> = term
-                ? { OR: [{ title: { contains: term } }, { description: { contains: term } }] }
-                : {};
-            if (typeof q.user === "string") where.userId = q.user;
-            if (typeof q.category === "string") where.categoryId = q.category;
-            if (typeof q.tag === "string") where.tags = { some: { tag: { slug: q.tag } } };
+            const conditions: Record<string, unknown>[] = [
+                {
+                    status: "published",
+                    visibility: "public",
+                    hiddenAt: null,
+                    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+                    user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+                },
+            ];
+            if (term) {
+                conditions.push({
+                    OR: [
+                        { title: { contains: term } },
+                        { description: { contains: term } },
+                        { caption: { contains: term } },
+                    ],
+                });
+            }
+            if (typeof q.user === "string" && q.user) conditions.push({ userId: q.user });
+            if (typeof q.category === "string" && q.category) conditions.push({ category: { slug: q.category } });
+            if (typeof q.tag === "string" && q.tag) conditions.push({ tags: { some: { tag: { slug: q.tag } } } });
+            if (typeof q.mime === "string" && q.mime) conditions.push({ uploads: { some: { mimeType: { contains: q.mime } } } });
+
+            const from = parseDate(q.from);
+            const to = parseDate(q.to);
+            if (from || to) {
+                conditions.push({
+                    createdAt: {
+                        ...(from ? { gte: from } : {}),
+                        ...(to ? { lte: to } : {}),
+                    },
+                });
+            }
+
+            const where = { AND: conditions };
             const [items, count] = await Promise.all([
                 prisma.post.findMany({
-                    where: where as never,
+                    where,
                     skip: p.skip,
                     take: p.limit,
                     orderBy: { createdAt: order },
                     include: postInclude,
                 }),
-                prisma.post.count({ where: where as never }),
+                prisma.post.count({ where }),
             ]);
             result.posts = items.map(postView);
             total += count;
@@ -37,7 +72,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         if (type === "users" || type === "all") {
-            const where = term ? { name: { contains: term } } : {};
+            const where = term ? { name: { contains: term }, isPublic: true, showProfile: true, isBanned: false } : { isPublic: true, showProfile: true, isBanned: false };
             const [items, count] = await Promise.all([
                 prisma.user.findMany({
                     where,
