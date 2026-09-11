@@ -43,7 +43,9 @@ export async function buildApp() {
     const origin = `${request.protocol}://${request.hostname}`;
     const canonical = `${origin}${request.url.split("?", 1)[0]}`;
     const tags = `<meta name="description" content="${escapeAttribute(description)}"><meta property="og:type" content="website"><meta property="og:site_name" content="${escapeAttribute(config.site.name)}"><meta property="og:title" content="${escapeAttribute(title)}"><meta property="og:description" content="${escapeAttribute(description)}"><meta property="og:url" content="${escapeAttribute(canonical)}"><link rel="canonical" href="${escapeAttribute(canonical)}">`;
-    return payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
+    let enhanced = payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
+    if (!enhanced.includes('src="/components.js"')) enhanced = enhanced.replace(/<\/head>/i, '<script src="/components.js" defer></script></head>');
+    return enhanced;
   });
   await mkdir(uploadDir, { recursive: true }); await app.register(cookie); await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize, files: 20 } }); await app.register(authRoutes); await app.register(apiRoutes);
   await app.register(fastifyStatic, { root: uploadDir, prefix: "/uploads/", decorateReply: false }); await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: true });
