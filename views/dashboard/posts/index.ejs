@@ -1,0 +1,7 @@
+<%- include("partials/head", { title: "My Posts · imshare" }) %>
+<%- include("partials/header") %>
+<main><h1>My Posts</h1><p><a class="button" href="/dashboard/posts/new/">New post</a></p><p id="status">Loading…</p><div id="posts" class="grid"></div></main>
+<%- include("partials/footer") %>
+<script type="module">
+const root=document.querySelector("#posts"),status=document.querySelector("#status");try{const r=await fetch("/v1/me/posts?limit=100");if(r.status===401){location.href="/account/login/";throw new Error("auth")}if(!r.ok)throw new Error();const{data}=await r.json();status.textContent=data.length+" post(s)";for(const p of data){const card=document.createElement("article");card.className="card";const img=p.uploads?.[0];if(img){const image=document.createElement("img");image.src=img.url;image.alt=p.title;card.append(image)}const h=document.createElement("h2");h.textContent=p.title;card.append(h);const a=document.createElement("a");a.href="/dashboard/posts/"+encodeURIComponent(p.id)+"/";a.textContent="Manage";card.append(a);root.append(card)}}catch(e){if(e.message!=="auth")status.textContent="Unable to load your posts."}
+</script>
