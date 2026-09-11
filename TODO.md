@@ -99,12 +99,30 @@
 - [ ] Modernize UI with Material UI
   - [x] Initial MUI integration
   - [x] React runtime/import-map setup
-  - [ ] Replace navigation/header with finalized MUI component
-  - [ ] Add MUI-based post cards
-  - [ ] Add MUI Skeleton loading states
+  - [x] Use MUI's component catalog as the UI reference
+  - [x] Replace navigation/header with finalized MUI component
+  - [x] Add MUI-based post cards
+  - [x] Add MUI Skeleton loading states
   - [ ] Add MUI form components for upload/edit pages
   - [ ] Add MUI dialogs / confirmation UI where appropriate
-  - [ ] Make MUI theme follow system dark/light preference
+  - [x] Make MUI theme follow system dark/light preference
+  - [ ] Add MUI feedback components
+      - [ ] Alert
+      - [ ] CircularProgress / LinearProgress
+      - [ ] Snackbar
+  - [ ] Add MUI navigation components where appropriate
+      - [ ] Drawer
+      - [ ] Menu
+      - [ ] Tabs
+      - [ ] Pagination
+  - [ ] Add MUI layout/data-display components where useful
+      - [ ] Container
+      - [ ] Stack
+      - [ ] Grid
+      - [ ] Paper
+      - [ ] Avatar
+      - [ ] Chip
+      - [ ] Tooltip
   - [ ] Remove remaining legacy frontend styling where replaced
   - [ ] Replace `esm.sh` runtime dependencies with a local frontend bundle
 - [ ] Improve development workflow
