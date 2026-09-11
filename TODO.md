@@ -175,14 +175,14 @@
 
 - [x] Edit post
 - [x] Delete post
-- [ ] Hide/unhide post
-- [ ] Draft posts
-- [ ] Post visibility
-    - [ ] Public
-    - [ ] Unlisted
-    - [ ] Private
-- [ ] Scheduled publishing
-- [ ] Post revision history
+- [x] Hide/unhide post
+- [x] Draft posts
+- [x] Post visibility
+    - [x] Public
+    - [x] Unlisted
+    - [x] Private
+- [x] Scheduled publishing
+- [x] Post revision history
 
 ## Discovery
 
