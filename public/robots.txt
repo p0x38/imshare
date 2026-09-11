@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /v1/
+Disallow: /dashboard/
+Disallow: /account/
+Disallow: /admin/
+Sitemap: /sitemap.xml
