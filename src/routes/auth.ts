@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { auth } from "../lib/auth.js";
+import { isValidRegistrationToken } from "../lib/registration-token.js";
 
-function toWebRequest(request: FastifyRequest): Request {
+function toWebRequest(request: FastifyRequest, body?: unknown): Request {
   const headers = new Headers();
 
   for (const [key, value] of Object.entries(request.headers)) {
@@ -17,20 +18,17 @@ function toWebRequest(request: FastifyRequest): Request {
   const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
   const url = `${protocol}://${host}${request.raw.url ?? "/"}`;
   const method = request.method.toUpperCase();
-  let body: string | undefined;
+  let requestBody: string | undefined;
 
-  if (method !== "GET" && method !== "HEAD" && request.body !== undefined) {
-    if (typeof request.body === "string") {
-      body = request.body;
-    } else {
-      body = JSON.stringify(request.body);
-      if (!headers.has("content-type")) {
-        headers.set("content-type", "application/json");
-      }
+  if (method !== "GET" && method !== "HEAD") {
+    const value = body ?? request.body;
+    if (value !== undefined) {
+      requestBody = typeof value === "string" ? value : JSON.stringify(value);
+      if (!headers.has("content-type")) headers.set("content-type", "application/json");
     }
   }
 
-  return new Request(url, { method, headers, body });
+  return new Request(url, { method, headers, body: requestBody });
 }
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
@@ -38,7 +36,30 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
     method: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     url: "/v1/auth/*",
     handler: async (request, reply) => {
-      const response = await auth.handler(toWebRequest(request));
+      const isRegistration = request.method === "POST" && request.url.split("?", 1)[0] === "/v1/auth/sign-up/email";
+      let body = request.body;
+
+      if (isRegistration) {
+        const registrationToken = typeof body === "object" && body !== null && "registrationToken" in body
+          ? (body as { registrationToken?: unknown }).registrationToken
+          : undefined;
+
+        if (!isValidRegistrationToken(registrationToken)) {
+          return reply.code(403).send({
+            error: {
+              code: "INVALID_REGISTRATION_TOKEN",
+              message: "A valid registration access token is required.",
+            },
+          });
+        }
+
+        if (typeof body === "object" && body !== null) {
+          const { registrationToken: _registrationToken, ...authBody } = body as Record<string, unknown>;
+          body = authBody;
+        }
+      }
+
+      const response = await auth.handler(toWebRequest(request, body));
       reply.code(response.status);
       response.headers.forEach((value, key) => reply.header(key, value));
       const contentType = response.headers.get("content-type");
