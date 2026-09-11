@@ -7,6 +7,7 @@
     - [x] Edit a comment
     - [x] Remove a comment (commenter or original image poster himself)
     - [x] Likes
+    - [ ] Custom emoji / emoticon support
 - [x] Report abuse stuff
 - [x] Recommended for you (or recommended sidebar on individual pages such as post, category, and tag page)
 - [x] Image caption stuff (under the image on post page)
