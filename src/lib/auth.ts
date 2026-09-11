@@ -12,6 +12,11 @@ const adapter = new PrismaBetterSqlite3({
 
 export const prisma = new PrismaClient({ adapter });
 const config = loadConfigSync();
+const baseUrl = resolveBaseUrl(config);
+const trustedOrigins = [
+    baseUrl,
+    ...(process.env.NODE_ENV === "production" ? [] : [`http://localhost:${config.server.port}`, `http://127.0.0.1:${config.server.port}`]),
+];
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -19,8 +24,9 @@ export const auth = betterAuth({
     }),
 
     secret: env.betterAuthSecret,
-    baseURL: resolveBaseUrl(config),
+    baseURL: baseUrl,
     basePath: "/v1/auth",
+    trustedOrigins,
 
     user: {
         additionalFields: {
