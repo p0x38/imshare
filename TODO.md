@@ -59,12 +59,12 @@
     - [x] File size
     - [x] MIME type
     - [ ] EXIF information
-- [ ] EXIF privacy stripping
-- [ ] Color profile handling
-- [ ] Orientation normalization
+- [x] EXIF privacy stripping
+- [x] Color profile handling
+- [x] Orientation normalization
 - [x] Blurhash/thumbhash placeholders
-- [ ] Progressive image loading
-- [ ] CDN/cache headers
+- [x] Progressive image loading
+- [x] CDN/cache headers
 - [x] Optional original-file download
 
 ## Realtime
@@ -186,7 +186,7 @@
 
 ## Discovery
 
-- [ ] Full-text search
+- [x] Full-text search
 - [x] Search filters
     - [x] User
     - [x] Tag
