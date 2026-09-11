@@ -13,12 +13,12 @@
 - [x] Image caption stuff (under the image on post page)
 - [x] Accessibility support (in case)
 - [x] Ability to download the image (if image creator allows)
-- [ ] Notifications
-    - [ ] Notification model
-    - [ ] Notification API
-    - [ ] Realtime notification delivery
-    - [ ] Notification center UI
-    - [ ] Mark as read
+- [x] Notifications
+    - [x] Notification model
+    - [x] Notification API
+    - [x] Realtime notification delivery
+    - [x] Notification center UI
+    - [x] Mark as read
     - [ ] Mark all as read
 
 ## Profiles
@@ -62,7 +62,7 @@
 - [ ] EXIF privacy stripping
 - [ ] Color profile handling
 - [ ] Orientation normalization
-- [ ] Blurhash/thumbhash placeholders
+- [x] Blurhash/thumbhash placeholders
 - [ ] Progressive image loading
 - [ ] CDN/cache headers
 - [x] Optional original-file download
@@ -104,7 +104,7 @@
   - [x] Add MUI-based post cards
   - [x] Add MUI Skeleton loading states
   - [ ] Add MUI form components for upload/edit pages
-  - [x] Add MUI dialogs / confirmation UI where appropriate
+  - [ ] Add MUI dialogs / confirmation UI where appropriate
   - [x] Make MUI theme follow system dark/light preference
   - [x] Add MUI feedback components
       - [x] Alert
@@ -143,7 +143,7 @@
     - [x] Remove queued files
 - [x] Toast / snackbar notification system
 - [ ] Optimistic reactions
-- [x] Copy image URL button
+- [ ] Copy image URL button
 - [ ] Copy Markdown/HTML embed code
 - [ ] Share button / Web Share API
 - [x] Better empty states
