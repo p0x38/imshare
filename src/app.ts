@@ -243,11 +243,20 @@ export async function buildApp() {
         }
     };
 
+    const sendReactPostPage = async (_request: FastifyRequest, reply: FastifyReply) => {
+        try {
+            const file = path.join(publicDir, "build", "post.html");
+            return reply.type("text/html; charset=utf-8").send(await readFile(file, "utf8"));
+        } catch {
+            return sendErrorPage(503, "Frontend unavailable", "The React frontend has not been built yet.", reply);
+        }
+    };
+
     await app.register(authRoutes);
     await app.register(apiRoutes);
     await app.register(pageRoutes);
 
-    app.get("/", async (_request, reply) => sendPage(_request, reply, "index.ejs"));
+    app.get("/", async (request, reply) => sendPage(request, reply, "index.ejs"));
     app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
     app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
@@ -256,15 +265,5 @@ export async function buildApp() {
     app.get("/account/profile/", async (request, reply) => sendPage(request, reply, "account/profile.ejs"));
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
     app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
-    app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
-    app.get("/posts/:postId/", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
-    app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
-    app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
-    app.get("/dashboard/posts/:postId/", async (request, reply) => sendPage(request, reply, "dashboard/post.ejs"));
-    app.get("/dashboard/posts/:postId/edit/", async (request, reply) => sendPage(request, reply, "dashboard/post-editor.ejs"));
-    app.get("/dashboard/tags/", async (request, reply) => sendPage(request, reply, "dashboard/tags.ejs"));
-    app.get("/dashboard/categories/", async (request, reply) => sendPage(request, reply, "dashboard/categories.ejs"));
-    app.get("/dashboard/settings/", async (request, reply) => sendPage(request, reply, "dashboard/settings.ejs"));
-
-    return app;
-}
+    app.get("/posts/:postId", sendReactPostPage);
+    app.get("/posts/:postId/", sendReactPostPage);
