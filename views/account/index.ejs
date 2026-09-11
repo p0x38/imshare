@@ -1,7 +1,7 @@
-<%- include("partials/head", { title: "Account · imshare" }) %>
-<%- include("partials/header") %>
+<%- include("../partials/head", { title: "Account · imshare" }) %>
+<%- include("../partials/header") %>
 <main><h1>Account</h1><div id="content" class="box">Checking session…</div></main>
-<%- include("partials/footer") %>
+<%- include("../partials/footer") %>
 <script type="module">
 const content=document.querySelector("#content");
 const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
