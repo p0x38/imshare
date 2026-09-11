@@ -5,6 +5,14 @@ import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib
 import { postInclude, postView } from "./_shared.js";
 import { categoryCreateSchema, categoryUpdateSchema } from "./schemas.js";
 
+const publicPostWhere = {
+    status: "published",
+    visibility: "public",
+    hiddenAt: null,
+    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+    user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+};
+
 export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/categories", async (request) => {
         const q = request.query as Record<string, unknown>;
@@ -104,7 +112,7 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         const { categoryId } = request.params as { categoryId: string };
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        const where = { categoryId };
+        const where = { ...publicPostWhere, categoryId };
         const [items, total] = await Promise.all([
             prisma.post.findMany({
                 where,
