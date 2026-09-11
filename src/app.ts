@@ -79,15 +79,16 @@ export async function buildApp() {
 
     const tags = [
       `<meta name="description" content="${escapeMeta(metaDescription)}">`,
-      `<meta name="author" content="${escapeMeta(metaAuthor)}">`,
+      metaAuthor ? `<meta name="author" content="${escapeMeta(metaAuthor)}">` : "",
       `<meta name="generator" content="${escapeAttribute(config.site.name)}">`,
-      `<meta name="keywords" content="${escapeMeta(metaKeywords)}">`,
+      metaKeywords ? `<meta name="keywords" content="${escapeMeta(metaKeywords)}">` : "",
       `<meta property="og:type" content="${escapeAttribute(metaType)}">`,
       `<meta property="og:site_name" content="${escapeAttribute(config.site.name)}">`,
       `<meta property="og:title" content="${escapeMeta(metaTitle)}">`,
       `<meta property="og:description" content="${escapeMeta(metaDescription)}">`,
       `<meta property="og:url" content="${escapeAttribute(canonical)}">`,
-      ...(metaImage ? [`<meta property="og:image" content="${escapeAttribute(metaImage)}">`, `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">`] : []),
+      metaImage ? `<meta property="og:image" content="${escapeAttribute(metaImage)}">` : "",
+      metaImage ? `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">` : "",
       `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
     ].join("");
     let enhanced = payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
@@ -100,7 +101,8 @@ export async function buildApp() {
   app.get("/", sendPage("index.html")); app.get("/posts/", sendPage("posts/index.html")); app.get("/posts/:postId", sendPage("posts/view.html")); app.get("/users/", sendPage("users/index.html")); app.get("/users/:userId", sendPage("users/view.html")); app.get("/users/:userId/posts", sendPage("users/posts.html")); app.get("/tags/", sendPage("tags/index.html")); app.get("/tags/:tagId", sendPage("tags/view.html")); app.get("/tags/:tagId/posts", sendPage("tags/posts.html")); app.get("/categories/", sendPage("categories/index.html")); app.get("/categories/:categoryId", sendPage("categories/view.html")); app.get("/categories/:categoryId/posts", sendPage("categories/posts.html")); app.get("/search/", sendPage("search/index.html")); app.get("/account/", sendPage("account/index.html")); app.get("/account/login/", sendPage("account/login/index.html")); app.get("/account/register/", sendPage("account/register/index.html")); app.get("/notifications/", sendPage("account/notifications.html")); app.get("/account/profile/", sendPage("account/profile.html"));
   app.get("/account/logout/", async (request, reply) => { const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, { method: "POST", headers: { cookie: request.headers.cookie ?? "" } }); response.headers.forEach((value, key) => reply.header(key, value)); return reply.redirect("/"); });
   app.get("/dashboard/", sendPage("dashboard/index.html")); app.get("/dashboard/posts/", sendPage("dashboard/posts/index.html")); app.get("/dashboard/posts/new/", sendPage("posts/new/index.html")); app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.html")); app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.html")); app.get("/dashboard/tags/", sendPage("dashboard/tags.html")); app.get("/dashboard/categories/", sendPage("dashboard/categories.html")); app.get("/dashboard/settings/", sendPage("dashboard/settings.html")); app.get("/about/", sendPage("about.html")); app.get("/faq/", sendPage("faq.html")); app.get("/github/", sendPage("github.html")); app.get("/privacy/", sendPage("privacy.html")); app.get("/terms/", sendPage("terms.html"));
-  app.setNotFoundHandler(async (request, reply) => { if ((request.headers.accept ?? "").includes("text/html")) return sendErrorPage(404, "Page not found", "The page you requested does not exist.", reply); return reply.code(404).send({ error: { code: "NOT_FOUND", message: "The requested page or resource was not found." } }); });
+  app.setNotFoundHandler(async (request, reply) => { if ((request.headers.accept ?? "").includes("text/html")) return sendErrorPage(404, "Page not found", "The page you requested does not exist.", reply); return reply.code(404).send({ error: { code: "NOT_FOUND", message: "The requested page or resource was not found." } });
+  });
   app.setErrorHandler(async (error, request, reply) => { request.log.error(error); if (reply.sent) return; const errorObject = typeof error === "object" && error !== null ? error : undefined; const statusCode = errorObject && "statusCode" in errorObject && typeof errorObject.statusCode === "number" ? errorObject.statusCode : 500; const status = statusCode >= 400 ? statusCode : 500; const message = error instanceof Error ? error.message : errorObject && "message" in errorObject && typeof errorObject.message === "string" ? errorObject.message : "Something went wrong while processing your request."; const code = errorObject && "code" in errorObject && typeof errorObject.code === "string" ? errorObject.code : "INTERNAL_ERROR"; const publicMessage = status < 500 ? message : "Something went wrong while processing your request."; if ((request.headers.accept ?? "").includes("text/html")) return sendErrorPage(status, status === 404 ? "Page not found" : "Something went wrong", publicMessage, reply); return reply.code(status).send({ error: { code, message: publicMessage } }); });
   return app;
 }
