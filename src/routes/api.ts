@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from "fastify";
-
 import { healthRoutes } from "./health.js";
 import { userRoutes } from "./users.js";
 import { postRoutes } from "./posts.js";
@@ -16,6 +15,7 @@ import { imageRoutes } from "./images.js";
 import { reportRoutes } from "./reports.js";
 import { recommendationRoutes } from "./recommendations.js";
 import { emojiRoutes } from "./emojis.js";
+import { adminRoutes } from "./admin.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(healthRoutes);
@@ -34,4 +34,5 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
   await fastify.register(reportRoutes);
   await fastify.register(recommendationRoutes);
   await fastify.register(emojiRoutes);
+  await fastify.register(adminRoutes);
 };

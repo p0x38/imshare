@@ -1,12 +1,25 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { auth } from "./auth.js";
+import { auth, prisma } from "./auth.js";
+import { hasRole, type UserRole } from "./permissions.js";
 
 export type SessionUser = typeof auth.$Infer.Session.user;
 
 export async function getSession(request: FastifyRequest) {
-  return auth.api.getSession({
+  const session = await auth.api.getSession({
     headers: request.headers as HeadersInit,
   });
+
+  if (!session) return null;
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { isBanned: true, bannedUntil: true },
+  });
+
+  if (!user) return null;
+  if (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date())) return null;
+
+  return session;
 }
 
 export async function requireUser(
@@ -26,6 +39,28 @@ export async function requireUser(
   }
 
   return session.user;
+}
+
+export async function requireRole(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  requiredRole: UserRole,
+): Promise<SessionUser | undefined> {
+  const user = await requireUser(request, reply);
+  if (!user) return undefined;
+
+  const roleRecord = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
+  if (!roleRecord || !hasRole(roleRecord.role, requiredRole)) {
+    await reply.code(403).send({
+      error: {
+        code: "FORBIDDEN",
+        message: "You do not have permission to perform this action.",
+      },
+    });
+    return undefined;
+  }
+
+  return user;
 }
 
 export function ok<T>(data: T) {
