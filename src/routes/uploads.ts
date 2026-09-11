@@ -164,7 +164,28 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             },
                         });
                 }
-                const contentHash = createHash("sha256").update(content).digest("hex");
+                const normalized = await sharp(content, { animated: true })
+                    .rotate()
+                    .toColorspace("srgb")
+                    .toBuffer();
+                const normalizedMetadata = await sharp(normalized, { animated: true }).metadata();
+                const metadataJson = JSON.stringify({
+                    format: metadata.format,
+                    width: normalizedMetadata.width,
+                    height: normalizedMetadata.height,
+                    channels: metadata.channels,
+                    depth: metadata.depth,
+                    space: metadata.space,
+                    density: metadata.density,
+                    orientation: metadata.orientation,
+                    hadExif: Boolean(metadata.exif),
+                    hadIccProfile: Boolean(metadata.icc),
+                    isProgressive: metadata.isProgressive,
+                    pages: metadata.pages,
+                    pageHeight: metadata.pageHeight,
+                    loop: metadata.loop,
+                });
+                const contentHash = createHash("sha256").update(normalized).digest("hex");
                 const existing = await prisma.upload.findFirst({
                     where: { userId: user.id, contentHash },
                 });
@@ -179,13 +200,18 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                     continue;
                 }
+                await unlink(temporaryPath).catch(() => undefined);
                 const filename = `${contentHash}${ext}`;
                 const destination = path.join(uploadDir, filename);
-                try {
-                    await rename(temporaryPath, destination);
-                } catch {
-                    await unlink(temporaryPath).catch(() => undefined);
-                }
+                await new Promise<void>(async (resolve, reject) => {
+                    try {
+                        await import("node:fs/promises").then(({ writeFile }) => writeFile(destination, normalized, { flag: "wx" }));
+                        resolve();
+                    } catch (error) {
+                        if ((error as NodeJS.ErrnoException).code === "EEXIST") resolve();
+                        else reject(error);
+                    }
+                });
                 try {
                     const thumbhash = await generateThumbHash(destination);
                     const upload = await prisma.upload.create({
@@ -194,11 +220,12 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             filename,
                             originalName: part.filename,
                             mimeType: part.mimetype,
-                            size: content.byteLength,
-                            width: metadata.width,
-                            height: metadata.height,
+                            size: normalized.byteLength,
+                            width: normalizedMetadata.width,
+                            height: normalizedMetadata.height,
                             contentHash,
                             thumbhash,
+                            metadataJson,
                             userId: user.id,
                         },
                     });
