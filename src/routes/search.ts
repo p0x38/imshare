@@ -10,6 +10,14 @@ function parseDate(value: unknown): Date | undefined {
     return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+function buildSearchQuery(term: string): string {
+    return term
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((token) => `"${token.replaceAll('"', '""')}"*`)
+        .join(" AND ");
+}
+
 export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/search", async (request) => {
         const q = request.query as Record<string, unknown>;
@@ -31,13 +39,15 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
                 },
             ];
             if (term) {
-                conditions.push({
-                    OR: [
-                        { title: { contains: term } },
-                        { description: { contains: term } },
-                        { caption: { contains: term } },
-                    ],
-                });
+                const searchQuery = buildSearchQuery(term);
+                const matches = await prisma.$queryRaw<{ postId: string }[]>`
+                    SELECT "postId"
+                    FROM "post_search"
+                    WHERE "post_search" MATCH ${searchQuery}
+                    ORDER BY bm25("post_search")
+                    LIMIT 1000
+                `;
+                conditions.push({ id: { in: matches.map((match) => match.postId) } });
             }
             if (typeof q.user === "string" && q.user) conditions.push({ userId: q.user });
             if (typeof q.category === "string" && q.category) conditions.push({ category: { slug: q.category } });
