@@ -1,1001 +1,145 @@
-# API
+# API Endpoints
+
+Current HTTP API specification for `imshare`. The API namespace is `/v1`.
+
+## Conventions
+
+Successful resources use `{ "data": ... }`; paginated collections include `pagination` with `page`, `limit`, `total`, and `totalPages`. Errors use `{ "error": { "code": "...", "message": "..." } }`.
+
+Authentication uses the Better Auth session cookie. Roles are `user < moderator < admin`.
 
 ## Authentication
 
-### `* /v1/auth/*`
-
-Better Auth endpoint namespace.
-
-Handles authentication, sessions, account creation, login, logout, and other Better Auth operations.
-
-The application should not implement password/session logic separately from Better Auth.
-
-#### `GET /v1/auth/get-session`
-
-Returns the currently authenticated session.
-
-**Authentication:** Optional
-
-**Response:**
-
-```json
-{
-  "session": {
-    "id": "...",
-    "expiresAt": "..."
-  },
-  "user": {
-    "id": "...",
-    "name": "...",
-    "email": "..."
-  }
-}
-```
-
-Returns `null`/an unauthenticated response when no valid session exists.
-
----
-
-#### `POST /v1/auth/sign-in/email`
-
-Authenticates a user using email and password.
-
-**Authentication:** Public
-
-**Request:**
-
-```json
-{
-  "email": "user@example.com",
-  "password": "..."
-}
-```
-
-Creates a Better Auth session and sets the appropriate authentication cookie.
-
----
-
-#### `POST /v1/auth/sign-up/email`
-
-Creates a new user account.
-
-**Authentication:** Public
-
-**Request:**
-
-```json
-{
-  "name": "Example User",
-  "email": "user@example.com",
-  "password": "..."
-}
-```
-
-Creates the User and associated credential Account.
-
----
-
-#### `POST /v1/auth/sign-out`
-
-Terminates the current session.
-
-**Authentication:** Required
-
-Invalidates the current Better Auth session and clears the authentication cookie.
+- `GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD /v1/auth/*` — Better Auth namespace.
+- `POST /v1/auth/sign-up/email` — email/password registration; imshare additionally requires `registrationToken` and removes it before forwarding to Better Auth.
+- `GET /v1/registration-token` — returns the current registration token and expiration; authenticated users only.
 
 ## Current User
 
-### `GET /v1/me`
-
-Returns information about the currently authenticated user.
-
-**Authentication:** Required
-
-**Response:**
-
-```json
-{
-  "data": {
-    "id": "...",
-    "name": "...",
-    "email": "...",
-    "image": "..."
-  }
-}
-```
-
----
-
-### `GET /v1/me/posts`
-
-Returns posts owned by the currently authenticated user.
-
-**Authentication:** Required
-
-**Query parameters:**
-
-* `page` — Page number
-* `limit` — Number of posts per page
-* `sort` — Sort field
-* `order` — `asc` or `desc`
-
-**Response:**
-
-```json
-{
-  "data": [],
-  "pagination": {
-    "page": 1,
-    "limit": 24,
-    "total": 0,
-    "totalPages": 0
-  }
-}
-```
-
-# Users
-
-### `GET /v1/users`
-
-Returns a paginated list of users.
-
-**Authentication:** Public
-
-**Query parameters:**
-
-* `page`
-* `limit`
-* `search`
-* `sort`
-* `order`
-
----
-
-### `POST /v1/users`
-
-Creates a user.
-
-**Authentication:** Restricted
-
-Normal account registration should use Better Auth instead.
-
-This endpoint should only exist if administrative/user-management functionality requires direct user creation.
-
----
-
-### `GET /v1/users/{userId}`
-
-Returns a public user profile.
-
-**Authentication:** Public
-
-**Path parameters:**
-
-* `userId` — User ID or supported public identifier
-
-**Response includes:**
-
-* User information
-* Public artwork/post count
-* Creation date
-* Other public profile metadata
-
-Private account information such as password credentials must never be returned.
-
----
-
-### `PATCH /v1/users/{userId}`
-
-Updates a user's profile.
-
-**Authentication:** Required
-
-The authenticated user may modify their own profile.
-
-Administrative users may modify other users if administration functionality is implemented.
-
-**Request example:**
-
-```json
-{
-  "name": "New Name",
-  "image": "/uploads/avatar.webp"
-}
-```
-
----
-
-### `DELETE /v1/users/{userId}`
-
-Deletes a user account.
-
-**Authentication:** Required
-
-Normally restricted to the account owner or administrator.
-
-Associated private data should be handled according to the application's deletion policy.
-
----
-
-### `GET /v1/users/{userId}/posts`
-
-Returns posts belonging to a specific user.
-
-**Authentication:** Public
-
-Supports pagination and sorting.
-
-# Posts
-
-## `GET /v1/posts`
-
-Returns a paginated collection of posts.
-
-**Authentication:** Public
-
-**Query parameters:**
-
-* `page`
-* `limit`
-* `user`
-* `tag`
-* `category`
-* `search`
-* `sort`
-* `order`
-
-**Example:**
-
-```text
-/v1/posts?page=1&limit=24&tag=landscape
-```
-
----
-
-## `POST /v1/posts`
-
-Creates a new post.
-
-**Authentication:** Required
-
-A post represents the logical published artwork entry.
-
-A post may reference one or more uploaded files.
-
-**Request example:**
-
-```json
-{
-  "title": "Example Artwork",
-  "description": "An example post.",
-  "sourceUrl": "https://example.com/source",
-  "tags": ["digital-art", "landscape"],
-  "categoryId": "..."
-}
-```
-
-**Response:** `201 Created`
-
-Returns the newly created post.
-
----
-
-## `GET /v1/posts/{postId}`
-
-Returns a single post.
-
-**Authentication:** Public
-
-Returns:
-
-* Post metadata
-* Author
-* Images/uploads
-* Tags
-* Category
-* Creation/update timestamps
-
----
-
-## `PATCH /v1/posts/{postId}`
-
-Updates an existing post.
-
-**Authentication:** Required
-
-The post owner or administrator may modify it.
-
----
-
-## `DELETE /v1/posts/{postId}`
-
-Deletes a post.
-
-**Authentication:** Required
-
-Deletes the post and handles its associated relationships/uploads according to the application's deletion policy.
-
-## Post Tags
-
-### `GET /v1/posts/{postId}/tags`
-
-Returns all tags assigned to a post.
-
-**Authentication:** Public
-
----
-
-### `POST /v1/posts/{postId}/tags`
-
-Adds a tag to a post.
-
-**Authentication:** Required
-
-**Request:**
-
-```json
-{
-  "tagId": "..."
-}
-```
-
-If the relationship already exists, the endpoint should return an appropriate conflict response or remain idempotent according to the API policy.
-
----
-
-### `DELETE /v1/posts/{postId}/tags/{tagId}`
-
-Removes a tag from a post.
-
-**Authentication:** Required
-
-## Post Category
-
-### `GET /v1/posts/{postId}/category`
-
-Returns the category assigned to a post.
-
-**Authentication:** Public
-
----
-
-### `PUT /v1/posts/{postId}/category`
-
-Assigns or replaces the post's category.
-
-**Authentication:** Required
-
-**Request:**
-
-```json
-{
-  "categoryId": "..."
-}
-```
-
----
-
-### `DELETE /v1/posts/{postId}/category`
-
-Removes the category from a post.
-
-**Authentication:** Required
-
-# Tags
-
-### `GET /v1/tags`
-
-Returns available tags.
-
-**Authentication:** Public
-
-**Query parameters:**
-
-* `page`
-* `limit`
-* `search`
-* `sort`
-* `order`
-
----
-
-### `POST /v1/tags`
-
-Creates a tag.
-
-**Authentication:** Required
-
-**Request:**
-
-```json
-{
-  "name": "landscape",
-  "slug": "landscape"
-}
-```
-
----
-
-### `GET /v1/tags/{tagId}`
-
-Returns information about a tag.
-
-**Authentication:** Public
-
-Includes basic metadata and post count.
-
----
-
-### `PATCH /v1/tags/{tagId}`
-
-Updates a tag.
-
-**Authentication:** Required
-
----
-
-### `DELETE /v1/tags/{tagId}`
-
-Deletes a tag.
-
-**Authentication:** Required
-
-The API must define whether deleting a tag also removes its post relationships.
-
-Recommended behavior: remove the relationships while leaving posts intact.
-
----
-
-### `GET /v1/tags/{tagId}/posts`
-
-Returns posts associated with a tag.
-
-**Authentication:** Public
-
-Supports pagination and sorting.
-
-# Categories
-
-### `GET /v1/categories`
-
-Returns all categories.
-
-**Authentication:** Public
-
----
-
-### `POST /v1/categories`
-
-Creates a category.
-
-**Authentication:** Required
-
-**Request:**
-
-```json
-{
-  "name": "Illustration",
-  "slug": "illustration",
-  "description": "Illustration artwork."
-}
-```
-
----
-
-### `GET /v1/categories/{categoryId}`
-
-Returns a category and its metadata.
-
-**Authentication:** Public
-
----
-
-### `PATCH /v1/categories/{categoryId}`
-
-Updates a category.
-
-**Authentication:** Required
-
----
-
-### `DELETE /v1/categories/{categoryId}`
-
-Deletes a category.
-
-**Authentication:** Required
-
-Recommended behavior is to remove the category from associated posts rather than deleting the posts.
-
----
-
-### `GET /v1/categories/{categoryId}/posts`
-
-Returns posts belonging to a category.
-
-**Authentication:** Public
-
-Supports pagination and sorting.
-
-# Search
-
-### `GET /v1/search`
-
-Searches across the archive.
-
-**Authentication:** Public
-
-**Query parameters:**
-
-* `q` — Search query
-* `type` — `posts`, `users`, `tags`, `categories`, or `all`
-* `user`
-* `tag`
-* `category`
-* `page`
-* `limit`
-* `sort`
-* `order`
-
-**Example:**
-
-```text
-/v1/search?q=landscape&type=posts
-```
-
-**Response:**
-
-```json
-{
-  "data": {
-    "posts": [],
-    "users": [],
-    "tags": [],
-    "categories": []
-  },
-  "pagination": {
-    "page": 1,
-    "limit": 24,
-    "total": 0,
-    "totalPages": 0
-  }
-}
-```
-
-# Uploads
-
-### `POST /v1/uploads`
-
-Uploads an image/file to the archive.
-
-**Authentication:** Required
-
-**Content-Type:**
-
-`multipart/form-data`
-
-The upload system should validate:
-
-* File type
-* File size
-* File extension
-* Actual file content
-* Filename
-* Storage path
-
-Uploads should be separate from posts so that an uploaded asset can exist before being attached to a post.
-
----
-
-### `GET /v1/uploads/{uploadId}`
-
-Returns upload metadata.
-
-**Authentication:** Required or public depending on asset visibility.
-
-Does not need to expose internal filesystem paths.
-
----
-
-### `DELETE /v1/uploads/{uploadId}`
-
-Deletes an uploaded asset.
-
-**Authentication:** Required
-
-The server should prevent deletion of assets still referenced by posts unless the operation explicitly supports cascading cleanup.
-
-# System
-
-### `GET /v1/health`
-
-Health-check endpoint.
-
-**Authentication:** Public
-
-**Response:**
-
-```json
-{
-  "status": "ok"
-}
-```
-
-Should be lightweight and suitable for monitoring/reverse-proxy health checks.
-
----
-
-### `GET /v1/version`
-
-Returns API/server version information.
-
-**Authentication:** Public
-
-**Response example:**
-
-```json
-{
-  "data": {
-    "api": "v1",
-    "version": "1.0.0"
-  }
-}
-```
-
-#=== Public ===#
-
-Public website pages.
-
-These routes return HTML rather than JSON and should use the same API internally where possible.
-
-## Home
-
-### `GET /`
-
-Main archive homepage.
-
-Should provide:
-
-* Featured/recent posts
-* Search
-* Navigation
-* Categories
-* Popular/recent tags
-* Login/account controls
-
-## Posts
-
-### `GET /posts/`
-
-Post archive/index.
-
-Supports:
-
-* Pagination
-* Search/filtering
-* Tag filtering
-* Category filtering
-* Sorting
-
----
-
-### `GET /posts/{postId}`
-
-Displays a single public post.
-
-Should show:
-
-* Artwork
-* Title
-* Description
-* Author
-* Tags
-* Category
-* Source URL
-* Creation date
-* Related posts
+- `GET /v1/me` — authenticated user's profile, email, profile links, post count, and avatar URL.
+- `GET /v1/me/posts` — authenticated user's posts. Query: `page`, `limit`, `order`.
+- `GET /v1/me/notifications` — authenticated user's notifications, newest first. Query: `page`, `limit`.
+- `GET /v1/me/notifications/unread-count` — unread count.
+- `PATCH /v1/me/notifications/{notificationId}/read` — mark one owned notification read.
+- `POST /v1/me/notifications/read-all` — mark all owned notifications read.
+- `POST /v1/me/links` — create profile link. HTTP(S) URL, label 1–100 chars, max 20 links.
+- `PATCH /v1/me/links/{linkId}` — update owned profile link.
+- `DELETE /v1/me/links/{linkId}` — delete owned profile link; `204`.
 
 ## Users
 
-### `GET /users/`
-
-User directory.
-
-Displays public users and basic profile information.
-
----
-
-### `GET /users/{userId}`
-
-Public user profile.
-
-Displays:
-
-* Profile information
-* User's posts
-* Statistics
-
----
-
-### `GET /users/{userId}/posts`
-
-Displays posts belonging to the specified user.
-
-## Tags
-
-### `GET /tags/`
-
-Tag directory.
-
-Should support searching/sorting tags.
-
----
-
-### `GET /tags/{tagId}`
-
-Displays information about a tag.
-
----
-
-### `GET /tags/{tagId}/posts`
-
-Displays all public posts associated with a tag.
-
-## Categories
-
-### `GET /categories/`
-
-Category directory.
-
----
-
-### `GET /categories/{categoryId}`
-
-Displays category information.
-
----
-
-### `GET /categories/{categoryId}/posts`
-
-Displays posts in the category.
-
-## Search
-
-### `GET /search/`
-
-Search interface.
-
-The page should provide a UI for `/v1/search` and display results across posts, users, tags, and categories.
-
-#=== Account ===#
-
-## `GET /account/`
-
-Account overview.
-
-For authenticated users, displays:
-
-* Profile information
-* Account settings
-* Dashboard link
-* Logout option
-
-Unauthenticated users should be redirected to login.
-
----
-
-## `GET /account/login/`
-
-Login page.
-
-Uses Better Auth email/password authentication through the API.
-
----
-
-## `GET /account/register/`
-
-Registration page.
-
-Creates accounts through Better Auth.
-
----
-
-## `GET /account/logout/`
-
-Logs the user out and redirects to an appropriate public page.
-
-The actual session invalidation should be performed through Better Auth rather than merely deleting frontend state.
-
-#=== Dashboard ===#
-
-Authenticated management interface.
-
-## `GET /dashboard/`
-
-Dashboard overview.
-
-Displays:
-
-* Post count
-* Upload count
-* Recent posts
-* Recent uploads
-* Tag/category information
-* Quick actions
+- `GET /v1/users` — paginated users. Query: `page`, `limit`, `search`, `order`.
+- `POST /v1/users` — create user directly; authenticated.
+- `GET /v1/users/{userId}` — public profile with profile fields, post count, links, and `avatarUrl`.
+- `PATCH /v1/users/{userId}` — update own profile only. Fields: `name`, `image`, `bio`, `websiteUrl`, `githubUrl`, `avatarMode`, `avatarValue`, `profileBannerUrl`, `accentColor`.
+- `DELETE /v1/users/{userId}` — delete own account; `204`.
+- `GET /v1/users/{userId}/posts` — user's posts. Query: `page`, `limit`, `order`.
+- `GET /v1/users/{userId}/links` — public profile links.
+- `GET /v1/users/{userId}/avatar` — generated/custom/Gravatar avatar response or redirect.
 
 ## Posts
 
-### `GET /dashboard/posts/`
+- `GET /v1/posts` — public paginated posts. Query: `page`, `limit`, `user`, `tag`, `category`, `search`, `order`. Search matches title, description, and caption.
+- `POST /v1/posts` — create post; authenticated. Fields: `title` (1–500), `description` (≤10000), `caption` (≤10000), `sourceUrl` (≤4096), `allowDownload`, `tags` (≤100), `categoryId`, `uploadIds` (≤100). Uploads must be owned and unused.
+- `GET /v1/posts/{postId}` — public post view.
+- `PATCH /v1/posts/{postId}` — update own post.
+- `DELETE /v1/posts/{postId}` — delete own post; `204`.
+- `GET /v1/posts/{postId}/tags` — public post tags.
+- `POST /v1/posts/{postId}/tags` — add tag; owner only; body `{ "tagId": "..." }`; upserted.
+- `DELETE /v1/posts/{postId}/tags/{tagId}` — remove tag; owner only; `204`.
+- `GET /v1/posts/{postId}/category` — public category or `null`.
+- `PUT /v1/posts/{postId}/category` — set category; owner only.
+- `DELETE /v1/posts/{postId}/category` — clear category; owner only; `204`.
 
-Management interface for the user's posts.
+## Reactions
 
-Provides:
+Post reaction types are `like`, `favorite`, and `save`.
 
-* Post listing
-* Search/filtering
-* Edit actions
-* Delete actions
-* Create-post action
+- `GET /v1/posts/{postId}/reactions` — counts plus current user's active state when authenticated.
+- `PUT /v1/posts/{postId}/{type}` — add reaction; authenticated.
+- `DELETE /v1/posts/{postId}/{type}` — remove reaction; authenticated.
 
----
+## Comments
 
-### `GET /dashboard/posts/new/`
+- `GET /v1/posts/{postId}/comments` — paginated public comments, oldest first. Query: `page`, `limit`.
+- `POST /v1/posts/{postId}/comments` — create comment; body `{ "body": "..." }`; 1–5000 chars.
+- `PATCH /v1/comments/{commentId}` — edit own comment.
+- `DELETE /v1/comments/{commentId}` — delete own comment or a comment on own post; `204`.
+- `PUT /v1/comments/{commentId}/like` — like comment.
+- `DELETE /v1/comments/{commentId}/like` — remove comment like.
 
-Create-post interface.
+## Reports
 
-Allows the user to:
-
-* Upload artwork
-* Enter metadata
-* Assign tags
-* Select category
-* Set source URL
-* Publish the post
-
----
-
-### `GET /dashboard/posts/{postId}/`
-
-Dashboard view of a specific post.
-
-Provides management-oriented information and actions.
-
----
-
-### `GET /dashboard/posts/{postId}/edit/`
-
-Edit interface for an existing post.
+- `POST /v1/reports` — authenticated user reports exactly one post or comment. Reasons: `spam`, `copyright`, `harassment`, `illegal`, `sexual`, `violence`, `other`. Optional `details` ≤2000 chars. Duplicate open reports return `409 REPORT_EXISTS`.
 
 ## Tags
 
-### `GET /dashboard/tags/`
-
-Tag management interface.
-
-Allows authorized users to:
-
-* Create tags
-* Rename tags
-* Change slugs
-* Delete tags
-* View usage
+- `GET /v1/tags` — paginated public tags. Query: `page`, `limit`, `search`, `order`.
+- `POST /v1/tags` — create tag; authenticated. Body requires `name` and slug matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
+- `GET /v1/tags/{tagId}` — public tag and post count.
+- `PATCH /v1/tags/{tagId}` — update tag; authenticated.
+- `DELETE /v1/tags/{tagId}` — delete tag; authenticated; `204`.
+- `GET /v1/tags/{tagId}/posts` — public posts for tag. Query: `page`, `limit`, `order`.
 
 ## Categories
 
-### `GET /dashboard/categories/`
+- `GET /v1/categories` — paginated public categories. Query: `page`, `limit`, `order`.
+- `POST /v1/categories` — create category; authenticated. Body requires `name` and `slug`; optional `description`.
+- `GET /v1/categories/{categoryId}` — public category and post count.
+- `PATCH /v1/categories/{categoryId}` — update category; authenticated.
+- `DELETE /v1/categories/{categoryId}` — delete category; authenticated; `204`.
+- `GET /v1/categories/{categoryId}/posts` — public category posts. Query: `page`, `limit`, `order`.
 
-Category management interface.
+## Search
 
-Allows authorized users to:
+`GET /v1/search` is public. Query: `q`, `type`, `user`, `tag`, `category`, `page`, `limit`, `order`. `type` is `all`, `posts`, `users`, `tags`, or `categories`. Specific types return paginated collections; `all` returns arrays for each resource type plus combined pagination metadata.
 
-* Create categories
-* Edit categories
-* Delete categories
-* View post counts
+## Uploads
 
-## Settings
+- `POST /v1/uploads` — authenticated multipart image upload. Supported types: JPG/JPEG, PNG, GIF, WebP, BMP, AVIF. Validates extension, MIME type, signature, and configured size. `?multiple=true` permits up to 20 files. Returns upload object(s) containing `/v1/posts/image/{uploadId}` URLs.
+- `GET /v1/uploads/{uploadId}` — own upload metadata; authenticated owner only.
+- `DELETE /v1/uploads/{uploadId}` — delete own unused upload; `204`. Attached uploads return `409 UPLOAD_IN_USE`.
 
-### `GET /dashboard/settings/`
+## Image Delivery
 
-Dashboard/account settings.
+- `GET /v1/posts/image/{uploadId}` — public image delivery. Query: `width`, `height` (16–4096), `fit` (`cover|contain|fill|inside|outside`), `format` (`webp|jpeg|jpg|png|avif`), `download=true`. Default fit is `inside`. Transforms are cached. Downloads respect post `allowDownload`.
+- `GET /v1/posts/image/{uploadId}/placeholder` — public ThumbHash PNG placeholder.
 
-Potential settings include:
+## Emojis
 
-* Display name
-* Avatar
-* Account preferences
-* Privacy
-* API-related settings
+- `GET /v1/emojis` — public custom emoji list.
+- `POST /v1/emojis` — authenticated custom emoji creation using an owned imshare image URL. Name: 1–32 lowercase letters/numbers/`_`/`+`/`-`.
+- `DELETE /v1/emojis/{emojiId}` — delete own emoji; `204`.
 
-#=== Other ===#
+## Recommendations
 
-## `GET /about/`
+- `GET /v1/recommendations` — public paginated recommendations. Query: `page`, `limit`. Authenticated sessions use reacted post tags/categories as preferences and exclude the user's own posts.
 
-About page describing the archive/project.
+## Moderation / Administration
 
----
+- `GET /v1/admin/overview` — moderator/admin summary counts.
+- `GET /v1/admin/registration-token` — admin-only registration token.
+- `GET /v1/admin/users` — moderator/admin user list. Query: `page`, `limit`, `search`, `role`, `banned`; limit 1–100, default 50.
+- `GET /v1/admin/reports` — moderator/admin reports. Query: `status` (`open|resolved|dismissed`, default `open`), `page`, `limit`.
+- `PATCH /v1/admin/reports/{reportId}` — change report status.
+- `POST /v1/admin/users/{userId}/kick` — revoke target sessions; moderator/admin.
+- `POST /v1/admin/users/{userId}/ban` — ban target and revoke sessions. Body: `reason` (1–500), optional `durationHours` (0–8760; 0 is indefinite).
+- `POST /v1/admin/users/{userId}/unban` — remove ban.
+- `PATCH /v1/admin/users/{userId}/role` — admin-only role change. Roles: `user|moderator|admin`; cannot self-change or demote the last admin.
+- `GET /v1/admin/logs` — moderator/admin latest 100 moderation logs.
 
-## `GET /privacy/`
+## System
 
-Privacy policy.
+- `GET /v1/health` — public lightweight health response `{ "status": "ok" }`.
+- `GET /v1/version` — public `{ "data": { "api": "v1", "version": "..." } }`.
 
----
+## Metadata / Crawlers
 
-## `GET /terms/`
+These are root-level rather than `/v1`:
 
-Terms of service.
+- `GET /sitemap.xml` — XML sitemap for static pages, public users/posts/tags/categories, with image-sitemap entries for post uploads.
+- `GET /robots.txt` — crawler directives and sitemap location.
 
-# API Conventions
+## Realtime
 
-## Response Format
-
-Successful single-resource responses should use:
-
-```json
-{
-  "data": {}
-}
-```
-
-Collection responses should use:
-
-```json
-{
-  "data": [],
-  "pagination": {
-    "page": 1,
-    "limit": 24,
-    "total": 120,
-    "totalPages": 5
-  }
-}
-```
-
-## Error Format
-
-All API errors should use a consistent structure:
-
-```json
-{
-  "error": {
-    "code": "POST_NOT_FOUND",
-    "message": "Post not found."
-  }
-}
-```
-
-## HTTP Status Codes
-
-| Status | Meaning                                  |
-| -----: | ---------------------------------------- |
-|  `200` | Successful request                       |
-|  `201` | Resource created                         |
-|  `204` | Successful request with no response body |
-|  `400` | Invalid request                          |
-|  `401` | Authentication required                  |
-|  `403` | Insufficient permissions                 |
-|  `404` | Resource not found                       |
-|  `409` | Resource conflict                        |
-|  `413` | Upload/request too large                 |
-|  `422` | Validation failed                        |
-|  `429` | Rate limit exceeded                      |
-|  `500` | Internal server error                    |
-
-# Data Model
-
-The API should treat a **Post** as the main public artwork entity.
-
-Recommended relationship:
-
-```text
-User
- └──< Post
-       ├──< Upload
-       ├──< PostTag >── Tag
-       └──── Category
-```
-
-Tags should be relational rather than stored as a comma-separated string.
-
-Users, tags, and categories should preferably have stable IDs and public slugs where human-readable URLs are desirable.
-
-Uploads should be separate from posts so that one post can contain multiple images/files and uploaded assets can be managed independently.
+Socket.IO supplements the HTTP API for transient upload-status and post-reaction updates. HTTP endpoints remain authoritative for durable state.
