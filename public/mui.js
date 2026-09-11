@@ -49,6 +49,7 @@ function Navigation() {
         ["Tags", "/tags/"],
         ["Categories", "/categories/"],
         ["Search", "/search/"],
+        ["Notifications", "/notifications/"],
         ["Account", "/account/"],
     ];
 
@@ -179,9 +180,7 @@ function PreviewCard({ title, image, href, author, stats, tags = [] }) {
     return React.createElement(
         Card,
         { variant: "outlined", sx: { height: "100%" } },
-        href
-            ? React.createElement(CardActionArea, { component: "a", href }, content)
-            : content,
+        href ? React.createElement(CardActionArea, { component: "a", href }, content) : content,
     );
 }
 
@@ -196,16 +195,8 @@ function PostGrid({ posts = [], empty = false, error = false, title = "No posts 
                 React.createElement(
                     CardContent,
                     null,
-                    React.createElement(
-                        Typography,
-                        { variant: "h5", component: "h2", gutterBottom: true },
-                        error ? "Unable to load posts" : title,
-                    ),
-                    React.createElement(
-                        Typography,
-                        { color: "text.secondary" },
-                        error ? "Please try again later." : "There are no posts matching this view yet.",
-                    ),
+                    React.createElement(Typography, { variant: "h5", component: "h2", gutterBottom: true }, error ? "Unable to load posts" : title),
+                    React.createElement(Typography, { color: "text.secondary" }, error ? "Please try again later." : "There are no posts matching this view yet."),
                 ),
             ),
         );
@@ -221,36 +212,27 @@ function PostGrid({ posts = [], empty = false, error = false, title = "No posts 
                 width: "100%",
             },
         },
-        ...posts.map((post) => {
+        ...posts.map(post => {
             const image = post.uploads?.[0];
-
             return React.createElement(PreviewCard, {
                 key: post.id,
                 title: post.title,
                 image: image ? `${image.url}?width=480&height=480&fit=cover&format=webp` : null,
                 href: `/posts/${encodeURIComponent(post.id)}`,
                 author: post.author?.name ?? "Unknown author",
-                stats: post.reactions
-                    ? `♥ ${post.reactions.like || 0} · ★ ${post.reactions.favorite || 0} · ▣ ${post.reactions.save || 0}`
-                    : null,
-                tags: post.tags?.map((item) => item.name ?? item.tag?.name).filter(Boolean) ?? [],
+                stats: post.reactions ? `♥ ${post.reactions.like || 0} · ★ ${post.reactions.favorite || 0} · ▣ ${post.reactions.save || 0}` : null,
+                tags: post.tags?.map(item => item.name ?? item.tag?.name).filter(Boolean) ?? [],
             });
         }),
     );
 }
 
 function themedComponent(component) {
-    return React.createElement(
-        ThemeProvider,
-        { theme },
-        React.createElement(CssBaseline),
-        component,
-    );
+    return React.createElement(ThemeProvider, { theme }, React.createElement(CssBaseline), component);
 }
 
 function mount(element, component) {
     if (!element) return null;
-
     const root = createRoot(element);
     mountedRoots.set(root, component);
     root.render(themedComponent(component));
@@ -259,7 +241,6 @@ function mount(element, component) {
 
 function render(root, component) {
     if (!root) return null;
-
     mountedRoots.set(root, component);
     root.render(themedComponent(component));
     return root;
@@ -267,10 +248,7 @@ function render(root, component) {
 
 function updateTheme() {
     theme = createImshareTheme();
-
-    for (const [root, component] of mountedRoots) {
-        root.render(themedComponent(component));
-    }
+    for (const [root, component] of mountedRoots) root.render(themedComponent(component));
 }
 
 systemThemeQuery.addEventListener("change", updateTheme);
