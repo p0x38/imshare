@@ -62,7 +62,7 @@ test("protected notification routes require authentication while comment listing
     }
     const comments = await app.inject({ method: "GET", url: "/v1/posts/missing/comments" });
     assert.equal(comments.statusCode, 200);
-    assert.deepEqual(comments.json(), { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
+    assert.deepEqual(comments.json(), { data: [], pagination: { page: 1, limit: 24, total: 0, totalPages: 0 } });
   } finally { await app.close(); }
 });
 
