@@ -1,3 +1,2 @@
-ALTER TABLE "user" ADD COLUMN "bio" TEXT;
-ALTER TABLE "user" ADD COLUMN "websiteUrl" TEXT;
-ALTER TABLE "user" ADD COLUMN "githubUrl" TEXT;
+-- Profile fields were already introduced by an earlier migration.
+-- Keep this migration as a no-op so the migration history remains valid.
