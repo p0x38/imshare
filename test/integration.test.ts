@@ -38,7 +38,12 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         const signup = await request({
             method: "POST",
             url: "/v1/auth/sign-up/email",
-            payload: { name: "Integration User", email, password: "integration-password-123", registrationToken },
+            payload: {
+                name: "Integration User",
+                email,
+                password: "integration-password-123",
+                registrationToken,
+            },
         });
         assert.ok([200, 201].includes(signup.statusCode), signup.body);
         cookie = extractCookie(signup);
@@ -104,12 +109,12 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         assert.equal(attachTag.statusCode, 201);
 
         const attachCategory = await request({
-            method: "POST",
-            url: `/v1/posts/${postId}/categories`,
+            method: "PUT",
+            url: `/v1/posts/${postId}/category`,
             headers: { cookie },
             payload: { categoryId },
         });
-        assert.equal(attachCategory.statusCode, 201);
+        assert.equal(attachCategory.statusCode, 200);
 
         const search = await request({ method: "GET", url: "/v1/search?q=Integration&type=all" });
         assert.equal(search.statusCode, 200);
