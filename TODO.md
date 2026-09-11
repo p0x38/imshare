@@ -54,8 +54,8 @@
 - [x] Responsive thumbnail variants
     - [x] "Fit" thumbnail, or just scale it to 64 ~ 128 px around for grid stuff
     - [x] Use thumbhash while loading if possible (https://evanw.github.io/thumbhash/)
-    - [ ] Original-image metadata
-    - [ ] Dimensions
+    - [x] Original-image metadata
+    - [x] Dimensions
     - [x] File size
     - [x] MIME type
     - [ ] EXIF information
@@ -111,18 +111,18 @@
   - [x] Watch EJS templates and TypeScript with nodemon
   - [ ] Add browser live reload / HMR
   - [ ] Add frontend build pipeline
-- [ ] Responsive/mobile layout
+- [x] Responsive/mobile layout
 - [ ] Keyboard navigation improvements
-- [ ] Image viewer / lightbox
+- [x] Image viewer / lightbox
     - [ ] Zoom
     - [ ] Pan
-    - [ ] Previous/next image
-    - [ ] Image metadata
-- [ ] Drag-and-drop upload UI
-- [ ] Upload queue UI
+    - [x] Previous/next image
+    - [x] Image metadata
+- [x] Drag-and-drop upload UI
+- [x] Upload queue UI
     - [ ] Retry failed uploads
-    - [ ] Reorder uploads
-    - [ ] Remove queued files
+    - [x] Reorder uploads
+    - [x] Remove queued files
 - [ ] Toast / snackbar notification system
 - [ ] Optimistic reactions
 - [ ] Copy image URL button
