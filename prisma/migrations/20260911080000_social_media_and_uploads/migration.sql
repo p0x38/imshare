@@ -1,19 +1,4 @@
-ALTER TABLE "user" ADD COLUMN "profileBannerUrl" TEXT;
-ALTER TABLE "user" ADD COLUMN "accentColor" TEXT;
 ALTER TABLE "upload" ADD COLUMN "contentHash" TEXT;
-
-CREATE TABLE "comment" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "body" TEXT NOT NULL,
-  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "userId" TEXT NOT NULL,
-  "postId" TEXT NOT NULL,
-  CONSTRAINT "comment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT "comment_postId_fkey" FOREIGN KEY ("postId") REFERENCES "post" ("id") ON DELETE CASCADE ON UPDATE CASCADE
-);
-CREATE INDEX "comment_postId_createdAt_idx" ON "comment"("postId", "createdAt");
-CREATE INDEX "comment_userId_createdAt_idx" ON "comment"("userId", "createdAt");
 
 CREATE TABLE "notification" (
   "id" TEXT NOT NULL PRIMARY KEY,
