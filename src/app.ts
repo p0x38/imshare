@@ -70,7 +70,7 @@ export async function buildApp() {
                     });
             return;
         }
-        if (request.method === "GET" && !request.url.startsWith("/v1/health")) {
+        if (request.method === "GET" && !request.url.startsWith("/v1/health") && !request.url.startsWith("/v1/ready")) {
             const result = viewLimiter.consume(key);
             reply
                 .header("X-RateLimit-Limit", "75")
@@ -111,6 +111,11 @@ export async function buildApp() {
             .send(await errorPage(status, fallbackTitle, message));
 
     app.addHook("onSend", async (request, reply, payload) => {
+        reply.header("X-Content-Type-Options", "nosniff");
+        reply.header("X-Frame-Options", "SAMEORIGIN");
+        reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
+        reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+
         const contentType = reply.getHeader("content-type");
         if (
             (request.headers.accept ?? "").includes("text/html") &&
