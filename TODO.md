@@ -56,8 +56,8 @@
     - [x] Use thumbhash while loading if possible (https://evanw.github.io/thumbhash/)
     - [ ] Original-image metadata
     - [ ] Dimensions
-    - [ ] File size
-    - [ ] MIME type
+    - [x] File size
+    - [x] MIME type
     - [ ] EXIF information
 - [ ] EXIF privacy stripping
 - [ ] Color profile handling
@@ -146,10 +146,10 @@
     - [ ] Local filesystem
     - [ ] S3-compatible storage
 - [ ] Automated database backups
-- [ ] Health/readiness endpoints
+- [x] Health/readiness endpoints
 - [ ] Metrics dashboard
 - [ ] Structured audit logging
-- [ ] Security headers
+- [x] Security headers
 - [ ] CSP
 - [ ] CSRF protection
 - [ ] Automated dependency updates
