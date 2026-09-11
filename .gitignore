@@ -4,3 +4,4 @@ node_modules/
 uploads/
 dist/
 **/*.db
+**/*.db.backup

@@ -12,6 +12,6 @@
     "version": "1.0.0"
   },
   "auth": {
-    "baseUrl": "http://localhost:5454"
+    "baseUrl": "https://uhm.p0x38.mydns.jp"
   }
 }
