@@ -1,12 +1,12 @@
-<%- include("partials/head", { title: "Posts · imshare" }) %>
-<%- include("partials/header") %>
+<%- include("../partials/head", { title: "Posts · imshare" }) %>
+<%- include("../partials/header") %>
 <main>
     <h1>Posts</h1>
     <form class="box" id="filters"><label for="q">Search</label><input id="q" name="q" type="search" /><button>Search</button></form>
     <p id="status">Loading…</p><section id="posts" class="grid"></section>
     <nav id="pagination" aria-label="Pagination"><button id="prev">Previous</button> <span id="page"></span> <button id="next">Next</button></nav>
 </main>
-<%- include("partials/footer") %>
+<%- include("../partials/footer") %>
 <script type="module">
 import { api } from "/app.js";
 const root=document.querySelector("#posts"),status=document.querySelector("#status"),form=document.querySelector("#filters"),prev=document.querySelector("#prev"),next=document.querySelector("#next"),page=document.querySelector("#page");
