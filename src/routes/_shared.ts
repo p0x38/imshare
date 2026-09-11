@@ -17,7 +17,7 @@ export function postView(post: any) {
     author: { ...post.user, avatarUrl: `/v1/users/${encodeURIComponent(post.user.id)}/avatar?v=${encodeURIComponent(post.user.updatedAt.toISOString())}` },
     category: post.category,
     tags: post.tags.map((x: any) => x.tag),
-    uploads: post.uploads.map((x: any) => ({ id: x.id, filename: x.filename, originalName: x.originalName, mimeType: x.mimeType, size: x.size, createdAt: x.createdAt, url: `/v1/posts/image/${encodeURIComponent(x.id)}` })),
+    uploads: post.uploads.map((x: any) => ({ id: x.id, filename: x.filename, originalName: x.originalName, mimeType: x.mimeType, size: x.size, createdAt: x.createdAt, thumbhash: x.thumbhash, url: `/v1/posts/image/${encodeURIComponent(x.id)}` })),
     reactions: reactionCounts,
   };
 }
