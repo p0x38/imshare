@@ -1,10 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
+import { hasRole, type UserRole } from "../lib/permissions.js";
 import { postUpdateSchema } from "./schemas.js";
 
 const statuses = new Set(["draft", "published"]);
 const visibilities = new Set(["public", "unlisted", "private"]);
+
+async function canModerate(userId: string): Promise<boolean> {
+    const record = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+    return Boolean(record && hasRole(record.role as UserRole, "moderator"));
+}
 
 function canView(post: { userId: string; status: string; visibility: string; scheduledAt: Date | null; hiddenAt: Date | null }, userId?: string): boolean {
     if (post.userId === userId) return true;
@@ -44,7 +50,7 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                 visibility: body.visibility ?? post.visibility,
                 scheduledAt,
                 publishedAt,
-                contentWarning: body.contentWarning,
+                contentWarning: body.contentWarning === undefined ? post.contentWarning : body.contentWarning,
                 hiddenAt: status === "published" ? null : post.hiddenAt,
             },
         });
@@ -71,7 +77,7 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
         const { postId } = request.params as { postId: string };
         const post = await prisma.post.findUnique({ where: { id: postId } });
         if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id && user.role !== "moderator" && user.role !== "admin")
+        if (post.userId !== user.id && !(await canModerate(user.id)))
             return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot hide this post." } });
         const updated = await prisma.post.update({ where: { id: postId }, data: { hiddenAt: new Date() } });
         return ok(updated);
@@ -83,7 +89,7 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
         const { postId } = request.params as { postId: string };
         const post = await prisma.post.findUnique({ where: { id: postId } });
         if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id && user.role !== "moderator" && user.role !== "admin")
+        if (post.userId !== user.id && !(await canModerate(user.id)))
             return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot unhide this post." } });
         const updated = await prisma.post.update({ where: { id: postId }, data: { hiddenAt: null } });
         return ok(updated);
@@ -95,7 +101,7 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
         const { postId } = request.params as { postId: string };
         const post = await prisma.post.findUnique({ where: { id: postId }, select: { userId: true } });
         if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id && user.role !== "moderator" && user.role !== "admin")
+        if (post.userId !== user.id && !(await canModerate(user.id)))
             return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot view these revisions." } });
         return ok(await prisma.postRevision.findMany({ where: { postId }, orderBy: { createdAt: "desc" } }));
     });
