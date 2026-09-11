@@ -6,12 +6,23 @@
   const footer = `<footer><a href="/about/">About</a> · <a href="/faq/">FAQ</a> · <a href="/github/">GitHub</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></footer>`;
 
   function mount() {
-    document.querySelectorAll("header, site-header").forEach((node) => {
-      node.outerHTML = header;
-    });
-    document.querySelectorAll("site-footer").forEach((node) => {
-      node.outerHTML = footer;
-    });
+    const existingHeaders = document.querySelectorAll("header, site-header");
+    if (existingHeaders.length > 0) {
+      existingHeaders.forEach((node) => {
+        node.outerHTML = header;
+      });
+    } else if (document.body) {
+      document.body.insertAdjacentHTML("afterbegin", header);
+    }
+
+    const existingFooters = document.querySelectorAll("footer, site-footer");
+    if (existingFooters.length > 0) {
+      existingFooters.forEach((node) => {
+        node.outerHTML = footer;
+      });
+    } else if (document.body) {
+      document.body.insertAdjacentHTML("beforeend", footer);
+    }
   }
 
   if (document.readyState === "loading") {
