@@ -4,194 +4,42 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Post · imshare</title>
-        <meta name="description" content="View an image post on imshare" />
         <link rel="stylesheet" href="/style.css" />
         <script src="/components.js" defer></script>
-        <script src="/socket.io/socket.io.js"></script>
+        <script type="module">
+            import "/mui.js";
+
+            const postId = decodeURIComponent(location.pathname.replace(/^\/posts\//, "").replace(/\/$/, ""));
+
+            function formatPost(post) {
+                const image = post.uploads?.[0];
+                return {
+                    ...post,
+                    image,
+                    imageUrl: image ? `${image.url}?width=1600&format=webp` : null,
+                    caption: post.caption || post.description || "",
+                    authorName: post.author?.name || post.author?.username || "Unknown author",
+                };
+            }
+
+            async function load() {
+                const root = document.querySelector("#post");
+                try {
+                    const response = await window.imshareUI.api(`/v1/posts/${encodeURIComponent(postId)}`);
+                    const post = formatPost(response.data);
+                    window.imshareMUI.mount(root, window.React.createElement(window.imshareMUI.PostPage, { post }));
+                } catch (error) {
+                    window.imshareMUI.mount(root, window.React.createElement(window.imshareMUI.ErrorState, {
+                        title: "Unable to load post",
+                        description: error instanceof Error ? error.message : "Please try again later.",
+                    }));
+                }
+            }
+
+            window.addEventListener("DOMContentLoaded", load, { once: true });
+        </script>
     </head>
     <body>
-        <site-header></site-header>
-        <main>
-            <p><a href="/posts/">&larr; Back to posts</a></p>
-            <div id="content" class="box">Loading…</div>
-            <section id="recommendations" hidden>
-                <h2>Recommended</h2>
-                <div id="recommended" class="grid"></div>
-            </section>
-        </main>
-        <site-footer></site-footer>
-        <script type="module">
-            import { api, escapeHtml, imageUrl } from "/app.js";
-            import { loadEmojiCatalog, renderEmojiText } from "/emoji.js";
-            const id = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
-            const root = document.querySelector("#content");
-            let reactionState = {
-                counts: { like: 0, favorite: 0, save: 0 },
-                active: { like: false, favorite: false, save: false },
-            };
-            let currentUser = null;
-            let emojis = new Map();
-            const current = async () => {
-                try {
-                    return (await api("/v1/me")).data;
-                } catch {
-                    return null;
-                }
-            };
-            function renderReactions() {
-                for (const type of ["like", "favorite", "save"]) {
-                    const b = document.querySelector(`[data-reaction="${type}"]`);
-                    if (b) {
-                        b.textContent = `${type[0].toUpperCase() + type.slice(1)} (${reactionState.counts[type] || 0})`;
-                        b.setAttribute("aria-pressed", String(Boolean(reactionState.active[type])));
-                    }
-                }
-            }
-            async function loadReactions() {
-                const r = await api(`/v1/posts/${encodeURIComponent(id)}/reactions`);
-                reactionState = r.data;
-                renderReactions();
-            }
-            async function report(target) {
-                const reason = prompt(
-                    "Report reason (spam, copyright, harassment, illegal, sexual, violence, other)",
-                    "other",
-                );
-                if (!reason) return;
-                try {
-                    await api("/v1/reports", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(
-                            target.commentId
-                                ? { commentId: target.commentId, reason }
-                                : { postId: id, reason },
-                        ),
-                    });
-                    alert("Report submitted.");
-                } catch (e) {
-                    alert(e.message);
-                }
-            }
-            async function loadComments() {
-                const r = await api(`/v1/posts/${encodeURIComponent(id)}/comments?limit=100`);
-                const box = document.querySelector("#comments");
-                box.innerHTML = r.data.length
-                    ? r.data
-                          .map(
-                              (c) =>
-                                  `<article class="card" data-comment="${escapeHtml(c.id)}"><strong>${escapeHtml(c.author.name)}</strong><p class="comment-body">${renderEmojiText(c.body, emojis)}</p><p class="meta">${new Date(c.createdAt).toLocaleString()}${c.updatedAt !== c.createdAt ? " · edited" : ""}</p><div class="comment-actions"><button data-comment-like aria-pressed="${c.liked}">Like (${c.likes})</button>${currentUser?.id === c.author.id ? "<button data-edit-comment>Edit</button>" : ""}${currentUser?.id === c.author.id || currentUser?.id === window.__postOwner ? "<button data-delete-comment>Delete</button>" : ""}<button data-report-comment>Report</button></div></article>`,
-                          )
-                          .join("")
-                    : "<p>No comments yet.</p>";
-            }
-            async function loadRecommendations() {
-                try {
-                    const r = await api("/v1/recommendations?limit=6");
-                    const box = document.querySelector("#recommended");
-                    box.innerHTML = (r.data || [])
-                        .map(
-                            (p) =>
-                                `<a class="card" href="/posts/${encodeURIComponent(p.id)}"><strong>${escapeHtml(p.title)}</strong>${p.uploads?.[0] ? `<img src="${escapeHtml(imageUrl(p.uploads[0], 320))}" alt="${escapeHtml(p.title)}" loading="lazy">` : ""}</a>`,
-                        )
-                        .join("");
-                    if (r.data?.length) document.querySelector("#recommendations").hidden = false;
-                } catch {}
-            }
-            try {
-                const [{ data: p }, me] = await Promise.all([
-                    api(`/v1/posts/${encodeURIComponent(id)}`),
-                    current(),
-                ]);
-                currentUser = me;
-                emojis = await loadEmojiCatalog();
-                window.__postOwner = p.author.id;
-                document.title = p.title + " · imshare";
-                root.innerHTML = `<h1>${escapeHtml(p.title)}</h1>${(p.uploads || []).map((u) => `<figure class="post-media"><a href="${escapeHtml(u.url)}"><img class="post-image" style="${u.thumbhash ? `background-image:url('${escapeHtml(u.url)}/placeholder');background-size:cover;background-position:center;` : ""}" src="${escapeHtml(imageUrl(u, 1600))}" srcset="${escapeHtml(imageUrl(u, 320))} 320w, ${escapeHtml(imageUrl(u, 800))} 800w, ${escapeHtml(imageUrl(u, 1600))} 1600w" sizes="(max-width: 700px) 100vw, (max-width: 1600px) 100vw, 1600px" alt="${escapeHtml(p.caption || p.title || u.originalName)}" loading="lazy" decoding="async"></a>${p.allowDownload ? `<figcaption><a href="${escapeHtml(u.url)}?download=true">Download original</a></figcaption>` : ""}</figure>`).join("")}${p.caption ? `<p class="caption">${escapeHtml(p.caption)}</p>` : ""}<div id="reactions" class="reactions" aria-label="Post reactions"><button data-reaction="like"></button><button data-reaction="favorite"></button><button data-reaction="save"></button></div>${p.description ? `<p>${escapeHtml(p.description)}</p>` : ""}<p class="meta">by <a href="/users/${encodeURIComponent(p.author.id)}">${escapeHtml(p.author.name)}</a><br>Created: ${new Date(p.createdAt).toLocaleString()}</p>${p.category ? `<p>Category: <a href="/categories/${encodeURIComponent(p.category.id)}">${escapeHtml(p.category.name)}</a></p>` : ""}<p class="tags">Tags: ${(p.tags || []).map((t) => `<a href="/tags/${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`).join(" ")}</p>${p.sourceUrl ? `<p>Source: <a href="${escapeHtml(p.sourceUrl)}" rel="noopener noreferrer">${escapeHtml(p.sourceUrl)}</a></p>` : ""}<p><button id="report-post">Report</button></p><section><h2>Comments</h2><div id="comments" class="grid">Loading…</div><form id="comment-form" class="box"><label for="comment-body">Add a comment</label><textarea id="comment-body" maxlength="5000" required></textarea><p class="meta">Custom emoji: type a shortcode such as <code>:name:</code></p><button>Post comment</button><p id="comment-status" class="meta"></p></form></section>`;
-                document.querySelector("#reactions").addEventListener("click", async (e) => {
-                    const b = e.target.closest("[data-reaction]");
-                    if (!b) return;
-                    try {
-                        const active = reactionState.active[b.dataset.reaction];
-                        reactionState = (
-                            await api(`/v1/posts/${encodeURIComponent(id)}/${b.dataset.reaction}`, {
-                                method: active ? "DELETE" : "PUT",
-                            })
-                        ).data;
-                        renderReactions();
-                    } catch (e) {
-                        if (e.status === 401) alert("Please sign in to react to posts.");
-                    }
-                });
-                document.querySelector("#report-post").onclick = () => report({ postId: id });
-                document.querySelector("#comments").addEventListener("click", async (e) => {
-                    const card = e.target.closest("[data-comment]");
-                    if (!card) return;
-                    const cid = card.dataset.comment;
-                    try {
-                        if (e.target.matches("[data-comment-like]")) {
-                            const liked = e.target.getAttribute("aria-pressed") === "true";
-                            await api(`/v1/comments/${encodeURIComponent(cid)}/like`, {
-                                method: liked ? "DELETE" : "PUT",
-                            });
-                            await loadComments();
-                        } else if (e.target.matches("[data-edit-comment]")) {
-                            const body = prompt(
-                                "Edit comment",
-                                card.querySelector(".comment-body").textContent,
-                            );
-                            if (body !== null)
-                                await api(`/v1/comments/${encodeURIComponent(cid)}`, {
-                                    method: "PATCH",
-                                    headers: { "Content-Type": "application/json" },
-                                    body: JSON.stringify({ body }),
-                                });
-                            await loadComments();
-                        } else if (e.target.matches("[data-delete-comment]")) {
-                            if (confirm("Delete this comment?"))
-                                await api(`/v1/comments/${encodeURIComponent(cid)}`, {
-                                    method: "DELETE",
-                                });
-                            await loadComments();
-                        } else if (e.target.matches("[data-report-comment]"))
-                            await report({ commentId: cid });
-                    } catch (err) {
-                        alert(err.message);
-                    }
-                });
-                document.querySelector("#comment-form").addEventListener("submit", async (e) => {
-                    e.preventDefault();
-                    const s = document.querySelector("#comment-status");
-                    try {
-                        await api(`/v1/posts/${encodeURIComponent(id)}/comments`, {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                body: document.querySelector("#comment-body").value,
-                            }),
-                        });
-                        document.querySelector("#comment-body").value = "";
-                        s.textContent = "Comment posted.";
-                        await loadComments();
-                    } catch (e) {
-                        s.textContent = e.status === 401 ? "Please sign in to comment." : e.message;
-                    }
-                });
-                await Promise.all([loadReactions(), loadComments(), loadRecommendations()]);
-                const socket = window.io?.();
-                if (socket) {
-                    socket.emit("post:subscribe", id);
-                    socket.on("post:reaction", (e) => {
-                        if (e.postId === id) {
-                            reactionState.counts = e.counts;
-                            renderReactions();
-                        }
-                    });
-                }
-            } catch (e) {
-                root.innerHTML =
-                    "<h1>Post not found</h1><p>That post does not exist or could not be loaded.</p>";
-            }
-        </script>
+        <main id="post"></main>
     </body>
 </html>
