@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
-import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
+import { collection, getSession, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
 import { findTags, postInclude, postView } from "./_shared.js";
 import {
     postCategorySchema,
@@ -10,11 +10,40 @@ import {
     postUpdateSchema,
 } from "./schemas.js";
 
+function publicPostWhere() {
+    return {
+        status: "published",
+        visibility: "public",
+        hiddenAt: null,
+        OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+        user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+    } as const;
+}
+
+function lifecycleData(body: {
+    status?: string;
+    visibility?: string;
+    scheduledAt?: string | null;
+    contentWarning?: string | null;
+}) {
+    const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
+    const status = scheduledAt && scheduledAt.getTime() > Date.now() ? "draft" : body.status ?? "published";
+    return {
+        status,
+        visibility: body.visibility ?? "public",
+        scheduledAt,
+        publishedAt: status === "published" && !scheduledAt ? new Date() : null,
+        contentWarning: body.contentWarning ?? null,
+    };
+}
+
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/posts", async (request) => {
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        const where: Record<string, unknown> = {};
+        const session = await getSession(request);
+        const isOwnListing = typeof q.user === "string" && q.user === session?.user.id;
+        const where: Record<string, unknown> = isOwnListing ? {} : publicPostWhere();
         if (typeof q.user === "string") where.userId = q.user;
         if (typeof q.category === "string") where.categoryId = q.category;
         if (typeof q.tag === "string") where.tags = { some: { tag: { slug: q.tag } } };
@@ -46,6 +75,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             caption?: string;
             sourceUrl?: string;
             allowDownload?: boolean;
+            status?: string;
+            visibility?: string;
+            scheduledAt?: string | null;
+            contentWarning?: string | null;
             tags?: string[];
             categoryId?: string | null;
             uploadIds?: string[];
@@ -70,6 +103,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     });
         }
         const tags = await findTags(body.tags ?? []);
+        const lifecycle = lifecycleData(body);
         const post = await prisma.post.create({
             data: {
                 title: body.title.trim(),
@@ -77,6 +111,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 caption: body.caption,
                 sourceUrl: body.sourceUrl,
                 allowDownload: body.allowDownload ?? true,
+                ...lifecycle,
                 categoryId: body.categoryId,
                 userId: user.id,
                 tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
@@ -91,8 +126,16 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.get("/v1/posts/:postId", async (request, reply) => {
         const { postId } = request.params as { postId: string };
+        const session = await getSession(request);
         const post = await prisma.post.findUnique({ where: { id: postId }, include: postInclude });
         if (!post)
+            return reply
+                .code(404)
+                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+        const owner = post.userId === session?.user.id;
+        const publicVisible = post.status === "published" && post.visibility === "public" && !post.hiddenAt && (!post.scheduledAt || post.scheduledAt <= new Date());
+        const unlistedVisible = post.status === "published" && post.visibility === "unlisted" && !post.hiddenAt && (!post.scheduledAt || post.scheduledAt <= new Date());
+        if (!owner && !publicVisible && !unlistedVisible)
             return reply
                 .code(404)
                 .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
@@ -103,7 +146,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const { postId } = request.params as { postId: string };
-        const existing = await prisma.post.findUnique({ where: { id: postId } });
+        const existing = await prisma.post.findUnique({
+            where: { id: postId },
+            include: { tags: { select: { tagId: true } } },
+        });
         if (!existing)
             return reply
                 .code(404)
@@ -118,6 +164,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             caption?: string | null;
             sourceUrl?: string | null;
             allowDownload?: boolean;
+            status?: string;
+            visibility?: string;
+            scheduledAt?: string | null;
+            contentWarning?: string | null;
             categoryId?: string | null;
             tags?: string[];
         };
@@ -125,20 +175,46 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             return reply
                 .code(400)
                 .send({ error: { code: "INVALID_POST", message: "title cannot be empty." } });
-        if (body.tags) await prisma.postTag.deleteMany({ where: { postId } });
         const tags = body.tags ? await findTags(body.tags) : [];
-        const post = await prisma.post.update({
-            where: { id: postId },
-            data: {
-                title: body.title?.trim(),
-                description: body.description,
-                caption: body.caption,
-                sourceUrl: body.sourceUrl,
-                allowDownload: body.allowDownload,
-                categoryId: body.categoryId,
-                ...(body.tags ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } } : {}),
-            },
-            include: postInclude,
+        const lifecycle =
+            body.status !== undefined || body.visibility !== undefined || body.scheduledAt !== undefined || body.contentWarning !== undefined
+                ? lifecycleData({
+                      status: body.status ?? existing.status,
+                      visibility: body.visibility ?? existing.visibility,
+                      scheduledAt: body.scheduledAt !== undefined ? body.scheduledAt : existing.scheduledAt?.toISOString() ?? null,
+                      contentWarning: body.contentWarning !== undefined ? body.contentWarning : existing.contentWarning,
+                  })
+                : {};
+        const post = await prisma.$transaction(async (tx) => {
+            await tx.postRevision.create({
+                data: {
+                    postId,
+                    title: existing.title,
+                    description: existing.description,
+                    caption: existing.caption,
+                    sourceUrl: existing.sourceUrl,
+                    allowDownload: existing.allowDownload,
+                    categoryId: existing.categoryId,
+                    tagsJson: JSON.stringify(existing.tags.map((tag) => tag.tagId)),
+                    contentWarning: existing.contentWarning,
+                    createdById: user.id,
+                },
+            });
+            if (body.tags) await tx.postTag.deleteMany({ where: { postId } });
+            return tx.post.update({
+                where: { id: postId },
+                data: {
+                    title: body.title?.trim(),
+                    description: body.description,
+                    caption: body.caption,
+                    sourceUrl: body.sourceUrl,
+                    allowDownload: body.allowDownload,
+                    categoryId: body.categoryId,
+                    ...lifecycle,
+                    ...(body.tags ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } } : {}),
+                },
+                include: postInclude,
+            });
         });
         return ok(postView(post));
     });
