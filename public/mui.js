@@ -9,6 +9,7 @@ import {
     CardContent,
     CardMedia,
     Chip,
+    Container,
     CssBaseline,
     Skeleton,
     Stack,
@@ -184,7 +185,32 @@ function PreviewCard({ title, image, href, author, stats, tags = [] }) {
     );
 }
 
-function PostGrid({ posts = [] }) {
+function PostGrid({ posts = [], empty = false, error = false, title = "No posts yet" }) {
+    if (error || empty) {
+        return React.createElement(
+            Container,
+            { maxWidth: "sm", sx: { py: 6 } },
+            React.createElement(
+                Card,
+                { variant: "outlined" },
+                React.createElement(
+                    CardContent,
+                    null,
+                    React.createElement(
+                        Typography,
+                        { variant: "h5", component: "h2", gutterBottom: true },
+                        error ? "Unable to load posts" : title,
+                    ),
+                    React.createElement(
+                        Typography,
+                        { color: "text.secondary" },
+                        error ? "Please try again later." : "There are no posts matching this view yet.",
+                    ),
+                ),
+            ),
+        );
+    }
+
     return React.createElement(
         Box,
         {
@@ -207,6 +233,7 @@ function PostGrid({ posts = [] }) {
                 stats: post.reactions
                     ? `♥ ${post.reactions.like || 0} · ★ ${post.reactions.favorite || 0} · ▣ ${post.reactions.save || 0}`
                     : null,
+                tags: post.tags?.map((item) => item.name ?? item.tag?.name).filter(Boolean) ?? [],
             });
         }),
     );
