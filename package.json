@@ -12,7 +12,7 @@
         "db:validate": "pnpm prisma validate",
         "typecheck": "pnpm prisma generate && tsc --noEmit",
         "lint": "eslint .",
-        "test": "node --import tsx --test test/api.test.ts test/rate-limit.test.ts test/security.test.ts",
+        "test": "node --import tsx --test test/api.test.ts test/rate-limit.test.ts test/security.test.ts test/reactions.test.ts",
         "test:integration": "tsx test/run.ts",
         "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration && pnpm build",
         "format": "prettier --write .",
