@@ -9,6 +9,7 @@ import path from "node:path";
 import { loadConfig } from "./lib/config.js";
 import { renderTemplate } from "./lib/template.js";
 import { RateLimiter } from "./lib/rate-limit.js";
+import { isSameOriginRequest } from "./lib/csrf.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 import { prisma } from "./lib/auth.js";
@@ -53,6 +54,20 @@ export async function buildApp() {
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
+        if (
+            !isSameOriginRequest(
+                request.method,
+                `${request.protocol}://${request.hostname}${request.headers.host?.includes(":") ? `:${new URL(request.url, `${request.protocol}://${request.headers.host}`).port}` : ""}`,
+                request.headers.origin,
+                request.headers.referer,
+            )
+        )
+            return reply.code(403).send({
+                error: {
+                    code: "CSRF_ORIGIN_REJECTED",
+                    message: "The request origin is not allowed.",
+                },
+            });
         if (request.method === "POST" && request.url.split("?", 1)[0] === "/v1/uploads") {
             const result = uploadLimiter.consume(key);
             reply
