@@ -25,8 +25,16 @@ export async function buildApp() {
     if (request.method === "GET" && !request.url.startsWith("/v1/health")) { const result = viewLimiter.consume(key); reply.header("X-RateLimit-Limit", "75").header("X-RateLimit-Remaining", String(result.remaining)); if (!result.allowed) return reply.code(429).header("Retry-After", String(result.retryAfter)).send({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } }); }
     viewLimiter.prune(); uploadLimiter.prune();
   });
+  const sendErrorPage = async (status: number, fallbackTitle: string, message: string, reply: FastifyReply) => {
+    const file = path.join(publicDir, "errors", `${status}.html`);
+    try { return reply.code(status).type("text/html").send(await readFile(file, "utf8")); }
+    catch { return reply.code(status).type("text/html").send(await renderTemplate("error.html", { status, title: fallbackTitle, message })); }
+  };
   app.addHook("onSend", async (request, reply, payload) => {
     const contentType = reply.getHeader("content-type");
+    if ((request.headers.accept ?? "").includes("text/html") && reply.statusCode >= 400 && typeof contentType === "string" && contentType.includes("application/json")) {
+      return sendErrorPage(reply.statusCode, reply.statusCode === 404 ? "Page not found" : "Something went wrong", "The requested resource could not be served as HTML.", reply);
+    }
     if (typeof contentType !== "string" || !contentType.includes("text/html") || typeof payload !== "string") return payload;
     const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
     const description = `${config.site.name} — self-hosted image archive and sharing server`;
@@ -38,11 +46,6 @@ export async function buildApp() {
   await mkdir(uploadDir, { recursive: true }); await app.register(cookie); await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize, files: 20 } }); await app.register(authRoutes); await app.register(apiRoutes);
   await app.register(fastifyStatic, { root: uploadDir, prefix: "/uploads/", decorateReply: false }); await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: true });
   const sendPage = (file: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.type("text/html").send(await readFile(path.join(publicDir, file), "utf8"));
-  const sendErrorPage = async (status: number, fallbackTitle: string, message: string, reply: FastifyReply) => {
-    const file = path.join(publicDir, "errors", `${status}.html`);
-    try { return reply.code(status).type("text/html").send(await readFile(file, "utf8")); }
-    catch { return reply.code(status).type("text/html").send(await renderTemplate("error.html", { status, title: fallbackTitle, message })); }
-  };
   app.get("/", sendPage("index.html")); app.get("/posts/", sendPage("posts/index.html")); app.get("/posts/:postId", sendPage("posts/view.html")); app.get("/users/", sendPage("users/index.html")); app.get("/users/:userId", sendPage("users/view.html")); app.get("/users/:userId/posts", sendPage("users/posts.html")); app.get("/tags/", sendPage("tags/index.html")); app.get("/tags/:tagId", sendPage("tags/view.html")); app.get("/tags/:tagId/posts", sendPage("tags/posts.html")); app.get("/categories/", sendPage("categories/index.html")); app.get("/categories/:categoryId", sendPage("categories/view.html")); app.get("/categories/:categoryId/posts", sendPage("categories/posts.html")); app.get("/search/", sendPage("search/index.html")); app.get("/account/", sendPage("account/index.html")); app.get("/account/login/", sendPage("account/login/index.html")); app.get("/account/register/", sendPage("account/register/index.html")); app.get("/notifications/", sendPage("account/notifications.html")); app.get("/account/profile/", sendPage("account/profile.html"));
   app.get("/account/logout/", async (request, reply) => { const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, { method: "POST", headers: { cookie: request.headers.cookie ?? "" } }); response.headers.forEach((value, key) => reply.header(key, value)); return reply.redirect("/"); });
   app.get("/dashboard/", sendPage("dashboard/index.html")); app.get("/dashboard/posts/", sendPage("dashboard/posts/index.html")); app.get("/dashboard/posts/new/", sendPage("posts/new/index.html")); app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.html")); app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.html")); app.get("/dashboard/tags/", sendPage("dashboard/tags.html")); app.get("/dashboard/categories/", sendPage("dashboard/categories.html")); app.get("/dashboard/settings/", sendPage("dashboard/settings.html")); app.get("/about/", sendPage("about.html")); app.get("/faq/", sendPage("faq.html")); app.get("/github/", sendPage("github.html")); app.get("/privacy/", sendPage("privacy.html")); app.get("/terms/", sendPage("terms.html"));
