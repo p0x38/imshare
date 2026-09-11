@@ -5,37 +5,24 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Post · imshare</title>
         <link rel="stylesheet" href="/style.css" />
+        <script src="/imshare-ui.js"></script>
         <script type="module">
-            import "/mui.js";
+            import { mountPostPage } from "/posts/post-page.js";
 
             const postId = decodeURIComponent(location.pathname.replace(/^\/posts\//, "").replace(/\/$/, ""));
 
-            function formatPost(post) {
-                const image = post.uploads?.[0];
-                return {
-                    ...post,
-                    image,
-                    imageUrl: image ? `${image.url}?width=1600&format=webp` : null,
-                    caption: post.caption || post.description || "",
-                    authorName: post.author?.name || post.author?.username || "Unknown author",
-                };
-            }
-
             async function load() {
                 const root = document.querySelector("#post");
+
                 try {
                     const response = await window.imshareUI.api(`/v1/posts/${encodeURIComponent(postId)}`);
-                    const post = formatPost(response.data);
-                    window.imshareMUI.mount(root, React.createElement(window.imshareMUI.PostPage, { post }));
+                    mountPostPage(root, response.data);
                 } catch (error) {
-                    window.imshareMUI.mount(root, React.createElement(window.imshareMUI.ErrorState, {
-                        title: "Unable to load post",
-                        description: error instanceof Error ? error.message : "Please try again later.",
-                    }));
+                    root.textContent = error instanceof Error ? error.message : "Unable to load post.";
                 }
             }
 
-            window.addEventListener("DOMContentLoaded", load, { once: true });
+            load();
         </script>
     </head>
     <body>
