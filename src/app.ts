@@ -9,10 +9,12 @@ import { renderTemplate } from "./lib/template.js";
 import { RateLimiter } from "./lib/rate-limit.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
+import { prisma } from "./lib/auth.js";
 
 const logger = process.stdout.isTTY ? { transport: { target: "pino-pretty", options: { colorize: true, translateTime: "SYS:yyyy-mm-dd HH:MM:ss.l", ignore: "pid,hostname", singleLine: true } } } : true;
 
 function escapeAttribute(value: string) { return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] ?? c)); }
+function escapeMeta(value: string | null | undefined) { return escapeAttribute((value ?? "").replace(/\s+/g, " ").trim()); }
 
 export async function buildApp() {
   const config = await loadConfig();
@@ -42,7 +44,52 @@ export async function buildApp() {
     const description = `${config.site.name} — self-hosted image archive and sharing server`;
     const origin = `${request.protocol}://${request.hostname}`;
     const canonical = `${origin}${request.url.split("?", 1)[0]}`;
-    const tags = `<meta name="description" content="${escapeAttribute(description)}"><meta property="og:type" content="website"><meta property="og:site_name" content="${escapeAttribute(config.site.name)}"><meta property="og:title" content="${escapeAttribute(title)}"><meta property="og:description" content="${escapeAttribute(description)}"><meta property="og:url" content="${escapeAttribute(canonical)}"><link rel="canonical" href="${escapeAttribute(canonical)}">`;
+    let metaTitle = title;
+    let metaDescription = description;
+    let metaAuthor = "";
+    let metaKeywords = "";
+    let metaImage = "";
+    let metaType = "website";
+
+    const postMatch = request.url.split("?", 1)[0].match(/^\/posts\/([^/]+)\/?$/);
+    if (postMatch) {
+      try {
+        const post = await prisma.post.findUnique({
+          where: { id: decodeURIComponent(postMatch[1]) },
+          select: {
+            title: true,
+            description: true,
+            author: true,
+            tags: { select: { tag: { select: { name: true } } } },
+            uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
+          },
+        });
+        if (post) {
+          metaTitle = `${post.title} · ${config.site.name}`;
+          metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
+          metaAuthor = post.author.name;
+          metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
+          if (post.uploads[0]) metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
+          metaType = "article";
+        }
+      } catch {
+        // Keep the generic site metadata when the post cannot be loaded.
+      }
+    }
+
+    const tags = [
+      `<meta name="description" content="${escapeMeta(metaDescription)}">`,
+      `<meta name="author" content="${escapeMeta(metaAuthor)}">`,
+      `<meta name="generator" content="${escapeAttribute(config.site.name)}">`,
+      `<meta name="keywords" content="${escapeMeta(metaKeywords)}">`,
+      `<meta property="og:type" content="${escapeAttribute(metaType)}">`,
+      `<meta property="og:site_name" content="${escapeAttribute(config.site.name)}">`,
+      `<meta property="og:title" content="${escapeMeta(metaTitle)}">`,
+      `<meta property="og:description" content="${escapeMeta(metaDescription)}">`,
+      `<meta property="og:url" content="${escapeAttribute(canonical)}">`,
+      ...(metaImage ? [`<meta property="og:image" content="${escapeAttribute(metaImage)}">`, `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">`] : []),
+      `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
+    ].join("");
     let enhanced = payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
     if (!enhanced.includes('src="/components.js"')) enhanced = enhanced.replace(/<\/head>/i, '<script src="/components.js" defer></script></head>');
     return enhanced;
