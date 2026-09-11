@@ -10,7 +10,7 @@ export default defineConfig({
         manifest: "manifest.json",
         rollupOptions: {
             input: {
-                post: path.resolve(process.cwd(), "src/client/posts/main.tsx"),
+                post: path.resolve(process.cwd(), "src/client/posts/index.html"),
             },
         },
     },
