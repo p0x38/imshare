@@ -23,7 +23,7 @@ async function publicUser(userId: string) {
 }
 
 async function currentUser(userId: string) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { ...publicUserSelect, email: true, profileLinks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } } });
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { ...publicUserSelect, email: true, role: true, profileLinks: { orderBy: [{ position: "asc" }, { createdAt: "asc" }] } } });
   if (!user) return undefined;
   return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt) };
 }
