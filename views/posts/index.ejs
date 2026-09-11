@@ -1,4 +1,9 @@
-<%- include("../partials/head", { title: "Posts · imshare" }) %>
+<!doctype html>
+<html lang="en">
+<head>
+    <%- include("../partials/head", { title: "Posts · imshare" }) %>
+</head>
+<body>
 <%- include("../partials/header") %>
 <main>
     <div id="posts-page"></div>
@@ -96,3 +101,5 @@ async function update() {
 await update();
 void page();
 </script>
+</body>
+</html>
