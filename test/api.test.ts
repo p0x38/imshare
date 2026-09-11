@@ -71,6 +71,8 @@ test("image route rejects invalid transformation parameters", async () => {
   try {
     const response = await app.inject({ method: "GET", url: "/v1/posts/image/missing?width=1" });
     assert.equal(response.statusCode, 404);
+    const placeholder = await app.inject({ method: "GET", url: "/v1/posts/image/missing/placeholder" });
+    assert.equal(placeholder.statusCode, 404);
   } finally { await app.close(); }
 });
 
@@ -79,5 +81,27 @@ test("request schemas reject malformed post and user bodies", async () => {
   try {
     const post = await app.inject({ method: "POST", url: "/v1/posts", payload: { title: "", unexpected: true } }); assert.equal(post.statusCode, 400);
     const user = await app.inject({ method: "POST", url: "/v1/users", payload: { name: "test" } }); assert.equal(user.statusCode, 400);
+  } finally { await app.close(); }
+});
+
+test("custom emoji listing is public and creation is protected", async () => {
+  const app = await buildApp();
+  try {
+    const list = await app.inject({ method: "GET", url: "/v1/emojis" });
+    assert.equal(list.statusCode, 200);
+    assert.deepEqual(list.json(), { data: [] });
+    const create = await app.inject({ method: "POST", url: "/v1/emojis", payload: { name: "blobcat", url: "/v1/posts/image/example" } });
+    assert.equal(create.statusCode, 401);
+  } finally { await app.close(); }
+});
+
+test("dedicated HTML error pages are served", async () => {
+  const app = await buildApp();
+  try {
+    for (const [url, status] of [["/does-not-exist", 404], ["/v1/posts/image/missing?width=1", 404]] as const) {
+      const response = await app.inject({ method: "GET", url, headers: { accept: "text/html" } });
+      assert.equal(response.statusCode, status, url);
+      assert.match(response.headers["content-type"] ?? "", /text\/html/);
+    }
   } finally { await app.close(); }
 });
