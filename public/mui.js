@@ -19,22 +19,27 @@ import {
 } from "https://esm.sh/@mui/material@9.4.0?bundle&external=react,react-dom&target=es2022";
 
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-let theme = createTheme({
-    palette: {
-        mode: systemThemeQuery.matches ? "dark" : "light",
-        primary: {
-            main: systemThemeQuery.matches ? "#90caf9" : "#1565c0",
-        },
-    },
-    shape: {
-        borderRadius: 3,
-    },
-    typography: {
-        fontFamily: "Roboto, system-ui, sans-serif",
-    },
-});
+let theme;
+const mountedRoots = new Map();
 
-const mountedRoots = new Set();
+function createImshareTheme() {
+    return createTheme({
+        palette: {
+            mode: systemThemeQuery.matches ? "dark" : "light",
+            primary: {
+                main: systemThemeQuery.matches ? "#90caf9" : "#1565c0",
+            },
+        },
+        shape: {
+            borderRadius: 3,
+        },
+        typography: {
+            fontFamily: "Roboto, system-ui, sans-serif",
+        },
+    });
+}
+
+theme = createImshareTheme();
 
 function Navigation() {
     const links = [
@@ -174,11 +179,7 @@ function PreviewCard({ title, image, href, author, stats, tags = [] }) {
         Card,
         { variant: "outlined", sx: { height: "100%" } },
         href
-            ? React.createElement(
-                  CardActionArea,
-                  { component: "a", href },
-                  content,
-              )
+            ? React.createElement(CardActionArea, { component: "a", href }, content)
             : content,
     );
 }
@@ -211,47 +212,29 @@ function PostGrid({ posts = [] }) {
     );
 }
 
+function themedComponent(component) {
+    return React.createElement(
+        ThemeProvider,
+        { theme },
+        React.createElement(CssBaseline),
+        component,
+    );
+}
+
 function mount(element, component) {
     if (!element) return null;
 
     const root = createRoot(element);
-    mountedRoots.add(root);
-    root.render(
-        React.createElement(
-            ThemeProvider,
-            { theme },
-            React.createElement(CssBaseline),
-            component,
-        ),
-    );
+    mountedRoots.set(root, component);
+    root.render(themedComponent(component));
     return root;
 }
 
 function updateTheme() {
-    theme = createTheme({
-        palette: {
-            mode: systemThemeQuery.matches ? "dark" : "light",
-            primary: {
-                main: systemThemeQuery.matches ? "#90caf9" : "#1565c0",
-            },
-        },
-        shape: {
-            borderRadius: 3,
-        },
-        typography: {
-            fontFamily: "Roboto, system-ui, sans-serif",
-        },
-    });
+    theme = createImshareTheme();
 
-    for (const root of mountedRoots) {
-        root.render(
-            React.createElement(
-                ThemeProvider,
-                { theme },
-                React.createElement(CssBaseline),
-                root._imshareComponent,
-            ),
-        );
+    for (const [root, component] of mountedRoots) {
+        root.render(themedComponent(component));
     }
 }
 
