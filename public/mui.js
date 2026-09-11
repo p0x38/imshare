@@ -230,6 +230,14 @@ function mount(element, component) {
     return root;
 }
 
+function render(root, component) {
+    if (!root) return null;
+
+    mountedRoots.set(root, component);
+    root.render(themedComponent(component));
+    return root;
+}
+
 function updateTheme() {
     theme = createImshareTheme();
 
@@ -250,6 +258,7 @@ if (originalHeader) {
 
 window.imshareMUI = {
     mount,
+    render,
     Navigation,
     SkeletonGrid,
     PreviewCard,
