@@ -3,6 +3,14 @@ import { prisma } from "../lib/auth.js";
 import { collection, getSession, parsePagination } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
 
+const publicPostWhere = {
+    status: "published",
+    visibility: "public",
+    hiddenAt: null,
+    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+    user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+};
+
 export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/recommendations", async (request) => {
         const session = await getSession(request);
@@ -40,16 +48,21 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             ];
         }
         const where = {
+            ...publicPostWhere,
             id: { notIn: excludedIds },
             ...(preferredCategoryIds.length || preferredTagIds.length
                 ? {
-                      OR: [
-                          ...(preferredCategoryIds.length
-                              ? [{ categoryId: { in: preferredCategoryIds } }]
-                              : []),
-                          ...(preferredTagIds.length
-                              ? [{ tags: { some: { tagId: { in: preferredTagIds } } } }]
-                              : []),
+                      AND: [
+                          {
+                              OR: [
+                                  ...(preferredCategoryIds.length
+                                      ? [{ categoryId: { in: preferredCategoryIds } }]
+                                      : []),
+                                  ...(preferredTagIds.length
+                                      ? [{ tags: { some: { tagId: { in: preferredTagIds } } } }]
+                                      : []),
+                              ],
+                          },
                       ],
                   }
                 : {}),
@@ -65,5 +78,64 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             prisma.post.count({ where }),
         ]);
         return collection(items.map(postView), p.page, p.limit, total);
+    });
+
+    fastify.get("/v1/posts/:postId/related", async (request, reply) => {
+        const { postId } = request.params as { postId: string };
+        const q = request.query as Record<string, unknown>;
+        const p = parsePagination(q);
+        const source = await prisma.post.findFirst({
+            where: { id: postId, ...publicPostWhere },
+            select: { id: true, categoryId: true, tags: { select: { tagId: true } } },
+        });
+        if (!source) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+        const tagIds = source.tags.map((tag) => tag.tagId);
+        const where = {
+            ...publicPostWhere,
+            id: { not: postId },
+            OR: [
+                ...(source.categoryId ? [{ categoryId: source.categoryId }] : []),
+                ...(tagIds.length ? [{ tags: { some: { tagId: { in: tagIds } } } }] : []),
+            ],
+        };
+        const candidates = await prisma.post.findMany({
+            where,
+            take: Math.min(Math.max(p.limit * 4, 20), 100),
+            include: postInclude,
+            orderBy: { createdAt: "desc" },
+        });
+        const ranked = candidates
+            .map((post) => {
+                const sharedTags = post.tags.filter((tag) => tagIds.includes(tag.tagId)).length;
+                const categoryMatch = source.categoryId && post.categoryId === source.categoryId ? 2 : 0;
+                return { post, score: sharedTags * 3 + categoryMatch };
+            })
+            .sort((a, b) => b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime());
+        const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
+        return collection(items, p.page, p.limit, ranked.length);
+    });
+
+    fastify.get("/v1/discovery/trending", async (request) => {
+        const q = request.query as Record<string, unknown>;
+        const p = parsePagination(q);
+        const candidates = await prisma.post.findMany({
+            where: publicPostWhere,
+            take: 200,
+            include: {
+                ...postInclude,
+                _count: { select: { reactions: true, comments: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+        const now = Date.now();
+        const ranked = candidates
+            .map((post) => {
+                const ageHours = Math.max((now - post.createdAt.getTime()) / 3_600_000, 1);
+                const engagement = post._count.reactions * 3 + post._count.comments * 2;
+                return { post, score: engagement / Math.pow(ageHours, 0.65) };
+            })
+            .sort((a, b) => b.score - a.score);
+        const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
+        return collection(items, p.page, p.limit, ranked.length);
     });
 };
