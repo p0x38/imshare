@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { createHash, randomUUID } from "node:crypto";
 import { createWriteStream } from "node:fs";
-import { mkdir, readFile, rename, unlink } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import sharp from "sharp";
@@ -203,14 +203,8 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 await unlink(temporaryPath).catch(() => undefined);
                 const filename = `${contentHash}${ext}`;
                 const destination = path.join(uploadDir, filename);
-                await new Promise<void>(async (resolve, reject) => {
-                    try {
-                        await import("node:fs/promises").then(({ writeFile }) => writeFile(destination, normalized, { flag: "wx" }));
-                        resolve();
-                    } catch (error) {
-                        if ((error as NodeJS.ErrnoException).code === "EEXIST") resolve();
-                        else reject(error);
-                    }
+                await writeFile(destination, normalized, { flag: "wx" }).catch((error: NodeJS.ErrnoException) => {
+                    if (error.code !== "EEXIST") throw error;
                 });
                 try {
                     const thumbhash = await generateThumbHash(destination);
