@@ -5,20 +5,48 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Tag · imshare</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="/components.js" defer></script>
   </head>
   <body>
-    <header>
-      <nav>
-        <a class="brand" href="/">imshare</a><a href="/posts/">Posts</a
-        ><a href="/tags/">Tags</a>
-      </nav>
-    </header>
+    <site-header></site-header>
     <main>
       <div id="info" class="box">Loading…</div>
       <div id="posts" class="grid"></div>
     </main>
-    <script>
-      const id=location.pathname.split('/').filter(Boolean).at(-1);try{const [tr,pr]=await Promise.all([fetch('/v1/tags/'+encodeURIComponent(id)),fetch('/v1/tags/'+encodeURIComponent(id)+'/posts?limit=100')]);if(!tr.ok)throw new Error();const {data:t}=await tr.json();document.querySelector('#info').innerHTML='<h1></h1><p>'+((await pr.clone().json()).data?.length||0)+' post(s)</p>';document.querySelector('#info h1').textContent=t.name;const root=document.querySelector('#posts');const posts=(await pr.json()).data||[];for(const p of posts){const c=document.createElement('article');c.className='card';if(p.uploads?.[0]){const i=document.createElement('img');i.src=p.uploads[0].url;i.alt=p.title;c.append(i);}const h=document.createElement('h2');h.textContent=p.title;c.append(h);const a=document.createElement('a');a.href='/posts/'+encodeURIComponent(p.id);a.textContent='View';c.append(a);root.append(c);}}catch{document.querySelector('#info').textContent='Tag not found.';}
+    <script type="module">
+      const id = location.pathname.split("/").filter(Boolean).at(-1);
+      try {
+        const [tr, pr] = await Promise.all([
+          fetch("/v1/tags/" + encodeURIComponent(id)),
+          fetch("/v1/tags/" + encodeURIComponent(id) + "/posts?limit=100"),
+        ]);
+        if (!tr.ok || !pr.ok) throw new Error();
+        const { data: tag } = await tr.json();
+        const { data: posts } = await pr.json();
+        document.querySelector("#info").innerHTML = "<h1></h1><p>" + posts.length + " post(s)</p>";
+        document.querySelector("#info h1").textContent = tag.name;
+        const root = document.querySelector("#posts");
+        for (const post of posts) {
+          const card = document.createElement("article");
+          card.className = "card";
+          if (post.uploads?.[0]) {
+            const image = document.createElement("img");
+            image.src = post.uploads[0].url;
+            image.alt = post.title;
+            card.append(image);
+          }
+          const heading = document.createElement("h2");
+          heading.textContent = post.title;
+          card.append(heading);
+          const link = document.createElement("a");
+          link.href = "/posts/" + encodeURIComponent(post.id);
+          link.textContent = "View";
+          card.append(link);
+          root.append(card);
+        }
+      } catch {
+        document.querySelector("#info").textContent = "Tag not found.";
+      }
     </script>
   </body>
 </html>
