@@ -1,6 +1,3 @@
-ALTER TABLE "user" ADD COLUMN "avatarMode" TEXT NOT NULL DEFAULT 'initials';
-ALTER TABLE "user" ADD COLUMN "avatarValue" TEXT;
-
 CREATE TABLE "post_reaction" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "type" TEXT NOT NULL,
