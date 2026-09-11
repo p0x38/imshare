@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
-import { collection, getSession, parsePagination } from "../lib/api.js";
+import { collection, getSession, parsePagination, requireUser } from "../lib/api.js";
 import { postInclude, postView } from "./_shared.js";
 
 const publicPostWhere = {
@@ -78,6 +78,33 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             prisma.post.count({ where }),
         ]);
         return collection(items.map(postView), p.page, p.limit, total);
+    });
+
+    fastify.post("/v1/posts/:postId/view", async (request, reply) => {
+        const user = await requireUser(request, reply);
+        if (!user) return;
+        const { postId } = request.params as { postId: string };
+        const post = await prisma.post.findFirst({ where: { id: postId, ...publicPostWhere }, select: { id: true } });
+        if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+        await prisma.postView.create({ data: { postId, userId: user.id } });
+        return { data: { recorded: true } };
+    });
+
+    fastify.get("/v1/discovery/recently-viewed", async (request, reply) => {
+        const user = await requireUser(request, reply);
+        if (!user) return;
+        const q = request.query as Record<string, unknown>;
+        const p = parsePagination(q);
+        const views = await prisma.postView.findMany({
+            where: { userId: user.id },
+            distinct: ["postId"],
+            orderBy: { viewedAt: "desc" },
+            skip: p.skip,
+            take: p.limit,
+            include: { post: { include: postInclude } },
+        });
+        const items = views.map((view) => postView(view.post));
+        return collection(items, p.page, p.limit, items.length);
     });
 
     fastify.get("/v1/posts/:postId/related", async (request, reply) => {
