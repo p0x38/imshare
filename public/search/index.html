@@ -5,51 +5,60 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Search · imshare</title>
     <link rel="stylesheet" href="/style.css" />
+    <script src="/components.js" defer></script>
   </head>
   <body>
-    <header>
-      <nav>
-        <a class="brand" href="/">imshare</a><a href="/posts/">Posts</a
-        ><a href="/users/">Users</a><a href="/tags/">Tags</a
-        ><a href="/categories/">Categories</a><a href="/search/">Search</a
-        ><a href="/account/">Account</a>
-      </nav>
-    </header>
+    <site-header></site-header>
     <main>
       <h1>Search</h1>
       <form id="form" class="box">
-        <label for="q">Query</label><input id="q" required /><button>
-          Search
-        </button>
+        <label for="q">Query</label><input id="q" required /><button>Search</button>
       </form>
       <p id="status"></p>
       <div id="results"></div>
     </main>
-    <script>
-      const form = document.querySelector("#form"),
-        root = document.querySelector("#results"),
-        status = document.querySelector("#status");
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const q = document.querySelector("#q").value.trim();
-        if (!q) return;
+    <script type="module">
+      const form = document.querySelector("#form");
+      const root = document.querySelector("#results");
+      const status = document.querySelector("#status");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const query = document.querySelector("#q").value.trim();
+        if (!query) return;
         try {
-          const r = await fetch(
-            "/v1/search?q=" + encodeURIComponent(q) + "&type=all&limit=25",
-          );
-          if (!r.ok) throw new Error();
-          const { data } = await r.json();
+          const response = await fetch("/v1/search?q=" + encodeURIComponent(query) + "&type=all&limit=25");
+          if (!response.ok) throw new Error();
+          const { data } = await response.json();
           root.replaceChildren();
-          status.textContent = "Results for “" + q + "”";
-          for (const group of data) {
+          status.textContent = "Results for “" + query + "”";
+
+          for (const [type, items] of Object.entries(data)) {
             const box = document.createElement("div");
             box.className = "box";
-            const h = document.createElement("h2");
-            h.textContent = group.type;
-            box.append(h);
-            const pre = document.createElement("pre");
-            pre.textContent = JSON.stringify(group.items, null, 2);
-            box.append(pre);
+            const heading = document.createElement("h2");
+            heading.textContent = type;
+            box.append(heading);
+
+            if (!Array.isArray(items) || !items.length) {
+              const empty = document.createElement("p");
+              empty.textContent = "No results.";
+              box.append(empty);
+            } else {
+              const list = document.createElement("ul");
+              for (const item of items) {
+                const entry = document.createElement("li");
+                const link = document.createElement("a");
+                link.textContent = item.name ?? item.title ?? item.id;
+                link.href = type === "posts" ? "/posts/" + encodeURIComponent(item.id)
+                  : type === "users" ? "/users/" + encodeURIComponent(item.id)
+                  : type === "tags" ? "/tags/" + encodeURIComponent(item.id)
+                  : "/categories/" + encodeURIComponent(item.id);
+                entry.append(link);
+                list.append(entry);
+              }
+              box.append(list);
+            }
             root.append(box);
           }
         } catch {
