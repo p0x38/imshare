@@ -226,22 +226,81 @@ Keep these files aligned when relevant:
 
 When an endpoint changes, update the relevant endpoint documentation instead of leaving stale route descriptions behind.
 
-## Git workflow for agents
+## Git workflow
 
-Make focused commits with descriptive messages.
+Use focused commits. Avoid mixing unrelated fixes, formatting-only changes, dependency churn, or generated-file updates into a feature commit unless they are required by that feature.
 
-Examples:
+### Conventional Commits
+
+Commit messages should follow the Conventional Commits shape:
 
 ```text
-feat: add admin navigation
-fix: avoid duplicate metadata tags
-docs: update endpoint specifications
-refactor: centralize permission checks
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
 ```
 
-Before modifying an existing file through the GitHub API, fetch the current file and use its current blob SHA. Do not overwrite based on an old SHA.
+Use these common types:
 
-Prefer minimal, reviewable changes over large generated diffs.
+- `feat:` — introduce new user-facing or developer-facing functionality
+- `fix:` — correct a behavior or bug
+- `docs:` — documentation-only changes
+- `refactor:` — restructure code without changing intended behavior
+- `test:` — add or change tests without changing production behavior
+- `chore:` — maintenance/tooling/dependency work
+- `perf:` — performance improvement
+- `build:` — build system or dependency/build configuration changes
+- `ci:` — CI/CD configuration changes
+- `revert:` — revert a previous commit
+
+Use a scope when it adds useful context, for example:
+
+```text
+feat(admin): add moderator dashboard navigation
+fix(metadata): avoid duplicate Open Graph tags
+test(auth): cover moderator role checks
+chore(deps): update fastify
+```
+
+Keep the subject concise and imperative-style. Do not end the subject with a period.
+
+Use `BREAKING CHANGE:` in the footer for breaking changes, or use the `!` form when appropriate:
+
+```text
+feat(api)!: change post response shape
+```
+
+Do not use a breaking-change marker for a normal internal refactor.
+
+### Commit boundaries
+
+Prefer one logical change per commit. For example, a feature that requires implementation, tests, and documentation may reasonably contain all three when they are part of the same behavior change; unrelated cleanup should be separate.
+
+Do not create meaningless commits solely to record intermediate thinking.
+
+Avoid rewriting public/shared history unless explicitly requested.
+
+Before committing, inspect the diff and make sure no secrets, local database files, build output, generated artifacts, or unrelated edits are included.
+
+### Branches and pull requests
+
+Use descriptive branch names, preferably based on the change, for example:
+
+```text
+feat/admin-navigation
+fix/dynamic-metadata
+chore/docs-agent-guidance
+```
+
+Open a pull request when the change benefits from review or when working collaboratively. The PR description should explain what changed, why it changed, relevant testing, and any migration/configuration implications.
+
+### GitHub API note
+
+When modifying repository files through GitHub's API, first fetch the current file and use its current blob SHA for an update. Do not update a file using a stale SHA.
+
+Prefer atomic, reviewable changes. When multiple related files must change, make the smallest coherent set of file updates necessary.
 
 ## Important pitfalls
 
