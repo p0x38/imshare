@@ -4,7 +4,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { env } from "./env.js";
-import { loadConfigSync } from "./config.js";
+import { loadConfigSync, resolveBaseUrl } from "./config.js";
 
 const adapter = new PrismaBetterSqlite3({
   url: env.databaseUrl,
@@ -19,7 +19,7 @@ export const auth = betterAuth({
   }),
 
   secret: env.betterAuthSecret,
-  baseURL: config.auth.baseUrl,
+  baseURL: resolveBaseUrl(config),
   basePath: "/v1/auth",
 
   user: {
