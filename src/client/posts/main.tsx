@@ -10,6 +10,7 @@ import {
     Chip,
     CircularProgress,
     Container,
+    CssBaseline,
     Divider,
     IconButton,
     Snackbar,
@@ -85,7 +86,11 @@ interface ApiResponse<T> {
     data: T;
 }
 
-const theme = createTheme();
+const theme = createTheme({
+    palette: {
+        mode: "dark",
+    },
+});
 
 async function api<T>(url: string, options?: RequestInit): Promise<T> {
     const response = await fetch(url, {
@@ -374,6 +379,7 @@ function App() {
 createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <ThemeProvider theme={theme}>
+            <CssBaseline />
             <App />
         </ThemeProvider>
     </React.StrictMode>,
