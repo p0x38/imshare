@@ -1,0 +1,2 @@
+ALTER TABLE "upload" ADD COLUMN "width" INTEGER;
+ALTER TABLE "upload" ADD COLUMN "height" INTEGER;
