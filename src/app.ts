@@ -156,11 +156,10 @@ export async function buildApp() {
             typeof payload !== "string"
         )
             return payload;
-        const pathname = request.url.split("?", 1)[0] ?? "/";
         const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
         const description = `${config.site.name} — self-hosted image archive and sharing server`;
         const origin = `${request.protocol}://${request.hostname}`;
-        const canonical = `${origin}${pathname}`;
+        const canonical = `${origin}${request.url.split("?", 1)[0]}`;
         let metaTitle = title;
         let metaDescription = description;
         let metaAuthor = "";
@@ -168,7 +167,7 @@ export async function buildApp() {
         let metaImage = "";
         let metaType = "website";
 
-        const postMatch = pathname.match(/^\/posts\/([^/]+)\/?$/);
+        const postMatch = request.url.split("?", 1)[0]?.match(/^\/posts\/([^/]+)\/?$/);
         if (postMatch) {
             try {
                 const post = await prisma.post.findUnique({
@@ -214,8 +213,7 @@ export async function buildApp() {
         let enhanced = payload.includes('property="og:title"')
             ? payload
             : payload.replace(/<\/head>/i, `${tags}</head>`);
-        const isReactPostPage = /^\/posts\/[^/]+\/?$/.test(pathname);
-        if (!isReactPostPage && !enhanced.includes('src="/components.js"'))
+        if (!enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
                 /<\/head>/i,
                 '<script src="/components.js" defer></script></head>',
@@ -245,20 +243,11 @@ export async function buildApp() {
         }
     };
 
-    const sendReactPostPage = async (_request: FastifyRequest, reply: FastifyReply) => {
-        try {
-            const file = path.join(publicDir, "build", "src", "client", "posts", "index.html");
-            return reply.type("text/html; charset=utf-8").send(await readFile(file, "utf8"));
-        } catch {
-            return sendErrorPage(503, "Frontend unavailable", "The React frontend has not been built yet.", reply);
-        }
-    };
-
     await app.register(authRoutes);
     await app.register(apiRoutes);
     await app.register(pageRoutes);
 
-    app.get("/", async (request, reply) => sendPage(request, reply, "index.ejs"));
+    app.get("/", async (_request, reply) => sendPage(_request, reply, "index.ejs"));
     app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
     app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
@@ -267,8 +256,8 @@ export async function buildApp() {
     app.get("/account/profile/", async (request, reply) => sendPage(request, reply, "account/profile.ejs"));
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
     app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
-    app.get("/posts/:postId", sendReactPostPage);
-    app.get("/posts/:postId/", sendReactPostPage);
+    app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
+    app.get("/posts/:postId/", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
     app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
     app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
     app.get("/dashboard/posts/:postId/", async (request, reply) => sendPage(request, reply, "dashboard/post.ejs"));
