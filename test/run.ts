@@ -24,7 +24,7 @@ function cleanup(): void {
 
 cleanup();
 
-const pnpmCommand = "pnpm exec prisma db push --accept-data-loss";
+const prismaCommand = "pnpm exec prisma migrate deploy";
 const pnpmOptions = {
     cwd: root,
     env: process.env,
@@ -35,11 +35,11 @@ try {
     if (process.platform === "win32") {
         execFileSync(
             process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", pnpmCommand],
+            ["/d", "/s", "/c", prismaCommand],
             pnpmOptions,
         );
     } else {
-        execFileSync("pnpm", ["exec", "prisma", "db", "push", "--accept-data-loss"], pnpmOptions);
+        execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
     }
 
     const result = spawnSync(
