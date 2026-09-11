@@ -118,6 +118,34 @@ test("protected notification routes require authentication while comment listing
     }
 });
 
+test("reaction reads reject missing posts and writes require authentication", async () => {
+    const app = await buildApp();
+    try {
+        const read = await app.inject({ method: "GET", url: "/v1/posts/missing/reactions" });
+        assert.equal(read.statusCode, 404);
+        assert.equal(read.json().error.code, "POST_NOT_FOUND");
+        const write = await app.inject({ method: "PUT", url: "/v1/posts/missing/like" });
+        assert.equal(write.statusCode, 401);
+    } finally {
+        await app.close();
+    }
+});
+
+test("state-changing requests reject foreign origins", async () => {
+    const app = await buildApp();
+    try {
+        const response = await app.inject({
+            method: "POST",
+            url: "/v1/me/notifications/read-all",
+            headers: { origin: "https://attacker.example" },
+        });
+        assert.equal(response.statusCode, 403);
+        assert.equal(response.json().error.code, "CSRF_ORIGIN_REJECTED");
+    } finally {
+        await app.close();
+    }
+});
+
 test("image route rejects invalid transformation parameters", async () => {
     const app = await buildApp();
     try {

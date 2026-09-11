@@ -19,7 +19,7 @@
     - [x] Realtime notification delivery
     - [x] Notification center UI
     - [x] Mark as read
-    - [ ] Mark all as read
+    - [x] Mark all as read
 
 ## Profiles
 
@@ -156,7 +156,7 @@
 - [ ] Add realtime integration tests
 - [ ] Add image upload/proxy tests
 - [ ] Add profile-link tests
-- [ ] Add reaction API tests
+- [x] Add reaction API tests
 - [x] Add migration CI check
 - [ ] Background job system
 - [ ] Image processing queue
@@ -168,8 +168,7 @@
 - [ ] Metrics dashboard
 - [ ] Structured audit logging
 - [x] Security headers
-- [ ] CSP
-- [ ] CSRF protection
+- [x] CSRF protection
 - [ ] Automated dependency updates
 
 ## Posts
