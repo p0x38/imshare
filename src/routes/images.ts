@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -46,6 +47,13 @@ function cacheKey(
 ) {
     return `${uploadId}-${width ?? "auto"}x${height ?? "auto"}-${fit ?? "inside"}.${format ?? "source"}`;
 }
+function setCacheHeaders(reply: any, output: Buffer) {
+    const etag = `"${createHash("sha256").update(output).digest("hex")}"`;
+    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    reply.header("ETag", etag);
+    reply.header("X-Content-Type-Options", "nosniff");
+    return etag;
+}
 
 export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
@@ -71,10 +79,9 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             const cachePath = path.join(cacheDir, `${uploadId}-thumbhash.png`);
             try {
                 const cached = await readFile(cachePath);
-                return reply
-                    .type("image/png")
-                    .header("Cache-Control", "public, max-age=31536000, immutable")
-                    .send(cached);
+                const etag = setCacheHeaders(reply, cached);
+                if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+                return reply.type("image/png").send(cached);
             } catch {}
             const image = thumbHashToRGBA(new Uint8Array(Buffer.from(upload.thumbhash, "base64")));
             const output = await sharp(Buffer.from(image.rgba), {
@@ -83,10 +90,9 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 .png()
                 .toBuffer();
             await writeFile(cachePath, output, { flag: "wx" }).catch(() => undefined);
-            return reply
-                .type("image/png")
-                .header("Cache-Control", "public, max-age=31536000, immutable")
-                .send(output);
+            const etag = setCacheHeaders(reply, output);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+            return reply.type("image/png").send(output);
         } catch {
             return reply
                 .code(500)
@@ -147,21 +153,24 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                         message: "The creator has disabled downloads for this image.",
                     },
                 });
-        reply.header("Cache-Control", "public, max-age=31536000, immutable");
-        reply.header("X-Content-Type-Options", "nosniff");
         if (!transformed) {
+            const output = await readFile(source);
+            const etag = setCacheHeaders(reply, output);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
             reply.type(upload.mimeType);
             if (query.download === "true")
                 reply.header(
                     "Content-Disposition",
                     `attachment; filename*=UTF-8''${encodeURIComponent(upload.originalName)}`,
                 );
-            return reply.send(createReadStream(source));
+            return reply.send(output);
         }
         const key = cacheKey(upload.id, width, height, fit, format);
         const cached = path.join(cacheDir, key);
         try {
             const output = await readFile(cached);
+            const etag = setCacheHeaders(reply, output);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
             reply.type(format ? FORMATS[format].mime : upload.mimeType);
             return reply.send(output);
         } catch {}
@@ -178,7 +187,11 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             if (width !== undefined || height !== undefined)
                 pipeline = pipeline.resize({ width, height, fit, withoutEnlargement: true });
             if (format !== undefined) {
-                pipeline = pipeline.toFormat(format === "jpg" ? "jpeg" : format);
+                const targetFormat = format === "jpg" ? "jpeg" : format;
+                pipeline = pipeline.toFormat(
+                    targetFormat,
+                    targetFormat === "jpeg" || targetFormat === "png" ? { progressive: true } : {},
+                );
                 reply.type(FORMATS[format].mime);
             } else reply.type(upload.mimeType);
             const output = await pipeline.toBuffer();
@@ -186,6 +199,8 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
                 throw error;
             });
+            const etag = setCacheHeaders(reply, output);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
             return reply.send(output);
         } catch (error) {
             request.log.error(error);
