@@ -25,18 +25,20 @@ export const userUpdateSchema = {
             bio: { anyOf: [{ type: "string", maxLength: 2000 }, { type: "null" }] },
             websiteUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
             githubUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
-            avatarMode: {
-                type: "string",
-                enum: ["default", "initials", "identicon", "gravatar", "custom"],
-            },
+            avatarMode: { type: "string", enum: ["default", "initials", "identicon", "gravatar", "custom"] },
             avatarValue: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
             profileBannerUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
-            accentColor: {
-                anyOf: [{ type: "string", pattern: "^#[0-9a-fA-F]{6}$" }, { type: "null" }],
-            },
+            accentColor: { anyOf: [{ type: "string", pattern: "^#[0-9a-fA-F]{6}$" }, { type: "null" }] },
         },
     },
 } as const;
+
+const postLifecycleProperties = {
+    status: { type: "string", enum: ["draft", "published"] },
+    visibility: { type: "string", enum: ["public", "unlisted", "private"] },
+    scheduledAt: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
+    contentWarning: { anyOf: [{ type: "string", maxLength: 500 }, { type: "null" }] },
+};
 
 export const postCreateSchema = {
     body: {
@@ -49,11 +51,8 @@ export const postCreateSchema = {
             caption: { type: "string", maxLength: 10000 },
             sourceUrl: { type: "string", maxLength: 4096 },
             allowDownload: { type: "boolean" },
-            tags: {
-                type: "array",
-                maxItems: 100,
-                items: { type: "string", minLength: 1, maxLength: 100 },
-            },
+            ...postLifecycleProperties,
+            tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             uploadIds: { type: "array", maxItems: 100, items: { type: "string", minLength: 1 } },
         },
@@ -72,11 +71,8 @@ export const postUpdateSchema = {
             allowDownload: { type: "boolean" },
             sourceUrl: { anyOf: [{ type: "string", maxLength: 4096 }, { type: "null" }] },
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
-            tags: {
-                type: "array",
-                maxItems: 100,
-                items: { type: "string", minLength: 1, maxLength: 100 },
-            },
+            ...postLifecycleProperties,
+            tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
         },
     },
 } as const;
@@ -104,12 +100,7 @@ export const tagCreateSchema = {
         required: ["name", "slug"],
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
-            slug: {
-                type: "string",
-                minLength: 1,
-                maxLength: 100,
-                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            },
+            slug: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
         },
     },
 } as const;
@@ -120,12 +111,7 @@ export const tagUpdateSchema = {
         minProperties: 1,
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
-            slug: {
-                type: "string",
-                minLength: 1,
-                maxLength: 100,
-                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            },
+            slug: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
         },
     },
 } as const;
@@ -136,12 +122,7 @@ export const categoryCreateSchema = {
         required: ["name", "slug"],
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
-            slug: {
-                type: "string",
-                minLength: 1,
-                maxLength: 100,
-                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            },
+            slug: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
             description: { type: "string", maxLength: 10000 },
         },
     },
@@ -153,12 +134,7 @@ export const categoryUpdateSchema = {
         minProperties: 1,
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
-            slug: {
-                type: "string",
-                minLength: 1,
-                maxLength: 100,
-                pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-            },
+            slug: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
             description: { anyOf: [{ type: "string", maxLength: 10000 }, { type: "null" }] },
         },
     },
