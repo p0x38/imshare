@@ -21,18 +21,10 @@ const publicDir = path.join(rootDir, "public");
 const viewsDir = path.join(rootDir, "views");
 const uploadDir = path.join(rootDir, config.storage.uploadDir);
 const rateLimiter = new RateLimiter(config.rateLimit);
-
 const escapeMeta = (value: string) => value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const escapeAttribute = escapeMeta;
-const sendErrorPage = async (status: number, title: string, message: string, reply: FastifyReply) => {
-    const file = await readFile(path.join(publicDir, "error.html"), "utf8");
-    return reply.code(status).type("text/html; charset=utf-8").send(renderTemplate(file, { title, message }));
-};
-
-app.addHook("onRequest", async (request, reply) => {
-    const key = request.ip;
-    if (!(await rateLimiter.allow(key))) return reply.code(429).send({ error: { code: "RATE_LIMITED", message: "Too many requests." } });
-});
+const sendErrorPage = async (status: number, title: string, message: string, reply: FastifyReply) => { const file = await readFile(path.join(publicDir, "error.html"), "utf8"); return reply.code(status).type("text/html; charset=utf-8").send(renderTemplate(file, { title, message })); };
+app.addHook("onRequest", async (request, reply) => { if (!(await rateLimiter.allow(request.ip))) return reply.code(429).send({ error: { code: "RATE_LIMITED", message: "Too many requests." } }); });
 app.addHook("onSend", async (request, reply, payload) => {
     const contentType = reply.getHeader("content-type");
     if (typeof contentType !== "string" || !contentType.includes("text/html") || typeof payload !== "string") return payload;
@@ -42,12 +34,7 @@ app.addHook("onSend", async (request, reply, payload) => {
     const canonical = `${origin}${request.url.split("?", 1)[0]}`;
     let metaTitle = title, metaDescription = description, metaAuthor = "", metaKeywords = "", metaImage = "", metaType = "website";
     const postMatch = request.url.split("?", 1)[0].match(/^\/posts\/([^/]+)\/?$/);
-    if (postMatch) {
-        try {
-            const post = await prisma.post.findUnique({ where: { id: decodeURIComponent(postMatch[1]) }, select: { title: true, description: true, user: { select: { name: true } }, tags: { select: { tag: { select: { name: true } } } }, uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } } } });
-            if (post) { metaTitle = `${post.title} · ${config.site.name}`; metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`; metaAuthor = post.user.name; metaKeywords = post.tags.map(({ tag }) => tag.name).join(", "); if (post.uploads[0]) metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`; metaType = "article"; }
-        } catch {}
-    }
+    if (postMatch) { try { const post = await prisma.post.findUnique({ where: { id: decodeURIComponent(postMatch[1]) }, select: { title: true, description: true, user: { select: { name: true } }, tags: { select: { tag: { select: { name: true } } } }, uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } } } }); if (post) { metaTitle = `${post.title} · ${config.site.name}`; metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`; metaAuthor = post.user.name; metaKeywords = post.tags.map(({ tag }) => tag.name).join(", "); if (post.uploads[0]) metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`; metaType = "article"; } } catch {} }
     const tags = [`<meta name="description" content="${escapeMeta(metaDescription)}">`, metaAuthor ? `<meta name="author" content="${escapeMeta(metaAuthor)}">` : "", `<meta name="generator" content="${escapeAttribute(config.site.name)}">`, metaKeywords ? `<meta name="keywords" content="${escapeMeta(metaKeywords)}">` : "", `<meta property="og:type" content="${escapeAttribute(metaType)}">`, `<meta property="og:site_name" content="${escapeAttribute(config.site.name)}">`, `<meta property="og:title" content="${escapeMeta(metaTitle)}">`, `<meta property="og:description" content="${escapeMeta(metaDescription)}">`, `<meta property="og:url" content="${escapeAttribute(canonical)}">`, metaImage ? `<meta property="og:image" content="${escapeAttribute(metaImage)}">` : "", metaImage ? `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">` : "", `<link rel="canonical" href="${escapeAttribute(canonical)}">`].join("");
     let enhanced = payload.includes('property="og:title"') ? payload : payload.replace(/<\/head>/i, `${tags}</head>`);
     if (!enhanced.includes('src="/components.js"')) enhanced = enhanced.replace(/<\/head>/i, '<script src="/components.js" defer></script></head>');
@@ -62,38 +49,39 @@ await app.register(apiRoutes);
 await app.register(fastifyStatic, { root: uploadDir, prefix: "/uploads/", decorateReply: false });
 await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: true });
 const sendPage = (view: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.view(view);
+const sendPublicPage = (file: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.type("text/html; charset=utf-8").send(await readFile(path.join(publicDir, file), "utf8"));
 app.get("/", sendPage("index.ejs"));
 app.get("/posts/", sendPage("posts/index.ejs"));
 app.get("/posts/:postId", sendPage("posts/view.ejs"));
-app.get("/users/", sendPage("users/index.html"));
-app.get("/users/:userId", sendPage("users/view.html"));
-app.get("/users/:userId/posts", sendPage("users/posts.html"));
-app.get("/tags/", sendPage("tags/index.html"));
-app.get("/tags/:tagId", sendPage("tags/view.html"));
-app.get("/tags/:tagId/posts", sendPage("tags/posts.html"));
-app.get("/categories/", sendPage("categories/index.html"));
-app.get("/categories/:categoryId", sendPage("categories/view.html"));
-app.get("/categories/:categoryId/posts", sendPage("categories/posts.html"));
-app.get("/search/", sendPage("search/index.html"));
+app.get("/users/", sendPublicPage("users/index.html"));
+app.get("/users/:userId", sendPublicPage("users/view.html"));
+app.get("/users/:userId/posts", sendPublicPage("users/posts.html"));
+app.get("/tags/", sendPublicPage("tags/index.html"));
+app.get("/tags/:tagId", sendPublicPage("tags/view.html"));
+app.get("/tags/:tagId/posts", sendPublicPage("tags/posts.html"));
+app.get("/categories/", sendPublicPage("categories/index.html"));
+app.get("/categories/:categoryId", sendPublicPage("categories/view.html"));
+app.get("/categories/:categoryId/posts", sendPublicPage("categories/posts.html"));
+app.get("/search/", sendPublicPage("search/index.html"));
 app.get("/account/", sendPage("account/index.ejs"));
-app.get("/account/login/", sendPage("account/login/index.html"));
-app.get("/account/register/", sendPage("account/register/index.html"));
-app.get("/notifications/", sendPage("account/notifications.html"));
-app.get("/account/profile/", sendPage("account/profile.html"));
+app.get("/account/login/", sendPublicPage("account/login/index.html"));
+app.get("/account/register/", sendPublicPage("account/register/index.html"));
+app.get("/notifications/", sendPublicPage("account/notifications.html"));
+app.get("/account/profile/", sendPublicPage("account/profile.html"));
 app.get("/account/logout/", async (request, reply) => { const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, { method: "POST", headers: { cookie: request.headers.cookie ?? "" } }); response.headers.forEach((value, key) => reply.header(key, value)); return reply.redirect("/"); });
 app.get("/dashboard/", sendPage("dashboard/index.ejs"));
 app.get("/dashboard/posts/", sendPage("dashboard/posts/index.ejs"));
 app.get("/dashboard/posts/new/", sendPage("posts/new/index.ejs"));
 app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.ejs"));
 app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.ejs"));
-app.get("/dashboard/tags/", sendPage("dashboard/tags.html"));
-app.get("/dashboard/categories/", sendPage("dashboard/categories.html"));
-app.get("/dashboard/settings/", sendPage("dashboard/settings.html"));
-app.get("/about/", sendPage("about.html"));
-app.get("/faq/", sendPage("faq.html"));
-app.get("/github/", sendPage("github.html"));
-app.get("/privacy/", sendPage("privacy.html"));
-app.get("/terms/", sendPage("terms.html"));
+app.get("/dashboard/tags/", sendPublicPage("dashboard/tags.html"));
+app.get("/dashboard/categories/", sendPublicPage("dashboard/categories.html"));
+app.get("/dashboard/settings/", sendPublicPage("dashboard/settings.html"));
+app.get("/about/", sendPublicPage("about.html"));
+app.get("/faq/", sendPublicPage("faq.html"));
+app.get("/github/", sendPublicPage("github.html"));
+app.get("/privacy/", sendPublicPage("privacy.html"));
+app.get("/terms/", sendPublicPage("terms.html"));
 app.setNotFoundHandler(async (request, reply) => { if ((request.headers.accept ?? "").includes("text/html")) return sendErrorPage(404, "Page not found", "The page you requested does not exist.", reply); return reply.code(404).send({ error: { code: "NOT_FOUND", message: "The requested page or resource was not found." } }); });
 app.setErrorHandler(async (error, request, reply) => { request.log.error(error); if (reply.sent) return; const errorObject = typeof error === "object" && error !== null ? error : undefined; const statusCode = errorObject && "statusCode" in errorObject && typeof errorObject.statusCode === "number" ? errorObject.statusCode : 500; const status = statusCode >= 400 ? statusCode : 500; const message = error instanceof Error ? error.message : errorObject && "message" in errorObject && typeof errorObject.message === "string" ? errorObject.message : "Something went wrong while processing your request."; const code = errorObject && "code" in errorObject && typeof errorObject.code === "string" ? errorObject.code : "INTERNAL_ERROR"; const publicMessage = status < 500 ? message : "Something went wrong while processing your request."; if ((request.headers.accept ?? "").includes("text/html")) return sendErrorPage(status, status === 404 ? "Page not found" : "Something went wrong", publicMessage, reply); return reply.code(status).send({ error: { code, message: publicMessage } }); });
 return app;
