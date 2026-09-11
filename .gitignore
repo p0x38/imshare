@@ -5,3 +5,4 @@ uploads/
 dist/
 **/*.db
 **/*.db.backup
+config.json

@@ -1,5 +1,52 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profile settings · imshare</title><link rel="stylesheet" href="/style.css"></head><body><header><nav><a class="brand" href="/">imshare</a><a href="/account/">Account</a><a href="/notifications/">Notifications</a></nav></header><main><h1>Profile settings</h1><div id="content" class="box">Loading…</div></main><script type="module">
-import { api, escapeHtml } from "/app.js";
-const root=document.querySelector("#content");
-try { const {data:u}=await api("/v1/me"); root.innerHTML=`<form id="form"><label for="mode">Avatar mode</label><select id="mode"><option value="initials">Text / initials</option><option value="default">Default</option><option value="identicon">Identicon</option><option value="gravatar">Gravatar</option><option value="custom">Custom</option></select><label for="value">Avatar value</label><input id="value" value="${escapeHtml(u.avatarValue||"")}"><label for="banner">Profile banner URL</label><input id="banner" type="url" maxlength="2048" value="${escapeHtml(u.profileBannerUrl||"")}" placeholder="https://…"><label for="accent">Accent color</label><input id="accent" type="color" value="${escapeHtml(u.accentColor||"#0645ad")}"><button>Save settings</button><p id="status" class="meta"></p></form>`; document.querySelector("#mode").value=u.avatarMode||"initials"; document.querySelector("#form").addEventListener("submit",async e=>{e.preventDefault();const status=document.querySelector("#status");try{await api(`/v1/users/${encodeURIComponent(u.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({avatarMode:document.querySelector("#mode").value,avatarValue:document.querySelector("#value").value||null,profileBannerUrl:document.querySelector("#banner").value||null,accentColor:document.querySelector("#accent").value})});status.textContent="Profile settings saved."}catch(error){status.textContent=error.message}}); } catch(error) { root.textContent=error.status===401?"Please sign in.":"Unable to load profile settings."; }
-</script></body></html>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Profile settings · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body>
+        <header>
+            <nav>
+                <a class="brand" href="/">imshare</a><a href="/account/">Account</a
+                ><a href="/notifications/">Notifications</a>
+            </nav>
+        </header>
+        <main>
+            <h1>Profile settings</h1>
+            <div id="content" class="box">Loading…</div>
+        </main>
+        <script type="module">
+            import { api, escapeHtml } from "/app.js";
+            const root = document.querySelector("#content");
+            try {
+                const { data: u } = await api("/v1/me");
+                root.innerHTML = `<form id="form"><label for="mode">Avatar mode</label><select id="mode"><option value="initials">Text / initials</option><option value="default">Default</option><option value="identicon">Identicon</option><option value="gravatar">Gravatar</option><option value="custom">Custom</option></select><label for="value">Avatar value</label><input id="value" value="${escapeHtml(u.avatarValue || "")}"><label for="banner">Profile banner URL</label><input id="banner" type="url" maxlength="2048" value="${escapeHtml(u.profileBannerUrl || "")}" placeholder="https://…"><label for="accent">Accent color</label><input id="accent" type="color" value="${escapeHtml(u.accentColor || "#0645ad")}"><button>Save settings</button><p id="status" class="meta"></p></form>`;
+                document.querySelector("#mode").value = u.avatarMode || "initials";
+                document.querySelector("#form").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const status = document.querySelector("#status");
+                    try {
+                        await api(`/v1/users/${encodeURIComponent(u.id)}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                avatarMode: document.querySelector("#mode").value,
+                                avatarValue: document.querySelector("#value").value || null,
+                                profileBannerUrl: document.querySelector("#banner").value || null,
+                                accentColor: document.querySelector("#accent").value,
+                            }),
+                        });
+                        status.textContent = "Profile settings saved.";
+                    } catch (error) {
+                        status.textContent = error.message;
+                    }
+                });
+            } catch (error) {
+                root.textContent =
+                    error.status === 401 ? "Please sign in." : "Unable to load profile settings.";
+            }
+        </script>
+    </body>
+</html>

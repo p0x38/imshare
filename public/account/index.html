@@ -1,65 +1,65 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Account · imshare</title>
-    <link rel="stylesheet" href="/style.css" />
-  </head>
-  <body>
-    <header>
-      <nav>
-        <a class="brand" href="/">imshare</a>
-        <a href="/posts/">Posts</a>
-        <a href="/users/">Users</a>
-        <a href="/tags/">Tags</a>
-        <a href="/categories/">Categories</a>
-        <a href="/search/">Search</a>
-        <a href="/account/">Account</a>
-      </nav>
-    </header>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Account · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body>
+        <header>
+            <nav>
+                <a class="brand" href="/">imshare</a>
+                <a href="/posts/">Posts</a>
+                <a href="/users/">Users</a>
+                <a href="/tags/">Tags</a>
+                <a href="/categories/">Categories</a>
+                <a href="/search/">Search</a>
+                <a href="/account/">Account</a>
+            </nav>
+        </header>
 
-    <main>
-      <h1>Account</h1>
-      <div id="content" class="box">Checking session…</div>
-    </main>
+        <main>
+            <h1>Account</h1>
+            <div id="content" class="box">Checking session…</div>
+        </main>
 
-    <script type="module">
-      const content = document.querySelector("#content");
+        <script type="module">
+            const content = document.querySelector("#content");
 
-      function escapeHtml(value) {
-        return String(value ?? "").replace(/[&<>"']/g, (character) => {
-          const entities = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-          };
+            function escapeHtml(value) {
+                return String(value ?? "").replace(/[&<>"']/g, (character) => {
+                    const entities = {
+                        "&": "&amp;",
+                        "<": "&lt;",
+                        ">": "&gt;",
+                        '"': "&quot;",
+                        "'": "&#39;",
+                    };
 
-          return entities[character];
-        });
-      }
+                    return entities[character];
+                });
+            }
 
-      async function loadAccount() {
-        const response = await fetch("/v1/me");
-        const result = response.ok ? await response.json() : null;
-        const user = result?.data;
+            async function loadAccount() {
+                const response = await fetch("/v1/me");
+                const result = response.ok ? await response.json() : null;
+                const user = result?.data;
 
-        if (!user) {
-          content.innerHTML = `
+                if (!user) {
+                    content.innerHTML = `
             <p>You are not signed in.</p>
             <p>
               <a class="button" href="/account/login/">Log in</a>
               <a class="button" href="/account/register/">Create account</a>
             </p>
           `;
-          return;
-        }
+                    return;
+                }
 
-        const links = (user.profileLinks ?? [])
-          .map(
-            (link) => `
+                const links = (user.profileLinks ?? [])
+                    .map(
+                        (link) => `
               <li data-link="${escapeHtml(link.id)}">
                 <a href="${escapeHtml(link.url)}" rel="noopener noreferrer nofollow">
                   ${escapeHtml(link.label)}
@@ -69,10 +69,10 @@
                 </button>
               </li>
             `,
-          )
-          .join("");
+                    )
+                    .join("");
 
-        content.innerHTML = `
+                content.innerHTML = `
           <div class="profile">
             <img
               class="avatar"
@@ -108,7 +108,7 @@
             <label for="avatarValue">Custom avatar value</label>
             <input
               id="avatarValue"
-              value="${escapeHtml(user.avatarValue || "") }"
+              value="${escapeHtml(user.avatarValue || "")}"
               maxlength="2048"
               placeholder="https://… or an upload ID"
             />
@@ -117,7 +117,7 @@
             <input
               id="websiteUrl"
               type="url"
-              value="${escapeHtml(user.websiteUrl || "") }"
+              value="${escapeHtml(user.websiteUrl || "")}"
               maxlength="2048"
             />
 
@@ -125,7 +125,7 @@
             <input
               id="githubUrl"
               type="url"
-              value="${escapeHtml(user.githubUrl || "") }"
+              value="${escapeHtml(user.githubUrl || "")}"
               maxlength="2048"
             />
 
@@ -165,70 +165,72 @@
           </p>
         `;
 
-        document.querySelector("#avatarMode").value = user.avatarMode || "initials";
+                document.querySelector("#avatarMode").value = user.avatarMode || "initials";
 
-        document.querySelector("#profile-form").addEventListener("submit", async (event) => {
-          event.preventDefault();
+                document
+                    .querySelector("#profile-form")
+                    .addEventListener("submit", async (event) => {
+                        event.preventDefault();
 
-          const status = document.querySelector("#profile-status");
-          const body = {
-            name: document.querySelector("#name").value,
-            bio: document.querySelector("#bio").value || null,
-            websiteUrl: document.querySelector("#websiteUrl").value || null,
-            githubUrl: document.querySelector("#githubUrl").value || null,
-            avatarMode: document.querySelector("#avatarMode").value,
-            avatarValue: document.querySelector("#avatarValue").value || null,
-          };
+                        const status = document.querySelector("#profile-status");
+                        const body = {
+                            name: document.querySelector("#name").value,
+                            bio: document.querySelector("#bio").value || null,
+                            websiteUrl: document.querySelector("#websiteUrl").value || null,
+                            githubUrl: document.querySelector("#githubUrl").value || null,
+                            avatarMode: document.querySelector("#avatarMode").value,
+                            avatarValue: document.querySelector("#avatarValue").value || null,
+                        };
 
-          const response = await fetch(`/v1/users/${encodeURIComponent(user.id)}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
+                        const response = await fetch(`/v1/users/${encodeURIComponent(user.id)}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(body),
+                        });
 
-          status.textContent = response.ok
-            ? "Profile saved."
-            : "Unable to save profile.";
+                        status.textContent = response.ok
+                            ? "Profile saved."
+                            : "Unable to save profile.";
 
-          if (response.ok) {
-            await loadAccount();
-          }
-        });
+                        if (response.ok) {
+                            await loadAccount();
+                        }
+                    });
 
-        document.querySelector("#link-form").addEventListener("submit", async (event) => {
-          event.preventDefault();
+                document.querySelector("#link-form").addEventListener("submit", async (event) => {
+                    event.preventDefault();
 
-          const response = await fetch("/v1/me/links", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              label: document.querySelector("#link-label").value,
-              url: document.querySelector("#link-url").value,
-            }),
-          });
+                    const response = await fetch("/v1/me/links", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            label: document.querySelector("#link-label").value,
+                            url: document.querySelector("#link-url").value,
+                        }),
+                    });
 
-          if (response.ok) {
-            await loadAccount();
-          } else {
-            alert("Unable to add profile link.");
-          }
-        });
+                    if (response.ok) {
+                        await loadAccount();
+                    } else {
+                        alert("Unable to add profile link.");
+                    }
+                });
 
-        document.querySelector("#links").addEventListener("click", async (event) => {
-          const button = event.target.closest("[data-delete-link]");
-          if (!button) return;
+                document.querySelector("#links").addEventListener("click", async (event) => {
+                    const button = event.target.closest("[data-delete-link]");
+                    if (!button) return;
 
-          await fetch(`/v1/me/links/${encodeURIComponent(button.dataset.deleteLink)}`, {
-            method: "DELETE",
-          });
+                    await fetch(`/v1/me/links/${encodeURIComponent(button.dataset.deleteLink)}`, {
+                        method: "DELETE",
+                    });
 
-          await loadAccount();
-        });
-      }
+                    await loadAccount();
+                });
+            }
 
-      loadAccount().catch(() => {
-        content.textContent = "Unable to load account information.";
-      });
-    </script>
-  </body>
+            loadAccount().catch(() => {
+                content.textContent = "Unable to load account information.";
+            });
+        </script>
+    </body>
 </html>

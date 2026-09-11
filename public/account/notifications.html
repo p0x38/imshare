@@ -1,12 +1,58 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Notifications · imshare</title><link rel="stylesheet" href="/style.css"><script src="/socket.io/socket.io.js"></script></head>
-<body><header><nav><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/users/">Users</a><a href="/notifications/">Notifications</a><a href="/account/">Account</a></nav></header><main><h1>Notifications</h1><p id="status">Loading…</p><div id="notifications" class="box"></div></main>
-<script type="module">
-import { api, escapeHtml } from "/app.js";
-const root = document.querySelector("#notifications");
-function render(items) { root.innerHTML = items.length ? items.map((n) => `<article class="notification ${n.readAt ? "" : "notification-unread"}"><p>${escapeHtml(n.message)}</p><p class="meta">${new Date(n.createdAt).toLocaleString()} ${n.readAt ? "" : "· unread"}</p>${n.postId ? `<a href="/posts/${encodeURIComponent(n.postId)}">Open post</a>` : ""}${n.readAt ? "" : ` <button data-read="${escapeHtml(n.id)}">Mark read</button>`}</article>`).join("") : "<p>No notifications yet.</p>"; }
-async function load() { const result = await api("/v1/me/notifications?limit=100"); render(result.data); document.querySelector("#status").textContent = `${result.pagination.total} notification(s)`; }
-root.addEventListener("click", async (event) => { const button = event.target.closest("[data-read]"); if (!button) return; await api(`/v1/me/notifications/${encodeURIComponent(button.dataset.read)}/read`, { method: "PATCH" }); await load(); });
-load().catch((error) => { document.querySelector("#status").textContent = error.status === 401 ? "Please sign in." : "Unable to load notifications."; });
-const socket = window.io?.(); socket?.on("notification", () => load().catch(() => undefined));
-</script></body></html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Notifications · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+        <script src="/socket.io/socket.io.js"></script>
+    </head>
+    <body>
+        <header>
+            <nav>
+                <a class="brand" href="/">imshare</a><a href="/posts/">Posts</a
+                ><a href="/users/">Users</a><a href="/notifications/">Notifications</a
+                ><a href="/account/">Account</a>
+            </nav>
+        </header>
+        <main>
+            <h1>Notifications</h1>
+            <p id="status">Loading…</p>
+            <div id="notifications" class="box"></div>
+        </main>
+        <script type="module">
+            import { api, escapeHtml } from "/app.js";
+            const root = document.querySelector("#notifications");
+            function render(items) {
+                root.innerHTML = items.length
+                    ? items
+                          .map(
+                              (n) =>
+                                  `<article class="notification ${n.readAt ? "" : "notification-unread"}"><p>${escapeHtml(n.message)}</p><p class="meta">${new Date(n.createdAt).toLocaleString()} ${n.readAt ? "" : "· unread"}</p>${n.postId ? `<a href="/posts/${encodeURIComponent(n.postId)}">Open post</a>` : ""}${n.readAt ? "" : ` <button data-read="${escapeHtml(n.id)}">Mark read</button>`}</article>`,
+                          )
+                          .join("")
+                    : "<p>No notifications yet.</p>";
+            }
+            async function load() {
+                const result = await api("/v1/me/notifications?limit=100");
+                render(result.data);
+                document.querySelector("#status").textContent =
+                    `${result.pagination.total} notification(s)`;
+            }
+            root.addEventListener("click", async (event) => {
+                const button = event.target.closest("[data-read]");
+                if (!button) return;
+                await api(`/v1/me/notifications/${encodeURIComponent(button.dataset.read)}/read`, {
+                    method: "PATCH",
+                });
+                await load();
+            });
+            load().catch((error) => {
+                document.querySelector("#status").textContent =
+                    error.status === 401 ? "Please sign in." : "Unable to load notifications.";
+            });
+            const socket = window.io?.();
+            socket?.on("notification", () => load().catch(() => undefined));
+        </script>
+    </body>
+</html>

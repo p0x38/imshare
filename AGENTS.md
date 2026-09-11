@@ -122,10 +122,10 @@ Keep user-visible API errors structured like:
 
 ```json
 {
-  "error": {
-    "code": "SOME_CODE",
-    "message": "Human-readable message."
-  }
+    "error": {
+        "code": "SOME_CODE",
+        "message": "Human-readable message."
+    }
 }
 ```
 
@@ -316,3 +316,23 @@ Prefer atomic, reviewable changes. When multiple related files must change, make
 ## Working principle
 
 Understand the existing implementation first, reuse existing helpers, make the smallest correct change, and validate the behavior end-to-end where possible.
+
+## Formatting
+
+Prettier is the repository formatter.
+
+Run:
+
+```sh
+pnpm format
+```
+
+to format the repository, or:
+
+```sh
+pnpm format:check
+```
+
+to verify formatting without modifying files.
+
+Do not introduce per-file formatting conventions. Keep formatting configuration in `prettier.config.mjs`.

@@ -1,5 +1,95 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Posts · imshare</title><link rel="stylesheet" href="/style.css"><script src="/components.js" defer></script></head><body><site-header></site-header><main><h1>Posts</h1><form class="box" id="filters"><label for="q">Search</label><input id="q" name="q" type="search"><button>Search</button></form><p id="status">Loading…</p><section id="posts" class="grid"></section><nav id="pagination" aria-label="Pagination"><button id="prev">Previous</button> <span id="page"></span> <button id="next">Next</button></nav></main><site-footer></site-footer><script type="module">
-import { api, escapeHtml } from "/app.js";const root=document.querySelector("#posts"),status=document.querySelector("#status"),form=document.querySelector("#filters"),prev=document.querySelector("#prev"),next=document.querySelector("#next"),page=document.querySelector("#page");let currentPage=1;const limit=48;
-async function load(){const q=document.querySelector("#q").value.trim();const r=await api(`/v1/posts?page=${currentPage}&limit=${limit}${q?`&search=${encodeURIComponent(q)}`:""}`);root.replaceChildren();status.textContent=`${r.pagination.total} post(s)`;page.textContent=`Page ${r.pagination.page} / ${Math.max(1,r.pagination.totalPages||1)}`;prev.disabled=currentPage<=1;next.disabled=currentPage>=Math.max(1,r.pagination.totalPages||1);for(const post of r.data){const card=document.createElement("article");card.className="card";const image=post.uploads?.[0];if(image){const img=document.createElement("img");img.src=image.url+"?width=480&height=480&fit=cover&format=webp";img.alt=post.caption||post.title;img.loading="lazy";img.decoding="async";card.append(img)}const title=document.createElement("h2");title.textContent=post.title;card.append(title);const author=document.createElement("p");author.className="meta";author.textContent=post.author?.name||"Unknown author";card.append(author);const stats=document.createElement("p");stats.className="meta";stats.textContent=`♥ ${post.reactions?.like||0} · ★ ${post.reactions?.favorite||0} · ▣ ${post.reactions?.save||0}`;card.append(stats);const link=document.createElement("a");link.href="/posts/"+encodeURIComponent(post.id);link.textContent="View post";card.append(link);root.append(card)}}
-form.addEventListener("submit",e=>{e.preventDefault();currentPage=1;load().catch(e=>status.textContent=e.message)});prev.onclick=()=>{if(currentPage>1){currentPage--;load().catch(e=>status.textContent=e.message)}};next.onclick=()=>{currentPage++;load().catch(e=>status.textContent=e.message)};load().catch(e=>status.textContent=e.message);
-</script></body></html>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Posts · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+        <script src="/components.js" defer></script>
+    </head>
+    <body>
+        <site-header></site-header>
+        <main>
+            <h1>Posts</h1>
+            <form class="box" id="filters">
+                <label for="q">Search</label><input id="q" name="q" type="search" /><button>
+                    Search
+                </button>
+            </form>
+            <p id="status">Loading…</p>
+            <section id="posts" class="grid"></section>
+            <nav id="pagination" aria-label="Pagination">
+                <button id="prev">Previous</button> <span id="page"></span>
+                <button id="next">Next</button>
+            </nav>
+        </main>
+        <site-footer></site-footer>
+        <script type="module">
+            import { api, escapeHtml } from "/app.js";
+            const root = document.querySelector("#posts"),
+                status = document.querySelector("#status"),
+                form = document.querySelector("#filters"),
+                prev = document.querySelector("#prev"),
+                next = document.querySelector("#next"),
+                page = document.querySelector("#page");
+            let currentPage = 1;
+            const limit = 48;
+            async function load() {
+                const q = document.querySelector("#q").value.trim();
+                const r = await api(
+                    `/v1/posts?page=${currentPage}&limit=${limit}${q ? `&search=${encodeURIComponent(q)}` : ""}`,
+                );
+                root.replaceChildren();
+                status.textContent = `${r.pagination.total} post(s)`;
+                page.textContent = `Page ${r.pagination.page} / ${Math.max(1, r.pagination.totalPages || 1)}`;
+                prev.disabled = currentPage <= 1;
+                next.disabled = currentPage >= Math.max(1, r.pagination.totalPages || 1);
+                for (const post of r.data) {
+                    const card = document.createElement("article");
+                    card.className = "card";
+                    const image = post.uploads?.[0];
+                    if (image) {
+                        const img = document.createElement("img");
+                        img.src = image.url + "?width=480&height=480&fit=cover&format=webp";
+                        img.alt = post.caption || post.title;
+                        img.loading = "lazy";
+                        img.decoding = "async";
+                        card.append(img);
+                    }
+                    const title = document.createElement("h2");
+                    title.textContent = post.title;
+                    card.append(title);
+                    const author = document.createElement("p");
+                    author.className = "meta";
+                    author.textContent = post.author?.name || "Unknown author";
+                    card.append(author);
+                    const stats = document.createElement("p");
+                    stats.className = "meta";
+                    stats.textContent = `♥ ${post.reactions?.like || 0} · ★ ${post.reactions?.favorite || 0} · ▣ ${post.reactions?.save || 0}`;
+                    card.append(stats);
+                    const link = document.createElement("a");
+                    link.href = "/posts/" + encodeURIComponent(post.id);
+                    link.textContent = "View post";
+                    card.append(link);
+                    root.append(card);
+                }
+            }
+            form.addEventListener("submit", (e) => {
+                e.preventDefault();
+                currentPage = 1;
+                load().catch((e) => (status.textContent = e.message));
+            });
+            prev.onclick = () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    load().catch((e) => (status.textContent = e.message));
+                }
+            };
+            next.onclick = () => {
+                currentPage++;
+                load().catch((e) => (status.textContent = e.message));
+            };
+            load().catch((e) => (status.textContent = e.message));
+        </script>
+    </body>
+</html>

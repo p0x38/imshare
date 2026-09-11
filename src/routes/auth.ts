@@ -3,80 +3,89 @@ import { auth } from "../lib/auth.js";
 import { getRegistrationToken, isValidRegistrationToken } from "../lib/registration-token.js";
 
 function toWebRequest(request: FastifyRequest, body?: unknown): Request {
-  const headers = new Headers();
+    const headers = new Headers();
 
-  for (const [key, value] of Object.entries(request.headers)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      for (const item of value) headers.append(key, item);
-    } else {
-      headers.set(key, value);
+    for (const [key, value] of Object.entries(request.headers)) {
+        if (value === undefined) continue;
+        if (Array.isArray(value)) {
+            for (const item of value) headers.append(key, item);
+        } else {
+            headers.set(key, value);
+        }
     }
-  }
 
-  const protocol = headers.get("x-forwarded-proto") ?? "http";
-  const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
-  const url = `${protocol}://${host}${request.raw.url ?? "/"}`;
-  const method = request.method.toUpperCase();
-  let requestBody: string | undefined;
+    const protocol = headers.get("x-forwarded-proto") ?? "http";
+    const host = headers.get("x-forwarded-host") ?? headers.get("host") ?? "localhost:3000";
+    const url = `${protocol}://${host}${request.raw.url ?? "/"}`;
+    const method = request.method.toUpperCase();
+    let requestBody: string | undefined;
 
-  if (method !== "GET" && method !== "HEAD") {
-    const value = body ?? request.body;
-    if (value !== undefined) {
-      requestBody = typeof value === "string" ? value : JSON.stringify(value);
-      if (!headers.has("content-type")) headers.set("content-type", "application/json");
+    if (method !== "GET" && method !== "HEAD") {
+        const value = body ?? request.body;
+        if (value !== undefined) {
+            requestBody = typeof value === "string" ? value : JSON.stringify(value);
+            if (!headers.has("content-type")) headers.set("content-type", "application/json");
+        }
     }
-  }
 
-  return new Request(url, { method, headers, body: requestBody });
+    return new Request(url, { method, headers, body: requestBody });
 }
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
-  fastify.get("/v1/registration-token", async (request, reply) => {
-    const session = await auth.api.getSession({ headers: request.headers as HeadersInit });
-    if (!session) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication is required." } });
+    fastify.get("/v1/registration-token", async (request, reply) => {
+        const session = await auth.api.getSession({ headers: request.headers as HeadersInit });
+        if (!session)
+            return reply
+                .code(401)
+                .send({ error: { code: "UNAUTHORIZED", message: "Authentication is required." } });
 
-    const { token, expiresAt } = getRegistrationToken();
-    return { data: { token, expiresAt } };
-  });
+        const { token, expiresAt } = getRegistrationToken();
+        return { data: { token, expiresAt } };
+    });
 
-  fastify.route({
-    method: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-    url: "/v1/auth/*",
-    handler: async (request, reply) => {
-      const isRegistration = request.method === "POST" && request.url.split("?", 1)[0] === "/v1/auth/sign-up/email";
-      let body = request.body;
+    fastify.route({
+        method: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+        url: "/v1/auth/*",
+        handler: async (request, reply) => {
+            const isRegistration =
+                request.method === "POST" &&
+                request.url.split("?", 1)[0] === "/v1/auth/sign-up/email";
+            let body = request.body;
 
-      if (isRegistration) {
-        const registrationToken = typeof body === "object" && body !== null && "registrationToken" in body
-          ? (body as { registrationToken?: unknown }).registrationToken
-          : undefined;
+            if (isRegistration) {
+                const registrationToken =
+                    typeof body === "object" && body !== null && "registrationToken" in body
+                        ? (body as { registrationToken?: unknown }).registrationToken
+                        : undefined;
 
-        if (!isValidRegistrationToken(registrationToken)) {
-          return reply.code(403).send({
-            error: {
-              code: "INVALID_REGISTRATION_TOKEN",
-              message: "A valid registration access token is required.",
-            },
-          });
-        }
+                if (!isValidRegistrationToken(registrationToken)) {
+                    return reply.code(403).send({
+                        error: {
+                            code: "INVALID_REGISTRATION_TOKEN",
+                            message: "A valid registration access token is required.",
+                        },
+                    });
+                }
 
-        if (typeof body === "object" && body !== null) {
-          const { registrationToken: _registrationToken, ...authBody } = body as Record<string, unknown>;
-          body = authBody;
-        }
-      }
+                if (typeof body === "object" && body !== null) {
+                    const { registrationToken: _registrationToken, ...authBody } = body as Record<
+                        string,
+                        unknown
+                    >;
+                    body = authBody;
+                }
+            }
 
-      const response = await auth.handler(toWebRequest(request, body));
-      reply.code(response.status);
-      response.headers.forEach((value, key) => reply.header(key, value));
-      const contentType = response.headers.get("content-type");
+            const response = await auth.handler(toWebRequest(request, body));
+            reply.code(response.status);
+            response.headers.forEach((value, key) => reply.header(key, value));
+            const contentType = response.headers.get("content-type");
 
-      if (contentType?.includes("application/json") || contentType?.includes("text/")) {
-        return reply.send(await response.text());
-      }
+            if (contentType?.includes("application/json") || contentType?.includes("text/")) {
+                return reply.send(await response.text());
+            }
 
-      return reply.send(Buffer.from(await response.arrayBuffer()));
-    },
-  });
+            return reply.send(Buffer.from(await response.arrayBuffer()));
+        },
+    });
 };

@@ -1,70 +1,76 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Search · imshare</title>
-    <link rel="stylesheet" href="/style.css" />
-    <script src="/components.js" defer></script>
-  </head>
-  <body>
-    <site-header></site-header>
-    <main>
-      <h1>Search</h1>
-      <form id="form" class="box">
-        <label for="q">Query</label><input id="q" required /><button>Search</button>
-      </form>
-      <p id="status"></p>
-      <div id="results"></div>
-    </main>
-    <script type="module">
-      const form = document.querySelector("#form");
-      const root = document.querySelector("#results");
-      const status = document.querySelector("#status");
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Search · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+        <script src="/components.js" defer></script>
+    </head>
+    <body>
+        <site-header></site-header>
+        <main>
+            <h1>Search</h1>
+            <form id="form" class="box">
+                <label for="q">Query</label><input id="q" required /><button>Search</button>
+            </form>
+            <p id="status"></p>
+            <div id="results"></div>
+        </main>
+        <script type="module">
+            const form = document.querySelector("#form");
+            const root = document.querySelector("#results");
+            const status = document.querySelector("#status");
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const query = document.querySelector("#q").value.trim();
-        if (!query) return;
-        try {
-          const response = await fetch("/v1/search?q=" + encodeURIComponent(query) + "&type=all&limit=25");
-          if (!response.ok) throw new Error();
-          const { data } = await response.json();
-          root.replaceChildren();
-          status.textContent = "Results for “" + query + "”";
+            form.addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const query = document.querySelector("#q").value.trim();
+                if (!query) return;
+                try {
+                    const response = await fetch(
+                        "/v1/search?q=" + encodeURIComponent(query) + "&type=all&limit=25",
+                    );
+                    if (!response.ok) throw new Error();
+                    const { data } = await response.json();
+                    root.replaceChildren();
+                    status.textContent = "Results for “" + query + "”";
 
-          for (const [type, items] of Object.entries(data)) {
-            const box = document.createElement("div");
-            box.className = "box";
-            const heading = document.createElement("h2");
-            heading.textContent = type;
-            box.append(heading);
+                    for (const [type, items] of Object.entries(data)) {
+                        const box = document.createElement("div");
+                        box.className = "box";
+                        const heading = document.createElement("h2");
+                        heading.textContent = type;
+                        box.append(heading);
 
-            if (!Array.isArray(items) || !items.length) {
-              const empty = document.createElement("p");
-              empty.textContent = "No results.";
-              box.append(empty);
-            } else {
-              const list = document.createElement("ul");
-              for (const item of items) {
-                const entry = document.createElement("li");
-                const link = document.createElement("a");
-                link.textContent = item.name ?? item.title ?? item.id;
-                link.href = type === "posts" ? "/posts/" + encodeURIComponent(item.id)
-                  : type === "users" ? "/users/" + encodeURIComponent(item.id)
-                  : type === "tags" ? "/tags/" + encodeURIComponent(item.id)
-                  : "/categories/" + encodeURIComponent(item.id);
-                entry.append(link);
-                list.append(entry);
-              }
-              box.append(list);
-            }
-            root.append(box);
-          }
-        } catch {
-          status.textContent = "Search failed.";
-        }
-      });
-    </script>
-  </body>
+                        if (!Array.isArray(items) || !items.length) {
+                            const empty = document.createElement("p");
+                            empty.textContent = "No results.";
+                            box.append(empty);
+                        } else {
+                            const list = document.createElement("ul");
+                            for (const item of items) {
+                                const entry = document.createElement("li");
+                                const link = document.createElement("a");
+                                link.textContent = item.name ?? item.title ?? item.id;
+                                link.href =
+                                    type === "posts"
+                                        ? "/posts/" + encodeURIComponent(item.id)
+                                        : type === "users"
+                                          ? "/users/" + encodeURIComponent(item.id)
+                                          : type === "tags"
+                                            ? "/tags/" + encodeURIComponent(item.id)
+                                            : "/categories/" + encodeURIComponent(item.id);
+                                entry.append(link);
+                                list.append(entry);
+                            }
+                            box.append(list);
+                        }
+                        root.append(box);
+                    }
+                } catch {
+                    status.textContent = "Search failed.";
+                }
+            });
+        </script>
+    </body>
 </html>

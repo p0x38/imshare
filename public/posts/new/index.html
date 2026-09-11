@@ -1,3 +1,177 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New Post · imshare</title><link rel="stylesheet" href="/style.css"><script src="/socket.io/socket.io.js"></script><script src="/components.js"></script></head><body><site-header></site-header><main><h1>New Post</h1><form id="post-form" class="box"><label for="title">Title</label><input id="title" required maxlength="200"><label for="caption">Image caption</label><textarea id="caption" maxlength="10000" placeholder="Text shown below the image"></textarea><label for="description">Description</label><textarea id="description"></textarea><label for="file">Images</label><input id="file" type="file" accept="image/*" multiple required><div id="previews" class="grid"></div><progress id="upload-progress" max="100" value="0" hidden></progress><p id="upload-status" class="meta" hidden></p><button type="button" id="cancel" hidden>Cancel upload</button><label for="sourceUrl">Source URL</label><input id="sourceUrl" type="url" placeholder="https://example.com/"><label><input id="allowDownload" type="checkbox" checked> Allow visitors to download the original image</label><label for="tags">Tags</label><input id="tags" placeholder="art, landscape, original"><label for="category">Category</label><select id="category"><option value="">None</option></select><button id="submit">Create Post</button><p id="error" class="error" hidden></p></form></main><script type="module">
-const form=document.querySelector("#post-form"),fileInput=document.querySelector("#file"),previews=document.querySelector("#previews"),error=document.querySelector("#error"),button=document.querySelector("#submit"),category=document.querySelector("#category"),progress=document.querySelector("#upload-progress"),status=document.querySelector("#upload-status"),cancel=document.querySelector("#cancel");let xhr;const socket=window.io?.();const uploadStatuses=new Map();fileInput.addEventListener("change",()=>{previews.replaceChildren(...[...fileInput.files].map(file=>{const img=document.createElement("img");img.className="post-image";img.alt=file.name;img.src=URL.createObjectURL(file);img.onload=()=>URL.revokeObjectURL(img.src);return img}))});(async()=>{try{const r=await fetch("/v1/categories?limit=100");if(r.ok)for(const item of (await r.json()).data||[]){const o=document.createElement("option");o.value=item.id;o.textContent=item.name;category.append(o)}}catch{}})();if(socket)socket.on("upload:status",event=>{uploadStatuses.set(event.uploadId,event);const states=[...uploadStatuses.values()],done=states.filter(x=>x.status==="ready").length,failed=states.filter(x=>x.status==="failed"||x.status==="cancelled").length;status.hidden=false;status.textContent=failed?`${failed} upload${failed===1?"":"s"} failed`:done===states.length&&states.length?"All uploads ready":`Processing ${done}/${states.length} images…`});function upload(files){return new Promise((resolve,reject)=>{xhr=new XMLHttpRequest();xhr.open("POST","/v1/uploads?multiple=true");cancel.hidden=false;xhr.upload.onprogress=e=>{if(e.lengthComputable){progress.hidden=false;progress.value=e.loaded/e.total*100;status.hidden=false;status.textContent=`Uploading… ${Math.round(progress.value)}%`}};xhr.onload=()=>{cancel.hidden=true;if(xhr.status>=200&&xhr.status<300){status.textContent="Upload complete";resolve(JSON.parse(xhr.responseText).data)}else reject(new Error(xhr.status===429?"Upload rate limit exceeded.":"Image upload failed."))};xhr.onerror=()=>{cancel.hidden=true;reject(new Error("Image upload failed."))};xhr.onabort=()=>{cancel.hidden=true;reject(new Error("Upload cancelled."))};const data=new FormData();for(const file of files)data.append("file",file);xhr.send(data)})}cancel.onclick=()=>xhr?.abort();form.addEventListener("submit",async e=>{e.preventDefault();error.hidden=true;button.disabled=true;button.textContent="Creating…";try{const files=[...fileInput.files];if(!files.length)throw new Error("Please choose at least one image.");const uploads=await upload(files),tags=document.querySelector("#tags").value.split(",").map(x=>x.trim()).filter(Boolean);const r=await fetch("/v1/posts",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({title:document.querySelector("#title").value,caption:document.querySelector("#caption").value||null,description:document.querySelector("#description").value||null,sourceUrl:document.querySelector("#sourceUrl").value||null,allowDownload:document.querySelector("#allowDownload").checked,uploadIds:uploads.map(x=>x.id),tags,categoryId:category.value||null})});if(!r.ok)throw new Error("Post creation failed.");location.href="/posts/"+encodeURIComponent((await r.json()).data.id)}catch(err){error.textContent=err instanceof Error?err.message:"Unable to create post.";error.hidden=false;button.disabled=false;button.textContent="Create Post"}});
-</script></body></html>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>New Post · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+        <script src="/socket.io/socket.io.js"></script>
+        <script src="/components.js"></script>
+    </head>
+    <body>
+        <site-header></site-header>
+        <main>
+            <h1>New Post</h1>
+            <form id="post-form" class="box">
+                <label for="title">Title</label><input id="title" required maxlength="200" /><label
+                    for="caption"
+                    >Image caption</label
+                ><textarea
+                    id="caption"
+                    maxlength="10000"
+                    placeholder="Text shown below the image"
+                ></textarea
+                ><label for="description">Description</label><textarea id="description"></textarea
+                ><label for="file">Images</label
+                ><input id="file" type="file" accept="image/*" multiple required />
+                <div id="previews" class="grid"></div>
+                <progress id="upload-progress" max="100" value="0" hidden></progress>
+                <p id="upload-status" class="meta" hidden></p>
+                <button type="button" id="cancel" hidden>Cancel upload</button
+                ><label for="sourceUrl">Source URL</label
+                ><input id="sourceUrl" type="url" placeholder="https://example.com/" /><label
+                    ><input id="allowDownload" type="checkbox" checked /> Allow visitors to download
+                    the original image</label
+                ><label for="tags">Tags</label
+                ><input id="tags" placeholder="art, landscape, original" /><label for="category"
+                    >Category</label
+                ><select id="category">
+                    <option value="">None</option></select
+                ><button id="submit">Create Post</button>
+                <p id="error" class="error" hidden></p>
+            </form>
+        </main>
+        <script type="module">
+            const form = document.querySelector("#post-form"),
+                fileInput = document.querySelector("#file"),
+                previews = document.querySelector("#previews"),
+                error = document.querySelector("#error"),
+                button = document.querySelector("#submit"),
+                category = document.querySelector("#category"),
+                progress = document.querySelector("#upload-progress"),
+                status = document.querySelector("#upload-status"),
+                cancel = document.querySelector("#cancel");
+            let xhr;
+            const socket = window.io?.();
+            const uploadStatuses = new Map();
+            fileInput.addEventListener("change", () => {
+                previews.replaceChildren(
+                    ...[...fileInput.files].map((file) => {
+                        const img = document.createElement("img");
+                        img.className = "post-image";
+                        img.alt = file.name;
+                        img.src = URL.createObjectURL(file);
+                        img.onload = () => URL.revokeObjectURL(img.src);
+                        return img;
+                    }),
+                );
+            });
+            (async () => {
+                try {
+                    const r = await fetch("/v1/categories?limit=100");
+                    if (r.ok)
+                        for (const item of (await r.json()).data || []) {
+                            const o = document.createElement("option");
+                            o.value = item.id;
+                            o.textContent = item.name;
+                            category.append(o);
+                        }
+                } catch {}
+            })();
+            if (socket)
+                socket.on("upload:status", (event) => {
+                    uploadStatuses.set(event.uploadId, event);
+                    const states = [...uploadStatuses.values()],
+                        done = states.filter((x) => x.status === "ready").length,
+                        failed = states.filter(
+                            (x) => x.status === "failed" || x.status === "cancelled",
+                        ).length;
+                    status.hidden = false;
+                    status.textContent = failed
+                        ? `${failed} upload${failed === 1 ? "" : "s"} failed`
+                        : done === states.length && states.length
+                          ? "All uploads ready"
+                          : `Processing ${done}/${states.length} images…`;
+                });
+            function upload(files) {
+                return new Promise((resolve, reject) => {
+                    xhr = new XMLHttpRequest();
+                    xhr.open("POST", "/v1/uploads?multiple=true");
+                    cancel.hidden = false;
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            progress.hidden = false;
+                            progress.value = (e.loaded / e.total) * 100;
+                            status.hidden = false;
+                            status.textContent = `Uploading… ${Math.round(progress.value)}%`;
+                        }
+                    };
+                    xhr.onload = () => {
+                        cancel.hidden = true;
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            status.textContent = "Upload complete";
+                            resolve(JSON.parse(xhr.responseText).data);
+                        } else
+                            reject(
+                                new Error(
+                                    xhr.status === 429
+                                        ? "Upload rate limit exceeded."
+                                        : "Image upload failed.",
+                                ),
+                            );
+                    };
+                    xhr.onerror = () => {
+                        cancel.hidden = true;
+                        reject(new Error("Image upload failed."));
+                    };
+                    xhr.onabort = () => {
+                        cancel.hidden = true;
+                        reject(new Error("Upload cancelled."));
+                    };
+                    const data = new FormData();
+                    for (const file of files) data.append("file", file);
+                    xhr.send(data);
+                });
+            }
+            cancel.onclick = () => xhr?.abort();
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                error.hidden = true;
+                button.disabled = true;
+                button.textContent = "Creating…";
+                try {
+                    const files = [...fileInput.files];
+                    if (!files.length) throw new Error("Please choose at least one image.");
+                    const uploads = await upload(files),
+                        tags = document
+                            .querySelector("#tags")
+                            .value.split(",")
+                            .map((x) => x.trim())
+                            .filter(Boolean);
+                    const r = await fetch("/v1/posts", {
+                        method: "POST",
+                        headers: { "content-type": "application/json" },
+                        body: JSON.stringify({
+                            title: document.querySelector("#title").value,
+                            caption: document.querySelector("#caption").value || null,
+                            description: document.querySelector("#description").value || null,
+                            sourceUrl: document.querySelector("#sourceUrl").value || null,
+                            allowDownload: document.querySelector("#allowDownload").checked,
+                            uploadIds: uploads.map((x) => x.id),
+                            tags,
+                            categoryId: category.value || null,
+                        }),
+                    });
+                    if (!r.ok) throw new Error("Post creation failed.");
+                    location.href = "/posts/" + encodeURIComponent((await r.json()).data.id);
+                } catch (err) {
+                    error.textContent =
+                        err instanceof Error ? err.message : "Unable to create post.";
+                    error.hidden = false;
+                    button.disabled = false;
+                    button.textContent = "Create Post";
+                }
+            });
+        </script>
+    </body>
+</html>

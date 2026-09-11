@@ -1,1 +1,96 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit Post · imshare</title><link rel="stylesheet" href="/style.css"><script src="/components.js" defer></script></head><body><site-header></site-header><main><h1>Edit Post</h1><form id="form" class="box"><label for="title">Title</label><input id="title" required><label for="caption">Image caption</label><textarea id="caption" maxlength="10000"></textarea><label for="description">Description</label><textarea id="description"></textarea><label for="sourceUrl">Source URL</label><input id="sourceUrl" type="url"><label><input id="allowDownload" type="checkbox"> Allow visitors to download the original image</label><label for="tags">Tags</label><input id="tags"><label for="category">Category</label><select id="category"><option value="">None</option></select><button>Save changes</button><p id="error" class="error" hidden></p></form></main><script type="module">const id=location.pathname.split("/").filter(Boolean).at(-2),form=document.querySelector("#form"),error=document.querySelector("#error"),fields={title:document.querySelector("#title"),caption:document.querySelector("#caption"),description:document.querySelector("#description"),sourceUrl:document.querySelector("#sourceUrl"),allowDownload:document.querySelector("#allowDownload"),tags:document.querySelector("#tags"),category:document.querySelector("#category")};try{const [postRes,catsRes]=await Promise.all([fetch("/v1/posts/"+encodeURIComponent(id)),fetch("/v1/categories?limit=100")]);if(postRes.status===401)location.href="/account/login/";if(!postRes.ok)throw new Error();const {data:p}=await postRes.json();for(const c of (await catsRes.json()).data||[]){const o=document.createElement("option");o.value=c.id;o.textContent=c.name;fields.category.append(o)}fields.title.value=p.title||"";fields.caption.value=p.caption||"";fields.description.value=p.description||"";fields.sourceUrl.value=p.sourceUrl||"";fields.allowDownload.checked=p.allowDownload!==false;fields.tags.value=(p.tags||[]).map(t=>t.name).join(", ");fields.category.value=p.category?.id||""}catch{error.textContent="Unable to load this post.";error.hidden=false;form.querySelector("button").disabled=true}form.addEventListener("submit",async e=>{e.preventDefault();error.hidden=true;const r=await fetch("/v1/posts/"+encodeURIComponent(id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:fields.title.value,caption:fields.caption.value||null,description:fields.description.value||null,sourceUrl:fields.sourceUrl.value||null,allowDownload:fields.allowDownload.checked,tags:fields.tags.value.split(",").map(x=>x.trim()).filter(Boolean),categoryId:fields.category.value||null})});if(r.ok)location.href="/dashboard/posts/"+encodeURIComponent(id)+"/";else{error.textContent="Unable to save changes.";error.hidden=false}});</script></body></html>
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Edit Post · imshare</title>
+        <link rel="stylesheet" href="/style.css" />
+        <script src="/components.js" defer></script>
+    </head>
+    <body>
+        <site-header></site-header>
+        <main>
+            <h1>Edit Post</h1>
+            <form id="form" class="box">
+                <label for="title">Title</label><input id="title" required /><label for="caption"
+                    >Image caption</label
+                ><textarea id="caption" maxlength="10000"></textarea
+                ><label for="description">Description</label><textarea id="description"></textarea
+                ><label for="sourceUrl">Source URL</label><input id="sourceUrl" type="url" /><label
+                    ><input id="allowDownload" type="checkbox" /> Allow visitors to download the
+                    original image</label
+                ><label for="tags">Tags</label><input id="tags" /><label for="category"
+                    >Category</label
+                ><select id="category">
+                    <option value="">None</option></select
+                ><button>Save changes</button>
+                <p id="error" class="error" hidden></p>
+            </form>
+        </main>
+        <script type="module">
+            const id = location.pathname.split("/").filter(Boolean).at(-2),
+                form = document.querySelector("#form"),
+                error = document.querySelector("#error"),
+                fields = {
+                    title: document.querySelector("#title"),
+                    caption: document.querySelector("#caption"),
+                    description: document.querySelector("#description"),
+                    sourceUrl: document.querySelector("#sourceUrl"),
+                    allowDownload: document.querySelector("#allowDownload"),
+                    tags: document.querySelector("#tags"),
+                    category: document.querySelector("#category"),
+                };
+            try {
+                const [postRes, catsRes] = await Promise.all([
+                    fetch("/v1/posts/" + encodeURIComponent(id)),
+                    fetch("/v1/categories?limit=100"),
+                ]);
+                if (postRes.status === 401) location.href = "/account/login/";
+                if (!postRes.ok) throw new Error();
+                const { data: p } = await postRes.json();
+                for (const c of (await catsRes.json()).data || []) {
+                    const o = document.createElement("option");
+                    o.value = c.id;
+                    o.textContent = c.name;
+                    fields.category.append(o);
+                }
+                fields.title.value = p.title || "";
+                fields.caption.value = p.caption || "";
+                fields.description.value = p.description || "";
+                fields.sourceUrl.value = p.sourceUrl || "";
+                fields.allowDownload.checked = p.allowDownload !== false;
+                fields.tags.value = (p.tags || []).map((t) => t.name).join(", ");
+                fields.category.value = p.category?.id || "";
+            } catch {
+                error.textContent = "Unable to load this post.";
+                error.hidden = false;
+                form.querySelector("button").disabled = true;
+            }
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                error.hidden = true;
+                const r = await fetch("/v1/posts/" + encodeURIComponent(id), {
+                    method: "PATCH",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({
+                        title: fields.title.value,
+                        caption: fields.caption.value || null,
+                        description: fields.description.value || null,
+                        sourceUrl: fields.sourceUrl.value || null,
+                        allowDownload: fields.allowDownload.checked,
+                        tags: fields.tags.value
+                            .split(",")
+                            .map((x) => x.trim())
+                            .filter(Boolean),
+                        categoryId: fields.category.value || null,
+                    }),
+                });
+                if (r.ok) location.href = "/dashboard/posts/" + encodeURIComponent(id) + "/";
+                else {
+                    error.textContent = "Unable to save changes.";
+                    error.hidden = false;
+                }
+            });
+        </script>
+    </body>
+</html>
