@@ -18,12 +18,13 @@
         const snackbar = document.createElement("div");
         snackbar.className = `mui-snackbar mui-snackbar-${severity}`;
         snackbar.setAttribute("role", severity === "error" ? "alert" : "status");
+        snackbar.setAttribute("aria-live", severity === "error" ? "assertive" : "polite");
         snackbar.textContent = message;
         host.append(snackbar);
         state.snackbars.push(snackbar);
         window.setTimeout(() => {
             snackbar.remove();
-            state.snackbars = state.snackbars.filter((item) => item !== snackbar);
+            state.snackbars = state.snackbars.filter(item => item !== snackbar);
         }, 4000);
         return snackbar;
     }
@@ -32,9 +33,7 @@
         const response = await fetch(url, {
             headers: {
                 Accept: "application/json",
-                ...(options?.body && !(options.body instanceof FormData)
-                    ? { "Content-Type": "application/json" }
-                    : {}),
+                ...(options?.body && !(options.body instanceof FormData) ? { "Content-Type": "application/json" } : {}),
                 ...(options?.headers ?? {}),
             },
             ...options,
@@ -49,14 +48,16 @@
             }
         }
         if (!response.ok) {
-            const message = data?.error?.message ?? `Request failed (${response.status}).`;
-            throw new Error(message);
+            const error = new Error(data?.error?.message ?? `Request failed (${response.status}).`);
+            error.status = response.status;
+            error.data = data;
+            throw error;
         }
         return data;
     }
 
     function escapeHtml(value) {
-        return String(value)
+        return String(value ?? "")
             .replaceAll("&", "&amp;")
             .replaceAll("<", "&lt;")
             .replaceAll(">", "&gt;")
@@ -64,18 +65,24 @@
             .replaceAll("'", "&#039;");
     }
 
+    async function copy(value, message = "Copied to clipboard.") {
+        try {
+            await navigator.clipboard.writeText(value);
+            showSnackbar(message, "success");
+            return true;
+        } catch {
+            showSnackbar("Unable to copy to clipboard.", "error");
+            return false;
+        }
+    }
+
     function setupCopyButtons() {
-        document.addEventListener("click", async (event) => {
+        document.addEventListener("click", async event => {
             const target = event.target instanceof Element ? event.target.closest("[data-copy]") : null;
             if (!target) return;
             const value = target.getAttribute("data-copy");
             if (!value) return;
-            try {
-                await navigator.clipboard.writeText(value);
-                showSnackbar("Copied to clipboard.", "success");
-            } catch {
-                showSnackbar("Unable to copy to clipboard.", "error");
-            }
+            await copy(value);
         });
     }
 
@@ -83,6 +90,7 @@
 
     window.imshareUI = {
         api,
+        copy,
         showSnackbar,
         escapeHtml,
     };
