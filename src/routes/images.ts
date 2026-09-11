@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs";
 import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
+import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
@@ -17,6 +18,19 @@ function cacheKey(uploadId: string, width?: number, height?: number, fit?: Fit, 
 
 export const imageRoutes: FastifyPluginAsync = async (fastify) => {
   const config = await loadConfig(); const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory); const cacheDir = path.join(uploadDir, ".cache"); await mkdir(cacheDir, { recursive: true });
+  fastify.get("/v1/posts/image/:uploadId/placeholder", async (request, reply) => {
+    const { uploadId } = request.params as { uploadId: string };
+    const upload = await prisma.upload.findUnique({ where: { id: uploadId }, select: { thumbhash: true } });
+    if (!upload?.thumbhash) return reply.code(404).send({ error: { code: "THUMBHASH_NOT_FOUND", message: "Image placeholder is not available." } });
+    try {
+      const cachePath = path.join(cacheDir, `${uploadId}-thumbhash.png`);
+      try { const cached = await readFile(cachePath); return reply.type("image/png").header("Cache-Control", "public, max-age=31536000, immutable").send(cached); } catch {}
+      const image = thumbHashToRGBA(new Uint8Array(Buffer.from(upload.thumbhash, "base64")));
+      const output = await sharp(Buffer.from(image.rgba), { raw: { width: image.w, height: image.h, channels: 4 } }).png().toBuffer();
+      await writeFile(cachePath, output, { flag: "wx" }).catch(() => undefined);
+      return reply.type("image/png").header("Cache-Control", "public, max-age=31536000, immutable").send(output);
+    } catch { return reply.code(500).send({ error: { code: "THUMBHASH_FAILED", message: "The image placeholder could not be generated." } }); }
+  });
   fastify.get("/v1/posts/image/:uploadId", async (request, reply) => {
     const { uploadId } = request.params as { uploadId: string }; const query = request.query as Record<string, unknown>;
     const upload = await prisma.upload.findUnique({ where: { id: uploadId }, include: { post: { select: { allowDownload: true, userId: true } } } });
