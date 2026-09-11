@@ -250,7 +250,7 @@ function PostPage({ post, recommendations = [] }) {
                                       image,
                                       alt: post.title || "Image",
                                       sx: {
-                                          width: "100%",
+                                          width: "min(100%, 45vw)",
                                           maxHeight: { xs: "70vh", md: "80vh" },
                                           objectFit: "contain",
                                       },
