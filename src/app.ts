@@ -54,10 +54,13 @@ export async function buildApp() {
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
+        const hostHeader = request.headers.host;
+        const host = hostHeader?.trim() || request.hostname;
+        const configuredHost = host.includes(":") ? host : `${host}:${config.server.port}`;
         if (
             !isSameOriginRequest(
                 request.method,
-                `${request.protocol}://${request.hostname}${request.headers.host?.includes(":") ? `:${new URL(request.url, `${request.protocol}://${request.headers.host}`).port}` : ""}`,
+                `${request.protocol}://${configuredHost}`,
                 request.headers.origin,
                 request.headers.referer,
             )
@@ -219,114 +222,46 @@ export async function buildApp() {
 
     await mkdir(uploadDir, { recursive: true });
     await app.register(cookie);
-    await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize, files: 20 } });
+    await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize } });
+    await app.register(fastifyStatic, {
+        root: publicDir,
+        prefix: "/",
+        decorateReply: false,
+    });
     await app.register(fastifyView, {
         engine: { ejs },
         root: viewsDir,
+        includeViewExtension: true,
     });
+
+    const sendPage = async (request: FastifyRequest, reply: FastifyReply, view: string) => {
+        try {
+            return await reply.view(view);
+        } catch {
+            return sendErrorPage(500, "Server error", "The requested page could not be rendered.", reply);
+        }
+    };
+
     await app.register(authRoutes);
     await app.register(apiRoutes);
-    await app.register(fastifyStatic, {
-        root: uploadDir,
-        prefix: "/uploads/",
-        decorateReply: false,
-    });
-    await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: true });
 
-    const sendPage = (view: string) =>
-        async (_request: FastifyRequest, reply: FastifyReply) => reply.view(view);
-    const sendPublicPage = (file: string) =>
-        async (_request: FastifyRequest, reply: FastifyReply) =>
-            reply
-                .type("text/html; charset=utf-8")
-                .send(await readFile(path.join(publicDir, file), "utf8"));
-
-    app.get("/", sendPage("index.ejs"));
-    app.get("/posts/", sendPage("posts/index.ejs"));
-    app.get("/posts/:postId", sendPage("posts/view.ejs"));
-    app.get("/users/", sendPublicPage("users/index.html"));
-    app.get("/users/:userId", sendPublicPage("users/view.html"));
-    app.get("/users/:userId/posts", sendPublicPage("users/posts.html"));
-    app.get("/tags/", sendPublicPage("tags/index.html"));
-    app.get("/tags/:tagId", sendPublicPage("tags/view.html"));
-    app.get("/tags/:tagId/posts", sendPublicPage("tags/posts.html"));
-    app.get("/categories/", sendPublicPage("categories/index.html"));
-    app.get("/categories/:categoryId", sendPublicPage("categories/view.html"));
-    app.get("/categories/:categoryId/posts", sendPublicPage("categories/posts.html"));
-    app.get("/search/", sendPublicPage("search/index.html"));
-    app.get("/account/", sendPage("account/index.ejs"));
-    app.get("/account/login/", sendPublicPage("account/login/index.html"));
-    app.get("/account/register/", sendPublicPage("account/register/index.html"));
-    app.get("/notifications/", sendPublicPage("account/notifications.html"));
-    app.get("/account/profile/", sendPublicPage("account/profile.html"));
-    app.get("/account/logout/", async (request, reply) => {
-        const response = await fetch(`${request.protocol}://${request.hostname}/v1/auth/sign-out`, {
-            method: "POST",
-            headers: { cookie: request.headers.cookie ?? "" },
-        });
-        response.headers.forEach((value, key) => reply.header(key, value));
-        return reply.redirect("/");
-    });
-    app.get("/dashboard/", sendPage("dashboard/index.ejs"));
-    app.get("/dashboard/posts/", sendPage("dashboard/posts/index.ejs"));
-    app.get("/dashboard/posts/new/", sendPage("posts/new/index.ejs"));
-    app.get("/dashboard/posts/:postId/", sendPage("dashboard/posts/view.ejs"));
-    app.get("/dashboard/posts/:postId/edit/", sendPage("dashboard/posts/edit.ejs"));
-    app.get("/dashboard/tags/", sendPublicPage("dashboard/tags.html"));
-    app.get("/dashboard/categories/", sendPublicPage("dashboard/categories.html"));
-    app.get("/dashboard/settings/", sendPublicPage("dashboard/settings.html"));
-    app.get("/about/", sendPublicPage("about.html"));
-    app.get("/faq/", sendPublicPage("faq.html"));
-    app.get("/github/", sendPublicPage("github.html"));
-    app.get("/privacy/", sendPublicPage("privacy.html"));
-    app.get("/terms/", sendPublicPage("terms.html"));
-
-    app.setNotFoundHandler(async (request, reply) => {
-        if ((request.headers.accept ?? "").includes("text/html"))
-            return sendErrorPage(
-                404,
-                "Page not found",
-                "The page you requested does not exist.",
-                reply,
-            );
-        return reply.code(404).send({
-            error: {
-                code: "NOT_FOUND",
-                message: "The requested page or resource was not found.",
-            },
-        });
-    });
-
-    app.setErrorHandler(async (error, request, reply) => {
-        request.log.error(error);
-        if (reply.sent) return;
-        const errorObject = typeof error === "object" && error !== null ? error : undefined;
-        const statusCode =
-            errorObject && "statusCode" in errorObject && typeof errorObject.statusCode === "number"
-                ? errorObject.statusCode
-                : 500;
-        const status = statusCode >= 400 ? statusCode : 500;
-        const message =
-            error instanceof Error
-                ? error.message
-                : errorObject && "message" in errorObject && typeof errorObject.message === "string"
-                  ? errorObject.message
-                  : "Something went wrong while processing your request.";
-        const code =
-            errorObject && "code" in errorObject && typeof errorObject.code === "string"
-                ? errorObject.code
-                : "INTERNAL_ERROR";
-        const publicMessage =
-            status < 500 ? message : "Something went wrong while processing your request.";
-        if ((request.headers.accept ?? "").includes("text/html"))
-            return sendErrorPage(
-                status,
-                status === 404 ? "Page not found" : "Something went wrong",
-                publicMessage,
-                reply,
-            );
-        return reply.code(status).send({ error: { code, message: publicMessage } });
-    });
+    app.get("/", async (_request, reply) => sendPage(_request, reply, "home/index.ejs"));
+    app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
+    app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
+    app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
+    app.get("/account/notifications/", async (request, reply) => sendPage(request, reply, "account/notifications.ejs"));
+    app.get("/account/sessions/", async (request, reply) => sendPage(request, reply, "account/sessions.ejs"));
+    app.get("/account/profile/", async (request, reply) => sendPage(request, reply, "account/profile.ejs"));
+    app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
+    app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
+    app.get("/posts/:postId/", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
+    app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
+    app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
+    app.get("/dashboard/posts/:postId/", async (request, reply) => sendPage(request, reply, "dashboard/post.ejs"));
+    app.get("/dashboard/posts/:postId/edit/", async (request, reply) => sendPage(request, reply, "dashboard/post-editor.ejs"));
+    app.get("/dashboard/tags/", async (request, reply) => sendPage(request, reply, "dashboard/tags.ejs"));
+    app.get("/dashboard/categories/", async (request, reply) => sendPage(request, reply, "dashboard/categories.ejs"));
+    app.get("/dashboard/settings/", async (request, reply) => sendPage(request, reply, "dashboard/settings.ejs"));
 
     return app;
 }
