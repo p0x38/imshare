@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import type { LightMyRequestOptions } from "fastify";
 
 import { buildApp } from "../src/app.js";
 import { getRegistrationToken } from "../src/lib/registration-token.js";
@@ -14,13 +15,13 @@ test("API integration: authentication, users, posts, tags, categories, and searc
     let postId = "";
     let categoryId = "";
 
-    const request = (options: Parameters<typeof app.inject>[0]) =>
+    const request = (options: LightMyRequestOptions) =>
         app.inject({
             ...options,
             headers: {
                 host: "localhost:5454",
                 origin: "http://localhost:5454",
-                ...options.headers,
+                ...(options.headers ?? {}),
             },
         });
 
@@ -130,7 +131,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const updateUser = await request({
             method: "PATCH",
-            url: "/v1/me",
+            url: `/v1/users/${userId}`,
             headers: { cookie },
             payload: { name: "Updated Integration User" },
         });
