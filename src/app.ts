@@ -12,6 +12,7 @@ import { RateLimiter } from "./lib/rate-limit.js";
 import { isSameOriginRequest } from "./lib/csrf.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
+import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
 
 const logger = process.stdout.isTTY
@@ -244,6 +245,7 @@ export async function buildApp() {
 
     await app.register(authRoutes);
     await app.register(apiRoutes);
+    await app.register(pageRoutes);
 
     app.get("/", async (_request, reply) => sendPage(_request, reply, "index.ejs"));
     app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
