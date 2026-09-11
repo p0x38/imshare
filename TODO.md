@@ -114,14 +114,14 @@
       - [ ] Drawer
       - [ ] Menu
       - [ ] Tabs
-      - [ ] Pagination
+      - [x] Pagination
   - [ ] Add MUI layout/data-display components where useful
-      - [ ] Container
-      - [ ] Stack
+      - [x] Container
+      - [x] Stack
       - [ ] Grid
       - [ ] Paper
       - [ ] Avatar
-      - [ ] Chip
+      - [x] Chip
       - [ ] Tooltip
   - [ ] Remove remaining legacy frontend styling where replaced
   - [ ] Replace `esm.sh` runtime dependencies with a local frontend bundle
@@ -141,14 +141,14 @@
     - [ ] Retry failed uploads
     - [x] Reorder uploads
     - [x] Remove queued files
-- [ ] Toast / snackbar notification system
+- [x] Toast / snackbar notification system
 - [ ] Optimistic reactions
 - [ ] Copy image URL button
 - [ ] Copy Markdown/HTML embed code
 - [ ] Share button / Web Share API
-- [ ] Better empty states
-- [ ] Better loading states
-- [ ] Confirm-before-destructive-action dialogs
+- [x] Better empty states
+- [x] Better loading states
+- [x] Confirm-before-destructive-action dialogs
 
 ## Infrastructure
 
@@ -174,8 +174,8 @@
 
 ## Posts
 
-- [ ] Edit post
-- [ ] Delete post
+- [x] Edit post
+- [x] Delete post
 - [ ] Hide/unhide post
 - [ ] Draft posts
 - [ ] Post visibility
@@ -223,9 +223,9 @@
 - [ ] Replace runtime `esm.sh` MUI dependencies with local bundling
 - [ ] Introduce frontend build pipeline
 - [ ] Add browser HMR/live reload
-- [ ] Define frontend component architecture
-- [ ] Define API/client state conventions
-- [ ] Consolidate duplicated client-side code
+- [x] Define frontend component architecture
+- [x] Define API/client state conventions
+- [x] Consolidate duplicated client-side code
 - [ ] Add end-to-end tests
 - [ ] Add accessibility regression tests
 - [ ] Add performance regression tests
