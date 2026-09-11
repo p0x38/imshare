@@ -44,6 +44,7 @@ model User {
   emojis Emoji[]
   moderationActions ModerationLog[] @relation("moderationActor")
   moderationTargets ModerationLog[] @relation("moderationTarget")
+  postRevisions PostRevision[]
   @@map("user")
 }
 
@@ -99,6 +100,12 @@ model Post {
   caption String?
   sourceUrl String?
   allowDownload Boolean @default(true)
+  status String @default("published")
+  visibility String @default("public")
+  publishedAt DateTime?
+  scheduledAt DateTime?
+  hiddenAt DateTime?
+  contentWarning String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId String
@@ -111,9 +118,31 @@ model Post {
   comments Comment[]
   reports Report[]
   notifications Notification[]
+  revisions PostRevision[]
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
+  @@index([status, visibility, scheduledAt])
   @@map("post")
+}
+
+model PostRevision {
+  id String @id @default(cuid())
+  postId String
+  title String
+  description String?
+  caption String?
+  sourceUrl String?
+  allowDownload Boolean
+  categoryId String?
+  tagsJson String
+  contentWarning String?
+  createdAt DateTime @default(now())
+  createdById String
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  @@index([postId, createdAt])
+  @@index([createdById, createdAt])
+  @@map("post_revision")
 }
 
 model Upload {
