@@ -187,16 +187,16 @@
 ## Discovery
 
 - [ ] Full-text search
-- [ ] Search filters
-    - [ ] User
-    - [ ] Tag
-    - [ ] Category
-    - [ ] Date
-    - [ ] MIME type
-- [ ] Tag autocomplete
-- [ ] Related posts
-- [ ] Trending/popular posts
-- [ ] Recently viewed posts
+- [x] Search filters
+    - [x] User
+    - [x] Tag
+    - [x] Category
+    - [x] Date
+    - [x] MIME type
+- [x] Tag autocomplete
+- [x] Related posts
+- [x] Trending/popular posts
+- [x] Recently viewed posts
 
 ## Moderation / safety
 
