@@ -245,7 +245,7 @@ export async function buildApp() {
 
     const sendReactPostPage = async (_request: FastifyRequest, reply: FastifyReply) => {
         try {
-            const file = path.join(publicDir, "build", "post.html");
+            const file = path.join(publicDir, "build", "src", "client", "posts", "index.html");
             return reply.type("text/html; charset=utf-8").send(await readFile(file, "utf8"));
         } catch {
             return sendErrorPage(503, "Frontend unavailable", "The React frontend has not been built yet.", reply);
