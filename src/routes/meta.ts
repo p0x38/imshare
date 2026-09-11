@@ -9,7 +9,7 @@ function escapeXml(value: string): string {
     ">": "&gt;",
     "&": "&amp;",
     "'": "&apos;",
-    "\"": "&quot;",
+    '"': "&quot;",
   }[character] ?? character));
 }
 
@@ -29,7 +29,15 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
       }),
       prisma.post.findMany({
         where: { user: { isPublic: true, showPosts: true } },
-        select: { id: true, updatedAt: true },
+        select: {
+          id: true,
+          updatedAt: true,
+          uploads: {
+            orderBy: { createdAt: "asc" },
+            take: 1000,
+            select: { id: true },
+          },
+        },
       }),
       prisma.tag.findMany({
         select: { slug: true, updatedAt: true },
@@ -62,10 +70,16 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         (user) =>
           `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/users/${encodeURIComponent(user.id)}`))}</loc><lastmod>${user.updatedAt.toISOString()}</lastmod></url>`,
       ),
-      ...posts.map(
-        (post) =>
-          `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod></url>`,
-      ),
+      ...posts.map((post) => {
+        const images = post.uploads
+          .map(
+            (upload) =>
+              `<image:image><image:loc>${escapeXml(absoluteUrl(baseUrl, `/v1/posts/image/${encodeURIComponent(upload.id)}`))}</image:loc></image:image>`,
+          )
+          .join("");
+
+        return `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod>${images}</url>`;
+      }),
       ...tags.map(
         (tag) =>
           `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/tags/${encodeURIComponent(tag.slug)}`))}</loc><lastmod>${tag.updatedAt.toISOString()}</lastmod></url>`,
@@ -78,7 +92,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
 
     const xml =
       `<?xml version="1.0" encoding="UTF-8"?>\n` +
-      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${entries.join("")}</urlset>\n`;
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">${entries.join("")}</urlset>\n`;
 
     return reply
       .type("application/xml; charset=utf-8")
