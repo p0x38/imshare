@@ -5,6 +5,7 @@ import {
     AppBar,
     Box,
     Button,
+    ButtonGroup,
     Card,
     CardActionArea,
     CardContent,
@@ -17,15 +18,23 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
+    Divider,
+    IconButton,
     Pagination,
+    Paper,
     Skeleton,
     Snackbar,
     Stack,
+    TextField,
     ThemeProvider,
     Toolbar,
+    Tooltip,
     Typography,
     createTheme,
 } from "https://esm.sh/@mui/material@9.4.0?bundle&external=react,react-dom&target=es2022";
+import SearchIcon from "https://esm.sh/@mui/icons-material@9.4.0/Search?target=es2022";
+import ArrowBackIcon from "https://esm.sh/@mui/icons-material@9.4.0/ArrowBack?target=es2022";
+import ArrowForwardIcon from "https://esm.sh/@mui/icons-material@9.4.0/ArrowForward?target=es2022";
 
 const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
 let theme;
@@ -239,6 +248,78 @@ function updateTheme() {
     if (feedbackRoot && feedbackState.open) feedbackRoot.render(themedComponent(React.createElement(Feedback)));
 }
 
+function PostsPage({ api }) {
+    const [posts, setPosts] = React.useState([]);
+    const [status, setStatus] = React.useState("Loading…");
+    const [query, setQuery] = React.useState("");
+    const [page, setPage] = React.useState(1);
+    const [totalPages, setTotalPages] = React.useState(1);
+    const limit = 48;
+
+    const load = React.useCallback(async (nextPage, nextQuery) => {
+        setStatus("Loading…");
+        try {
+            const search = nextQuery.trim();
+            const response = await api(`/v1/posts?page=${nextPage}&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`);
+            setPosts(response.data ?? []);
+            setTotalPages(Math.max(1, response.pagination?.totalPages || 1));
+            setStatus(`${response.pagination?.total ?? 0} post(s)`);
+        } catch (error) {
+            setPosts([]);
+            setStatus(error instanceof Error ? error.message : "Unable to load posts.");
+        }
+    }, [api]);
+
+    React.useEffect(() => {
+        load(page, query);
+    }, [load, page, query]);
+
+    const submit = event => {
+        event.preventDefault();
+        setPage(1);
+    };
+
+    return React.createElement(
+        Container,
+        { maxWidth: "lg", sx: { py: 4 } },
+        React.createElement(Typography, { variant: "h4", component: "h1", gutterBottom: true }, "Posts"),
+        React.createElement(
+            Paper,
+            { component: "form", onSubmit: submit, variant: "outlined", sx: { p: 2, mb: 3 } },
+            React.createElement(
+                Stack,
+                { direction: { xs: "column", sm: "row" }, spacing: 1, alignItems: { sm: "center" } },
+                React.createElement(TextField, {
+                    fullWidth: true,
+                    label: "Search",
+                    name: "q",
+                    type: "search",
+                    value: query,
+                    onChange: event => setQuery(event.target.value),
+                    slotProps: {
+                        input: {
+                            startAdornment: React.createElement(SearchIcon, { sx: { mr: 1, color: "text.secondary" } }),
+                        },
+                    },
+                }),
+                React.createElement(Tooltip, { title: "Search posts" }, React.createElement(IconButton, { type: "submit", color: "primary", "aria-label": "Search posts" }, React.createElement(SearchIcon))),
+            ),
+        ),
+        React.createElement(Divider, { sx: { mb: 2 } }),
+        React.createElement(Typography, { color: "text.secondary", sx: { mb: 2 } }, status),
+        React.createElement(PostGrid, { posts, empty: posts.length === 0 && status !== "Loading…", error: false, title: query.trim() ? "No matching posts" : "No posts yet" }),
+        React.createElement(
+            Stack,
+            { direction: "row", alignItems: "center", justifyContent: "center", spacing: 2, sx: { mt: 4 } },
+            React.createElement(ButtonGroup, { variant: "outlined", "aria-label": "Pagination controls" },
+                React.createElement(Tooltip, { title: "Previous page" }, React.createElement(IconButton, { disabled: page <= 1, onClick: () => setPage(current => Math.max(1, current - 1)), "aria-label": "Previous page" }, React.createElement(ArrowBackIcon))),
+                React.createElement(Button, { disabled: page > totalPages }, `Page ${page} / ${totalPages}`),
+                React.createElement(Tooltip, { title: "Next page" }, React.createElement(IconButton, { disabled: page >= totalPages, onClick: () => setPage(current => Math.min(totalPages, current + 1)), "aria-label": "Next page" }, React.createElement(ArrowForwardIcon))),
+            ),
+        ),
+    );
+}
+
 systemThemeQuery.addEventListener("change", updateTheme);
 
 const originalHeader = document.querySelector("body > header");
@@ -259,6 +340,7 @@ window.imshareMUI = {
     LoadingState,
     PreviewCard,
     PostGrid,
+    PostsPage,
     DialogPrompt,
     Pagination,
     showSnackbar,
