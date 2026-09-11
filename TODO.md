@@ -65,7 +65,7 @@
 - [ ] Blurhash/thumbhash placeholders
 - [ ] Progressive image loading
 - [ ] CDN/cache headers
-- [ ] Optional original-file download
+- [x] Optional original-file download
 
 ## Realtime
 
@@ -104,18 +104,18 @@
   - [x] Add MUI-based post cards
   - [x] Add MUI Skeleton loading states
   - [ ] Add MUI form components for upload/edit pages
-  - [ ] Add MUI dialogs / confirmation UI where appropriate
+  - [x] Add MUI dialogs / confirmation UI where appropriate
   - [x] Make MUI theme follow system dark/light preference
-  - [ ] Add MUI feedback components
-      - [ ] Alert
-      - [ ] CircularProgress / LinearProgress
-      - [ ] Snackbar
+  - [x] Add MUI feedback components
+      - [x] Alert
+      - [x] CircularProgress / LinearProgress
+      - [x] Snackbar
   - [ ] Add MUI navigation components where appropriate
       - [ ] Drawer
       - [ ] Menu
       - [ ] Tabs
       - [x] Pagination
-  - [ ] Add MUI layout/data-display components where useful
+  - [x] Add MUI layout/data-display components where useful
       - [x] Container
       - [x] Stack
       - [ ] Grid
@@ -143,7 +143,7 @@
     - [x] Remove queued files
 - [x] Toast / snackbar notification system
 - [ ] Optimistic reactions
-- [ ] Copy image URL button
+- [x] Copy image URL button
 - [ ] Copy Markdown/HTML embed code
 - [ ] Share button / Web Share API
 - [x] Better empty states
