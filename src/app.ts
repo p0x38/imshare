@@ -147,7 +147,7 @@ export async function buildApp() {
         let metaImage = "";
         let metaType = "website";
 
-        const postMatch = request.url.split("?", 1)[0].match(/^\/posts\/([^/]+)\/?$/);
+        const postMatch = request.url.split("?", 1)[0]?.match(/^\/posts\/([^/]+)\/?$/);
         if (postMatch) {
             try {
                 const post = await prisma.post.findUnique({
