@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { buildApp } from "../src/app.js";
+import { getRegistrationToken } from "../src/lib/registration-token.js";
 import { prisma } from "../src/lib/auth.js";
 
 test("API integration: authentication, users, posts, tags, categories, and search", async () => {
@@ -25,10 +26,11 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         const anonymous = await request({ method: "GET", url: "/v1/me" });
         assert.equal(anonymous.statusCode, 401);
 
+        const registrationToken = getRegistrationToken().token;
         const signup = await request({
             method: "POST",
             url: "/v1/auth/sign-up/email",
-            payload: { name: "Integration User", email, password: "integration-password-123" },
+            payload: { name: "Integration User", email, password: "integration-password-123", registrationToken },
         });
         assert.ok([200, 201].includes(signup.statusCode), signup.body);
         cookie = extractCookie(signup);
@@ -39,11 +41,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         assert.equal(me.json().data.email, email);
         const userId = me.json().data.id as string;
 
-        const session = await request({
-            method: "GET",
-            url: "/v1/auth/get-session",
-            headers: { cookie },
-        });
+        const session = await request({ method: "GET", url: "/v1/auth/get-session", headers: { cookie } });
         assert.equal(session.statusCode, 200);
 
         const category = await request({
@@ -85,10 +83,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         assert.equal(postRead.statusCode, 200);
         assert.equal(postRead.json().data.id, postId);
 
-        const postList = await request({
-            method: "GET",
-            url: "/v1/posts?search=Integration%20Post",
-        });
+        const postList = await request({ method: "GET", url: "/v1/posts?search=Integration%20Post" });
         assert.equal(postList.statusCode, 200);
         assert.equal(postList.json().pagination.total, 1);
 
@@ -100,20 +95,10 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         assert.equal(postTags.statusCode, 200);
         assert.equal(postTags.json().data[0].name, "generated tag");
 
-        const attachTag = await request({
-            method: "POST",
-            url: `/v1/posts/${postId}/tags`,
-            headers: { cookie },
-            payload: { tagId },
-        });
+        const attachTag = await request({ method: "POST", url: `/v1/posts/${postId}/tags`, headers: { cookie }, payload: { tagId } });
         assert.equal(attachTag.statusCode, 201);
 
-        const attachCategory = await request({
-            method: "PUT",
-            url: `/v1/posts/${postId}/category`,
-            headers: { cookie },
-            payload: { categoryId },
-        });
+        const attachCategory = await request({ method: "PUT", url: `/v1/posts/${postId}/category`, headers: { cookie }, payload: { categoryId } });
         assert.equal(attachCategory.statusCode, 200);
 
         const search = await request({ method: "GET", url: "/v1/search?q=Integration&type=all" });
@@ -123,70 +108,41 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         assert.ok(search.json().data.tags.length >= 1);
         assert.ok(search.json().data.categories.length >= 1);
 
-        const update = await request({
-            method: "PATCH",
-            url: `/v1/posts/${postId}`,
-            headers: { cookie },
-            payload: { title: "Updated Integration Post" },
-        });
+        const update = await request({ method: "PATCH", url: `/v1/posts/${postId}`, headers: { cookie }, payload: { title: "Updated Integration Post" } });
         assert.equal(update.statusCode, 200);
         assert.equal(update.json().data.title, "Updated Integration Post");
 
-        const ownUserUpdate = await request({
-            method: "PATCH",
-            url: `/v1/users/${userId}`,
-            headers: { cookie },
-            payload: { name: "Renamed Integration User" },
-        });
+        const ownUserUpdate = await request({ method: "PATCH", url: `/v1/users/${userId}`, headers: { cookie }, payload: { name: "Renamed Integration User" } });
         assert.equal(ownUserUpdate.statusCode, 200);
         assert.equal(ownUserUpdate.json().data.name, "Renamed Integration User");
 
         const secondSignup = await request({
             method: "POST",
             url: "/v1/auth/sign-up/email",
-            payload: {
-                name: "Second Integration User",
-                email: secondEmail,
-                password: "integration-password-456",
-            },
+            payload: { name: "Second Integration User", email: secondEmail, password: "integration-password-456", registrationToken },
         });
         assert.ok([200, 201].includes(secondSignup.statusCode), secondSignup.body);
         secondCookie = extractCookie(secondSignup);
         assert.notEqual(secondCookie, "");
 
-        const forbiddenPostUpdate = await request({
-            method: "PATCH",
-            url: `/v1/posts/${postId}`,
-            headers: { cookie: secondCookie },
-            payload: { title: "Should Be Rejected" },
-        });
+        const forbiddenPostUpdate = await request({ method: "PATCH", url: `/v1/posts/${postId}`, headers: { cookie: secondCookie }, payload: { title: "Should Be Rejected" } });
         assert.equal(forbiddenPostUpdate.statusCode, 403);
 
-        const forbiddenPostDelete = await request({
-            method: "DELETE",
-            url: `/v1/posts/${postId}`,
-            headers: { cookie: secondCookie },
-        });
+        const forbiddenPostDelete = await request({ method: "DELETE", url: `/v1/posts/${postId}`, headers: { cookie: secondCookie } });
         assert.equal(forbiddenPostDelete.statusCode, 403);
 
         const tagPosts = await request({ method: "GET", url: `/v1/tags/${tagId}/posts` });
         assert.equal(tagPosts.statusCode, 200);
         assert.equal(tagPosts.json().pagination.total, 1);
 
-        const categoryPosts = await request({
-            method: "GET",
-            url: `/v1/categories/${categoryId}/posts`,
-        });
+        const categoryPosts = await request({ method: "GET", url: `/v1/categories/${categoryId}/posts` });
         assert.equal(categoryPosts.statusCode, 200);
         assert.equal(categoryPosts.json().pagination.total, 1);
 
         const logout = await request({
             method: "POST",
             url: "/v1/auth/sign-out",
-            headers: {
-                cookie,
-                origin: "http://localhost:5454",
-            },
+            headers: { cookie, origin: "http://localhost:5454" },
         });
         assert.equal(logout.statusCode, 200);
 
