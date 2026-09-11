@@ -32,6 +32,7 @@ model User {
   reports Report[]
   notifications Notification[] @relation("notificationRecipient")
   actedNotifications Notification[] @relation("notificationActor")
+  emojis Emoji[]
   @@map("user")
 }
 
@@ -111,6 +112,7 @@ model Upload {
   mimeType String
   size Int
   contentHash String?
+  thumbhash String?
   createdAt DateTime @default(now())
   userId String
   postId String?
@@ -120,6 +122,17 @@ model Upload {
   @@index([postId])
   @@unique([userId, contentHash])
   @@map("upload")
+}
+
+model Emoji {
+  id String @id @default(cuid())
+  name String @unique
+  url String
+  createdAt DateTime @default(now())
+  creatorId String
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  @@index([creatorId, createdAt])
+  @@map("emoji")
 }
 
 model PostReaction {
