@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import { auth } from "../lib/auth.js";
-import { isValidRegistrationToken } from "../lib/registration-token.js";
+import { getRegistrationToken, isValidRegistrationToken } from "../lib/registration-token.js";
 
 function toWebRequest(request: FastifyRequest, body?: unknown): Request {
   const headers = new Headers();
@@ -32,6 +32,14 @@ function toWebRequest(request: FastifyRequest, body?: unknown): Request {
 }
 
 export const authRoutes: FastifyPluginAsync = async (fastify) => {
+  fastify.get("/v1/registration-token", async (request, reply) => {
+    const session = await auth.api.getSession({ headers: request.headers as HeadersInit });
+    if (!session) return reply.code(401).send({ error: { code: "UNAUTHORIZED", message: "Authentication is required." } });
+
+    const { token, expiresAt } = getRegistrationToken();
+    return { data: { token, expiresAt } };
+  });
+
   fastify.route({
     method: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     url: "/v1/auth/*",
