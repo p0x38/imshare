@@ -1,0 +1,7 @@
+<%- include("partials/head", { title: "Manage Post · imshare" }) %>
+<%- include("partials/header") %>
+<main><p><a href="/dashboard/posts/">&larr; My posts</a></p><div id="content" class="box">Loading…</div></main>
+<%- include("partials/footer") %>
+<script type="module">
+const id=location.pathname.split("/").filter(Boolean).at(-1),root=document.querySelector("#content");try{const r=await fetch("/v1/posts/"+encodeURIComponent(id));if(!r.ok)throw new Error();const{data:p}=await r.json();root.innerHTML='<h1></h1><p><a class="button" href="/dashboard/posts/'+encodeURIComponent(p.id)+'/edit/">Edit</a> <button id="delete">Delete</button></p><p><a href="/posts/'+encodeURIComponent(p.id)+'">View public post</a></p>';root.querySelector("h1").textContent=p.title;document.querySelector("#delete").onclick=async()=>{if(!confirm("Delete this post?"))return;const d=await fetch("/v1/posts/"+encodeURIComponent(p.id),{method:"DELETE"});if(d.ok)location.href="/dashboard/posts/";else alert("Unable to delete post.")}}catch{root.innerHTML="<h1>Post not found</h1>"}
+</script>
