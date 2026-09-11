@@ -1,5 +1,6 @@
 ALTER TABLE "post" ADD COLUMN "caption" TEXT;
 ALTER TABLE "post" ADD COLUMN "allowDownload" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "upload" ADD COLUMN "thumbhash" TEXT;
 
 CREATE TABLE "comment_reaction" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -29,3 +30,14 @@ CREATE TABLE "report" (
 CREATE INDEX "report_status_createdAt_idx" ON "report"("status", "createdAt");
 CREATE INDEX "report_postId_idx" ON "report"("postId");
 CREATE INDEX "report_commentId_idx" ON "report"("commentId");
+
+CREATE TABLE "emoji" (
+  "id" TEXT NOT NULL PRIMARY KEY,
+  "name" TEXT NOT NULL,
+  "url" TEXT NOT NULL,
+  "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "creatorId" TEXT NOT NULL,
+  CONSTRAINT "emoji_creatorId_fkey" FOREIGN KEY ("creatorId") REFERENCES "user" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+CREATE UNIQUE INDEX "emoji_name_key" ON "emoji"("name");
+CREATE INDEX "emoji_creatorId_createdAt_idx" ON "emoji"("creatorId", "createdAt");
