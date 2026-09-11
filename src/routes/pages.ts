@@ -38,7 +38,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     };
 
     for (const [from, to] of Object.entries(redirects))
-        fastify.get(from, async (_request, reply) => reply.redirect(308, to));
+        fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
 
     fastify.get("/account/login/", async (_request, reply) => staticPage(reply, "account/login/index.html"));
     fastify.get("/account/register/", async (_request, reply) => staticPage(reply, "account/register/index.html"));

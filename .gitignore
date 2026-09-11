@@ -6,3 +6,4 @@ dist/
 **/*.db
 **/*.db.backup
 config.json
+build/
