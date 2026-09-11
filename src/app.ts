@@ -254,6 +254,7 @@ export async function buildApp() {
     app.get("/account/profile/", async (request, reply) => sendPage(request, reply, "account/profile.ejs"));
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
     app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
+    app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
     app.get("/posts/:postId/", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
     app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
     app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
