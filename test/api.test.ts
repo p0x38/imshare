@@ -53,13 +53,16 @@ test("health and version routes are publicly available", async () => {
   finally { await app.close(); }
 });
 
-test("protected social routes require authentication", async () => {
+test("protected notification routes require authentication while comment listing is public", async () => {
   const app = await buildApp();
   try {
-    for (const url of ["/v1/me/notifications", "/v1/me/notifications/unread-count", "/v1/posts/missing/comments"]) {
+    for (const url of ["/v1/me/notifications", "/v1/me/notifications/unread-count"]) {
       const response = await app.inject({ method: "GET", url });
       assert.equal(response.statusCode, 401, url);
     }
+    const comments = await app.inject({ method: "GET", url: "/v1/posts/missing/comments" });
+    assert.equal(comments.statusCode, 200);
+    assert.deepEqual(comments.json(), { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } });
   } finally { await app.close(); }
 });
 
