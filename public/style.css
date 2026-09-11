@@ -294,6 +294,42 @@ samp {
     margin-top: 6px;
     font-size: 0.9rem;
 }
+.image-viewer-trigger {
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+}
+.image-viewer-trigger:hover {
+    background: transparent;
+}
+#image-viewer {
+    width: min(96vw, 1400px);
+    height: min(94vh, 1000px);
+    max-width: 96vw;
+    max-height: 94vh;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+}
+#image-viewer::backdrop {
+    background: rgb(0 0 0 / 0.8);
+}
+#image-viewer #viewer-image {
+    display: block;
+    width: 100%;
+    height: calc(100% - 96px);
+    object-fit: contain;
+    margin: 8px 0;
+}
+#viewer-meta {
+    margin: 4px 0;
+    text-align: center;
+}
 .caption {
     font-size: 1.05rem;
     white-space: pre-wrap;
