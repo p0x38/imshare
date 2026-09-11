@@ -1,7 +1,38 @@
 <%- include("../../partials/head", { title: "Manage Post · imshare" }) %>
 <%- include("../../partials/header") %>
-<main><p><a href="/dashboard/posts/">&larr; My posts</a></p><div id="content" class="box">Loading…</div></main>
+<main>
+    <div id="content" class="box">Loading…</div>
+</main>
 <%- include("../../partials/footer") %>
 <script type="module">
-const id=location.pathname.split("/").filter(Boolean).at(-1),root=document.querySelector("#content");try{const r=await fetch("/v1/posts/"+encodeURIComponent(id));if(!r.ok)throw new Error();const{data:p}=await r.json();root.innerHTML='<h1></h1><p><a class="button" href="/dashboard/posts/'+encodeURIComponent(p.id)+'/edit/">Edit</a> <button id="delete">Delete</button></p><p><a href="/posts/'+encodeURIComponent(p.id)+'">View public post</a></p>';root.querySelector("h1").textContent=p.title;document.querySelector("#delete").onclick=async()=>{if(!confirm("Delete this post?"))return;const d=await fetch("/v1/posts/"+encodeURIComponent(p.id),{method:"DELETE"});if(d.ok)location.href="/dashboard/posts/";else alert("Unable to delete post.")}}catch{root.innerHTML="<h1>Post not found</h1>"}
+const { api, showSnackbar, escapeHtml } = window.imshareUI;
+const root = document.querySelector("#content");
+const id = location.pathname.split("/").filter(Boolean).at(-1);
+
+try {
+    const { data: post } = await api(`/v1/posts/${encodeURIComponent(id)}`);
+    root.innerHTML = `
+        <h1>${escapeHtml(post.title)}</h1>
+        <p class="meta">Manage your post and its public page.</p>
+        <p>
+            <a class="button" href="/dashboard/posts/${encodeURIComponent(post.id)}/edit/">Edit</a>
+            <a class="button" href="/posts/${encodeURIComponent(post.id)}/">View public post</a>
+            <button type="button" id="delete">Delete</button>
+        </p>`;
+    document.querySelector("#delete").addEventListener("click", async event => {
+        if (!confirm("Delete this post? This cannot be undone.")) return;
+        event.currentTarget.disabled = true;
+        try {
+            await api(`/v1/posts/${encodeURIComponent(post.id)}`, { method: "DELETE" });
+            showSnackbar("Post deleted.", "success");
+            location.href = "/dashboard/posts/";
+        } catch (error) {
+            showSnackbar(error instanceof Error ? error.message : "Unable to delete post.", "error");
+            event.currentTarget.disabled = false;
+        }
+    });
+} catch (error) {
+    showSnackbar(error instanceof Error ? error.message : "Unable to load this post.", "error");
+    root.innerHTML = "<h1>Post not found</h1>";
+}
 </script>
