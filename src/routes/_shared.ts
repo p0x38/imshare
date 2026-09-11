@@ -23,6 +23,12 @@ export function postView(post: any) {
         caption: post.caption,
         sourceUrl: post.sourceUrl,
         allowDownload: post.allowDownload,
+        status: post.status,
+        visibility: post.visibility,
+        publishedAt: post.publishedAt,
+        scheduledAt: post.scheduledAt,
+        hiddenAt: post.hiddenAt,
+        contentWarning: post.contentWarning,
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         author: {
