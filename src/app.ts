@@ -59,7 +59,7 @@ export async function buildApp() {
           select: {
             title: true,
             description: true,
-            author: true,
+            user: { select: { name: true } },
             tags: { select: { tag: { select: { name: true } } } },
             uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
           },
@@ -67,7 +67,7 @@ export async function buildApp() {
         if (post) {
           metaTitle = `${post.title} · ${config.site.name}`;
           metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
-          metaAuthor = post.author.name;
+          metaAuthor = post.user.name;
           metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
           if (post.uploads[0]) metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
           metaType = "article";
