@@ -1,7 +1,87 @@
 <%- include("../../partials/head", { title: "Edit Post · imshare" }) %>
 <%- include("../../partials/header") %>
-<main><h1>Edit Post</h1><form id="form" class="box"><label for="title">Title</label><input id="title" required/><label for="caption">Image caption</label><textarea id="caption" maxlength="10000"></textarea><label for="description">Description</label><textarea id="description"></textarea><label for="sourceUrl">Source URL</label><input id="sourceUrl" type="url"/><label><input id="allowDownload" type="checkbox"/> Allow visitors to download the original image</label><label for="tags">Tags</label><input id="tags"/><label for="category">Category</label><select id="category"><option value="">None</option></select><button>Save changes</button><p id="error" class="error" hidden></p></form></main>
+<main>
+    <div id="edit-page"></div>
+</main>
 <%- include("../../partials/footer") %>
 <script type="module">
-const id=location.pathname.split("/").filter(Boolean).at(-2),form=document.querySelector("#form"),error=document.querySelector("#error"),fields={title:document.querySelector("#title"),caption:document.querySelector("#caption"),description:document.querySelector("#description"),sourceUrl:document.querySelector("#sourceUrl"),allowDownload:document.querySelector("#allowDownload"),tags:document.querySelector("#tags"),category:document.querySelector("#category")};try{const[postRes,catsRes]=await Promise.all([fetch("/v1/posts/"+encodeURIComponent(id)),fetch("/v1/categories?limit=100")]);if(postRes.status===401)location.href="/account/login/";if(!postRes.ok)throw new Error();const{data:p}=await postRes.json();for(const c of(await catsRes.json()).data||[]){const o=document.createElement("option");o.value=c.id;o.textContent=c.name;fields.category.append(o)}fields.title.value=p.title||"";fields.caption.value=p.caption||"";fields.description.value=p.description||"";fields.sourceUrl.value=p.sourceUrl||"";fields.allowDownload.checked=p.allowDownload!==false;fields.tags.value=(p.tags||[]).map(t=>t.name).join(", ");fields.category.value=p.category?.id||""}catch{error.textContent="Unable to load this post.";error.hidden=false;form.querySelector("button").disabled=true}form.addEventListener("submit",async e=>{e.preventDefault();error.hidden=true;const r=await fetch("/v1/posts/"+encodeURIComponent(id),{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({title:fields.title.value,caption:fields.caption.value||null,description:fields.description.value||null,sourceUrl:fields.sourceUrl.value||null,allowDownload:fields.allowDownload.checked,tags:fields.tags.value.split(",").map(x=>x.trim()).filter(Boolean),categoryId:fields.category.value||null})});if(r.ok)location.href="/dashboard/posts/"+encodeURIComponent(id)+"/";else{error.textContent="Unable to save changes.";error.hidden=false}});
+const { api, showSnackbar, escapeHtml } = window.imshareUI;
+const root = document.querySelector("#edit-page");
+const id = location.pathname.split("/").filter(Boolean).at(-2);
+
+try {
+    const [postResponse, categoriesResponse] = await Promise.all([
+        api(`/v1/posts/${encodeURIComponent(id)}`),
+        api("/v1/categories?limit=100"),
+    ]);
+    const post = postResponse.data;
+    const categories = categoriesResponse.data ?? [];
+    root.innerHTML = `
+        <h1>Edit Post</h1>
+        <form id="form" class="box">
+            <label for="title">Title</label>
+            <input id="title" maxlength="200" required />
+            <label for="caption">Image caption</label>
+            <textarea id="caption" maxlength="10000"></textarea>
+            <label for="description">Description</label>
+            <textarea id="description"></textarea>
+            <label for="sourceUrl">Source URL</label>
+            <input id="sourceUrl" type="url" />
+            <label><input id="allowDownload" type="checkbox" /> Allow visitors to download the original image</label>
+            <label for="tags">Tags</label>
+            <input id="tags" />
+            <label for="category">Category</label>
+            <select id="category"><option value="">None</option>${categories.map(category => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`).join("")}</select>
+            <button type="submit">Save changes</button>
+        </form>`;
+
+    const fields = {
+        title: document.querySelector("#title"),
+        caption: document.querySelector("#caption"),
+        description: document.querySelector("#description"),
+        sourceUrl: document.querySelector("#sourceUrl"),
+        allowDownload: document.querySelector("#allowDownload"),
+        tags: document.querySelector("#tags"),
+        category: document.querySelector("#category"),
+    };
+    fields.title.value = post.title || "";
+    fields.caption.value = post.caption || "";
+    fields.description.value = post.description || "";
+    fields.sourceUrl.value = post.sourceUrl || "";
+    fields.allowDownload.checked = post.allowDownload !== false;
+    fields.tags.value = (post.tags || []).map(tag => tag.name).join(", ");
+    fields.category.value = post.category?.id || "";
+
+    document.querySelector("#form").addEventListener("submit", async event => {
+        event.preventDefault();
+        const button = event.currentTarget.querySelector("button[type=submit]");
+        button.disabled = true;
+        try {
+            await api(`/v1/posts/${encodeURIComponent(id)}`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                    title: fields.title.value,
+                    caption: fields.caption.value || null,
+                    description: fields.description.value || null,
+                    sourceUrl: fields.sourceUrl.value || null,
+                    allowDownload: fields.allowDownload.checked,
+                    tags: fields.tags.value.split(",").map(value => value.trim()).filter(Boolean),
+                    categoryId: fields.category.value || null,
+                }),
+            });
+            showSnackbar("Post updated.", "success");
+            location.href = `/dashboard/posts/${encodeURIComponent(id)}/`;
+        } catch (error) {
+            showSnackbar(error instanceof Error ? error.message : "Unable to save changes.", "error");
+            button.disabled = false;
+        }
+    });
+} catch (error) {
+    if (error?.status === 401) {
+        location.href = "/account/login/";
+    } else {
+        showSnackbar(error instanceof Error ? error.message : "Unable to load this post.", "error");
+        root.innerHTML = `<div class="box"><h1>Unable to edit post</h1><p>Please try again later.</p></div>`;
+    }
+}
 </script>
