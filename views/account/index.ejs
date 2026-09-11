@@ -1,10 +1,53 @@
-<%- include("../partials/head", { title: "Account · imshare" }) %>
-<%- include("../partials/header") %>
-<main><h1>Account</h1><div id="content" class="box">Checking session…</div></main>
-<%- include("../partials/footer") %>
-<script type="module">
-const content=document.querySelector("#content");
-const escapeHtml=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-async function loadAccount(){const response=await fetch("/v1/me");const result=response.ok?await response.json():null;const user=result?.data;if(!user){content.innerHTML=`<p>You are not signed in.</p><p><a class="button" href="/account/login/">Log in</a> <a class="button" href="/account/register/">Create account</a></p>`;return}const links=(user.profileLinks??[]).map(link=>`<li data-link="${escapeHtml(link.id)}"><a href="${escapeHtml(link.url)}" rel="noopener noreferrer nofollow">${escapeHtml(link.label)}</a> <button type="button" data-delete-link="${escapeHtml(link.id)}">Remove</button></li>`).join("");content.innerHTML=`<div class="profile"><img class="avatar" src="${escapeHtml(user.avatarUrl)}" alt="" loading="lazy" decoding="async"/><div><h2>${escapeHtml(user.name||"Account")}</h2><p>${escapeHtml(user.email||"")}</p></div></div><hr/><form id="profile-form"><label for="name">Name</label><input id="name" value="${escapeHtml(user.name||"")}" maxlength="100" required/><label for="bio">Profile description</label><textarea id="bio" maxlength="2000">${escapeHtml(user.bio||"")}</textarea><label for="avatarMode">Profile avatar</label><select id="avatarMode"><option value="initials">Text / initials</option><option value="default">Default</option><option value="identicon">Identicon</option><option value="gravatar">Gravatar</option><option value="custom">Custom URL or uploaded image ID</option></select><label for="avatarValue">Custom avatar value</label><input id="avatarValue" value="${escapeHtml(user.avatarValue||"")}" maxlength="2048"/><label for="websiteUrl">Website</label><input id="websiteUrl" type="url" value="${escapeHtml(user.websiteUrl||"")}" maxlength="2048"/><label for="githubUrl">GitHub</label><input id="githubUrl" type="url" value="${escapeHtml(user.githubUrl||"")}" maxlength="2048"/><button type="submit">Save profile</button><p id="profile-status" class="meta"></p></form><h2>Profile links</h2><ul id="links">${links||"<li>No extra links yet.</li>"}</ul><form id="link-form"><label for="link-label">Label</label><input id="link-label" maxlength="100" required/><label for="link-url">URL</label><input id="link-url" type="url" maxlength="2048" required/><button type="submit">Add link</button></form><p><a class="button" href="/dashboard/">Dashboard</a> <a class="button" href="/account/logout/">Log out</a></p>`;document.querySelector("#avatarMode").value=user.avatarMode||"initials";document.querySelector("#profile-form").addEventListener("submit",async event=>{event.preventDefault();const status=document.querySelector("#profile-status");const body={name:document.querySelector("#name").value,bio:document.querySelector("#bio").value||null,websiteUrl:document.querySelector("#websiteUrl").value||null,githubUrl:document.querySelector("#githubUrl").value||null,avatarMode:document.querySelector("#avatarMode").value,avatarValue:document.querySelector("#avatarValue").value||null};const response=await fetch(`/v1/users/${encodeURIComponent(user.id)}`,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});status.textContent=response.ok?"Profile saved.":"Unable to save profile.";if(response.ok)await loadAccount()});document.querySelector("#link-form").addEventListener("submit",async event=>{event.preventDefault();const response=await fetch("/v1/me/links",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({label:document.querySelector("#link-label").value,url:document.querySelector("#link-url").value})});if(response.ok)await loadAccount();else alert("Unable to add profile link.")});document.querySelector("#links").addEventListener("click",async event=>{const button=event.target.closest("[data-delete-link]");if(!button)return;await fetch(`/v1/me/links/${encodeURIComponent(button.dataset.deleteLink)}`,{method:"DELETE"});await loadAccount()})}
-loadAccount().catch(()=>{content.textContent="Unable to load account information."});
-</script>
+<!doctype html>
+<html lang="en">
+<head>
+    <%- include("../partials/head", { title: "Account · imshare" }) %>
+</head>
+<body>
+    <%- include("../partials/header") %>
+    <main>
+        <h1>Account</h1>
+        <div id="content" class="box">Checking session…</div>
+    </main>
+    <%- include("../partials/footer") %>
+    <script type="module">
+        const content = document.querySelector("#content");
+        const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+        async function loadAccount() {
+            const response = await fetch("/v1/me");
+            const result = response.ok ? await response.json() : null;
+            const user = result?.data;
+            if (!user) {
+                content.innerHTML = `<p>You are not signed in.</p><p><a class="button" href="/account/login/">Log in</a> <a class="button" href="/account/register/">Create account</a></p>`;
+                return;
+            }
+            const links = (user.profileLinks ?? []).map(link => `<li data-link="${escapeHtml(link.id)}"><a href="${escapeHtml(link.url)}" rel="noopener noreferrer nofollow">${escapeHtml(link.label)}</a> <button type="button" data-delete-link="${escapeHtml(link.id)}">Remove</button></li>`).join("");
+            content.innerHTML = `<div class="profile"><img class="avatar" src="${escapeHtml(user.avatarUrl)}" alt="" loading="lazy" decoding="async"/><div><h2>${escapeHtml(user.name || "Account")}</h2><p>${escapeHtml(user.email || "")}</p></div></div><hr/><form id="profile-form"><label for="name">Name</label><input id="name" value="${escapeHtml(user.name || "")}" maxlength="100" required/><label for="bio">Profile description</label><textarea id="bio" maxlength="2000">${escapeHtml(user.bio || "")}</textarea><label for="avatarMode">Profile avatar</label><select id="avatarMode"><option value="initials">Text / initials</option><option value="default">Default</option><option value="identicon">Identicon</option><option value="gravatar">Gravatar</option><option value="custom">Custom URL or uploaded image ID</option></select><label for="avatarValue">Custom avatar value</label><input id="avatarValue" value="${escapeHtml(user.avatarValue || "")}" maxlength="2048"/><label for="websiteUrl">Website</label><input id="websiteUrl" type="url" value="${escapeHtml(user.websiteUrl || "")}" maxlength="2048"/><label for="githubUrl">GitHub</label><input id="githubUrl" type="url" value="${escapeHtml(user.githubUrl || "")}" maxlength="2048"/><button type="submit">Save profile</button><p id="profile-status" class="meta"></p></form><h2>Profile links</h2><ul id="links">${links || "<li>No extra links yet.</li>"}</ul><form id="link-form"><label for="link-label">Label</label><input id="link-label" maxlength="100" required/><label for="link-url">URL</label><input id="link-url" type="url" maxlength="2048" required/><button type="submit">Add link</button></form><p><a class="button" href="/dashboard/">Dashboard</a> <a class="button" href="/account/logout/">Log out</a></p>`;
+            document.querySelector("#avatarMode").value = user.avatarMode || "initials";
+            document.querySelector("#profile-form").addEventListener("submit", async event => {
+                event.preventDefault();
+                const status = document.querySelector("#profile-status");
+                const body = { name: document.querySelector("#name").value, bio: document.querySelector("#bio").value || null, websiteUrl: document.querySelector("#websiteUrl").value || null, githubUrl: document.querySelector("#githubUrl").value || null, avatarMode: document.querySelector("#avatarMode").value, avatarValue: document.querySelector("#avatarValue").value || null };
+                const response = await fetch(`/v1/users/${encodeURIComponent(user.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                status.textContent = response.ok ? "Profile saved." : "Unable to save profile.";
+                if (response.ok) await loadAccount();
+            });
+            document.querySelector("#link-form").addEventListener("submit", async event => {
+                event.preventDefault();
+                const response = await fetch("/v1/me/links", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label: document.querySelector("#link-label").value, url: document.querySelector("#link-url").value }) });
+                if (response.ok) await loadAccount();
+                else alert("Unable to add profile link.");
+            });
+            document.querySelector("#links").addEventListener("click", async event => {
+                const button = event.target.closest("[data-delete-link]");
+                if (!button) return;
+                await fetch(`/v1/me/links/${encodeURIComponent(button.dataset.deleteLink)}`, { method: "DELETE" });
+                await loadAccount();
+            });
+        }
+        loadAccount().catch(() => {
+            content.textContent = "Unable to load account information.";
+        });
+    </script>
+</body>
+</html>
