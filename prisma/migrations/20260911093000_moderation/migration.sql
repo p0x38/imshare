@@ -1,8 +1,3 @@
-ALTER TABLE "user" ADD COLUMN "isBanned" INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE "user" ADD COLUMN "banReason" TEXT;
-ALTER TABLE "user" ADD COLUMN "bannedAt" DATETIME;
-ALTER TABLE "user" ADD COLUMN "bannedUntil" DATETIME;
-
 CREATE TABLE "moderation_log" (
   "id" TEXT NOT NULL PRIMARY KEY,
   "action" TEXT NOT NULL,
