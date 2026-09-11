@@ -5,6 +5,14 @@ import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib
 import { postInclude, postView } from "./_shared.js";
 import { tagCreateSchema, tagUpdateSchema } from "./schemas.js";
 
+const publicPostWhere = {
+    status: "published",
+    visibility: "public",
+    hiddenAt: null,
+    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+    user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+};
+
 export const tagRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/tags", async (request) => {
         const q = request.query as Record<string, unknown>;
@@ -103,7 +111,7 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
         const { tagId } = request.params as { tagId: string };
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        const where = { tags: { some: { tagId } } };
+        const where = { ...publicPostWhere, tags: { some: { tagId } } };
         const [items, total] = await Promise.all([
             prisma.post.findMany({
                 where,
