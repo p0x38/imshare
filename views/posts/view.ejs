@@ -9,6 +9,13 @@
         <div id="recommended" class="grid"></div>
     </section>
 </main>
+<dialog id="image-viewer" aria-label="Image viewer">
+    <button type="button" id="viewer-close" aria-label="Close image viewer">Close</button>
+    <button type="button" id="viewer-prev" aria-label="Previous image">Previous</button>
+    <img id="viewer-image" alt="" />
+    <button type="button" id="viewer-next" aria-label="Next image">Next</button>
+    <p id="viewer-meta" class="meta"></p>
+</dialog>
 <%- include("../partials/footer") %>
 <script type="module">
     import { api, escapeHtml, imageUrl } from "/app.js";
@@ -18,6 +25,41 @@
     let reactionState = { counts: { like: 0, favorite: 0, save: 0 }, active: { like: false, favorite: false, save: false } };
     let currentUser = null;
     let emojis = new Map();
+    let viewerImages = [];
+    let viewerIndex = 0;
+    const viewer = document.querySelector("#image-viewer");
+    const viewerImage = document.querySelector("#viewer-image");
+    const viewerMeta = document.querySelector("#viewer-meta");
+    function renderViewer() {
+        const item = viewerImages[viewerIndex];
+        if (!item) return;
+        viewerImage.src = imageUrl(item, 2400);
+        viewerImage.alt = item.alt;
+        viewerMeta.textContent = `${item.width && item.height ? `${item.width} × ${item.height}` : ""}${item.size ? ` · ${item.size.toLocaleString()} bytes` : ""}${item.mimeType ? ` · ${item.mimeType}` : ""}`;
+        document.querySelector("#viewer-prev").disabled = viewerImages.length < 2;
+        document.querySelector("#viewer-next").disabled = viewerImages.length < 2;
+    }
+    function openViewer(index) {
+        viewerIndex = index;
+        renderViewer();
+        if (typeof viewer.showModal === "function") viewer.showModal();
+        else viewer.setAttribute("open", "");
+    }
+    function moveViewer(delta) {
+        if (viewerImages.length < 2) return;
+        viewerIndex = (viewerIndex + delta + viewerImages.length) % viewerImages.length;
+        renderViewer();
+    }
+    document.querySelector("#viewer-close").onclick = () => viewer.close();
+    document.querySelector("#viewer-prev").onclick = () => moveViewer(-1);
+    document.querySelector("#viewer-next").onclick = () => moveViewer(1);
+    viewer.addEventListener("click", event => { if (event.target === viewer) viewer.close(); });
+    document.addEventListener("keydown", event => {
+        if (!viewer.open) return;
+        if (event.key === "Escape") viewer.close();
+        if (event.key === "ArrowLeft") moveViewer(-1);
+        if (event.key === "ArrowRight") moveViewer(1);
+    });
     const current = async () => { try { return (await api("/v1/me")).data; } catch { return null; } };
     function renderReactions() {
         for (const type of ["like", "favorite", "save"]) {
@@ -42,7 +84,9 @@
     try {
         const [{ data: p }, me] = await Promise.all([api(`/v1/posts/${encodeURIComponent(id)}`), current()]);
         currentUser = me; emojis = await loadEmojiCatalog(); window.__postOwner = p.author.id; document.title = p.title + " · imshare";
-        root.innerHTML = `<h1>${escapeHtml(p.title)}</h1>${(p.uploads || []).map(u => `<figure class="post-media"><a href="${escapeHtml(u.url)}"><img class="post-image" style="${u.thumbhash ? `background-image:url('${escapeHtml(u.url)}/placeholder');background-size:cover;background-position:center;` : ""}" src="${escapeHtml(imageUrl(u, 1600))}" srcset="${escapeHtml(imageUrl(u, 320))} 320w, ${escapeHtml(imageUrl(u, 800))} 800w, ${escapeHtml(imageUrl(u, 1600))} 1600w" sizes="100vw" alt="${escapeHtml(p.caption || p.title || u.originalName)}" loading="lazy" decoding="async"></a>${p.allowDownload ? `<figcaption><a href="${escapeHtml(u.url)}?download=true">Download original</a></figcaption>` : ""}</figure>`).join("")}${p.caption ? `<p class="caption">${escapeHtml(p.caption)}</p>` : ""}<div id="reactions" class="reactions"><button data-reaction="like"></button><button data-reaction="favorite"></button><button data-reaction="save"></button></div>${p.description ? `<p>${escapeHtml(p.description)}</p>` : ""}<p class="meta">by <a href="/users/${encodeURIComponent(p.author.id)}">${escapeHtml(p.author.name)}</a><br>Created: ${new Date(p.createdAt).toLocaleString()}</p>${p.category ? `<p>Category: <a href="/categories/${encodeURIComponent(p.category.id)}">${escapeHtml(p.category.name)}</a></p>` : ""}<p class="tags">Tags: ${(p.tags || []).map(t => `<a href="/tags/${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`).join(" ")}</p>${p.sourceUrl ? `<p>Source: <a href="${escapeHtml(p.sourceUrl)}" rel="noopener noreferrer">${escapeHtml(p.sourceUrl)}</a></p>` : ""}<p><button id="report-post">Report</button></p><section><h2>Comments</h2><div id="comments" class="grid">Loading…</div><form id="comment-form" class="box"><label for="comment-body">Add a comment</label><textarea id="comment-body" maxlength="5000" required></textarea><p class="meta">Custom emoji: type a shortcode such as <code>:name:</code></p><button>Post comment</button><p id="comment-status" class="meta"></p></form></section>`;
+        viewerImages = (p.uploads || []).map(u => ({ ...u, alt: p.caption || p.title || u.originalName }));
+        root.innerHTML = `<h1>${escapeHtml(p.title)}</h1>${(p.uploads || []).map((u, index) => `<figure class="post-media"><button type="button" class="image-viewer-trigger" data-image-index="${index}" aria-label="Open image ${index + 1}"><img class="post-image" style="${u.thumbhash ? `background-image:url('${escapeHtml(u.url)}/placeholder');background-size:cover;background-position:center;` : ""}" src="${escapeHtml(imageUrl(u, 1600))}" srcset="${escapeHtml(imageUrl(u, 320))} 320w, ${escapeHtml(imageUrl(u, 800))} 800w, ${escapeHtml(imageUrl(u, 1600))} 1600w" sizes="100vw" alt="${escapeHtml(p.caption || p.title || u.originalName)}" loading="lazy" decoding="async"></button>${p.allowDownload ? `<figcaption><a href="${escapeHtml(u.url)}?download=true">Download original</a></figcaption>` : ""}</figure>`).join("")}${p.caption ? `<p class="caption">${escapeHtml(p.caption)}</p>` : ""}<div id="reactions" class="reactions"><button data-reaction="like"></button><button data-reaction="favorite"></button><button data-reaction="save"></button></div>${p.description ? `<p>${escapeHtml(p.description)}</p>` : ""}<p class="meta">by <a href="/users/${encodeURIComponent(p.author.id)}">${escapeHtml(p.author.name)}</a><br>Created: ${new Date(p.createdAt).toLocaleString()}</p>${p.category ? `<p>Category: <a href="/categories/${encodeURIComponent(p.category.id)}">${escapeHtml(p.category.name)}</a></p>` : ""}<p class="tags">Tags: ${(p.tags || []).map(t => `<a href="/tags/${encodeURIComponent(t.id)}">${escapeHtml(t.name)}</a>`).join(" ")}</p>${p.sourceUrl ? `<p>Source: <a href="${escapeHtml(p.sourceUrl)}" rel="noopener noreferrer">${escapeHtml(p.sourceUrl)}</a></p>` : ""}<p><button id="report-post">Report</button></p><section><h2>Comments</h2><div id="comments" class="grid">Loading…</div><form id="comment-form" class="box"><label for="comment-body">Add a comment</label><textarea id="comment-body" maxlength="5000" required></textarea><p class="meta">Custom emoji: type a shortcode such as <code>:name:</code></p><button>Post comment</button><p id="comment-status" class="meta"></p></form></section>`;
+        document.querySelectorAll(".image-viewer-trigger").forEach(button => button.addEventListener("click", () => openViewer(Number(button.dataset.imageIndex))));
         document.querySelector("#reactions").addEventListener("click", async e => { const b = e.target.closest("[data-reaction]"); if (!b) return; try { const active = reactionState.active[b.dataset.reaction]; reactionState = (await api(`/v1/posts/${encodeURIComponent(id)}/${b.dataset.reaction}`, { method: active ? "DELETE" : "PUT" })).data; renderReactions(); } catch (e) { if (e.status === 401) alert("Please sign in to react to posts."); } });
         document.querySelector("#report-post").onclick = () => report({ postId: id });
         document.querySelector("#comments").addEventListener("click", async e => { const card = e.target.closest("[data-comment]"); if (!card) return; const cid = card.dataset.comment; try { if (e.target.matches("[data-comment-like]")) { const liked = e.target.getAttribute("aria-pressed") === "true"; await api(`/v1/comments/${encodeURIComponent(cid)}/like`, { method: liked ? "DELETE" : "PUT" }); await loadComments(); } else if (e.target.matches("[data-edit-comment]")) { const body = prompt("Edit comment", card.querySelector(".comment-body").textContent); if (body !== null) await api(`/v1/comments/${encodeURIComponent(cid)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }) }); await loadComments(); } else if (e.target.matches("[data-delete-comment]")) { if (confirm("Delete this comment?")) await api(`/v1/comments/${encodeURIComponent(cid)}`, { method: "DELETE" }); await loadComments(); } else if (e.target.matches("[data-report-comment]")) await report({ commentId: cid }); } catch (err) { alert(err.message); } });
