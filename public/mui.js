@@ -1,5 +1,5 @@
-import React from "https://esm.sh/react@19.1.1?bundle&target=es2022";
-import { createRoot } from "https://esm.sh/react-dom@19.1.1/client?bundle&target=es2022";
+import React from "https://esm.sh/react@19.1.1?target=es2022";
+import { createRoot } from "https://esm.sh/react-dom@19.1.1/client?target=es2022";
 import {
     AppBar,
     Box,
@@ -15,7 +15,7 @@ import {
     Toolbar,
     Typography,
     createTheme,
-} from "https://esm.sh/@mui/material@9.4.0?bundle&target=es2022";
+} from "https://esm.sh/@mui/material@9.4.0?bundle&external=react,react-dom&target=es2022";
 
 const theme = createTheme({
     palette: {
