@@ -5,6 +5,7 @@ import {
     Box,
     Button,
     Card,
+    CardActionArea,
     CardContent,
     CardMedia,
     Chip,
@@ -17,15 +18,12 @@ import {
     createTheme,
 } from "https://esm.sh/@mui/material@9.4.0?bundle&external=react,react-dom&target=es2022";
 
-const theme = createTheme({
+const systemThemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+let theme = createTheme({
     palette: {
-        mode: "dark",
+        mode: systemThemeQuery.matches ? "dark" : "light",
         primary: {
-            main: "#90caf9",
-        },
-        background: {
-            default: "#101114",
-            paper: "#191b20",
+            main: systemThemeQuery.matches ? "#90caf9" : "#1565c0",
         },
     },
     shape: {
@@ -35,6 +33,8 @@ const theme = createTheme({
         fontFamily: "Roboto, system-ui, sans-serif",
     },
 });
+
+const mountedRoots = new Set();
 
 function Navigation() {
     const links = [
@@ -51,7 +51,16 @@ function Navigation() {
         { position: "static", elevation: 0 },
         React.createElement(
             Toolbar,
-            { sx: { gap: 1, flexWrap: "wrap", py: 1 } },
+            {
+                sx: {
+                    gap: 1,
+                    flexWrap: "wrap",
+                    py: 1,
+                    maxWidth: 1200,
+                    width: "100%",
+                    mx: "auto",
+                },
+            },
             React.createElement(
                 Typography,
                 {
@@ -124,23 +133,33 @@ function SkeletonGrid({ count = 8 }) {
     );
 }
 
-function PreviewCard({ title, image, tags = [] }) {
-    return React.createElement(
-        Card,
-        { variant: "outlined" },
+function PreviewCard({ title, image, href, author, stats, tags = [] }) {
+    const content = React.createElement(
+        React.Fragment,
+        null,
         image
             ? React.createElement(CardMedia, {
                   component: "img",
                   image,
                   alt: title || "",
                   loading: "lazy",
+                  decoding: "async",
                   sx: { aspectRatio: "1 / 1", objectFit: "cover" },
               })
-            : null,
+            : React.createElement(Skeleton, {
+                  variant: "rectangular",
+                  sx: { aspectRatio: "1 / 1", width: "100%" },
+              }),
         React.createElement(
             CardContent,
             null,
-            React.createElement(Typography, { variant: "h6", component: "h2" }, title),
+            React.createElement(Typography, { variant: "h6", component: "h2", noWrap: true }, title),
+            author
+                ? React.createElement(Typography, { variant: "body2", color: "text.secondary", noWrap: true }, author)
+                : null,
+            stats
+                ? React.createElement(Typography, { variant: "body2", color: "text.secondary", noWrap: true }, stats)
+                : null,
             tags.length
                 ? React.createElement(
                       Stack,
@@ -150,16 +169,93 @@ function PreviewCard({ title, image, tags = [] }) {
                 : null,
         ),
     );
+
+    return React.createElement(
+        Card,
+        { variant: "outlined", sx: { height: "100%" } },
+        href
+            ? React.createElement(
+                  CardActionArea,
+                  { component: "a", href },
+                  content,
+              )
+            : content,
+    );
+}
+
+function PostGrid({ posts = [] }) {
+    return React.createElement(
+        Box,
+        {
+            sx: {
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 2,
+                width: "100%",
+            },
+        },
+        ...posts.map((post) => {
+            const image = post.uploads?.[0];
+
+            return React.createElement(PreviewCard, {
+                key: post.id,
+                title: post.title,
+                image: image ? `${image.url}?width=480&height=480&fit=cover&format=webp` : null,
+                href: `/posts/${encodeURIComponent(post.id)}`,
+                author: post.author?.name ?? "Unknown author",
+                stats: post.reactions
+                    ? `♥ ${post.reactions.like || 0} · ★ ${post.reactions.favorite || 0} · ▣ ${post.reactions.save || 0}`
+                    : null,
+            });
+        }),
+    );
 }
 
 function mount(element, component) {
     if (!element) return null;
+
     const root = createRoot(element);
+    mountedRoots.add(root);
     root.render(
-        React.createElement(ThemeProvider, { theme }, React.createElement(CssBaseline), component),
+        React.createElement(
+            ThemeProvider,
+            { theme },
+            React.createElement(CssBaseline),
+            component,
+        ),
     );
     return root;
 }
+
+function updateTheme() {
+    theme = createTheme({
+        palette: {
+            mode: systemThemeQuery.matches ? "dark" : "light",
+            primary: {
+                main: systemThemeQuery.matches ? "#90caf9" : "#1565c0",
+            },
+        },
+        shape: {
+            borderRadius: 3,
+        },
+        typography: {
+            fontFamily: "Roboto, system-ui, sans-serif",
+        },
+    });
+
+    for (const root of mountedRoots) {
+        root.render(
+            React.createElement(
+                ThemeProvider,
+                { theme },
+                React.createElement(CssBaseline),
+                root._imshareComponent,
+            ),
+        );
+    }
+}
+
+systemThemeQuery.addEventListener("change", updateTheme);
 
 const originalHeader = document.querySelector("body > header");
 if (originalHeader) {
@@ -171,7 +267,11 @@ if (originalHeader) {
 
 window.imshareMUI = {
     mount,
+    Navigation,
     SkeletonGrid,
     PreviewCard,
-    theme,
+    PostGrid,
+    get theme() {
+        return theme;
+    },
 };
