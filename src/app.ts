@@ -25,15 +25,17 @@ export async function buildApp() {
     if (request.method === "GET" && !request.url.startsWith("/v1/health")) { const result = viewLimiter.consume(key); reply.header("X-RateLimit-Limit", "75").header("X-RateLimit-Remaining", String(result.remaining)); if (!result.allowed) return reply.code(429).header("Retry-After", String(result.retryAfter)).send({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } }); }
     viewLimiter.prune(); uploadLimiter.prune();
   });
-  const sendErrorPage = async (status: number, fallbackTitle: string, message: string, reply: FastifyReply) => {
+  const errorPage = async (status: number, fallbackTitle: string, message: string) => {
     const file = path.join(publicDir, "errors", `${status}.html`);
-    try { return reply.code(status).type("text/html").send(await readFile(file, "utf8")); }
-    catch { return reply.code(status).type("text/html").send(await renderTemplate("error.html", { status, title: fallbackTitle, message })); }
+    try { return await readFile(file, "utf8"); }
+    catch { return await renderTemplate("error.html", { status, title: fallbackTitle, message }); }
   };
+  const sendErrorPage = async (status: number, fallbackTitle: string, message: string, reply: FastifyReply) => reply.code(status).type("text/html").send(await errorPage(status, fallbackTitle, message));
   app.addHook("onSend", async (request, reply, payload) => {
     const contentType = reply.getHeader("content-type");
     if ((request.headers.accept ?? "").includes("text/html") && reply.statusCode >= 400 && typeof contentType === "string" && contentType.includes("application/json")) {
-      return sendErrorPage(reply.statusCode, reply.statusCode === 404 ? "Page not found" : "Something went wrong", "The requested resource could not be served as HTML.", reply);
+      reply.type("text/html");
+      return errorPage(reply.statusCode, reply.statusCode === 404 ? "Page not found" : "Something went wrong", "The requested resource could not be served as HTML.");
     }
     if (typeof contentType !== "string" || !contentType.includes("text/html") || typeof payload !== "string") return payload;
     const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
