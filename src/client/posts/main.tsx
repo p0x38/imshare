@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
     AppBar,
     Avatar,
     Box,
+    Button,
     Card,
     CardContent,
     CardMedia,
@@ -15,6 +16,7 @@ import {
     IconButton,
     Snackbar,
     Stack,
+    TextField,
     ToggleButton,
     ToggleButtonGroup,
     Toolbar,
@@ -47,6 +49,7 @@ interface Author {
     id: string;
     name: string;
     username?: string;
+    avatarUrl?: string;
 }
 
 interface ReactionState {
@@ -75,11 +78,31 @@ interface Post {
     };
 }
 
+interface Comment {
+    id: string;
+    body: string;
+    createdAt: string;
+    updatedAt: string;
+    author: Author;
+    likes: number;
+    liked: boolean;
+}
+
 interface Recommendation {
     id: string;
     title: string;
     author?: Author;
     uploads?: Upload[];
+}
+
+interface CollectionResponse<T> {
+    data: T[];
+    pagination?: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+    };
 }
 
 interface ApiResponse<T> {
@@ -218,7 +241,7 @@ function LabelSection({ title, items, href }: { title: string; items: Label[]; h
             <Typography variant="subtitle2" color="text.secondary">
                 {title}
             </Typography>
-            <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap">
+            <Stack direction="row" spacing={0.75} useFlexGap sx={{ flexWrap: "wrap" }}>
                 {items.map((item) => (
                     <Chip
                         key={item.id}
@@ -234,10 +257,149 @@ function LabelSection({ title, items, href }: { title: string; items: Label[]; h
     );
 }
 
-function RecommendationSidebar({ posts }: { posts: Recommendation[] }) {
+function CommentCard({ comment, onLike, onError }: { comment: Comment; onLike: (comment: Comment) => void; onError: (message: string) => void }) {
+    const toggleLike = async () => {
+        try {
+            const result = await api<ApiResponse<Comment>>(`/v1/comments/${encodeURIComponent(comment.id)}/like`, {
+                method: comment.liked ? "DELETE" : "PUT",
+            });
+            onLike(result.data);
+        } catch (error) {
+            onError(error instanceof Error ? error.message : "Unable to update comment like.");
+        }
+    };
+
+    const authorName = comment.author.name || comment.author.username || "Unknown user";
+
+    return (
+        <Stack direction="row" spacing={1.5} alignItems="flex-start">
+            <Avatar src={comment.author.avatarUrl} sx={{ width: 36, height: 36 }}>
+                {authorName.charAt(0).toUpperCase()}
+            </Avatar>
+            <Stack spacing={0.5} sx={{ minWidth: 0, flex: 1 }}>
+                <Typography variant="subtitle2" component="a" href={`/users/${encodeURIComponent(comment.author.id)}`} sx={{ textDecoration: "none", width: "fit-content" }}>
+                    {authorName}
+                </Typography>
+                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                    {comment.body}
+                </Typography>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                    <IconButton size="small" aria-label={comment.liked ? "Unlike comment" : "Like comment"} onClick={() => void toggleLike()}>
+                        {comment.liked ? <ThumbUpAltIcon fontSize="small" /> : <ThumbUpAltOutlinedIcon fontSize="small" />}
+                    </IconButton>
+                    {comment.likes > 0 ? <Typography variant="caption" color="text.secondary">{comment.likes}</Typography> : null}
+                    <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                        {new Date(comment.createdAt).toLocaleString()}
+                    </Typography>
+                </Stack>
+            </Stack>
+        </Stack>
+    );
+}
+
+function CommentSection({ postId, onError }: { postId: string; onError: (message: string) => void }) {
+    const [comments, setComments] = useState<Comment[]>([]);
+    const [total, setTotal] = useState(0);
+    const [body, setBody] = useState("");
+    const [loading, setLoading] = useState(true);
+    const [submitting, setSubmitting] = useState(false);
+
+    const loadComments = async () => {
+        try {
+            const result = await api<CollectionResponse<Comment>>(`/v1/posts/${encodeURIComponent(postId)}/comments?limit=100`);
+            setComments(result.data);
+            setTotal(result.pagination?.total ?? result.data.length);
+        } catch (error) {
+            onError(error instanceof Error ? error.message : "Unable to load comments.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        void loadComments();
+    }, [postId]);
+
+    const submit = async () => {
+        const text = body.trim();
+        if (!text || submitting) return;
+        setSubmitting(true);
+        try {
+            const result = await api<ApiResponse<Comment>>(`/v1/posts/${encodeURIComponent(postId)}/comments`, {
+                method: "POST",
+                body: JSON.stringify({ body: text }),
+            });
+            setComments((current) => [...current, result.data]);
+            setTotal((current) => current + 1);
+            setBody("");
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Unable to post comment.";
+            if (message === "Authentication is required.") {
+                onError("Please sign in to comment.");
+            } else {
+                onError(message);
+            }
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const replaceComment = (updated: Comment) => {
+        setComments((current) => current.map((comment) => (comment.id === updated.id ? updated : comment)));
+    };
+
+    return (
+        <Card variant="outlined">
+            <CardContent>
+                <Stack spacing={2}>
+                    <Typography variant="h6" component="h2">
+                        Comments {total > 0 ? `(${total})` : ""}
+                    </Typography>
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={1} alignItems={{ xs: "stretch", sm: "flex-start" }}>
+                        <TextField
+                            value={body}
+                            onChange={(event) => setBody(event.target.value)}
+                            onKeyDown={(event) => {
+                                if ((event.ctrlKey || event.metaKey) && event.key === "Enter") void submit();
+                            }}
+                            label="Write a comment"
+                            placeholder="Share your thoughts…"
+                            multiline
+                            minRows={2}
+                            maxRows={8}
+                            fullWidth
+                            slotProps={{ htmlInput: { maxLength: 5000 } }}
+                        />
+                        <Button variant="contained" onClick={() => void submit()} disabled={!body.trim() || submitting} sx={{ minWidth: { sm: 112 }, minHeight: { sm: 56 } }}>
+                            {submitting ? "Posting…" : "Post"}
+                        </Button>
+                    </Stack>
+                    <Divider />
+                    {loading ? (
+                        <Stack alignItems="center" py={3}>
+                            <CircularProgress size={24} />
+                        </Stack>
+                    ) : comments.length ? (
+                        <Stack spacing={2}>
+                            {comments.map((comment) => (
+                                <CommentCard key={comment.id} comment={comment} onLike={replaceComment} onError={onError} />
+                            ))}
+                        </Stack>
+                    ) : (
+                        <Typography variant="body2" color="text.secondary">
+                            No comments yet. Be the first to comment.
+                        </Typography>
+                    )}
+                </Stack>
+            </CardContent>
+        </Card>
+    );
+}
+
+function RecommendationSection({ posts }: { posts: Recommendation[] }) {
     if (!posts.length) return null;
     return (
-        <Stack spacing={2} sx={{ position: "sticky", top: 16 }}>
+        <Stack spacing={2} sx={{ position: { md: "sticky" }, top: { md: 16 } }}>
             <Typography variant="h6" component="h2">
                 Recommended
             </Typography>
@@ -283,9 +445,17 @@ function PostPage({ post, recommendations }: { post: Post; recommendations: Reco
                 </Toolbar>
             </AppBar>
 
-            <Container maxWidth="xl" sx={{ py: { xs: 1, md: 3 } }}>
-                <Box sx={{ display: { xs: "block", md: "grid" }, gridTemplateColumns: "minmax(0, 1fr) 320px", gap: 3 }}>
-                    <Stack spacing={2}>
+            <Container maxWidth="lg" sx={{ py: { xs: 1, md: 3 }, mx: "auto" }}>
+                <Box
+                    sx={{
+                        display: { xs: "flex", md: "grid" },
+                        flexDirection: "column",
+                        gridTemplateColumns: "minmax(0, 1fr) 320px",
+                        gap: 3,
+                        alignItems: "start",
+                    }}
+                >
+                    <Stack spacing={2} sx={{ minWidth: 0, width: "100%", gridColumn: { md: "1" } }}>
                         <Card variant="outlined">
                             {image ? (
                                 <CardMedia
@@ -320,10 +490,16 @@ function PostPage({ post, recommendations }: { post: Post; recommendations: Reco
                                 </Typography>
                             ) : null}
                         </Stack>
+
+                        <CommentSection postId={post.id} onError={setSnackbar} />
                     </Stack>
 
-                    <Box sx={{ display: { xs: "none", md: "block" } }}>
-                        <RecommendationSidebar posts={recommendations} />
+                    <Box sx={{ gridColumn: { md: "2" }, display: { xs: "none", md: "block" }, width: "100%" }}>
+                        <RecommendationSection posts={recommendations} />
+                    </Box>
+
+                    <Box sx={{ display: { xs: "block", md: "none" }, width: "100%" }}>
+                        <RecommendationSection posts={recommendations} />
                     </Box>
                 </Box>
             </Container>
@@ -335,7 +511,7 @@ function PostPage({ post, recommendations }: { post: Post; recommendations: Reco
 
 function ErrorPage({ message }: { message: string }) {
     return (
-        <Container sx={{ py: 8 }}>
+        <Container maxWidth="lg" sx={{ py: 8, mx: "auto" }}>
             <Typography variant="h4" component="h1">Unable to load post</Typography>
             <Typography variant="body1" color="text.secondary">{message}</Typography>
         </Container>
@@ -354,7 +530,7 @@ async function loadPost() {
     const id = decodeURIComponent(location.pathname.replace(/^\/posts\//, "").replace(/\/$/, ""));
     const [postResult, recommendationResult] = await Promise.all([
         api<ApiResponse<Post>>(`/v1/posts/${encodeURIComponent(id)}`),
-        api<ApiResponse<Recommendation[]>>("/v1/recommendations?limit=6").catch(() => ({ data: [] })),
+        api<CollectionResponse<Recommendation>>(`/v1/posts/${encodeURIComponent(id)}/related?limit=6`).catch(() => ({ data: [] })),
     ]);
     return { post: postResult.data, recommendations: recommendationResult.data };
 }
