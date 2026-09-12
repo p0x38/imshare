@@ -144,6 +144,10 @@ export async function buildApp() {
             .send(await errorPage(status, fallbackTitle, message));
 
     app.addHook("onSend", async (request, reply, payload) => {
+        // Swagger UI owns its complete HTML document and static assets.
+        if (request.url === "/docs" || request.url.startsWith("/docs/"))
+            return payload;
+
         reply.header("X-Content-Type-Options", "nosniff");
         reply.header("X-Frame-Options", "SAMEORIGIN");
         reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
