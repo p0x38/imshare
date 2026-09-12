@@ -17,6 +17,56 @@ export async function registerOpenApi(
         }
     }
 
+    const tagForPath = (pathname: string): string => {
+        const sections = pathname.split("/").filter(Boolean);
+        const section = sections[1] ?? "";
+        const subSection = sections[2] ?? "";
+
+        const tagMap: Record<string, string> = {
+            account: "account",
+            auth: "auth",
+            posts: "posts",
+            reactions: "reactions",
+            comments: "comments",
+            notifications: "notifications",
+            uploads: "uploads",
+            avatars: "users",
+            tags: "tags",
+            categories: "categories",
+            search: "search",
+            reports: "reports",
+            recommendations: "recommendations",
+            emojis: "emojis",
+            admin: "admin",
+            meta: "meta",
+            users: "users",
+            "profile-links": "profile-links",
+            health: "health",
+            ready: "health",
+            version: "health",
+            "registration-token": "account",
+            "post-lifecycle": "posts",
+        };
+
+        let tag = tagMap[section];
+
+        if (section === "me") {
+            tag =
+                subSection === "posts"
+                    ? "posts"
+                    : subSection === "notifications"
+                      ? "notifications"
+                      : subSection === "links"
+                        ? "profile-links"
+                        : "account";
+        }
+
+        if (section === "discovery") tag = "recommendations";
+        if (section === "posts" && subSection === "image") tag = "images";
+
+        return tag ?? "meta";
+    };
+
     await app.register(fastifySwagger, {
         openapi: {
             openapi: "3.1.0",
@@ -61,86 +111,73 @@ export async function registerOpenApi(
         transform: ({ schema, url }) => {
             const pathname = url.split("?", 1)[0] ?? "/";
 
-            // The Swagger document is for the HTTP API, not the server-rendered UI.
             if (!pathname.startsWith("/v1/"))
                 return {
                     schema: { ...(schema ?? {}), hide: true },
                     url,
                 };
 
-            const sections = pathname.split("/").filter(Boolean);
-            const section = sections[1] ?? "";
-            const subSection = sections[2] ?? "";
-
-            const tagMap: Record<string, string> = {
-                account: "account",
-                auth: "auth",
-                posts: "posts",
-                reactions: "reactions",
-                comments: "comments",
-                notifications: "notifications",
-                uploads: "uploads",
-                avatars: "users",
-                tags: "tags",
-                categories: "categories",
-                search: "search",
-                reports: "reports",
-                recommendations: "recommendations",
-                emojis: "emojis",
-                admin: "admin",
-                meta: "meta",
-                users: "users",
-                "profile-links": "profile-links",
-                health: "health",
-                ready: "health",
-                version: "health",
-                "registration-token": "account",
-                "post-lifecycle": "posts",
-            };
-
-            let tag = tagMap[section];
-
-            // `/v1/me/*` is split into the same logical groups as the public resources.
-            if (section === "me") {
-                tag =
-                    subSection === "posts"
-                        ? "posts"
-                        : subSection === "notifications"
-                          ? "notifications"
-                          : subSection === "links"
-                            ? "profile-links"
-                            : "account";
-            }
-
-            // Discovery endpoints describe recommendation/discovery feeds.
-            if (section === "discovery") tag = "recommendations";
-
-            // Images are served from the posts namespace but are image endpoints semantically.
-            if (section === "posts" && subSection === "image") tag = "images";
-
-            // Keep unknown API routes visible but grouped instead of falling back to `default`.
-            if (!tag) tag = "meta";
-
             return {
                 schema: {
                     ...(schema ?? {}),
-                    tags: [...new Set([...(schema?.tags ?? []), tag])],
+                    tags: [...new Set([...(schema?.tags ?? []), tagForPath(pathname)])],
                 },
                 url,
             };
         },
         transformObject: (documentObject) => {
-            if ("openapiObject" in documentObject) {
-                return {
-                    ...documentObject.openapiObject,
-                    externalDocs: {
-                        description: "imshare project documentation",
-                        url: "https://github.com/p0x38/imshare",
-                    },
-                };
-            }
+            const document =
+                "openapiObject" in documentObject
+                    ? documentObject.openapiObject
+                    : documentObject.swaggerObject;
 
-            return documentObject.swaggerObject;
+            const paths = Object.fromEntries(
+                Object.entries(document.paths ?? {})
+                    .filter(([pathname]) => pathname.startsWith("/v1/"))
+                    .map(([pathname, pathItem]) => {
+                        if (!pathItem || typeof pathItem !== "object")
+                            return [pathname, pathItem] as const;
+
+                        const tag = tagForPath(pathname);
+                        const operations = new Set([
+                            "get",
+                            "post",
+                            "put",
+                            "patch",
+                            "delete",
+                            "options",
+                            "head",
+                            "trace",
+                        ]);
+
+                        const updatedPathItem = Object.fromEntries(
+                            Object.entries(pathItem).map(([method, operation]) => {
+                                if (!operations.has(method) || !operation || typeof operation !== "object")
+                                    return [method, operation] as const;
+
+                                const operationObject = operation as { tags?: readonly string[] };
+                                return [
+                                    method,
+                                    {
+                                        ...operationObject,
+                                        tags: [...new Set([...(operationObject.tags ?? []), tag])],
+                                    },
+                                ] as const;
+                            }),
+                        );
+
+                        return [pathname, updatedPathItem] as const;
+                    }),
+            );
+
+            return {
+                ...document,
+                paths,
+                externalDocs: {
+                    description: "imshare project documentation",
+                    url: "https://github.com/p0x38/imshare",
+                },
+            };
         },
     });
 
