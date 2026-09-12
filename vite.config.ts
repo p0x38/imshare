@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [react()],
     publicDir: false,
     build: {
-        outDir: "public/client",
+        outDir: "dist/client",
         emptyOutDir: true,
         rollupOptions: {
             input: {
