@@ -12,6 +12,7 @@ export default defineConfig({
             input: {
                 home: path.resolve(process.cwd(), "src/client/entries/home.tsx"),
                 posts: path.resolve(process.cwd(), "src/client/entries/posts.tsx"),
+                post: path.resolve(process.cwd(), "src/client/entries/post.tsx"),
                 account: path.resolve(process.cwd(), "src/client/entries/account.tsx"),
                 dashboard: path.resolve(process.cwd(), "src/client/entries/dashboard.tsx"),
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
