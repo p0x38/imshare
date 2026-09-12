@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "https://esm.sh/react@19.1.1?target=es2022";
+import { useEffect, useState } from "https://esm.sh/react@19.1.1?target=es2022";
 import {
     Alert,
     Button,
@@ -8,7 +8,7 @@ import {
     Stack,
     Typography,
 } from "https://esm.sh/@mui/material@9.4.0?bundle&external=react,react-dom&target=es2022";
-import { App, api, h, LoadingState, Page } from "/react/core.js";
+import { api, h, LoadingState, mount, Page } from "/react/core.js";
 
 function DashboardPage() {
     const [user, setUser] = useState(null);
@@ -20,12 +20,8 @@ function DashboardPage() {
             .catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load your dashboard."));
     }, []);
 
-    if (error) {
-        return h(Page, null, h(Alert, { severity: "error" }, error));
-    }
-    if (!user) {
-        return h(Page, null, h(LoadingState, { label: "Loading dashboard…" }));
-    }
+    if (error) return h(Page, null, h(Alert, { severity: "error" }, error));
+    if (!user) return h(Page, null, h(LoadingState, { label: "Loading dashboard…" }));
 
     const name = user.name || user.email || "user";
     return h(
@@ -78,15 +74,4 @@ function DashboardPage() {
 }
 
 const root = document.querySelector("#dashboard-page");
-if (root) root.replaceChildren();
-
-export function mountDashboard() {
-    if (root) root.appendChild(document.createElement("div"));
-    if (root) root.firstElementChild && (root.firstElementChild.id = "dashboard-root");
-    const target = document.querySelector("#dashboard-root");
-    if (target) {
-        import("/react/core.js").then(({ mount }) => mount(target, h(App, null, h(DashboardPage))));
-    }
-}
-
-mountDashboard();
+if (root) mount(root, h(DashboardPage));
