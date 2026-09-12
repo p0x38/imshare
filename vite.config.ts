@@ -4,21 +4,19 @@ import path from "node:path";
 
 export default defineConfig({
     plugins: [react()],
-    root: ".",
-    publicDir: "public",
+    publicDir: false,
     build: {
-        outDir: "dist/client",
+        outDir: "public/client",
         emptyOutDir: true,
         rollupOptions: {
             input: {
-                home: path.resolve(__dirname, "src/client/entries/home.tsx"),
-                posts: path.resolve(__dirname, "src/client/entries/posts.tsx"),
-                post: path.resolve(__dirname, "src/client/entries/post.tsx"),
-                account: path.resolve(__dirname, "src/client/entries/account.tsx"),
-                dashboard: path.resolve(__dirname, "src/client/entries/dashboard.tsx"),
-                taxonomy: path.resolve(__dirname, "src/client/entries/taxonomy.tsx"),
+                home: path.resolve(process.cwd(), "src/client/entries/home.tsx"),
+                posts: path.resolve(process.cwd(), "src/client/entries/posts.tsx"),
             },
             output: {
+                entryFileNames: "[name].js",
+                chunkFileNames: "chunks/[name]-[hash].js",
+                assetFileNames: "assets/[name]-[hash][extname]",
                 manualChunks: {
                     react: ["react", "react-dom"],
                     mui: ["@mui/material", "@mui/icons-material"],
