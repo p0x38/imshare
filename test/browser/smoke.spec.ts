@@ -60,7 +60,7 @@ test.describe("public frontend", () => {
         await expect(footer).toBeVisible();
         await expect(footer.getByRole("link", { name: "FAQ" })).toBeVisible();
         await expect(footer.getByRole("link", { name: "GitHub" })).toBeVisible();
-        await expect(footer).toContainText(/Version/i);
+        await expect(footer.getByLabel("Version")).toBeVisible();
     });
 
     test("FAQ keeps its grouped heading structure", async ({ page }) => {
