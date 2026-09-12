@@ -312,9 +312,10 @@ export async function buildApp() {
     app.get("/account/sessions/", async (request, reply) =>
         sendPage(request, reply, "account/sessions.ejs"),
     );
-    app.get("/account/profile/", async (request, reply) =>
-        sendPage(request, reply, "account/profile.ejs"),
-    );
+    app.get("/account/profile/", async (_request, reply) => {
+        const body = await readFile(path.join(publicDir, "account", "profile.html"), "utf8");
+        return reply.type("text/html; charset=utf-8").send(body);
+    });
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
     app.get("/posts/new/", async (request, reply) =>
         sendPage(request, reply, "posts/new/index.ejs"),
