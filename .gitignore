@@ -39,6 +39,6 @@ Thumbs.db
 config.json
 
 # Test output
+coverage/
 playwright-report/
 test-results/
-coverage/
