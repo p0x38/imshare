@@ -46,11 +46,7 @@
         {
             "label": "imshare: check",
             "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: typecheck",
-                "imshare: lint",
-                "imshare: test"
-            ],
+            "dependsOn": ["imshare: typecheck", "imshare: lint", "imshare: test"],
             "problemMatcher": []
         },
         {
@@ -62,6 +58,12 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "imshare: install packages",
+            "type": "shell",
+            "command": "pnpm install",
+            "problemMatcher": []
         }
     ]
 }
