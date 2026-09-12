@@ -5,125 +5,13 @@
 </head>
 <body>
     <script src="/socket.io/socket.io.js"></script>
-    <%- include("../partials/header") %>
-    <main>
-        <div id="content"><div class="box">Loading…</div></div>
-        <section id="recommendations" hidden><h2>Recommended</h2><div id="recommended" class="grid"></div></section>
-    </main>
+    <main id="post"></main>
     <%- include("../partials/footer") %>
     <script type="module">
-        import { api, escapeHtml, imageUrl } from "/app.js";
-        import { loadEmojiCatalog, renderEmojiText } from "/emoji.js";
-        const id = decodeURIComponent(location.pathname.split("/").filter(Boolean).pop());
-        const root = document.querySelector("#content");
-        let reactionState = { counts: { like: 0, favorite: 0, save: 0 }, active: { like: false, favorite: false, save: false } };
-        let currentUser = null;
-        let emojis = new Map();
-        let viewerImages = [];
-        let viewerIndex = 0;
+        import { mountPostPage } from "/posts/post-page.js";
 
-        function openViewer(index) {
-            viewerIndex = index;
-            const item = viewerImages[viewerIndex];
-            if (!item) return;
-            const dialog = document.createElement("dialog");
-            dialog.id = "image-viewer";
-            dialog.setAttribute("aria-label", "Image viewer");
-            dialog.innerHTML = `<div><button type="button" data-close>Close</button><button type="button" data-prev>Previous</button><button type="button" data-next>Next</button></div><img alt="" /><p class="meta"></p>`;
-            document.body.append(dialog);
-            const image = dialog.querySelector("img");
-            const meta = dialog.querySelector("p");
-            const render = () => {
-                const current = viewerImages[viewerIndex];
-                image.src = imageUrl(current, 2400);
-                image.alt = current.alt;
-                meta.textContent = `${current.width && current.height ? `${current.width} × ${current.height}` : ""}${current.size ? ` · ${current.size.toLocaleString()} bytes` : ""}${current.mimeType ? ` · ${current.mimeType}` : ""}`;
-            };
-            dialog.querySelector("[data-close]").onclick = () => dialog.close();
-            dialog.querySelector("[data-prev]").onclick = () => { viewerIndex = (viewerIndex - 1 + viewerImages.length) % viewerImages.length; render(); };
-            dialog.querySelector("[data-next]").onclick = () => { viewerIndex = (viewerIndex + 1) % viewerImages.length; render(); };
-            dialog.addEventListener("close", () => dialog.remove(), { once: true });
-            render();
-            if (typeof dialog.showModal === "function") dialog.showModal(); else dialog.setAttribute("open", "");
-        }
-
-        function renderReactions() {
-            for (const type of ["like", "favorite", "save"]) {
-                const button = document.querySelector(`[data-reaction="${type}"]`);
-                if (button) {
-                    button.textContent = `${type[0].toUpperCase() + type.slice(1)} (${reactionState.counts[type] || 0})`;
-                    button.setAttribute("aria-pressed", String(Boolean(reactionState.active[type])));
-                }
-            }
-        }
-
-        async function loadReactions() {
-            reactionState = (await api(`/v1/posts/${encodeURIComponent(id)}/reactions`)).data;
-            renderReactions();
-        }
-
-        async function report(target) {
-            const reason = prompt("Report reason (spam, copyright, harassment, illegal, sexual, violence, other)", "other");
-            if (!reason) return;
-            await api("/v1/reports", { method: "POST", body: JSON.stringify(target.commentId ? { commentId: target.commentId, reason } : { postId: id, reason }) });
-            window.imshareUI.showSnackbar("Report submitted.", "success");
-        }
-
-        async function loadComments() {
-            const result = await api(`/v1/posts/${encodeURIComponent(id)}/comments?limit=100`);
-            const box = document.querySelector("#comments");
-            box.innerHTML = result.data.length
-                ? result.data.map(comment => `<article class="card" data-comment="${escapeHtml(comment.id)}"><strong>${escapeHtml(comment.author.name)}</strong><p class="comment-body">${renderEmojiText(comment.body, emojis)}</p><p class="meta">${new Date(comment.createdAt).toLocaleString()}${comment.updatedAt !== comment.createdAt ? " · edited" : ""}</p><div class="comment-actions"><button data-comment-like aria-pressed="${comment.liked}">Like (${comment.likes})</button>${currentUser?.id === comment.author.id ? "<button data-edit-comment>Edit</button>" : ""}${currentUser?.id === comment.author.id || currentUser?.id === window.__postOwner ? "<button data-delete-comment>Delete</button>" : ""}<button data-report-comment>Report</button></div></article>`).join("")
-                : "<p>No comments yet.</p>";
-        }
-
-        async function loadRecommendations() {
-            try {
-                const result = await api("/v1/recommendations?limit=6");
-                const box = document.querySelector("#recommended");
-                box.innerHTML = (result.data || []).map(post => `<a class="card" href="/posts/${encodeURIComponent(post.id)}"><strong>${escapeHtml(post.title)}</strong>${post.uploads?.[0] ? `<img src="${escapeHtml(imageUrl(post.uploads[0], 320))}" alt="${escapeHtml(post.title)}" loading="lazy">` : ""}</a>`).join("");
-                document.querySelector("#recommendations").hidden = !result.data?.length;
-            } catch {}
-        }
-
-        try {
-            const [{ data: post }, me] = await Promise.all([api(`/v1/posts/${encodeURIComponent(id)}`), (async () => { try { return (await api("/v1/me")).data; } catch { return null; } })()]);
-            currentUser = me;
-            emojis = await loadEmojiCatalog();
-            window.__postOwner = post.author.id;
-            document.title = `${post.title} · imshare`;
-            viewerImages = (post.uploads || []).map(upload => ({ ...upload, alt: post.caption || post.title || upload.originalName }));
-            root.innerHTML = `<h1>${escapeHtml(post.title)}</h1>${(post.uploads || []).map((upload, index) => `<figure class="post-media"><button type="button" class="image-viewer-trigger" data-image-index="${index}" aria-label="Open image ${index + 1}"><img class="post-image" src="${escapeHtml(imageUrl(upload, 1600))}" srcset="${escapeHtml(imageUrl(upload, 320))} 320w, ${escapeHtml(imageUrl(upload, 800))} 800w, ${escapeHtml(imageUrl(upload, 1600))} 1600w" sizes="100vw" alt="${escapeHtml(post.caption || post.title || upload.originalName)}" loading="lazy" decoding="async"></button>${post.allowDownload ? `<figcaption><button type="button" data-copy-url="${escapeHtml(upload.url)}">Copy image URL</button> <a href="${escapeHtml(upload.url)}?download=true">Download original</a></figcaption>` : ""}</figure>`).join("")}${post.caption ? `<p class="caption">${escapeHtml(post.caption)}</p>` : ""}<div id="reactions" class="reactions"><button data-reaction="like"></button><button data-reaction="favorite"></button><button data-reaction="save"></button></div>${post.description ? `<p>${escapeHtml(post.description)}</p>` : ""}<p class="meta">by <a href="/users/${encodeURIComponent(post.author.id)}">${escapeHtml(post.author.name)}</a><br>Created: ${new Date(post.createdAt).toLocaleString()}</p>${post.category ? `<p>Category: <a href="/categories/${encodeURIComponent(post.category.id)}">${escapeHtml(post.category.name)}</a></p>` : ""}<p class="tags">Tags: ${(post.tags || []).map(tag => `<a href="/tags/${encodeURIComponent(tag.id)}">${escapeHtml(tag.name)}</a>`).join(" ")}</p>${post.sourceUrl ? `<p>Source: <a href="${escapeHtml(post.sourceUrl)}" rel="noopener noreferrer">${escapeHtml(post.sourceUrl)}</a></p>` : ""}<p><button id="report-post">Report</button></p><section><h2>Comments</h2><div id="comments" class="grid">Loading…</div><form id="comment-form" class="box"><label for="comment-body">Add a comment</label><textarea id="comment-body" maxlength="5000" required></textarea><p class="meta">Custom emoji: type a shortcode such as <code>:name:</code></p><button>Post comment</button><p id="comment-status" class="meta"></p></form></section>`;
-            document.querySelectorAll(".image-viewer-trigger").forEach(button => button.addEventListener("click", () => openViewer(Number(button.dataset.imageIndex))));
-            document.querySelectorAll("[data-copy-url]").forEach(button => button.addEventListener("click", async () => { try { await navigator.clipboard.writeText(button.dataset.copyUrl); window.imshareUI.showSnackbar("Image URL copied.", "success"); } catch { window.imshareUI.showSnackbar("Unable to copy image URL.", "error"); } }));
-            document.querySelector("#reactions").addEventListener("click", async event => { const button = event.target.closest("[data-reaction]"); if (!button) return; try { const active = reactionState.active[button.dataset.reaction]; reactionState = (await api(`/v1/posts/${encodeURIComponent(id)}/${button.dataset.reaction}`, { method: active ? "DELETE" : "PUT" })).data; renderReactions(); } catch (error) { window.imshareUI.showSnackbar(error.message, "error"); } });
-            document.querySelector("#report-post").onclick = () => report({ postId: id }).catch(error => window.imshareUI.showSnackbar(error.message, "error"));
-            document.querySelector("#comments").addEventListener("click", async event => {
-                const card = event.target.closest("[data-comment]");
-                if (!card) return;
-                const commentId = card.dataset.comment;
-                try {
-                    if (event.target.matches("[data-comment-like]")) {
-                        const liked = event.target.getAttribute("aria-pressed") === "true";
-                        await api(`/v1/comments/${encodeURIComponent(commentId)}/like`, { method: liked ? "DELETE" : "PUT" });
-                    } else if (event.target.matches("[data-edit-comment]")) {
-                        const body = prompt("Edit comment", card.querySelector(".comment-body").textContent);
-                        if (body !== null) await api(`/v1/comments/${encodeURIComponent(commentId)}`, { method: "PATCH", body: JSON.stringify({ body }) });
-                    } else if (event.target.matches("[data-delete-comment]") && confirm("Delete this comment?")) {
-                        await api(`/v1/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
-                    } else if (event.target.matches("[data-report-comment]")) {
-                        await report({ commentId });
-                    } else return;
-                    await loadComments();
-                } catch (error) { window.imshareUI.showSnackbar(error.message, "error"); }
-            });
-            document.querySelector("#comment-form").addEventListener("submit", async event => { event.preventDefault(); const status = document.querySelector("#comment-status"); try { await api(`/v1/posts/${encodeURIComponent(id)}/comments`, { method: "POST", body: JSON.stringify({ body: document.querySelector("#comment-body").value }) }); document.querySelector("#comment-body").value = ""; status.textContent = "Comment posted."; await loadComments(); } catch (error) { status.textContent = error.message; } });
-            await Promise.all([loadReactions(), loadComments(), loadRecommendations()]);
-            const socket = window.io?.();
-            if (socket) { socket.emit("post:subscribe", id); socket.on("post:reaction", event => { if (event.postId === id) { reactionState.counts = event.counts; renderReactions(); } }); }
-        } catch {
-            root.innerHTML = "<h1>Post not found</h1><p>That post does not exist or could not be loaded.</p>";
-        }
+        const postId = decodeURIComponent(location.pathname.replace(/^\/posts\//, "").replace(/\/$/, ""));
+        mountPostPage(document.querySelector("#post"), postId);
     </script>
 </body>
 </html>
