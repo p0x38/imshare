@@ -23,6 +23,28 @@ export function createAppTheme(mode: "light" | "dark") {
             },
         },
         components: {
+            MuiButtonBase: {
+                defaultProps: {
+                    disableRipple: false,
+                    disableTouchRipple: false,
+                },
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["transform", "background-color", "color"], {
+                            duration: fastMotion,
+                        }),
+                        "&:active": {
+                            transform: "scale(0.98)",
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            "&:active": {
+                                transform: "none",
+                            },
+                        },
+                    }),
+                },
+            },
             MuiButton: {
                 defaultProps: {
                     disableElevation: true,
@@ -71,6 +93,24 @@ export function createAppTheme(mode: "light" | "dark") {
                         "@media (prefers-reduced-motion: reduce)": {
                             transition: "none",
                             "&:hover, &:active": {
+                                transform: "none",
+                            },
+                        },
+                    }),
+                },
+            },
+            MuiListItemButton: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["transform", "background-color", "color"], {
+                            duration: fastMotion,
+                        }),
+                        "&:active": {
+                            transform: "scale(0.99)",
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            "&:active": {
                                 transform: "none",
                             },
                         },
