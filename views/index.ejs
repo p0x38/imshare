@@ -4,38 +4,10 @@
         <%- include("partials/head", { title: "imshare" }) %>
     </head>
     <body>
-        <%- include("partials/header") %>
         <main>
-            <section class="box">
-                <h1>Recent artwork</h1>
-                <p>A self-hosted image archive.</p>
-                <p><a class="button" href="/dashboard/posts/new/">New post</a></p>
-            </section>
-            <section id="posts" aria-label="Recent artwork"></section>
-            <p id="status" class="notice" role="status">Loading…</p>
+            <div id="home-page"></div>
         </main>
-        <script type="module">
-            const root = document.querySelector("#posts");
-            const status = document.querySelector("#status");
-            const { PostGrid, SkeletonGrid, mount, render } = window.imshareMUI;
-            const gridRoot = mount(root, SkeletonGrid({ count: 8 }));
-
-            (async () => {
-                try {
-                    const response = await fetch("/v1/posts?limit=24");
-                    if (!response.ok) throw new Error("API request failed");
-                    const { data } = await response.json();
-                    status.remove();
-                    if (!data.length) {
-                        render(gridRoot, SkeletonGrid({ count: 0 }));
-                        return;
-                    }
-                    render(gridRoot, PostGrid({ posts: data }));
-                } catch (error) {
-                    status.textContent = "Unable to load posts.";
-                    console.error(error);
-                }
-            })();
-        </script>
+        <%- include("partials/footer") %>
+        <script type="module" src="/react/home.js"></script>
     </body>
 </html>
