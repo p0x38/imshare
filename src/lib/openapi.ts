@@ -57,7 +57,7 @@ export async function registerOpenApi(
             },
         },
         transform: ({ schema, url }) => {
-            if (!url.startsWith("/v1/")) return { schema, url };
+            if (!url.startsWith("/v1/") || !schema) return { schema, url };
 
             const section = url.split("/")[2] ?? "";
             const tagMap: Record<string, string> = {
