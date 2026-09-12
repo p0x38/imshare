@@ -14,7 +14,8 @@
         "db:validate": "pnpm prisma validate",
         "typecheck": "pnpm prisma generate && tsc --noEmit && tsc -p tsconfig.client.json",
         "lint": "eslint .",
-        "test": "node --import tsx --test test/api.test.ts test/rate-limit.test.ts test/security.test.ts",
+        "test": "vitest run",
+        "test:watch": "vitest",
         "test:integration": "tsx test/run.ts",
         "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration && pnpm build",
         "format": "prettier --write .",
@@ -51,7 +52,8 @@
         "tsx": "^4.23.13",
         "typescript": "^7.0.2",
         "typescript-eslint": "^8.42.0",
-        "vite": "^7.1.12"
+        "vite": "^7.1.12",
+        "vitest": "^5.0.0"
     },
     "dependencies": {
         "@better-auth/prisma-adapter": "^1.7.3",

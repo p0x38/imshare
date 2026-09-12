@@ -31,5 +31,6 @@
         "**/.history/**": true
     },
     "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
-    "npm.packageManager": "pnpm"
+    "npm.packageManager": "pnpm",
+    "vitest.rootConfig": "./vitest.config.ts"
 }
