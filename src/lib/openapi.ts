@@ -21,6 +21,7 @@ export async function registerOpenApi(
         const sections = pathname.split("/").filter(Boolean);
         const section = sections[1] ?? "";
         const subSection = sections[2] ?? "";
+        const thirdSection = sections[3] ?? "";
 
         const tagMap: Record<string, string> = {
             account: "account",
@@ -38,7 +39,6 @@ export async function registerOpenApi(
             recommendations: "recommendations",
             emojis: "emojis",
             admin: "admin",
-            meta: "meta",
             users: "users",
             "profile-links": "profile-links",
             health: "health",
@@ -62,7 +62,15 @@ export async function registerOpenApi(
         }
 
         if (section === "discovery") tag = "recommendations";
-        if (section === "posts" && subSection === "image") tag = "images";
+
+        if (section === "posts") {
+            if (subSection === "image") tag = "images";
+            if (
+                subSection === "{postId}" &&
+                (thirdSection === "reactions" || thirdSection === "{type}")
+            )
+                tag = "reactions";
+        }
 
         return tag ?? "meta";
     };
@@ -95,7 +103,6 @@ export async function registerOpenApi(
                 { name: "recommendations", description: "Recommendation endpoints." },
                 { name: "emojis", description: "Emoji endpoints." },
                 { name: "admin", description: "Administrator-only endpoints." },
-                { name: "meta", description: "Metadata endpoints." },
             ],
             components: {
                 securitySchemes: {
