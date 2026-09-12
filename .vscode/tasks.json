@@ -44,9 +44,57 @@
             "problemMatcher": []
         },
         {
+            "label": "imshare: test integration",
+            "type": "shell",
+            "command": "pnpm test:integration",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser",
+            "type": "shell",
+            "command": "pnpm test:browser",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser headed",
+            "type": "shell",
+            "command": "pnpm test:browser:headed",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser UI",
+            "type": "shell",
+            "command": "pnpm test:browser:ui",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
+        },
+        {
+            "label": "imshare: format",
+            "type": "shell",
+            "command": "pnpm format",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: format check",
+            "type": "shell",
+            "command": "pnpm format:check",
+            "problemMatcher": []
+        },
+        {
             "label": "imshare: check",
             "dependsOrder": "sequence",
-            "dependsOn": ["imshare: typecheck", "imshare: lint", "imshare: test"],
+            "dependsOn": [
+                "imshare: typecheck",
+                "imshare: lint",
+                "imshare: test",
+                "imshare: test integration",
+                "imshare: test browser"
+            ],
             "problemMatcher": []
         },
         {
