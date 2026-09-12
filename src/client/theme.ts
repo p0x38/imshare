@@ -2,6 +2,7 @@ import { createTheme } from "@mui/material/styles";
 
 const motionEase = "cubic-bezier(0.22, 1, 0.36, 1)";
 const fastMotion = 180;
+const rippleDuration = 420;
 
 export function createAppTheme(mode: "light" | "dark") {
     return createTheme({
@@ -30,16 +31,31 @@ export function createAppTheme(mode: "light" | "dark") {
                 },
                 styleOverrides: {
                     root: ({ theme }) => ({
+                        position: "relative",
+                        overflow: "hidden",
                         transition: theme.transitions.create(["transform", "background-color", "color"], {
                             duration: fastMotion,
                         }),
                         "&:active": {
                             transform: "scale(0.98)",
                         },
+                        "& .MuiTouchRipple-root": {
+                            overflow: "hidden",
+                        },
+                        "& .MuiTouchRipple-rippleVisible": {
+                            animationDuration: `${rippleDuration}ms`,
+                            animationTimingFunction: "cubic-bezier(0.2, 0, 0, 1)",
+                        },
+                        "& .MuiTouchRipple-child": {
+                            opacity: 0.22,
+                        },
                         "@media (prefers-reduced-motion: reduce)": {
                             transition: "none",
                             "&:active": {
                                 transform: "none",
+                            },
+                            "& .MuiTouchRipple-rippleVisible": {
+                                animationDuration: "1ms",
                             },
                         },
                     }),
