@@ -7,6 +7,7 @@ export const postInclude = {
     tags: { include: { tag: true } },
     uploads: true,
     reactions: { select: { type: true } },
+    _count: { select: { views: true } },
 } as const;
 
 export function postView(post: any) {
@@ -35,6 +36,7 @@ export function postView(post: any) {
             ...post.user,
             avatarUrl: `/v1/users/${encodeURIComponent(post.user.id)}/avatar?v=${encodeURIComponent(post.user.updatedAt.toISOString())}`,
         },
+        viewCount: post._count?.views ?? 0,
         category: post.category,
         tags: post.tags.map((x: any) => x.tag),
         uploads: post.uploads.map((x: any) => ({
