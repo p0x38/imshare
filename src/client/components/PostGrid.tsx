@@ -1,4 +1,4 @@
-import { Box, Card, CardContent, CardMedia, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from "@mui/material";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
 
@@ -39,17 +39,24 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                         sx={{
                             overflow: "hidden",
                             transition: (theme) => theme.transitions.create(["transform", "box-shadow"], { duration: 220 }),
-                            "&:hover": {
+                            "&:has(.MuiCardActionArea-root:hover)": {
                                 transform: "translateY(-3px)",
                                 boxShadow: 3,
                             },
                             "@media (prefers-reduced-motion: reduce)": {
                                 transition: "none",
-                                "&:hover": { transform: "none" },
+                                "&:has(.MuiCardActionArea-root:hover)": { transform: "none" },
                             },
                         }}
                     >
-                        <a href={`/posts/${encodeURIComponent(post.id)}`} style={{ color: "inherit", textDecoration: "none" }}>
+                        <CardActionArea
+                            component="a"
+                            href={`/posts/${encodeURIComponent(post.id)}`}
+                            sx={{
+                                display: "block",
+                                textAlign: "left",
+                            }}
+                        >
                             {post.uploads?.[0] ? (
                                 <CardMedia
                                     component="img"
@@ -60,7 +67,7 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                                         aspectRatio: "1 / 1",
                                         objectFit: "cover",
                                         transition: (theme) => theme.transitions.create("transform", { duration: 320 }),
-                                        "a:hover &": { transform: "scale(1.025)" },
+                                        ".MuiCardActionArea-root:hover &": { transform: "scale(1.025)" },
                                         "@media (prefers-reduced-motion: reduce)": { transition: "none" },
                                     }}
                                 />
@@ -73,7 +80,7 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                                     {post.author?.name || post.author?.username || post.authorName || "Unknown author"}
                                 </Typography>
                             </CardContent>
-                        </a>
+                        </CardActionArea>
                     </Card>
                 </AnimatedItem>
             ))}
