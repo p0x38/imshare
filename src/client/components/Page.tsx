@@ -16,8 +16,8 @@ export function Page({ children, maxWidth = "xl" }: { children: React.ReactNode;
                         width: "100%",
                         maxWidth: width,
                         mx: "auto",
-                        px: 0,
-                        py: 0,
+                        px: { xs: 1.5, sm: 2, md: 3 },
+                        py: { xs: 2, sm: 3 },
                     }}
                 >
                     {children}
