@@ -37,6 +37,7 @@ test.describe("public frontend", () => {
             "/",
             "/posts/",
             "/posts/new/",
+            "/posts/test-post/",
             "/account/",
             "/account/login/",
             "/account/register/",
@@ -53,6 +54,7 @@ test.describe("public frontend", () => {
             "/github/",
             "/privacy/",
             "/terms/",
+            "/admin/",
         ];
 
         for (const path of paths) {
@@ -132,15 +134,20 @@ test.describe("dashboard frontend", () => {
     test("dashboard post list mounts its React entry", async ({ page }) => {
         await page.goto("/dashboard/posts/");
 
-        await expect(page.locator("#dashboard-posts-page")).toBeVisible();
         await expect(page.locator('script[src="/client/dashboardPosts.js"]')).toHaveCount(1);
+        await expect(page.locator("#dashboard-posts-page")).toBeVisible();
+        await expect(page).toHaveURL(/\/account\/login\/$|\/dashboard\/posts\/$/);
     });
 
     test("dashboard taxonomy pages mount the shared React entry", async ({ page }) => {
-        for (const path of ["/dashboard/tags/", "/dashboard/categories/"]) {
+        for (const [path, label] of [
+            ["/dashboard/tags/", "Manage Tags"],
+            ["/dashboard/categories/", "Manage Categories"],
+        ] as const) {
             await page.goto(path);
-            await expect(page.locator("#taxonomy-page")).toBeVisible();
             await expect(page.locator('script[src="/client/taxonomy.js"]')).toHaveCount(1);
+            await expect(page.locator("#taxonomy-page")).toBeVisible();
+            await expect(page.getByRole("heading", { name: label })).toBeVisible();
         }
     });
 });
