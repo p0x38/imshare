@@ -151,6 +151,20 @@ export async function buildApp() {
             );
         }
         if (
+            typeof contentType === "string" &&
+            contentType.includes("application/json") &&
+            typeof payload === "string" &&
+            request.url.split("?", 1)[0]?.startsWith("/v1/")
+        ) {
+            try {
+                const body = JSON.parse(payload) as Record<string, unknown>;
+                body.endpoint = request.url.split("?", 1)[0] ?? "/";
+                return JSON.stringify(body);
+            } catch {
+                // Keep the original payload when it is not a JSON object.
+            }
+        }
+        if (
             typeof contentType !== "string" ||
             !contentType.includes("text/html") ||
             typeof payload !== "string"
