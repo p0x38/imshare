@@ -28,6 +28,7 @@ export async function registerOpenApi(
             ...(serverUrl ? { servers: [{ url: serverUrl }] } : {}),
             tags: [
                 { name: "account", description: "Authenticated account and session endpoints." },
+                { name: "auth", description: "Authentication and registration endpoints." },
                 { name: "posts", description: "Post creation, retrieval, and management." },
                 { name: "reactions", description: "Likes, favorites, saves, and related reactions." },
                 { name: "comments", description: "Post comments and comment interactions." },
@@ -39,6 +40,7 @@ export async function registerOpenApi(
                 { name: "reports", description: "Content reporting endpoints." },
                 { name: "health", description: "Health and readiness checks." },
                 { name: "users", description: "User and profile endpoints." },
+                { name: "profile-links", description: "User profile link endpoints." },
                 { name: "notifications", description: "Notification endpoints." },
                 { name: "recommendations", description: "Recommendation endpoints." },
                 { name: "emojis", description: "Emoji endpoints." },
@@ -57,11 +59,10 @@ export async function registerOpenApi(
             },
         },
         transform: ({ schema, url }) => {
-            if (!url.startsWith("/v1/") || !schema) return { schema, url };
-
-            const section = url.split("/")[2] ?? "";
+            const section = url.match(/^\/v1\/([^/]+)/)?.[1] ?? "";
             const tagMap: Record<string, string> = {
                 account: "account",
+                auth: "auth",
                 posts: "posts",
                 reactions: "reactions",
                 comments: "comments",
@@ -77,10 +78,20 @@ export async function registerOpenApi(
                 admin: "admin",
                 meta: "meta",
                 users: "users",
+                "profile-links": "profile-links",
+                health: "health",
+                ready: "health",
+                version: "health",
+                "post-lifecycle": "posts",
             };
             const tag = tagMap[section];
+            if (!tag) return { schema: schema ?? {}, url };
+
             return {
-                schema: tag ? { ...schema, tags: [...(schema.tags ?? []), tag] } : schema,
+                schema: {
+                    ...(schema ?? {}),
+                    tags: [...new Set([...(schema?.tags ?? []), tag])],
+                },
                 url,
             };
         },
