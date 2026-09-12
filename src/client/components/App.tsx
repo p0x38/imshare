@@ -46,7 +46,7 @@ export function App({ children }: { children: React.ReactNode }) {
                 <CssBaseline />
                 <GlobalStyles
                     styles={{
-                        "main:has(> [id$='-page'])": {
+                        "main:has(> [id$='-page']), main#post": {
                             width: "100% !important",
                             maxWidth: "none !important",
                             margin: "0 !important",
