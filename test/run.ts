@@ -37,16 +37,15 @@ try {
             ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"],
             pnpmOptions,
         );
+        execFileSync(
+            process.env.ComSpec ?? "cmd.exe",
+            ["/d", "/s", "/c", "pnpm exec vitest run test/integration.test.ts"],
+            pnpmOptions,
+        );
     } else {
         execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
+        execFileSync("pnpm", ["exec", "vitest", "run", "test/integration.test.ts"], pnpmOptions);
     }
-
-    const pnpmExecutable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    execFileSync(
-        pnpmExecutable,
-        ["exec", "vitest", "run", "test/integration.test.ts"],
-        pnpmOptions,
-    );
 } finally {
     cleanup();
 }
