@@ -40,6 +40,19 @@ function escapeMeta(value: string | null | undefined) {
     return escapeAttribute((value ?? "").replace(/\s+/g, " ").trim());
 }
 
+function resolveRequestOrigin(config: Awaited<ReturnType<typeof loadConfig>>, request: FastifyRequest) {
+    const configuredOrigin = config.auth.baseUrl?.trim();
+    if (configuredOrigin) {
+        try {
+            return new URL(configuredOrigin).origin;
+        } catch {
+            // Fall back to the request origin when the configured base URL is invalid.
+        }
+    }
+
+    return `${request.protocol}://${request.hostname}`;
+}
+
 export async function buildApp() {
     const config = await loadConfig();
     const app = Fastify({
@@ -56,13 +69,11 @@ export async function buildApp() {
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
-        const hostHeader = request.headers.host;
-        const host = hostHeader?.trim() || request.hostname;
-        const configuredHost = host.includes(":") ? host : `${host}:${config.server.port}`;
+        const requestOrigin = resolveRequestOrigin(config, request);
         if (
             !isSameOriginRequest(
                 request.method,
-                `${request.protocol}://${configuredHost}`,
+                requestOrigin,
                 request.headers.origin,
                 request.headers.referer,
             )
