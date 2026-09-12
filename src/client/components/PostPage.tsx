@@ -71,8 +71,8 @@ export function PostPage({ postId }: { postId: string }) {
                         <>
                             <Divider />
                             <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                                {post.tags?.map((tag) => <Chip key={tag.id} label={tag.name} component="a" href={`/tags/${encodeURIComponent(tag.id)}/`} clickable />)}
-                                {post.categories?.map((category) => <Chip key={category.id} label={category.name} component="a" href={`/categories/${encodeURIComponent(category.id)}/`} clickable />)}
+                                {post.tags?.map((tag) => tag.id ? <Chip key={tag.id} label={tag.name} component="a" href={`/tags/${encodeURIComponent(tag.id)}/`} clickable /> : null)}
+                                {post.categories?.map((category) => category.id ? <Chip key={category.id} label={category.name} component="a" href={`/categories/${encodeURIComponent(category.id)}/`} clickable /> : null)}
                             </Stack>
                         </>
                     ) : null}
