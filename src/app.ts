@@ -305,9 +305,10 @@ export async function buildApp() {
     app.get("/login/", async (_request, reply) => reply.redirect("/account/login/", 301));
     app.get("/signup/", async (_request, reply) => reply.redirect("/account/register/", 301));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
-    app.get("/account/notifications/", async (request, reply) =>
-        sendPage(request, reply, "account/notifications.ejs"),
-    );
+    app.get("/account/notifications/", async (_request, reply) => {
+        const body = await readFile(path.join(publicDir, "account", "notifications.html"), "utf8");
+        return reply.type("text/html; charset=utf-8").send(body);
+    });
     app.get("/account/sessions/", async (request, reply) =>
         sendPage(request, reply, "account/sessions.ejs"),
     );
