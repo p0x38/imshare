@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
-import type { OpenAPIV3_1 } from "openapi-types";
 import type { loadConfig } from "./config.js";
 
 export async function registerOpenApi(
@@ -85,14 +84,13 @@ export async function registerOpenApi(
                 url,
             };
         },
-        transformObject: ({ openapiObject }) => {
-            const document = openapiObject as OpenAPIV3_1.Document;
-            document.externalDocs = {
+        transformObject: ({ openapiObject }) => ({
+            ...openapiObject,
+            externalDocs: {
                 description: "imshare project documentation",
                 url: "https://github.com/p0x38/imshare",
-            };
-            return document;
-        },
+            },
+        }),
     });
 
     await app.register(fastifySwaggerUi, {
