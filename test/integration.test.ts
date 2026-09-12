@@ -1,10 +1,9 @@
-import assert from "node:assert/strict";
-import test from "node:test";
 import type { LightMyRequestOptions } from "fastify";
+import { expect, test } from "vitest";
 
 import { buildApp } from "../src/app.js";
-import { getRegistrationToken } from "../src/lib/registration-token.js";
 import { prisma } from "../src/lib/auth.js";
+import { getRegistrationToken } from "../src/lib/registration-token.js";
 
 test("API integration: authentication, users, posts, tags, categories, and search", async () => {
     const app = await buildApp();
@@ -33,7 +32,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
     try {
         const anonymous = await request({ method: "GET", url: "/v1/me" });
-        assert.equal(anonymous.statusCode, 401);
+        expect(anonymous.statusCode).toBe(401);
 
         const registrationToken = getRegistrationToken().token;
         const signup = await request({
@@ -46,17 +45,18 @@ test("API integration: authentication, users, posts, tags, categories, and searc
                 registrationToken,
             },
         });
-        assert.ok([200, 201].includes(signup.statusCode), signup.body);
+        expect([200, 201]).toContain(signup.statusCode);
+        expect(signup.body).toBeDefined();
         cookie = extractCookie(signup);
-        assert.notEqual(cookie, "");
+        expect(cookie).not.toBe("");
 
         const me = await request({ method: "GET", url: "/v1/me", headers: { cookie } });
-        assert.equal(me.statusCode, 200);
-        assert.equal(me.json().data.email, email);
+        expect(me.statusCode).toBe(200);
+        expect(me.json().data.email).toBe(email);
         const userId = me.json().data.id as string;
 
         const session = await request({ method: "GET", url: "/v1/auth/get-session", headers: { cookie } });
-        assert.equal(session.statusCode, 200);
+        expect(session.statusCode).toBe(200);
 
         const category = await request({
             method: "POST",
@@ -64,7 +64,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { name: "Integration Category", slug: "integration-category" },
         });
-        assert.equal(category.statusCode, 201);
+        expect(category.statusCode).toBe(201);
         categoryId = category.json().data.id;
 
         const tag = await request({
@@ -73,7 +73,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { name: "Integration Tag", slug: "integration-tag" },
         });
-        assert.equal(tag.statusCode, 201);
+        expect(tag.statusCode).toBe(201);
         const tagId = tag.json().data.id as string;
 
         const post = await request({
@@ -86,20 +86,20 @@ test("API integration: authentication, users, posts, tags, categories, and searc
                 content: "Integration content",
             },
         });
-        assert.equal(post.statusCode, 201);
+        expect(post.statusCode).toBe(201);
         postId = post.json().data.id as string;
 
         const postRead = await request({ method: "GET", url: `/v1/posts/${postId}` });
-        assert.equal(postRead.statusCode, 200);
+        expect(postRead.statusCode).toBe(200);
 
         const posts = await request({ method: "GET", url: "/v1/posts" });
-        assert.equal(posts.statusCode, 200);
+        expect(posts.statusCode).toBe(200);
 
         const userPosts = await request({ method: "GET", url: `/v1/users/${userId}/posts` });
-        assert.equal(userPosts.statusCode, 200);
+        expect(userPosts.statusCode).toBe(200);
 
         const tags = await request({ method: "GET", url: "/v1/tags" });
-        assert.equal(tags.statusCode, 200);
+        expect(tags.statusCode).toBe(200);
 
         const attachTag = await request({
             method: "POST",
@@ -107,7 +107,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { tagId },
         });
-        assert.equal(attachTag.statusCode, 201);
+        expect(attachTag.statusCode).toBe(201);
 
         const attachCategory = await request({
             method: "PUT",
@@ -115,11 +115,11 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { categoryId },
         });
-        assert.equal(attachCategory.statusCode, 200);
+        expect(attachCategory.statusCode).toBe(200);
 
         const search = await request({ method: "GET", url: "/v1/search?q=Integration&type=all" });
-        assert.equal(search.statusCode, 200);
-        assert.equal(search.json().data.posts.length, 1);
+        expect(search.statusCode).toBe(200);
+        expect(search.json().data.posts).toHaveLength(1);
 
         const update = await request({
             method: "PATCH",
@@ -127,7 +127,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { title: "Updated Integration Post" },
         });
-        assert.equal(update.statusCode, 200);
+        expect(update.statusCode).toBe(200);
 
         const updateUser = await request({
             method: "PATCH",
@@ -135,7 +135,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie },
             payload: { name: "Updated Integration User" },
         });
-        assert.equal(updateUser.statusCode, 200);
+        expect(updateUser.statusCode).toBe(200);
 
         const signupSecond = await request({
             method: "POST",
@@ -147,9 +147,10 @@ test("API integration: authentication, users, posts, tags, categories, and searc
                 registrationToken,
             },
         });
-        assert.ok([200, 201].includes(signupSecond.statusCode), signupSecond.body);
+        expect([200, 201]).toContain(signupSecond.statusCode);
+        expect(signupSecond.body).toBeDefined();
         secondCookie = extractCookie(signupSecond);
-        assert.notEqual(secondCookie, "");
+        expect(secondCookie).not.toBe("");
 
         const forbiddenUpdate = await request({
             method: "PATCH",
@@ -157,32 +158,32 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie: secondCookie },
             payload: { title: "Forbidden" },
         });
-        assert.equal(forbiddenUpdate.statusCode, 403);
+        expect(forbiddenUpdate.statusCode).toBe(403);
 
         const forbiddenDelete = await request({
             method: "DELETE",
             url: `/v1/posts/${postId}`,
             headers: { cookie: secondCookie },
         });
-        assert.equal(forbiddenDelete.statusCode, 403);
+        expect(forbiddenDelete.statusCode).toBe(403);
 
         const tagPosts = await request({ method: "GET", url: `/v1/tags/${tagId}/posts` });
-        assert.equal(tagPosts.statusCode, 200);
-        assert.equal(tagPosts.json().pagination.total, 1);
+        expect(tagPosts.statusCode).toBe(200);
+        expect(tagPosts.json().pagination.total).toBe(1);
 
         const categoryPosts = await request({ method: "GET", url: `/v1/categories/${categoryId}/posts` });
-        assert.equal(categoryPosts.statusCode, 200);
-        assert.equal(categoryPosts.json().pagination.total, 1);
+        expect(categoryPosts.statusCode).toBe(200);
+        expect(categoryPosts.json().pagination.total).toBe(1);
 
         const logout = await request({
             method: "POST",
             url: "/v1/auth/sign-out",
             headers: { cookie },
         });
-        assert.equal(logout.statusCode, 200);
+        expect(logout.statusCode).toBe(200);
 
         const afterLogout = await request({ method: "GET", url: "/v1/me", headers: { cookie } });
-        assert.equal(afterLogout.statusCode, 401);
+        expect(afterLogout.statusCode).toBe(401);
     } finally {
         await app.close();
         await prisma.$disconnect();
