@@ -50,6 +50,7 @@ export async function buildApp() {
     const uploadLimiter = new RateLimiter(30, 86_400_000);
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
+    const clientDistDir = path.join(rootDir, "dist", "client");
     const viewsDir = path.join(rootDir, "views");
     const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
 
@@ -237,11 +238,17 @@ export async function buildApp() {
     });
 
     await mkdir(uploadDir, { recursive: true });
+    await mkdir(clientDistDir, { recursive: true });
     await app.register(cookie);
     await app.register(multipart, { limits: { fileSize: config.storage.maxFileSize } });
     await app.register(fastifyStatic, {
         root: publicDir,
         prefix: "/",
+        decorateReply: false,
+    });
+    await app.register(fastifyStatic, {
+        root: clientDistDir,
+        prefix: "/client/",
         decorateReply: false,
     });
     await app.register(fastifyView, {
@@ -253,7 +260,8 @@ export async function buildApp() {
     const sendPage = async (request: FastifyRequest, reply: FastifyReply, view: string) => {
         try {
             return await reply.view(view);
-        } catch {
+        } catch (error) {
+            request.log.error({ err: error, view }, "Failed to render page");
             return sendErrorPage(500, "Server error", "The requested page could not be rendered.", reply);
         }
     };
@@ -262,7 +270,7 @@ export async function buildApp() {
     await app.register(apiRoutes);
     await app.register(pageRoutes);
 
-    app.get("/", async (_request, reply) => sendPage(_request, reply, "index.ejs"));
+    app.get("/", async (request, reply) => sendPage(request, reply, "index.ejs"));
     app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
     app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
