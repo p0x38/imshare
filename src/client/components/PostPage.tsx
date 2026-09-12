@@ -1,7 +1,43 @@
-import { Alert, Avatar, Button, Card, CardContent, CardMedia, Chip, Divider, Fade, Grow, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import {
+    Alert,
+    Avatar,
+    Button,
+    Card,
+    CardContent,
+    CardMedia,
+    Chip,
+    CircularProgress,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Divider,
+    Fade,
+    FormControl,
+    Grow,
+    IconButton,
+    InputLabel,
+    ListItemIcon,
+    ListItemText,
+    Menu,
+    MenuItem,
+    Select,
+    Stack,
+    TextField,
+    Tooltip,
+    Typography,
+} from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
+import DownloadIcon from "@mui/icons-material/Download";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import LinkIcon from "@mui/icons-material/Link";
 import { useCallback, useEffect, useState } from "react";
 import { Page } from "./Page";
 import { api } from "../lib/api";
@@ -24,11 +60,27 @@ interface CurrentUser {
     id: string;
 }
 
+const REPORT_REASONS = [
+    ["spam", "Spam"],
+    ["copyright", "Copyright"],
+    ["harassment", "Harassment"],
+    ["illegal", "Illegal content"],
+    ["sexual", "Sexual content"],
+    ["violence", "Violence"],
+    ["other", "Other"],
+] as const;
+
 function imageUrl(url: string, width = 1600) {
     const image = new URL(url, window.location.origin);
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
     return image.href;
+}
+
+function downloadUrl(url: string) {
+    const download = new URL(url, window.location.origin);
+    download.searchParams.set("download", "true");
+    return download.href;
 }
 
 function authorUrl(post: Post) {
@@ -75,15 +127,84 @@ function useReducedMotion() {
     return reduced;
 }
 
-function PostActions({ postId }: { postId: string }) {
+function PostActions({ post }: { post: Post }) {
     const [busy, setBusy] = useState("");
+    const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+    const [reportOpen, setReportOpen] = useState(false);
+    const [reportReason, setReportReason] = useState<(typeof REPORT_REASONS)[number][0]>("other");
+    const [reportDetails, setReportDetails] = useState("");
+    const [reporting, setReporting] = useState(false);
+    const [reportMessage, setReportMessage] = useState("");
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const reducedMotion = useReducedMotion();
+
+    useEffect(() => {
+        let active = true;
+        void api<{ data: CurrentUser }>("/v1/me")
+            .then((response) => {
+                if (active) setCurrentUserId(response.data.id);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const toggle = async (kind: "like" | "favorite" | "save") => {
         if (busy) return;
         setBusy(kind);
         try {
-            await api(`/v1/posts/${encodeURIComponent(postId)}/${kind}`, { method: "PUT" });
+            await api(`/v1/posts/${encodeURIComponent(post.id)}/${kind}`, { method: "PUT" });
+        } finally {
+            setBusy("");
+        }
+    };
+
+    const openMenu = (event: React.MouseEvent<HTMLElement>) => setAnchorEl(event.currentTarget);
+    const closeMenu = () => setAnchorEl(null);
+
+    const copyLink = async () => {
+        closeMenu();
+        await navigator.clipboard.writeText(window.location.href);
+        setReportMessage("Link copied to clipboard.");
+    };
+
+    const openReport = () => {
+        closeMenu();
+        setReportMessage("");
+        setReportOpen(true);
+    };
+
+    const submitReport = async () => {
+        if (reporting) return;
+        setReporting(true);
+        try {
+            await api("/v1/reports", {
+                method: "POST",
+                body: JSON.stringify({
+                    reason: reportReason,
+                    details: reportDetails.trim() || undefined,
+                    postId: post.id,
+                }),
+            });
+            setReportOpen(false);
+            setReportDetails("");
+            setReportReason("other");
+            setReportMessage("Report submitted. Thank you.");
+        } catch (cause) {
+            setReportMessage(cause instanceof Error ? cause.message : "Unable to submit report.");
+        } finally {
+            setReporting(false);
+        }
+    };
+
+    const deletePost = async () => {
+        closeMenu();
+        if (!window.confirm("Delete this post? This cannot be undone.")) return;
+        setBusy("delete");
+        try {
+            await api(`/v1/posts/${encodeURIComponent(post.id)}`, { method: "DELETE" });
+            window.location.assign("/posts/");
         } finally {
             setBusy("");
         }
@@ -97,41 +218,163 @@ function PostActions({ postId }: { postId: string }) {
         "&:active": reducedMotion ? {} : { transform: "scale(0.96)" },
     });
 
+    const ownPost = currentUserId !== null && currentUserId === post.author?.id;
+
     return (
-        <Stack direction="row" justifyContent="flex-end">
-            <Stack direction="row" sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
-                <Tooltip title="Like">
-                    <IconButton
-                        aria-label="Like"
-                        disabled={busy !== "" && busy !== "like"}
-                        onClick={() => void toggle("like")}
-                        sx={buttonSx()}
-                    >
-                        <ThumbUpAltOutlinedIcon />
-                    </IconButton>
-                </Tooltip>
-                <Tooltip title="Favorite">
-                    <IconButton
-                        aria-label="Favorite"
-                        disabled={busy !== "" && busy !== "favorite"}
-                        onClick={() => void toggle("favorite")}
-                        sx={buttonSx(true)}
-                    >
-                        <FavoriteBorderIcon />
-                    </IconButton>
-                </Tooltip>
-                <Tooltip title="Save">
-                    <IconButton
-                        aria-label="Save"
-                        disabled={busy !== "" && busy !== "save"}
-                        onClick={() => void toggle("save")}
-                        sx={buttonSx(true)}
-                    >
-                        <BookmarkBorderIcon />
-                    </IconButton>
-                </Tooltip>
+        <>
+            <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
+                {reportMessage ? (
+                    <Alert severity={reportMessage.startsWith("Report submitted") || reportMessage.startsWith("Link copied") ? "success" : "info"} sx={{ mr: "auto", py: 0 }}>
+                        {reportMessage}
+                    </Alert>
+                ) : null}
+                <Stack direction="row" sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+                    <Tooltip title="Like">
+                        <IconButton
+                            aria-label="Like"
+                            disabled={busy !== "" && busy !== "like"}
+                            onClick={() => void toggle("like")}
+                            sx={buttonSx()}
+                        >
+                            <ThumbUpAltOutlinedIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Favorite">
+                        <IconButton
+                            aria-label="Favorite"
+                            disabled={busy !== "" && busy !== "favorite"}
+                            onClick={() => void toggle("favorite")}
+                            sx={buttonSx(true)}
+                        >
+                            <FavoriteBorderIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Save">
+                        <IconButton
+                            aria-label="Save"
+                            disabled={busy !== "" && busy !== "save"}
+                            onClick={() => void toggle("save")}
+                            sx={buttonSx(true)}
+                        >
+                            <BookmarkBorderIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="More actions">
+                        <IconButton
+                            aria-label="More actions"
+                            aria-controls={anchorEl ? "post-actions-menu" : undefined}
+                            aria-haspopup="true"
+                            aria-expanded={anchorEl ? "true" : undefined}
+                            onClick={openMenu}
+                            sx={buttonSx(true)}
+                        >
+                            <MoreVertIcon />
+                        </IconButton>
+                    </Tooltip>
+                </Stack>
             </Stack>
-        </Stack>
+
+            <Menu
+                id="post-actions-menu"
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={closeMenu}
+                transitionDuration={reducedMotion ? 0 : 160}
+            >
+                {post.allowDownload && post.uploads?.length ? (
+                    <>
+                        {post.uploads.map((upload, index) => (
+                            <MenuItem
+                                key={`download-${upload.id}`}
+                                component="a"
+                                href={downloadUrl(upload.url)}
+                                download={upload.originalName || undefined}
+                                onClick={closeMenu}
+                            >
+                                <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
+                                <ListItemText>
+                                    {post.uploads!.length === 1 ? "Download" : `Download image ${index + 1}`}
+                                </ListItemText>
+                            </MenuItem>
+                        ))}
+                    </>
+                ) : null}
+                <MenuItem onClick={() => void copyLink()}>
+                    <ListItemIcon><LinkIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText>Copy link</ListItemText>
+                </MenuItem>
+                <MenuItem onClick={() => {
+                    closeMenu();
+                    window.open(window.location.href, "_blank", "noopener,noreferrer");
+                }}>
+                    <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText>Open in new tab</ListItemText>
+                </MenuItem>
+                {post.sourceUrl ? (
+                    <MenuItem component="a" href={post.sourceUrl} target="_blank" rel="noreferrer" onClick={closeMenu}>
+                        <ListItemIcon><OpenInNewIcon fontSize="small" /></ListItemIcon>
+                        <ListItemText>Open source</ListItemText>
+                    </MenuItem>
+                ) : null}
+                <Divider />
+                {ownPost ? (
+                    <>
+                        <MenuItem component="a" href={`/dashboard/posts/${encodeURIComponent(post.id)}/edit/`} onClick={closeMenu}>
+                            <ListItemIcon><EditOutlinedIcon fontSize="small" /></ListItemIcon>
+                            <ListItemText>Edit post</ListItemText>
+                        </MenuItem>
+                        <MenuItem disabled={busy === "delete"} onClick={() => void deletePost()}>
+                            <ListItemIcon><DeleteOutlineIcon fontSize="small" color="error" /></ListItemIcon>
+                            <ListItemText primaryTypographyProps={{ color: "error.main" }}>Delete post</ListItemText>
+                        </MenuItem>
+                    </>
+                ) : null}
+                <MenuItem onClick={openReport}>
+                    <ListItemIcon><FlagOutlinedIcon fontSize="small" /></ListItemIcon>
+                    <ListItemText>Report post</ListItemText>
+                </MenuItem>
+            </Menu>
+
+            <Dialog open={reportOpen} onClose={() => !reporting && setReportOpen(false)} fullWidth maxWidth="sm">
+                <DialogTitle>Report post</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <FormControl fullWidth>
+                            <InputLabel id="report-reason-label">Reason</InputLabel>
+                            <Select
+                                labelId="report-reason-label"
+                                value={reportReason}
+                                label="Reason"
+                                onChange={(event) => setReportReason(event.target.value as typeof reportReason)}
+                            >
+                                {REPORT_REASONS.map(([value, label]) => (
+                                    <MenuItem key={value} value={value}>{label}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            fullWidth
+                            multiline
+                            minRows={4}
+                            label="Details (optional)"
+                            value={reportDetails}
+                            onChange={(event) => setReportDetails(event.target.value)}
+                            inputProps={{ maxLength: 2000 }}
+                            helperText={`${reportDetails.length}/2000`}
+                        />
+                        {reportMessage && !reportMessage.startsWith("Report submitted") ? (
+                            <Alert severity="error">{reportMessage}</Alert>
+                        ) : null}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setReportOpen(false)} disabled={reporting}>Cancel</Button>
+                    <Button onClick={() => void submitReport()} variant="contained" color="error" disabled={reporting}>
+                        {reporting ? <CircularProgress size={18} /> : "Submit report"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }
 
@@ -430,7 +673,7 @@ export function PostPage({ postId }: { postId: string }) {
                                             {metadata}
                                         </Stack>
                                     </Stack>
-                                    <PostActions postId={post.id} />
+                                    <PostActions post={post} />
                                     {post.description ? (
                                         <>
                                             <Divider />
