@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 
@@ -24,7 +24,6 @@ function cleanup(): void {
 
 cleanup();
 
-const prismaCommand = "pnpm exec prisma migrate deploy";
 const pnpmOptions = {
     cwd: root,
     env: process.env,
@@ -35,7 +34,7 @@ try {
     if (process.platform === "win32") {
         execFileSync(
             process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", prismaCommand],
+            ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"],
             pnpmOptions,
         );
     } else {
@@ -43,17 +42,11 @@ try {
     }
 
     const pnpmExecutable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-    const result = spawnSync(
+    execFileSync(
         pnpmExecutable,
         ["exec", "vitest", "run", "test/integration.test.ts"],
-        {
-            cwd: root,
-            env: process.env,
-            stdio: "inherit",
-        },
+        pnpmOptions,
     );
-
-    process.exitCode = result.status ?? 1;
 } finally {
     cleanup();
 }
