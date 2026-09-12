@@ -32,8 +32,7 @@ function imageUrl(url: string, width = 1600) {
 }
 
 function authorUrl(post: Post) {
-    const username = post.author?.username;
-    return username ? `/users/${encodeURIComponent(username)}/` : undefined;
+    return post.author?.id ? `/users/${encodeURIComponent(post.author.id)}/` : undefined;
 }
 
 function relativeTime(value: string) {
@@ -290,16 +289,16 @@ export function PostPage({ postId }: { postId: string }) {
     if (!post)
         return <Page><Typography color="text.secondary">Loading post…</Typography></Page>;
 
-    const username = post.author?.username || post.authorName || "Unknown author";
-    const usernameHref = authorUrl(post);
+    const authorName = post.author?.name || post.authorName || post.author?.id || "Unknown author";
+    const authorHref = authorUrl(post);
     const metadata = [
-        usernameHref ? (
-            <Typography key="user" component="a" href={usernameHref} color="text.secondary" sx={{ width: "fit-content" }}>
-                {username}
+        authorHref ? (
+            <Typography key="user" component="a" href={authorHref} color="text.secondary" sx={{ width: "fit-content" }}>
+                {authorName}
             </Typography>
         ) : (
             <Typography key="user" component="span" color="text.secondary">
-                {username}
+                {authorName}
             </Typography>
         ),
         <Typography key="views" component="span" color="text.secondary">
