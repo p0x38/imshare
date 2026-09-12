@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState } from "react";
-import { CssBaseline, ThemeProvider } from "@mui/material";
+import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
 import { createAppTheme } from "../theme";
 
 type ColorMode = "light" | "dark";
@@ -44,6 +44,16 @@ export function App({ children }: { children: React.ReactNode }) {
         <ColorModeContext.Provider value={colorMode}>
             <ThemeProvider theme={theme}>
                 <CssBaseline />
+                <GlobalStyles
+                    styles={{
+                        "main[id$='-page']": {
+                            width: "100%",
+                            maxWidth: "none",
+                            margin: 0,
+                            padding: 0,
+                        },
+                    }}
+                />
                 {children}
             </ThemeProvider>
         </ColorModeContext.Provider>
