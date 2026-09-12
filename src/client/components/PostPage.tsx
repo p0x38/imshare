@@ -181,11 +181,7 @@ function PostActions({ post }: { post: Post }) {
         try {
             await api("/v1/reports", {
                 method: "POST",
-                body: JSON.stringify({
-                    reason: reportReason,
-                    details: reportDetails.trim() || undefined,
-                    postId: post.id,
-                }),
+                body: JSON.stringify({ reason: reportReason, details: reportDetails.trim() || undefined, postId: post.id }),
             });
             setReportOpen(false);
             setReportDetails("");
@@ -223,11 +219,7 @@ function PostActions({ post }: { post: Post }) {
     return (
         <>
             <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
-                {reportMessage ? (
-                    <Alert severity={reportMessage.startsWith("Report submitted") || reportMessage.startsWith("Link copied") ? "success" : "info"} sx={{ mr: "auto", py: 0 }}>
-                        {reportMessage}
-                    </Alert>
-                ) : null}
+                {reportMessage ? <Alert severity={reportMessage.startsWith("Report submitted") || reportMessage.startsWith("Link copied") ? "success" : "info"} sx={{ mr: "auto", py: 0 }}>{reportMessage}</Alert> : null}
                 <Stack direction="row" sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
                     <Tooltip title="Like"><IconButton aria-label="Like" disabled={busy !== "" && busy !== "like"} onClick={() => void toggle("like")} sx={buttonSx()}><ThumbUpAltOutlinedIcon /></IconButton></Tooltip>
                     <Tooltip title="Favorite"><IconButton aria-label="Favorite" disabled={busy !== "" && busy !== "favorite"} onClick={() => void toggle("favorite")} sx={buttonSx(true)}><FavoriteBorderIcon /></IconButton></Tooltip>
@@ -375,22 +367,74 @@ export function PostPage({ postId }: { postId: string }) {
     return (
         <Page maxWidth="lg">
             <Stack spacing={{ xs: 2, sm: 3 }}>
-                <Fade in timeout={reducedMotion ? 0 : 260}>
-                    <div><Stack spacing={{ xs: 1, sm: 1.5 }}>{post.uploads?.map((upload, index) => <Grow key={upload.id} in timeout={reducedMotion ? 0 : 220 + index * 45} style={{ transformOrigin: "center top" }}><div><Card variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}><CardMedia component="img" image={imageUrl(upload.url)} alt={upload.alt || post.title || ""} sx={{ maxHeight: "80vh", objectFit: "contain" }} />{upload.alt ? <CardContent><Typography color="text.secondary">{upload.alt}</Typography></CardContent> : null}</Card></div></Grow>)}</Stack></div>
-                </Fade>
-                <Divider />
-                <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "80ms" }}>
-                    <div><Card variant="outlined" sx={cardSx}><CardContent><Stack spacing={2}>
-                        <Stack spacing={0.5}><Typography variant="h3" component="h1">{post.title || "Untitled"}</Typography><Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" divider={<Typography color="text.disabled">・</Typography>}>{metadata}</Stack></Stack>
-                        <PostActions post={post} />
-                        {post.description ? <><Divider /><Typography sx={{ whiteSpace: "pre-wrap" }}>{post.description}</Typography></> : null}
-                        {post.tags?.length || post.categories?.length ? <><Divider /><Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">{post.tags?.map((tag) => { const id = tag.id || tag.tag?.id; const name = tag.name || tag.tag?.name; return id && name ? <Chip key={`tag-${id}`} label={name} component="a" href={`/tags/${encodeURIComponent(id)}/`} clickable /> : null; })}{post.categories?.map((category) => { const id = category.id || category.category?.id; const name = category.name || category.category?.name; return id && name ? <Chip key={`category-${id}`} label={name} component="a" href={`/categories/${encodeURIComponent(id)}/`} clickable /> : null; })}</Stack></> : null}
-                    </Stack></CardContent></Card></div>
-                </Fade>
-                <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "140ms" }}>
-                    <div><Card variant="outlined" sx={cardSx}><CardContent><Comments postId={postId} /></CardContent></Card></div>
-                </Fade>
-                <RecommendationSections postId={postId} />
+                <Stack
+                    sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                            xs: "minmax(0, 1fr)",
+                            lg: "minmax(0, 1fr) minmax(300px, 360px)",
+                        },
+                        alignItems: "start",
+                        gap: { xs: 2, sm: 3, lg: 4 },
+                    }}
+                >
+                    <Stack spacing={{ xs: 2, sm: 3 }}>
+                        <Fade in timeout={reducedMotion ? 0 : 260}>
+                            <div>
+                                <Stack spacing={{ xs: 1, sm: 1.5 }}>
+                                    {post.uploads?.map((upload, index) => (
+                                        <Grow key={upload.id} in timeout={reducedMotion ? 0 : 220 + index * 45} style={{ transformOrigin: "center top" }}>
+                                            <div>
+                                                <Card variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}>
+                                                    <CardMedia component="img" image={imageUrl(upload.url)} alt={upload.alt || post.title || ""} sx={{ maxHeight: "80vh", objectFit: "contain" }} />
+                                                    {upload.alt ? <CardContent><Typography color="text.secondary">{upload.alt}</Typography></CardContent> : null}
+                                                </Card>
+                                            </div>
+                                        </Grow>
+                                    ))}
+                                </Stack>
+                            </div>
+                        </Fade>
+
+                        <Divider />
+
+                        <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "80ms" }}>
+                            <div>
+                                <Card variant="outlined" sx={cardSx}>
+                                    <CardContent>
+                                        <Stack spacing={2}>
+                                            <Stack spacing={0.5}>
+                                                <Typography variant="h3" component="h1">{post.title || "Untitled"}</Typography>
+                                                <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" divider={<Typography color="text.disabled">・</Typography>}>{metadata}</Stack>
+                                            </Stack>
+                                            <PostActions post={post} />
+                                            {post.description ? <><Divider /><Typography sx={{ whiteSpace: "pre-wrap" }}>{post.description}</Typography></> : null}
+                                            {post.tags?.length || post.categories?.length ? <><Divider /><Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">{post.tags?.map((tag) => { const id = tag.id || tag.tag?.id; const name = tag.name || tag.tag?.name; return id && name ? <Chip key={`tag-${id}`} label={name} component="a" href={`/tags/${encodeURIComponent(id)}/`} clickable /> : null; })}{post.categories?.map((category) => { const id = category.id || category.category?.id; const name = category.name || category.category?.name; return id && name ? <Chip key={`category-${id}`} label={name} component="a" href={`/categories/${encodeURIComponent(id)}/`} clickable /> : null; })}</Stack></> : null}
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </Fade>
+
+                        <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "140ms" }}>
+                            <div>
+                                <Card variant="outlined" sx={cardSx}>
+                                    <CardContent><Comments postId={postId} /></CardContent>
+                                </Card>
+                            </div>
+                        </Fade>
+                    </Stack>
+
+                    <Stack
+                        sx={{
+                            minWidth: 0,
+                            position: { xs: "static", lg: "sticky" },
+                            top: { lg: 88 },
+                        }}
+                    >
+                        <RecommendationSections postId={postId} />
+                    </Stack>
+                </Stack>
             </Stack>
         </Page>
     );
