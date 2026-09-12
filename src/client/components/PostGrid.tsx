@@ -13,7 +13,7 @@ export function PostGrid({ posts }: { posts: Post[] }) {
     if (posts.length === 0)
         return (
             <Card variant="outlined">
-                <CardContent sx={{ textAlign: "center" }}>
+                <CardContent sx={{ textAlign: "center", px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
                     <Typography variant="h5" component="h2" gutterBottom>
                         No posts found
                     </Typography>
@@ -28,8 +28,11 @@ export function PostGrid({ posts }: { posts: Post[] }) {
         <Box
             sx={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                gap: 2,
+                gridTemplateColumns: {
+                    xs: "repeat(2, minmax(0, 1fr))",
+                    sm: "repeat(auto-fill, minmax(220px, 1fr))",
+                },
+                gap: { xs: 1, sm: 2 },
             }}
         >
             {posts.map((post, index) => (
@@ -38,14 +41,16 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                         variant="outlined"
                         sx={{
                             overflow: "hidden",
+                            height: "100%",
                             transition: (theme) => theme.transitions.create(["transform", "box-shadow"], { duration: 220 }),
-                            "&:has(.MuiCardActionArea-root:hover)": {
-                                transform: "translateY(-3px)",
-                                boxShadow: 3,
+                            "@media (hover: hover)": {
+                                "&:has(.MuiCardActionArea-root:hover)": {
+                                    transform: "translateY(-3px)",
+                                    boxShadow: 3,
+                                },
                             },
                             "@media (prefers-reduced-motion: reduce)": {
                                 transition: "none",
-                                "&:has(.MuiCardActionArea-root:hover)": { transform: "none" },
                             },
                         }}
                     >
@@ -55,6 +60,7 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                             sx={{
                                 display: "block",
                                 textAlign: "left",
+                                height: "100%",
                             }}
                         >
                             {post.uploads?.[0] ? (
@@ -67,16 +73,18 @@ export function PostGrid({ posts }: { posts: Post[] }) {
                                         aspectRatio: "1 / 1",
                                         objectFit: "cover",
                                         transition: (theme) => theme.transitions.create("transform", { duration: 320 }),
-                                        ".MuiCardActionArea-root:hover &": { transform: "scale(1.025)" },
+                                        "@media (hover: hover)": {
+                                            ".MuiCardActionArea-root:hover &": { transform: "scale(1.025)" },
+                                        },
                                         "@media (prefers-reduced-motion: reduce)": { transition: "none" },
                                     }}
                                 />
                             ) : null}
-                            <CardContent>
-                                <Typography variant="subtitle1" noWrap>
+                            <CardContent sx={{ p: { xs: 1.25, sm: 2 }, "&:last-child": { pb: { xs: 1.25, sm: 2 } } }}>
+                                <Typography variant="subtitle1" noWrap sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}>
                                     {post.title || "Untitled"}
                                 </Typography>
-                                <Typography variant="body2" color="text.secondary" noWrap>
+                                <Typography variant="body2" color="text.secondary" noWrap sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}>
                                     {post.author?.name || post.author?.username || post.authorName || "Unknown author"}
                                 </Typography>
                             </CardContent>
