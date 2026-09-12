@@ -32,3 +32,8 @@ Thumbs.db
 
 # Local configuration
 config.json
+
+# Test output
+playwright-report/
+test-results/
+coverage/
