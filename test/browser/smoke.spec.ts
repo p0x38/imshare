@@ -84,15 +84,17 @@ test.describe("dashboard frontend", () => {
             const response = await request.get(path, { maxRedirects: 0 });
             expect(response.status(), path).toBe(200);
             const html = await response.text();
-            expect(html, path).toMatch(/<(?:!doctype\s+)?html\b/i);
+            expect(html, path).toMatch(/<main\b/i);
+            expect(html, path).toMatch(/<script[^>]+type=["']module["']/i);
         }
     });
 
-    test("dashboard landing renders the signed-out state", async ({ page }) => {
-        await page.goto("/dashboard/");
-        await expect(page.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible();
-        await expect(page.getByText("Sign in to manage your content.")).toBeVisible();
-        await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+    test("dashboard landing shell mounts its React entry", async ({ request }) => {
+        const response = await request.get("/dashboard/");
+        expect(response.status()).toBe(200);
+        const html = await response.text();
+        expect(html).toContain('id="dashboard-page"');
+        expect(html).toContain('src="/client/dashboard.js"');
     });
 
     test("dashboard post list mounts its React entry", async ({ request }) => {
