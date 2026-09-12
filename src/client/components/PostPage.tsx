@@ -1,4 +1,4 @@
-import { Alert, Avatar, Box, Button, Card, CardContent, CardMedia, Chip, Container, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Alert, Avatar, Button, Card, CardContent, CardMedia, Chip, Container, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
@@ -29,10 +29,6 @@ function imageUrl(url: string, width = 1600) {
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
     return image.href;
-}
-
-function authorName(post: Post) {
-    return post.author?.name || post.author?.username || post.authorName || "Unknown author";
 }
 
 function authorUrl(post: Post) {
@@ -270,6 +266,27 @@ export function PostPage({ postId }: { postId: string }) {
 
     const username = post.author?.username || post.authorName || "Unknown author";
     const usernameHref = authorUrl(post);
+    const metadata = [
+        usernameHref ? (
+            <Typography key="user" component="a" href={usernameHref} color="text.secondary" sx={{ width: "fit-content" }}>
+                {username}
+            </Typography>
+        ) : (
+            <Typography key="user" component="span" color="text.secondary">
+                {username}
+            </Typography>
+        ),
+        <Typography key="views" component="span" color="text.secondary">
+            {post.viewCount ?? 0} views
+        </Typography>,
+        ...(post.createdAt
+            ? [
+                  <Typography key="date" component="span" color="text.secondary">
+                      {new Date(post.createdAt).toLocaleDateString()}
+                  </Typography>,
+              ]
+            : []),
+    ];
 
     return (
         <Page>
@@ -302,13 +319,9 @@ export function PostPage({ postId }: { postId: string }) {
                                     <Typography variant="h3" component="h1">
                                         {post.title || "Untitled"}
                                     </Typography>
-                                    {usernameHref ? (
-                                        <Typography component="a" href={usernameHref} color="text.secondary" sx={{ width: "fit-content" }}>
-                                            {username}
-                                        </Typography>
-                                    ) : (
-                                        <Typography color="text.secondary">{username}</Typography>
-                                    )}
+                                    <Stack direction="row" spacing={1} divider={<Typography color="text.disabled">・</Typography>}>
+                                        {metadata}
+                                    </Stack>
                                 </Stack>
                                 <PostActions postId={post.id} />
                                 {post.description ? (
