@@ -15,6 +15,11 @@ uploads/
 dist/
 build/
 
+# Test output
+playwright-report/
+test-results/
+coverage/
+
 # Tool caches
 .vite/
 .eslintcache
