@@ -9,17 +9,7 @@ interface MotionProps {
 
 export function PageTransition({ children, duration = 420 }: MotionProps): ReactElement {
     return (
-        <Fade
-            in
-            appear
-            timeout={duration}
-            easing="ease-out"
-            sx={{
-                "@media (prefers-reduced-motion: reduce)": {
-                    transition: "none !important",
-                },
-            }}
-        >
+        <Fade in appear timeout={duration} easing="ease-out">
             <div>{children}</div>
         </Fade>
     );
@@ -30,12 +20,11 @@ export function AnimatedItem({ children, delay = 0, duration = 360 }: MotionProp
         <Grow
             in
             appear
-            timeout={duration}
+            timeout={{ enter: duration + delay, exit: duration }}
             style={{ transformOrigin: "50% 0" }}
             easing="ease-out"
-            {...{ timeout: { enter: duration + delay, exit: duration } }}
         >
-            <div style={{ animationDelay: `${delay}ms` }}>{children}</div>
+            <div>{children}</div>
         </Grow>
     );
 }
