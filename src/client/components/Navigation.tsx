@@ -43,7 +43,7 @@ export function Navigation() {
 
     return (
         <AppBar position="static" elevation={0}>
-            <Toolbar sx={{ gap: 1, flexWrap: "wrap", maxWidth: 1200, width: "100%", mx: "auto" }}>
+            <Toolbar sx={{ gap: 1, flexWrap: "wrap", width: "100%", maxWidth: 1200, mx: "auto", px: { xs: 1.5, sm: 2, md: 3 } }}>
                 <Typography component="a" href="/" variant="h6" sx={{ mr: 1, color: "inherit", textDecoration: "none", fontWeight: 700 }}>
                     imshare
                 </Typography>
