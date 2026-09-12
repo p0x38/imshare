@@ -84,8 +84,8 @@ export async function registerOpenApi(
                 url,
             };
         },
-        transformObject: ({ openapiObject }) => ({
-            ...openapiObject,
+        transformObject: (documentObject) => ({
+            ...(documentObject.openapiObject ?? {}),
             externalDocs: {
                 description: "imshare project documentation",
                 url: "https://github.com/p0x38/imshare",
