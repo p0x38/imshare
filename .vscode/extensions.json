@@ -2,6 +2,9 @@
     "recommendations": [
         "typescriptteam.native-preview",
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
-    ]
+        "dbaeumer.vscode-eslint",
+        "prisma.prisma",
+        "bradlc.vscode-tailwindcss"
+    ],
+    "unwantedRecommendations": []
 }
