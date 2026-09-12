@@ -36,6 +36,32 @@ function authorUrl(post: Post) {
     return username ? `/users/${encodeURIComponent(username)}/` : undefined;
 }
 
+function relativeTime(value: string) {
+    const date = new Date(value);
+    const seconds = Math.round((date.getTime() - Date.now()) / 1000);
+    const absoluteSeconds = Math.abs(seconds);
+    const units = [
+        [31536000, "year"],
+        [2592000, "month"],
+        [604800, "week"],
+        [86400, "day"],
+        [3600, "hour"],
+        [60, "minute"],
+    ] as const;
+    for (const [unitSeconds, unit] of units) {
+        if (absoluteSeconds >= unitSeconds)
+            return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(Math.round(seconds / unitSeconds), unit);
+    }
+    return "just now";
+}
+
+function absoluteTime(value: string) {
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "medium",
+    }).format(new Date(value));
+}
+
 function PostActions({ postId }: { postId: string }) {
     const [busy, setBusy] = useState("");
 
@@ -281,9 +307,20 @@ export function PostPage({ postId }: { postId: string }) {
         </Typography>,
         ...(post.createdAt
             ? [
-                  <Typography key="date" component="span" color="text.secondary">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                  </Typography>,
+                  <Tooltip key="created" title={`Created ${absoluteTime(post.createdAt)}`}>
+                      <Typography component="time" dateTime={post.createdAt} color="text.secondary" sx={{ cursor: "help" }}>
+                          {relativeTime(post.createdAt)}
+                      </Typography>
+                  </Tooltip>,
+              ]
+            : []),
+        ...(post.updatedAt && post.updatedAt !== post.createdAt
+            ? [
+                  <Tooltip key="updated" title={`Updated ${absoluteTime(post.updatedAt)}`}>
+                      <Typography component="time" dateTime={post.updatedAt} color="text.secondary" sx={{ cursor: "help" }}>
+                          updated {relativeTime(post.updatedAt)}
+                      </Typography>
+                  </Tooltip>,
               ]
             : []),
     ];
