@@ -3,8 +3,7 @@
         "typescriptteam.native-preview",
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
-        "prisma.prisma",
-        "bradlc.vscode-tailwindcss"
+        "prisma.prisma"
     ],
     "unwantedRecommendations": []
 }
