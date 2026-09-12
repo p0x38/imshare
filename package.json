@@ -17,7 +17,10 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:integration": "tsx test/run.ts",
-        "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration && pnpm build",
+        "test:browser": "playwright test",
+        "test:browser:ui": "playwright test --ui",
+        "test:browser:headed": "playwright test --headed",
+        "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration && pnpm test:browser && pnpm build",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
     },
@@ -38,6 +41,7 @@
     "type": "module",
     "devDependencies": {
         "@eslint/js": "^9.39.1",
+        "@playwright/test": "^1.63.0",
         "@types/better-sqlite3": "^7.6.13",
         "@types/ejs": "^3.1.5",
         "@types/node": "^22.20.1",
