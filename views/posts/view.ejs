@@ -4,14 +4,9 @@
     <%- include("../partials/head", { title: "Post · imshare" }) %>
 </head>
 <body>
-    <script src="/socket.io/socket.io.js"></script>
     <main id="post"></main>
     <%- include("../partials/footer") %>
-    <script type="module">
-        import { mountPostPage } from "/posts/post-page.js";
-
-        const postId = decodeURIComponent(location.pathname.replace(/^\/posts\//, "").replace(/\/$/, ""));
-        mountPostPage(document.querySelector("#post"), postId);
-    </script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="/client/post.js"></script>
 </body>
 </html>
