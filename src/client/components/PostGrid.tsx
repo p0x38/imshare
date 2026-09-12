@@ -2,7 +2,7 @@ import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from "@
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
 
-function imageUrl(url: string, width = 480) {
+function imageUrl(url: string, width = 512) {
     const image = new URL(url, window.location.origin);
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
@@ -28,10 +28,7 @@ export function PostGrid({ posts }: { posts: Post[] }) {
         <Box
             sx={{
                 display: "grid",
-                gridTemplateColumns: {
-                    xs: "repeat(2, minmax(0, 1fr))",
-                    sm: "repeat(auto-fill, minmax(220px, 1fr))",
-                },
+                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))",
                 gap: { xs: 1, sm: 2 },
             }}
         >
