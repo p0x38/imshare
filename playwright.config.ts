@@ -21,8 +21,10 @@ export default defineConfig({
     ],
     webServer: {
         command: "pnpm exec tsx src/server.ts",
-        url: "http://127.0.0.1:5454/",
+        url: "http://127.0.0.1:5454/v1/health",
         reuseExistingServer: !process.env.CI,
-        timeout: 30_000,
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 120_000,
     },
 });
