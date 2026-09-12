@@ -23,6 +23,7 @@ export interface Post {
     tags?: Array<{ id?: string; name?: string; tag?: { id: string; name: string } }>;
     categories?: Array<{ id?: string; name?: string; category?: { id: string; name: string } }>;
     createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface User extends Author {
