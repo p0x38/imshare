@@ -210,10 +210,11 @@ export async function buildApp() {
                 : "",
             `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
         ].join("");
+        const isReactPage = /<script type="module" src="\/client\/[^\"]+"><\/script>/i.test(payload);
         let enhanced = payload.includes('property="og:title"')
             ? payload
             : payload.replace(/<\/head>/i, `${tags}</head>`);
-        if (!enhanced.includes('src="/components.js"'))
+        if (!isReactPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
                 /<\/head>/i,
                 '<script src="/components.js" defer></script></head>',
