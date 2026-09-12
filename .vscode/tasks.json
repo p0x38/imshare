@@ -52,6 +52,16 @@
                 "imshare: test"
             ],
             "problemMatcher": []
+        },
+        {
+            "label": "imshare: build",
+            "type": "shell",
+            "command": "pnpm build",
+            "problemMatcher": ["$tsc"],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

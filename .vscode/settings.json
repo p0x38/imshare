@@ -8,9 +8,8 @@
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "typescript.preferences.importModuleSpecifier": "relative",
-    "javascript.preferences.importModuleSpecifier": "relative",
+    "js/ts.tsdk.path": "node_modules/typescript/lib",
+    "js/ts.preferences.importModuleSpecifier": "relative",
     "eslint.workingDirectories": [{ "mode": "location" }],
     "files.exclude": {
         "**/.history": true,
@@ -31,6 +30,6 @@
         "**/uploads/**": true,
         "**/.history/**": true
     },
-    "typescript.disableAutomaticTypeAcquisition": false,
+    "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
     "npm.packageManager": "pnpm"
 }
