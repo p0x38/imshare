@@ -59,7 +59,19 @@ export async function registerOpenApi(
             },
         },
         transform: ({ schema, url }) => {
-            const section = url.match(/^\/v1\/([^/]+)/)?.[1] ?? "";
+            const pathname = url.split("?", 1)[0] ?? "/";
+
+            // The Swagger document is for the HTTP API, not the server-rendered UI.
+            if (!pathname.startsWith("/v1/"))
+                return {
+                    schema: { ...(schema ?? {}), hide: true },
+                    url,
+                };
+
+            const sections = pathname.split("/").filter(Boolean);
+            const section = sections[1] ?? "";
+            const subSection = sections[2] ?? "";
+
             const tagMap: Record<string, string> = {
                 account: "account",
                 auth: "auth",
@@ -82,10 +94,32 @@ export async function registerOpenApi(
                 health: "health",
                 ready: "health",
                 version: "health",
+                "registration-token": "account",
                 "post-lifecycle": "posts",
             };
-            const tag = tagMap[section];
-            if (!tag) return { schema: schema ?? {}, url };
+
+            let tag = tagMap[section];
+
+            // `/v1/me/*` is split into the same logical groups as the public resources.
+            if (section === "me") {
+                tag =
+                    subSection === "posts"
+                        ? "posts"
+                        : subSection === "notifications"
+                          ? "notifications"
+                          : subSection === "links"
+                            ? "profile-links"
+                            : "account";
+            }
+
+            // Discovery endpoints describe recommendation/discovery feeds.
+            if (section === "discovery") tag = "recommendations";
+
+            // Images are served from the posts namespace but are image endpoints semantically.
+            if (section === "posts" && subSection === "image") tag = "images";
+
+            // Keep unknown API routes visible but grouped instead of falling back to `default`.
+            if (!tag) tag = "meta";
 
             return {
                 schema: {
