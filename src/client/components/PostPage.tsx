@@ -1,4 +1,7 @@
-import { Alert, Avatar, Button, Card, CardContent, CardMedia, Chip, Container, Divider, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Avatar, Box, Button, Card, CardContent, CardMedia, Chip, Container, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import { useCallback, useEffect, useState } from "react";
 import { Page } from "./Page";
 import { api } from "../lib/api";
@@ -30,6 +33,62 @@ function imageUrl(url: string, width = 1600) {
 
 function authorName(post: Post) {
     return post.author?.name || post.author?.username || post.authorName || "Unknown author";
+}
+
+function authorUrl(post: Post) {
+    const username = post.author?.username;
+    return username ? `/users/${encodeURIComponent(username)}/` : undefined;
+}
+
+function PostActions({ postId }: { postId: string }) {
+    const [busy, setBusy] = useState("");
+
+    const toggle = async (kind: "like" | "favorite" | "save") => {
+        if (busy) return;
+        setBusy(kind);
+        try {
+            await api(`/v1/posts/${encodeURIComponent(postId)}/${kind}`, { method: "PUT" });
+        } finally {
+            setBusy("");
+        }
+    };
+
+    return (
+        <Stack direction="row" justifyContent="flex-end">
+            <Stack direction="row" sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
+                <Tooltip title="Like">
+                    <IconButton
+                        aria-label="Like"
+                        disabled={busy !== "" && busy !== "like"}
+                        onClick={() => void toggle("like")}
+                        sx={{ borderRadius: 0 }}
+                    >
+                        <ThumbUpAltOutlinedIcon />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Favorite">
+                    <IconButton
+                        aria-label="Favorite"
+                        disabled={busy !== "" && busy !== "favorite"}
+                        onClick={() => void toggle("favorite")}
+                        sx={{ borderRadius: 0, borderLeft: 1, borderColor: "divider" }}
+                    >
+                        <FavoriteBorderIcon />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title="Save">
+                    <IconButton
+                        aria-label="Save"
+                        disabled={busy !== "" && busy !== "save"}
+                        onClick={() => void toggle("save")}
+                        sx={{ borderRadius: 0, borderLeft: 1, borderColor: "divider" }}
+                    >
+                        <BookmarkBorderIcon />
+                    </IconButton>
+                </Tooltip>
+            </Stack>
+        </Stack>
+    );
 }
 
 function CommentItem({ comment, currentUser, onUpdate }: { comment: Comment; currentUser: CurrentUser | null; onUpdate: () => Promise<void> }) {
@@ -110,7 +169,7 @@ function Comments({ postId }: { postId: string }) {
         let active = true;
         void Promise.all([
             load(),
-            api<{ data: CurrentUser }>('/v1/me').then((response) => {
+            api<{ data: CurrentUser }>("/v1/me").then((response) => {
                 if (active) setCurrentUser(response.data);
             }).catch(() => {}),
         ]).catch((cause) => {
@@ -209,11 +268,14 @@ export function PostPage({ postId }: { postId: string }) {
     if (!post)
         return <Page><Typography color="text.secondary">Loading post…</Typography></Page>;
 
+    const username = post.author?.username || post.authorName || "Unknown author";
+    const usernameHref = authorUrl(post);
+
     return (
         <Page>
             <Container maxWidth="lg" disableGutters>
                 <Stack spacing={3}>
-                    <Stack spacing={3}>
+                    <Stack spacing={1}>
                         {post.uploads?.map((upload) => (
                             <Card key={upload.id} variant="outlined" sx={{ overflow: "hidden" }}>
                                 <CardMedia
@@ -240,10 +302,15 @@ export function PostPage({ postId }: { postId: string }) {
                                     <Typography variant="h3" component="h1">
                                         {post.title || "Untitled"}
                                     </Typography>
-                                    <Typography color="text.secondary">
-                                        {authorName(post)}
-                                    </Typography>
+                                    {usernameHref ? (
+                                        <Typography component="a" href={usernameHref} color="text.secondary" sx={{ width: "fit-content" }}>
+                                            {username}
+                                        </Typography>
+                                    ) : (
+                                        <Typography color="text.secondary">{username}</Typography>
+                                    )}
                                 </Stack>
+                                <PostActions postId={post.id} />
                                 {post.description ? (
                                     <>
                                         <Divider />
