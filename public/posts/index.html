@@ -5,16 +5,9 @@
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <title>Posts · imshare</title>
         <link rel="stylesheet" href="/style.css" />
-        <script src="/mui.js" type="module"></script>
     </head>
     <body>
         <main id="posts-page"></main>
-        <script type="module">
-            import { api } from "/app.js";
-
-            const root = document.querySelector("#posts-page");
-            const page = React.createElement(window.imshareMUI.PostsPage, { api });
-            window.imshareMUI.mount(root, page);
-        </script>
+        <script type="module" src="/react/posts.js"></script>
     </body>
 </html>
