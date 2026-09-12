@@ -14,6 +14,7 @@ import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
+import { registerOpenApi } from "./lib/openapi.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -277,6 +278,7 @@ export async function buildApp() {
         }
     };
 
+    await registerOpenApi(app, config);
     await app.register(authRoutes);
     await app.register(apiRoutes);
     await app.register(pageRoutes);
