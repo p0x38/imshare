@@ -71,7 +71,7 @@ export function Navigation() {
                     width: "100%",
                     maxWidth: 1200,
                     mx: "auto",
-                    px: { xs: 1, sm: 2, md: 3 },
+                    px: { xs: 1.5, sm: 2, md: 3 },
                     py: { xs: 0.5, sm: 0 },
                     minHeight: { xs: 56, sm: 64 },
                 }}
