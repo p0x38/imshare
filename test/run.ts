@@ -42,9 +42,10 @@ try {
         execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
     }
 
+    const pnpmExecutable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
     const result = spawnSync(
-        process.execPath,
-        ["--import", "tsx", "--test", "test/integration.test.ts"],
+        pnpmExecutable,
+        ["exec", "vitest", "run", "test/integration.test.ts"],
         {
             cwd: root,
             env: process.env,
