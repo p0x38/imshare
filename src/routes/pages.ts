@@ -69,5 +69,4 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/privacy/", async (_request, reply) => staticPage(reply, "privacy.html"));
     fastify.get("/terms/", async (_request, reply) => staticPage(reply, "terms.html"));
     fastify.get("/admin/", async (_request, reply) => staticPage(reply, "admin/index.html"));
-    fastify.get("/dashboard/settings/", async (_request, reply) => staticPage(reply, "dashboard/settings/index.html"));
 };
