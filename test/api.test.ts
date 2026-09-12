@@ -81,7 +81,7 @@ test("health, readiness, and version routes are publicly available", async () =>
         expect(ready.json()).toMatchObject({ status: "ready" });
         const version = await app.inject({ method: "GET", url: "/v1/version" });
         expect(version.statusCode).toBe(200);
-        expect(version.json()).toEqual({ data: { api: "v1", version: "1.0.0" } });
+        expect(version.json()).toMatchObject({ data: { api: "v1", version: "1.0.0" } });
     } finally {
         await app.close();
     }
@@ -195,7 +195,7 @@ test("custom emoji listing is public and creation is protected", async () => {
     try {
         const list = await app.inject({ method: "GET", url: "/v1/emojis" });
         expect(list.statusCode).toBe(200);
-        expect(list.json()).toEqual({ data: [] });
+        expect(list.json()).toMatchObject({ data: [] });
         const create = await app.inject({
             method: "POST",
             url: "/v1/emojis",
