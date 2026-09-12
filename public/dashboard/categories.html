@@ -5,55 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Manage categories · imshare</title>
     <link rel="stylesheet" href="/style.css" />
-    <script src="/imshare-ui.js" defer></script>
 </head>
-<body>
-<header><nav><a class="brand" href="/">imshare</a><a href="/dashboard/">Dashboard</a><a href="/dashboard/posts/">Posts</a><a href="/dashboard/tags/">Tags</a><a href="/account/">Account</a></nav></header>
-<main>
-    <h1>Manage categories</h1>
-    <form id="create" class="box">
-        <label for="name">Name</label>
-        <input id="name" maxlength="100" required />
-        <label for="slug">Slug</label>
-        <input id="slug" maxlength="100" required pattern="[a-z0-9-]+" />
-        <label for="description">Description</label>
-        <textarea id="description" maxlength="2000"></textarea>
-        <button type="submit">Create category</button>
-    </form>
-    <p id="status">Loading…</p>
-    <div id="items" class="grid"></div>
-</main>
-<script type="module">
-const { api, escapeHtml, showSnackbar } = window.imshareUI;
-const items = document.querySelector("#items");
-async function load() {
-    const result = await api("/v1/categories?limit=100");
-    items.innerHTML = result.data.length ? result.data.map(category => `<article class="card"><h2>${escapeHtml(category.name)}</h2><p class="meta">${escapeHtml(category.slug)} · ${category._count?.posts ?? 0} post(s)</p>${category.description ? `<p>${escapeHtml(category.description)}</p>` : ""}<button type="button" data-delete="${escapeHtml(category.id)}">Delete</button></article>`).join("") : "<p>No categories yet.</p>";
-    document.querySelector("#status").textContent = `${result.pagination.total} categor${result.pagination.total === 1 ? "y" : "ies"}`;
-}
-document.querySelector("#create").addEventListener("submit", async event => {
-    event.preventDefault();
-    try {
-        await api("/v1/categories", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: document.querySelector("#name").value, slug: document.querySelector("#slug").value, description: document.querySelector("#description").value || undefined }) });
-        event.target.reset();
-        await load();
-        showSnackbar("Category created.", "success");
-    } catch (error) {
-        showSnackbar(error instanceof Error ? error.message : "Unable to create category.", "error");
-    }
-});
-items.addEventListener("click", async event => {
-    const button = event.target.closest("[data-delete]");
-    if (!button || !confirm("Delete this category?")) return;
-    try {
-        await api(`/v1/categories/${encodeURIComponent(button.dataset.delete)}`, { method: "DELETE" });
-        await load();
-        showSnackbar("Category deleted.", "success");
-    } catch (error) {
-        showSnackbar(error instanceof Error ? error.message : "Unable to delete category.", "error");
-    }
-});
-try { await load(); } catch (error) { document.querySelector("#status").textContent = error.status === 401 ? "Please sign in." : "Unable to load categories."; }
-</script>
+<body data-taxonomy="categories">
+    <main><div id="taxonomy-page"></div></main>
+    <script type="module" src="/react/manage-taxonomy.js"></script>
 </body>
 </html>
