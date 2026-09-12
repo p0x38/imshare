@@ -1,4 +1,4 @@
-import { Alert, Avatar, Button, Card, CardContent, CardMedia, Chip, Container, Divider, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
+import { Alert, Avatar, Button, Card, CardContent, CardMedia, Chip, Divider, Fade, Grow, IconButton, Stack, TextField, Tooltip, Typography } from "@mui/material";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
@@ -61,8 +61,23 @@ function absoluteTime(value: string) {
     }).format(new Date(value));
 }
 
+function useReducedMotion() {
+    const [reduced, setReduced] = useState(false);
+
+    useEffect(() => {
+        const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const update = () => setReduced(media.matches);
+        update();
+        media.addEventListener("change", update);
+        return () => media.removeEventListener("change", update);
+    }, []);
+
+    return reduced;
+}
+
 function PostActions({ postId }: { postId: string }) {
     const [busy, setBusy] = useState("");
+    const reducedMotion = useReducedMotion();
 
     const toggle = async (kind: "like" | "favorite" | "save") => {
         if (busy) return;
@@ -74,6 +89,14 @@ function PostActions({ postId }: { postId: string }) {
         }
     };
 
+    const buttonSx = (borderLeft = false) => ({
+        borderRadius: 0,
+        ...(borderLeft ? { borderLeft: 1, borderColor: "divider" } : {}),
+        transition: reducedMotion ? "none" : "transform 140ms ease, background-color 140ms ease",
+        "&:hover": reducedMotion ? {} : { transform: "translateY(-1px)" },
+        "&:active": reducedMotion ? {} : { transform: "scale(0.96)" },
+    });
+
     return (
         <Stack direction="row" justifyContent="flex-end">
             <Stack direction="row" sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
@@ -82,7 +105,7 @@ function PostActions({ postId }: { postId: string }) {
                         aria-label="Like"
                         disabled={busy !== "" && busy !== "like"}
                         onClick={() => void toggle("like")}
-                        sx={{ borderRadius: 0 }}
+                        sx={buttonSx()}
                     >
                         <ThumbUpAltOutlinedIcon />
                     </IconButton>
@@ -92,7 +115,7 @@ function PostActions({ postId }: { postId: string }) {
                         aria-label="Favorite"
                         disabled={busy !== "" && busy !== "favorite"}
                         onClick={() => void toggle("favorite")}
-                        sx={{ borderRadius: 0, borderLeft: 1, borderColor: "divider" }}
+                        sx={buttonSx(true)}
                     >
                         <FavoriteBorderIcon />
                     </IconButton>
@@ -102,7 +125,7 @@ function PostActions({ postId }: { postId: string }) {
                         aria-label="Save"
                         disabled={busy !== "" && busy !== "save"}
                         onClick={() => void toggle("save")}
-                        sx={{ borderRadius: 0, borderLeft: 1, borderColor: "divider" }}
+                        sx={buttonSx(true)}
                     >
                         <BookmarkBorderIcon />
                     </IconButton>
@@ -115,6 +138,7 @@ function PostActions({ postId }: { postId: string }) {
 function CommentItem({ comment, currentUser, onUpdate }: { comment: Comment; currentUser: CurrentUser | null; onUpdate: () => Promise<void> }) {
     const [busy, setBusy] = useState(false);
     const ownComment = currentUser?.id === comment.author?.id;
+    const reducedMotion = useReducedMotion();
 
     const run = async (callback: () => Promise<unknown>) => {
         if (busy) return;
@@ -128,7 +152,13 @@ function CommentItem({ comment, currentUser, onUpdate }: { comment: Comment; cur
     };
 
     return (
-        <Card variant="outlined">
+        <Card
+            variant="outlined"
+            sx={{
+                transition: reducedMotion ? "none" : "transform 160ms ease, box-shadow 160ms ease",
+                "&:hover": reducedMotion ? {} : { transform: "translateY(-2px)", boxShadow: 2 },
+            }}
+        >
             <CardContent>
                 <Stack spacing={1.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
@@ -180,6 +210,7 @@ function Comments({ postId }: { postId: string }) {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const reducedMotion = useReducedMotion();
 
     const load = useCallback(async () => {
         const response = await api<{ data: Comment[] }>(`/v1/posts/${encodeURIComponent(postId)}/comments?limit=100`);
@@ -231,8 +262,12 @@ function Comments({ postId }: { postId: string }) {
                 <Typography color="text.secondary">Loading comments…</Typography>
             ) : comments.length ? (
                 <Stack spacing={1.5}>
-                    {comments.map((comment) => (
-                        <CommentItem key={comment.id} comment={comment} currentUser={currentUser} onUpdate={load} />
+                    {comments.map((comment, index) => (
+                        <Grow key={comment.id} in timeout={reducedMotion ? 0 : 220 + index * 35} style={{ transformOrigin: "top center" }}>
+                            <div>
+                                <CommentItem comment={comment} currentUser={currentUser} onUpdate={load} />
+                            </div>
+                        </Grow>
                     ))}
                 </Stack>
             ) : (
@@ -261,6 +296,7 @@ function Comments({ postId }: { postId: string }) {
 export function PostPage({ postId }: { postId: string }) {
     const [post, setPost] = useState<Post | null>(null);
     const [error, setError] = useState("");
+    const reducedMotion = useReducedMotion();
 
     useEffect(() => {
         let active = true;
@@ -280,14 +316,24 @@ export function PostPage({ postId }: { postId: string }) {
 
     if (error)
         return (
-            <Page>
-                <Alert severity="error">{error}</Alert>
-                <Button component="a" href="/posts/" sx={{ mt: 2 }}>Back to posts</Button>
+            <Page maxWidth="lg">
+                <Fade in timeout={reducedMotion ? 0 : 180}>
+                    <div>
+                        <Alert severity="error">{error}</Alert>
+                        <Button component="a" href="/posts/" sx={{ mt: 2 }}>Back to posts</Button>
+                    </div>
+                </Fade>
             </Page>
         );
 
     if (!post)
-        return <Page><Typography color="text.secondary">Loading post…</Typography></Page>;
+        return (
+            <Page maxWidth="lg">
+                <Fade in timeout={reducedMotion ? 0 : 180}>
+                    <div><Typography color="text.secondary">Loading post…</Typography></div>
+                </Fade>
+            </Page>
+        );
 
     const authorName = post.author?.name || post.authorName || post.author?.id || "Unknown author";
     const authorHref = authorUrl(post);
@@ -324,80 +370,110 @@ export function PostPage({ postId }: { postId: string }) {
             : []),
     ];
 
+    const cardSx = {
+        transition: reducedMotion ? "none" : "transform 180ms ease, box-shadow 180ms ease",
+        "&:hover": reducedMotion ? {} : { transform: "translateY(-2px)", boxShadow: 2 },
+    };
+
     return (
-        <Page>
-            <Container maxWidth="lg" disableGutters>
-                <Stack spacing={3}>
-                    <Stack spacing={1}>
-                        {post.uploads?.map((upload) => (
-                            <Card key={upload.id} variant="outlined" sx={{ overflow: "hidden" }}>
-                                <CardMedia
-                                    component="img"
-                                    image={imageUrl(upload.url)}
-                                    alt={upload.alt || post.title || ""}
-                                    sx={{ maxHeight: "80vh", objectFit: "contain" }}
-                                />
-                                {upload.alt ? (
-                                    <CardContent>
-                                        <Typography color="text.secondary">{upload.alt}</Typography>
-                                    </CardContent>
-                                ) : null}
-                            </Card>
-                        ))}
-                    </Stack>
+        <Page maxWidth="lg">
+            <Stack spacing={{ xs: 2, sm: 3 }}>
+                <Fade in timeout={reducedMotion ? 0 : 260}>
+                    <div>
+                        <Stack spacing={{ xs: 1, sm: 1.5 }}>
+                            {post.uploads?.map((upload, index) => (
+                                <Grow
+                                    key={upload.id}
+                                    in
+                                    timeout={reducedMotion ? 0 : 220 + index * 45}
+                                    style={{ transformOrigin: "center top" }}
+                                >
+                                    <div>
+                                        <Card variant="outlined" sx={{ ...cardSx, overflow: "hidden" }}>
+                                            <CardMedia
+                                                component="img"
+                                                image={imageUrl(upload.url)}
+                                                alt={upload.alt || post.title || ""}
+                                                sx={{ maxHeight: "80vh", objectFit: "contain" }}
+                                            />
+                                            {upload.alt ? (
+                                                <CardContent>
+                                                    <Typography color="text.secondary">{upload.alt}</Typography>
+                                                </CardContent>
+                                            ) : null}
+                                        </Card>
+                                    </div>
+                                </Grow>
+                            ))}
+                        </Stack>
+                    </div>
+                </Fade>
 
-                    <Divider />
+                <Divider />
 
-                    <Card variant="outlined">
-                        <CardContent>
-                            <Stack spacing={2}>
-                                <Stack spacing={0.5}>
-                                    <Typography variant="h3" component="h1">
-                                        {post.title || "Untitled"}
-                                    </Typography>
-                                    <Stack direction="row" spacing={1} divider={<Typography color="text.disabled">・</Typography>}>
-                                        {metadata}
-                                    </Stack>
-                                </Stack>
-                                <PostActions postId={post.id} />
-                                {post.description ? (
-                                    <>
-                                        <Divider />
-                                        <Typography sx={{ whiteSpace: "pre-wrap" }}>{post.description}</Typography>
-                                    </>
-                                ) : null}
-                                {post.tags?.length || post.categories?.length ? (
-                                    <>
-                                        <Divider />
-                                        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                                            {post.tags?.map((tag) => {
-                                                const id = tag.id || tag.tag?.id;
-                                                const name = tag.name || tag.tag?.name;
-                                                return id && name ? (
-                                                    <Chip key={`tag-${id}`} label={name} component="a" href={`/tags/${encodeURIComponent(id)}/`} clickable />
-                                                ) : null;
-                                            })}
-                                            {post.categories?.map((category) => {
-                                                const id = category.id || category.category?.id;
-                                                const name = category.name || category.category?.name;
-                                                return id && name ? (
-                                                    <Chip key={`category-${id}`} label={name} component="a" href={`/categories/${encodeURIComponent(id)}/`} clickable />
-                                                ) : null;
-                                            })}
+                <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "80ms" }}>
+                    <div>
+                        <Card variant="outlined" sx={cardSx}>
+                            <CardContent>
+                                <Stack spacing={2}>
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="h3" component="h1">
+                                            {post.title || "Untitled"}
+                                        </Typography>
+                                        <Stack
+                                            direction="row"
+                                            spacing={1}
+                                            useFlexGap
+                                            flexWrap="wrap"
+                                            divider={<Typography color="text.disabled">・</Typography>}
+                                        >
+                                            {metadata}
                                         </Stack>
-                                    </>
-                                ) : null}
-                            </Stack>
-                        </CardContent>
-                    </Card>
+                                    </Stack>
+                                    <PostActions postId={post.id} />
+                                    {post.description ? (
+                                        <>
+                                            <Divider />
+                                            <Typography sx={{ whiteSpace: "pre-wrap" }}>{post.description}</Typography>
+                                        </>
+                                    ) : null}
+                                    {post.tags?.length || post.categories?.length ? (
+                                        <>
+                                            <Divider />
+                                            <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                                                {post.tags?.map((tag) => {
+                                                    const id = tag.id || tag.tag?.id;
+                                                    const name = tag.name || tag.tag?.name;
+                                                    return id && name ? (
+                                                        <Chip key={`tag-${id}`} label={name} component="a" href={`/tags/${encodeURIComponent(id)}/`} clickable />
+                                                    ) : null;
+                                                })}
+                                                {post.categories?.map((category) => {
+                                                    const id = category.id || category.category?.id;
+                                                    const name = category.name || category.category?.name;
+                                                    return id && name ? (
+                                                        <Chip key={`category-${id}`} label={name} component="a" href={`/categories/${encodeURIComponent(id)}/`} clickable />
+                                                    ) : null;
+                                                })}
+                                            </Stack>
+                                        </>
+                                    ) : null}
+                                </Stack>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </Fade>
 
-                    <Card variant="outlined">
-                        <CardContent>
-                            <Comments postId={postId} />
-                        </CardContent>
-                    </Card>
-                </Stack>
-            </Container>
+                <Fade in timeout={reducedMotion ? 0 : 320} style={{ transitionDelay: reducedMotion ? "0ms" : "140ms" }}>
+                    <div>
+                        <Card variant="outlined" sx={cardSx}>
+                            <CardContent>
+                                <Comments postId={postId} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                </Fade>
+            </Stack>
         </Page>
     );
 }
