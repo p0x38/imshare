@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/auth.js";
 
 export const postInclude = {
-    user: { select: { id: true, name: true, username: true, image: true, updatedAt: true } },
+    user: { select: { id: true, name: true, image: true, updatedAt: true } },
     category: true,
     tags: { include: { tag: true } },
     uploads: true,
