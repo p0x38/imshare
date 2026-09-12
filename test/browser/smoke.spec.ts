@@ -54,13 +54,13 @@ test.describe("public frontend", () => {
         }
     });
 
-    test("footer exposes FAQ, GitHub, and version", async ({ page }) => {
+    test("footer exposes FAQ, GitHub, and version label", async ({ page }) => {
         await page.goto("/");
         const footer = page.getByRole("contentinfo");
         await expect(footer).toBeVisible();
         await expect(footer.getByRole("link", { name: "FAQ" })).toBeVisible();
         await expect(footer.getByRole("link", { name: "GitHub" })).toBeVisible();
-        await expect(footer.getByLabel("Version")).toBeVisible();
+        await expect(footer.getByLabel("Version")).toHaveAttribute("aria-label", "Version");
     });
 
     test("FAQ keeps its grouped heading structure", async ({ page }) => {
