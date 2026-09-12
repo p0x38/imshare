@@ -36,6 +36,7 @@ export function postView(post: any) {
             ...post.user,
             avatarUrl: `/v1/users/${encodeURIComponent(post.user.id)}/avatar?v=${encodeURIComponent(post.user.updatedAt.toISOString())}`,
         },
+        authorName: post.user.name || post.user.id,
         viewCount: post._count?.views ?? 0,
         category: post.category,
         tags: post.tags.map((x: any) => x.tag),
