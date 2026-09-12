@@ -1,0 +1,57 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "imshare: dev server",
+            "type": "shell",
+            "command": "pnpm dev",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
+        },
+        {
+            "label": "imshare: dev client",
+            "type": "shell",
+            "command": "pnpm dev:client",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
+        },
+        {
+            "label": "imshare: typecheck",
+            "type": "shell",
+            "command": "pnpm typecheck",
+            "problemMatcher": ["$tsc"]
+        },
+        {
+            "label": "imshare: lint",
+            "type": "shell",
+            "command": "pnpm lint",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test",
+            "type": "shell",
+            "command": "pnpm test",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: check",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: typecheck",
+                "imshare: lint",
+                "imshare: test"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
