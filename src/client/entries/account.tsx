@@ -62,7 +62,7 @@ function AccountPage() {
         <Page>
             <Stack spacing={2}>
                 <Typography variant="h4" component="h1">Account</Typography>
-                <Card variant="outlined"><CardContent><Stack direction="row" spacing={2} alignItems="center"><Avatar src={user.avatarUrl} sx={{ width: 80, height: 80 }}>{(user.name || "A").charAt(0).toUpperCase()}</Avatar><Stack><Typography variant="h6">{user.name || "Account"}</Typography><Typography color="text.secondary">{user.email}</Typography></Stack></Stack></CardContent></Card>
+                <Card variant="outlined"><CardContent><Stack direction="row" spacing={2} alignItems="center"><Avatar src={user.avatarUrl ?? undefined} sx={{ width: 80, height: 80 }}>{(user.name || "A").charAt(0).toUpperCase()}</Avatar><Stack><Typography variant="h6">{user.name || "Account"}</Typography><Typography color="text.secondary">{user.email}</Typography></Stack></Stack></CardContent></Card>
                 <Card variant="outlined" component="form" onSubmit={save}><CardContent><Typography variant="h6" component="h2" gutterBottom>Profile</Typography><Stack spacing={2}>
                     <TextField label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
                     <TextField label="Profile description" value={bio} onChange={(event) => setBio(event.target.value)} multiline minRows={4} />
