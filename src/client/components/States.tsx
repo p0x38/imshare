@@ -1,30 +1,54 @@
-import { Alert, Card, CardContent, CircularProgress, Skeleton, Stack, Typography } from "@mui/material";
+import { Alert, Box, Card, CardContent, CircularProgress, Fade, Skeleton, Stack, Typography } from "@mui/material";
+import { AnimatedItem } from "./Motion";
 
-export function LoadingState({ label = "Loading…" }: { label?: string }) {
+export function LoadingState({ label = "Loading…", fullHeight = false }: { label?: string; fullHeight?: boolean }) {
     return (
-        <Stack alignItems="center" spacing={2} sx={{ py: 6 }}>
-            <CircularProgress />
-            <Typography color="text.secondary">{label}</Typography>
-        </Stack>
+        <Fade in appear timeout={280}>
+            <Stack
+                alignItems="center"
+                justifyContent="center"
+                spacing={2}
+                role="status"
+                aria-live="polite"
+                sx={{ py: fullHeight ? 10 : 6, minHeight: fullHeight ? "40vh" : undefined }}
+            >
+                <CircularProgress size={32} aria-label={label} />
+                <Typography color="text.secondary">{label}</Typography>
+            </Stack>
+        </Fade>
     );
 }
 
 export function ErrorState({ message }: { message: string }) {
-    return <Alert severity="error">{message}</Alert>;
+    return (
+        <Fade in appear timeout={260}>
+            <Alert severity="error">{message}</Alert>
+        </Fade>
+    );
 }
 
 export function SkeletonGrid({ count = 8 }: { count?: number }) {
     return (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
+        <Box
+            sx={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                gap: 2,
+            }}
+            aria-busy="true"
+            aria-label="Loading posts"
+        >
             {Array.from({ length: count }, (_, index) => (
-                <Card key={index} variant="outlined">
-                    <Skeleton variant="rectangular" sx={{ aspectRatio: "1 / 1" }} />
-                    <CardContent>
-                        <Skeleton variant="text" width="70%" />
-                        <Skeleton variant="text" width="45%" />
-                    </CardContent>
-                </Card>
+                <AnimatedItem key={index} delay={Math.min(index, 8) * 45} duration={300}>
+                    <Card variant="outlined" sx={{ overflow: "hidden" }}>
+                        <Skeleton variant="rectangular" animation="wave" sx={{ aspectRatio: "1 / 1" }} />
+                        <CardContent>
+                            <Skeleton variant="text" animation="wave" width="70%" />
+                            <Skeleton variant="text" animation="wave" width="45%" />
+                        </CardContent>
+                    </Card>
+                </AnimatedItem>
             ))}
-        </div>
+        </Box>
     );
 }
