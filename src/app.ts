@@ -309,9 +309,7 @@ export async function buildApp() {
         const body = await readFile(path.join(publicDir, "account", "notifications.html"), "utf8");
         return reply.type("text/html; charset=utf-8").send(body);
     });
-    app.get("/account/sessions/", async (request, reply) =>
-        sendPage(request, reply, "account/sessions.ejs"),
-    );
+    app.get("/account/sessions/", async (_request, reply) => reply.redirect("/account/", 301));
     app.get("/account/profile/", async (_request, reply) => {
         const body = await readFile(path.join(publicDir, "account", "profile.html"), "utf8");
         return reply.type("text/html; charset=utf-8").send(body);
