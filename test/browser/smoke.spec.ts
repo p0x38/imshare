@@ -83,7 +83,8 @@ test.describe("dashboard frontend", () => {
         for (const path of managementPaths) {
             const response = await request.get(path, { maxRedirects: 0 });
             expect(response.status(), path).toBe(200);
-            expect(await response.text(), path).toContain("<html");
+            const html = await response.text();
+            expect(html, path).toMatch(/<(?:!doctype\s+)?html\b/i);
         }
     });
 
