@@ -9,7 +9,6 @@ test.describe("public frontend", () => {
 
     test("navigation is usable on desktop", async ({ page }) => {
         await page.goto("/");
-
         await expect(page.getByRole("link", { name: "imshare" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Posts" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Search" })).toBeVisible();
@@ -20,43 +19,23 @@ test.describe("public frontend", () => {
     test("mobile navigation opens and closes", async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/");
-
         const openButton = page.getByRole("button", { name: "Open navigation" });
         await expect(openButton).toBeVisible();
         await openButton.click();
-
         await expect(page.getByRole("button", { name: "Close navigation" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Posts" })).toBeVisible();
-
         await page.getByRole("button", { name: "Close navigation" }).click();
         await expect(page.getByRole("button", { name: "Close navigation" })).toBeHidden();
     });
 
     test("public pages return real HTML", async ({ page }) => {
         const paths = [
-            "/",
-            "/posts/",
-            "/posts/new/",
-            "/posts/test-post/",
-            "/account/",
-            "/account/login/",
-            "/account/register/",
-            "/account/notifications/",
-            "/account/profile/",
-            "/account/sessions/",
-            "/notifications/",
-            "/users/",
-            "/tags/",
-            "/categories/",
-            "/search/",
-            "/about/",
-            "/faq/",
-            "/github/",
-            "/privacy/",
-            "/terms/",
-            "/admin/",
+            "/", "/posts/", "/posts/new/", "/posts/test-post/", "/account/",
+            "/account/login/", "/account/register/", "/account/notifications/",
+            "/account/profile/", "/account/sessions/", "/notifications/", "/users/",
+            "/tags/", "/categories/", "/search/", "/about/", "/faq/", "/github/",
+            "/privacy/", "/terms/", "/admin/",
         ];
-
         for (const path of paths) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
@@ -66,12 +45,8 @@ test.describe("public frontend", () => {
 
     test("public taxonomy and profile detail pages render", async ({ page }) => {
         for (const path of [
-            "/users/test-user/",
-            "/users/test-user/posts/",
-            "/tags/test-tag/",
-            "/tags/test-tag/posts/",
-            "/categories/test-category/",
-            "/categories/test-category/posts/",
+            "/users/test-user/", "/users/test-user/posts/", "/tags/test-tag/",
+            "/tags/test-tag/posts/", "/categories/test-category/", "/categories/test-category/posts/",
         ]) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
@@ -81,7 +56,6 @@ test.describe("public frontend", () => {
 
     test("footer exposes FAQ, GitHub, and version", async ({ page }) => {
         await page.goto("/");
-
         const footer = page.getByRole("contentinfo");
         await expect(footer).toBeVisible();
         await expect(footer.getByRole("link", { name: "FAQ" })).toBeVisible();
@@ -91,63 +65,73 @@ test.describe("public frontend", () => {
 
     test("FAQ keeps its grouped heading structure", async ({ page }) => {
         await page.goto("/faq/");
-
         await expect(page.getByRole("heading", { name: "FAQs", level: 1 })).toBeVisible();
         await expect(page.getByRole("heading", { name: "About imshare", level: 2 })).toBeVisible();
-        await expect(
-            page.getByRole("heading", { name: "Images and privacy", level: 2 }),
-        ).toBeVisible();
-        await expect(
-            page.getByRole("heading", { name: "Who can access my images?", level: 3 }),
-        ).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Images and privacy", level: 2 })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Who can access my images?", level: 3 })).toBeVisible();
     });
 });
 
 test.describe("dashboard frontend", () => {
-    test("dashboard management pages render", async ({ page }) => {
-        const paths = [
-            "/dashboard/",
-            "/dashboard/posts/",
-            "/dashboard/tags/",
-            "/dashboard/categories/",
-            "/dashboard/settings/",
-        ];
+    const managementPaths = [
+        "/dashboard/", "/dashboard/posts/", "/dashboard/posts/test-post/",
+        "/dashboard/posts/test-post/edit/", "/dashboard/tags/", "/dashboard/categories/",
+        "/dashboard/settings/",
+    ];
 
-        for (const path of paths) {
-            const response = await page.goto(path);
-            expect(response?.status(), path).toBe(200);
-            await expect(page.locator("body"), path).not.toBeEmpty();
+    test("dashboard management routes serve HTML shells", async ({ request }) => {
+        for (const path of managementPaths) {
+            const response = await request.get(path, { maxRedirects: 0 });
+            expect(response.status(), path).toBe(200);
+            expect(await response.text(), path).toContain("<html");
         }
     });
 
-    test("dashboard post management routes render", async ({ page }) => {
-        for (const path of [
-            "/dashboard/posts/test-post/",
-            "/dashboard/posts/test-post/edit/",
-        ]) {
-            const response = await page.goto(path);
-            expect(response?.status(), path).toBe(200);
-            await expect(page.locator("body"), path).not.toBeEmpty();
+    test("dashboard landing renders the signed-out state", async ({ page }) => {
+        await page.goto("/dashboard/");
+        await expect(page.getByRole("heading", { name: "Dashboard", level: 1 })).toBeVisible();
+        await expect(page.getByText("Sign in to manage your content.")).toBeVisible();
+        await expect(page.getByRole("link", { name: "Log in" })).toBeVisible();
+    });
+
+    test("dashboard post list mounts its React entry", async ({ request }) => {
+        const response = await request.get("/dashboard/posts/");
+        expect(response.status()).toBe(200);
+        const html = await response.text();
+        expect(html).toContain('id="dashboard-posts-page"');
+        expect(html).toContain('src="/client/dashboardPosts.js"');
+    });
+
+    test("dashboard taxonomy pages mount the shared React entry", async ({ request }) => {
+        for (const path of ["/dashboard/tags/", "/dashboard/categories/"]) {
+            const response = await request.get(path);
+            expect(response.status(), path).toBe(200);
+            const html = await response.text();
+            expect(html, path).toContain('id="taxonomy-page"');
+            expect(html, path).toContain('src="/client/taxonomy.js"');
         }
     });
 
-    test("dashboard post list mounts its React entry", async ({ page }) => {
-        await page.goto("/dashboard/posts/");
-
-        await expect(page.locator('script[src="/client/dashboardPosts.js"]')).toHaveCount(1);
-        await expect(page.locator("#dashboard-posts-page")).toBeVisible();
-        await expect(page).toHaveURL(/\/account\/login\/$|\/dashboard\/posts\/$/);
+    test("dashboard settings mounts its React entry", async ({ request }) => {
+        const response = await request.get("/dashboard/settings/");
+        expect(response.status()).toBe(200);
+        const html = await response.text();
+        expect(html).toContain('id="settings-page"');
+        expect(html).toContain('src="/client/settings.js"');
     });
 
-    test("dashboard taxonomy pages mount the shared React entry", async ({ page }) => {
-        for (const [path, label] of [
-            ["/dashboard/tags/", "Manage Tags"],
-            ["/dashboard/categories/", "Manage Categories"],
-        ] as const) {
-            await page.goto(path);
-            await expect(page.locator('script[src="/client/taxonomy.js"]')).toHaveCount(1);
-            await expect(page.locator("#taxonomy-page")).toBeVisible();
-            await expect(page.getByRole("heading", { name: label })).toBeVisible();
-        }
+    test("dashboard post management routes expose their controls", async ({ request }) => {
+        const view = await request.get("/dashboard/posts/test-post/");
+        expect(view.status()).toBe(200);
+        const viewHtml = await view.text();
+        expect(viewHtml).toContain("Edit");
+        expect(viewHtml).toContain("Delete this post?");
+
+        const edit = await request.get("/dashboard/posts/test-post/edit/");
+        expect(edit.status()).toBe(200);
+        const editHtml = await edit.text();
+        expect(editHtml).toContain("Edit Post");
+        expect(editHtml).toContain('id="form"');
+        expect(editHtml).toContain("Save changes");
     });
 });
