@@ -315,7 +315,9 @@ export async function buildApp() {
         sendPage(request, reply, "account/profile.ejs"),
     );
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
-    app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
+    app.get("/posts/new/", async (request, reply) =>
+        sendPage(request, reply, "posts/new/index.ejs"),
+    );
     app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
     app.get("/posts/:postId/", async (request, reply) =>
         sendPage(request, reply, "posts/view.ejs"),
