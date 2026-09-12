@@ -324,13 +324,13 @@ export async function buildApp() {
         sendPage(request, reply, "dashboard/index.ejs"),
     );
     app.get("/dashboard/posts/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/posts.ejs"),
+        sendPage(request, reply, "dashboard/posts/index.ejs"),
     );
     app.get("/dashboard/posts/:postId/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/post.ejs"),
+        sendPage(request, reply, "dashboard/posts/view.ejs"),
     );
     app.get("/dashboard/posts/:postId/edit/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/post-editor.ejs"),
+        sendPage(request, reply, "dashboard/posts/edit.ejs"),
     );
     app.get("/dashboard/tags/", async (request, reply) =>
         sendPage(request, reply, "dashboard/tags.ejs"),
