@@ -4,102 +4,10 @@
     <%- include("../partials/head", { title: "Posts · imshare" }) %>
 </head>
 <body>
-<%- include("../partials/header") %>
-<main>
-    <div id="posts-page"></div>
-</main>
-<%- include("../partials/footer") %>
-<script type="module">
-const { PostGrid, SkeletonGrid, mount, render } = window.imshareMUI;
-const { api, showSnackbar } = window.imshareUI;
-const root = document.querySelector("#posts-page");
-let currentPage = Number(new URLSearchParams(location.search).get("page")) || 1;
-let query = new URLSearchParams(location.search).get("search") || "";
-
-function page() {
-    return {
-        type: "posts",
-        page: currentPage,
-        query,
-    };
-}
-
-const gridRoot = mount(root, SkeletonGrid({ count: 12 }));
-
-async function load() {
-    render(gridRoot, SkeletonGrid({ count: 12 }));
-    try {
-        const params = new URLSearchParams({ page: String(currentPage), limit: "48" });
-        if (query) params.set("search", query);
-        const response = await api(`/v1/posts?${params}`);
-        const data = response.data ?? [];
-        const pagination = response.pagination ?? {};
-        render(
-            gridRoot,
-            PostGrid({
-                posts: data,
-                empty: data.length === 0,
-                title: query ? `No posts found for “${query}”` : "No posts yet",
-            }),
-        );
-        document.title = query ? `Search: ${query} · imshare` : "Posts · imshare";
-        history.replaceState(null, "", `?${new URLSearchParams({ ...(query ? { search: query } : {}), page: String(pagination.page ?? currentPage) })}`);
-        return pagination;
-    } catch (error) {
-        showSnackbar(error instanceof Error ? error.message : "Unable to load posts.", "error");
-        render(gridRoot, PostGrid({ posts: [], error: true }));
-        return null;
-    }
-}
-
-const pagination = document.createElement("div");
-pagination.id = "posts-controls";
-pagination.innerHTML = `
-    <form id="posts-search" class="mui-search">
-        <label for="posts-search-input">Search posts</label>
-        <input id="posts-search-input" name="search" type="search" />
-        <button type="submit">Search</button>
-    </form>
-    <div class="mui-pagination" aria-label="Post pagination">
-        <button type="button" data-page="previous">Previous</button>
-        <span data-page="label"></span>
-        <button type="button" data-page="next">Next</button>
-    </div>`;
-root.prepend(pagination);
-
-const search = pagination.querySelector("#posts-search");
-const searchInput = pagination.querySelector("#posts-search-input");
-const pageLabel = pagination.querySelector('[data-page="label"]');
-const previous = pagination.querySelector('[data-page="previous"]');
-const next = pagination.querySelector('[data-page="next"]');
-searchInput.value = query;
-
-search.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    query = searchInput.value.trim();
-    currentPage = 1;
-    await update();
-});
-previous.addEventListener("click", async () => {
-    if (currentPage <= 1) return;
-    currentPage -= 1;
-    await update();
-});
-next.addEventListener("click", async () => {
-    currentPage += 1;
-    await update();
-});
-
-async function update() {
-    const result = await load();
-    const totalPages = Math.max(1, result?.totalPages ?? 1);
-    pageLabel.textContent = `Page ${currentPage} / ${totalPages}`;
-    previous.disabled = currentPage <= 1;
-    next.disabled = currentPage >= totalPages;
-}
-
-await update();
-void page();
-</script>
+    <main>
+        <div id="posts-page"></div>
+    </main>
+    <%- include("../partials/footer") %>
+    <script type="module" src="/react/posts.js"></script>
 </body>
 </html>
