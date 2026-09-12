@@ -21,7 +21,6 @@ test(
                 ...options,
                 headers: {
                     host: "localhost:5454",
-                    origin: "http://localhost:5454",
                     ...(options.headers ?? {}),
                 },
             });
