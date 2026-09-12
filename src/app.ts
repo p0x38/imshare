@@ -41,7 +41,10 @@ function escapeMeta(value: string | null | undefined) {
     return escapeAttribute((value ?? "").replace(/\s+/g, " ").trim());
 }
 
-function resolveRequestOrigin(config: Awaited<ReturnType<typeof loadConfig>>, request: FastifyRequest) {
+function resolveRequestOrigin(
+    config: Awaited<ReturnType<typeof loadConfig>>,
+    request: FastifyRequest,
+) {
     const configuredOrigin = config.auth.baseUrl?.trim();
     if (configuredOrigin) {
         try {
@@ -103,7 +106,12 @@ export async function buildApp() {
             return;
         }
         const pathname = request.url.split("?", 1)[0] ?? "/";
-        if (request.method === "GET" && pathname.startsWith("/v1/") && !pathname.startsWith("/v1/health") && !pathname.startsWith("/v1/ready")) {
+        if (
+            request.method === "GET" &&
+            pathname.startsWith("/v1/") &&
+            !pathname.startsWith("/v1/health") &&
+            !pathname.startsWith("/v1/ready")
+        ) {
             const result = viewLimiter.consume(key);
             reply
                 .header("X-RateLimit-Limit", "75")
@@ -145,8 +153,7 @@ export async function buildApp() {
 
     app.addHook("onSend", async (request, reply, payload) => {
         // Swagger UI owns its complete HTML document and static assets.
-        if (request.url === "/docs" || request.url.startsWith("/docs/"))
-            return payload;
+        if (request.url === "/docs" || request.url.startsWith("/docs/")) return payload;
 
         reply.header("X-Content-Type-Options", "nosniff");
         reply.header("X-Frame-Options", "SAMEORIGIN");
@@ -241,7 +248,9 @@ export async function buildApp() {
                 : "",
             `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
         ].join("");
-        const isReactPage = /<script type="module" src="\/client\/[^\"]+"><\/script>/i.test(payload);
+        const isReactPage = /<script type="module" src="\/client\/[^\"]+"><\/script>/i.test(
+            payload,
+        );
         let enhanced = payload.includes('property="og:title"')
             ? payload
             : payload.replace(/<\/head>/i, `${tags}</head>`);
@@ -278,7 +287,12 @@ export async function buildApp() {
             return await reply.view(view);
         } catch (error) {
             request.log.error({ err: error, view }, "Failed to render page");
-            return sendErrorPage(500, "Server error", "The requested page could not be rendered.", reply);
+            return sendErrorPage(
+                500,
+                "Server error",
+                "The requested page could not be rendered.",
+                reply,
+            );
         }
     };
 
@@ -288,23 +302,45 @@ export async function buildApp() {
     await app.register(pageRoutes);
 
     app.get("/", async (request, reply) => sendPage(request, reply, "index.ejs"));
-    app.get("/login/", async (request, reply) => sendPage(request, reply, "auth/login.ejs"));
-    app.get("/signup/", async (request, reply) => sendPage(request, reply, "auth/signup.ejs"));
+    app.get("/login/", async (_request, reply) => reply.redirect("/account/login/", 301));
+    app.get("/signup/", async (_request, reply) => reply.redirect("/account/register/", 301));
     app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
-    app.get("/account/notifications/", async (request, reply) => sendPage(request, reply, "account/notifications.ejs"));
-    app.get("/account/sessions/", async (request, reply) => sendPage(request, reply, "account/sessions.ejs"));
-    app.get("/account/profile/", async (request, reply) => sendPage(request, reply, "account/profile.ejs"));
+    app.get("/account/notifications/", async (request, reply) =>
+        sendPage(request, reply, "account/notifications.ejs"),
+    );
+    app.get("/account/sessions/", async (request, reply) =>
+        sendPage(request, reply, "account/sessions.ejs"),
+    );
+    app.get("/account/profile/", async (request, reply) =>
+        sendPage(request, reply, "account/profile.ejs"),
+    );
     app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
     app.get("/posts/new/", async (request, reply) => sendPage(request, reply, "posts/new.ejs"));
     app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
-    app.get("/posts/:postId/", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
-    app.get("/dashboard/", async (request, reply) => sendPage(request, reply, "dashboard/index.ejs"));
-    app.get("/dashboard/posts/", async (request, reply) => sendPage(request, reply, "dashboard/posts.ejs"));
-    app.get("/dashboard/posts/:postId/", async (request, reply) => sendPage(request, reply, "dashboard/post.ejs"));
-    app.get("/dashboard/posts/:postId/edit/", async (request, reply) => sendPage(request, reply, "dashboard/post-editor.ejs"));
-    app.get("/dashboard/tags/", async (request, reply) => sendPage(request, reply, "dashboard/tags.ejs"));
-    app.get("/dashboard/categories/", async (request, reply) => sendPage(request, reply, "dashboard/categories.ejs"));
-    app.get("/dashboard/settings/", async (request, reply) => sendPage(request, reply, "dashboard/settings.ejs"));
+    app.get("/posts/:postId/", async (request, reply) =>
+        sendPage(request, reply, "posts/view.ejs"),
+    );
+    app.get("/dashboard/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/index.ejs"),
+    );
+    app.get("/dashboard/posts/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/posts.ejs"),
+    );
+    app.get("/dashboard/posts/:postId/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/post.ejs"),
+    );
+    app.get("/dashboard/posts/:postId/edit/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/post-editor.ejs"),
+    );
+    app.get("/dashboard/tags/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/tags.ejs"),
+    );
+    app.get("/dashboard/categories/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/categories.ejs"),
+    );
+    app.get("/dashboard/settings/", async (request, reply) =>
+        sendPage(request, reply, "dashboard/settings.ejs"),
+    );
 
     return app;
 }

@@ -33,7 +33,7 @@ test.describe("public frontend", () => {
     });
 
     test("public pages return real HTML", async ({ page }) => {
-        for (const path of ["/", "/posts/", "/login/", "/signup/"]) {
+        for (const path of ["/", "/posts/", "/account/login/", "/account/register/"]) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
             await expect(page.locator("body")).not.toBeEmpty();
