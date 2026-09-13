@@ -8,9 +8,11 @@
     "editor.tabSize": 4,
     "editor.insertSpaces": true,
     "editor.detectIndentation": false,
-    "js/ts.tsdk.path": "node_modules/typescript/lib",
-    "js/ts.preferences.importModuleSpecifier": "relative",
+    "typescript.tsdk": "${workspaceFolder}/node_modules/typescript/lib",
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "javascript.preferences.importModuleSpecifier": "relative",
     "eslint.workingDirectories": [{ "mode": "location" }],
+    "eslint.useFlatConfig": true,
     "files.exclude": {
         "**/.history": true,
         "**/dist": true,
@@ -30,6 +32,7 @@
         "**/uploads/**": true,
         "**/.history/**": true
     },
+    "js/ts.implicitProjectConfig.checkJs": false,
     "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
     "npm.packageManager": "pnpm",
     "vitest.rootConfig": "./vitest.config.ts"
