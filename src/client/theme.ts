@@ -273,6 +273,9 @@ export function createAppTheme(mode: "light" | "dark") {
                 styleOverrides: {
                     root: {
                         animation: `imshare-alert-enter ${validationMotion}ms ${motionEase}`,
+                        "@media (prefers-reduced-motion: reduce)": {
+                            animation: "none",
+                        },
                     },
                     icon: ({ theme }) => ({
                         transition: theme.transitions.create(["transform", "opacity"], {
@@ -284,11 +287,6 @@ export function createAppTheme(mode: "light" | "dark") {
                             duration: fieldMotion,
                         }),
                     }),
-                    "@media (prefers-reduced-motion: reduce)": {
-                        root: {
-                            animation: "none",
-                        },
-                    },
                 },
             },
             MuiCard: {
