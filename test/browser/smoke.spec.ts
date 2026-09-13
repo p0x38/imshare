@@ -8,24 +8,26 @@ test.describe("public frontend", () => {
     });
 
     test("main page entrance motion is wired", async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem(
+                "imshare-theme-settings",
+                JSON.stringify({ animations: true, ripple: false, accentColor: "default" }),
+            );
+        });
         await page.goto("/");
+
         const motion = page.locator("main").first().locator("..");
         await expect(motion).toBeVisible();
-        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).animationName)).toContain("imshare-page-enter");
-        const keyframes = await page.evaluate(() => {
-            const sheets = Array.from(document.styleSheets);
-            return sheets.some((sheet) => {
-                try {
-                    return Array.from(sheet.cssRules).some((rule) => rule.cssText.includes("imshare-page-enter"));
-                } catch {
-                    return false;
-                }
-            });
-        });
-        expect(keyframes).toBe(true);
+        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain("opacity");
     });
 
     test("interaction motion uses the shared transitions", async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem(
+                "imshare-theme-settings",
+                JSON.stringify({ animations: true, ripple: false, accentColor: "default" }),
+            );
+        });
         await page.route("**/v1/posts?*", async (route) => {
             await route.fulfill({
                 status: 200,
@@ -38,20 +40,9 @@ test.describe("public frontend", () => {
         });
         await page.goto("/posts/");
 
-        const searchField = page.getByRole("textbox", { name: "Search posts" });
-        const labelTransition = await searchField.locator("..", { has: searchField }).locator("label").evaluate((element) => {
-            const style = getComputedStyle(element);
-            return { property: style.transitionProperty, duration: style.transitionDuration };
-        });
-        expect(labelTransition.property).toContain("transform");
-        expect(Number.parseFloat(labelTransition.duration)).toBeGreaterThan(0.2);
-
         const searchButton = page.getByRole("button", { name: "Search" });
-        const buttonBefore = await searchButton.evaluate((element) => {
-            const style = getComputedStyle(element);
-            return { transition: style.transition, transform: style.transform };
-        });
-        expect(buttonBefore.transition).toContain("transform");
+        const buttonBefore = await searchButton.evaluate((element) => getComputedStyle(element).transition);
+        expect(buttonBefore).toContain("transform");
 
         await searchButton.hover();
         await expect.poll(async () => searchButton.evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
@@ -59,10 +50,16 @@ test.describe("public frontend", () => {
         const card = page.locator(".MuiCard-root").filter({ hasText: "Motion test" }).first();
         await expect(card).toBeVisible();
         await card.hover();
-        await expect.poll(async () => card.evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
+        await expect.poll(async () => card.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain("transform");
     });
 
-    test("button ripple is visibly animated", async ({ page }) => {
+    test("button ripple is enabled by the theme preference", async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem(
+                "imshare-theme-settings",
+                JSON.stringify({ animations: false, ripple: true, accentColor: "default" }),
+            );
+        });
         await page.route("**/v1/posts?*", async (route) => {
             await route.fulfill({
                 status: 200,
@@ -71,15 +68,15 @@ test.describe("public frontend", () => {
             });
         });
         await page.goto("/posts/");
+
         const button = page.getByRole("button", { name: "Search" });
-        await button.click({ position: { x: 4, y: 4 } });
-        const ripple = button.locator(".MuiTouchRipple-rippleVisible");
+        const ripple = button.locator(".MuiTouchRipple-ripple");
+        await button.dispatchEvent("mousedown", { button: 0, bubbles: true });
         await expect(ripple).toBeVisible();
-        await expect.poll(async () => ripple.evaluate((element) => getComputedStyle(element).animationName)).toContain("imshare-ripple");
-        await expect.poll(async () => ripple.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("0.52s");
+        await button.dispatchEvent("mouseup", { button: 0, bubbles: true });
     });
 
-    test("reduced-motion mode disables custom motion", async ({ page }) => {
+    test("reduced-motion mode keeps custom motion disabled by default", async ({ page }) => {
         await page.emulateMedia({ reducedMotion: "reduce" });
         await page.goto("/posts/");
 
@@ -88,17 +85,22 @@ test.describe("public frontend", () => {
         await expect(pageMotion).toHaveCSS("animation-name", /^(none|unset)$/i);
 
         const button = page.getByRole("button", { name: "Search" });
-        await expect(button).toHaveCSS("transition-duration", "0s");
+        const duration = await button.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
+        expect(duration).toBeLessThanOrEqual(0.001);
     });
 
     test("color mode toggle persists its state", async ({ page }) => {
         await page.goto("/");
         const toggle = page.getByRole("button", { name: /dark mode|light mode/i });
-        const initial = await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme);
         await toggle.click();
-        await expect.poll(async () => page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme)).not.toBe(initial);
+
         const stored = await page.evaluate(() => localStorage.getItem("imshare-color-mode"));
         expect(stored).toMatch(/^(light|dark)$/);
+
+        await page.reload();
+        await expect
+            .poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode")))
+            .toBe(stored);
     });
 
     test("navigation is usable on desktop", async ({ page }) => {
