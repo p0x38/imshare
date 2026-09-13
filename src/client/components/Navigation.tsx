@@ -74,6 +74,7 @@ export function Navigation() {
                     px: { xs: 1.5, sm: 2, md: 3 },
                     py: { xs: 0.5, sm: 0 },
                     minHeight: { xs: 56, sm: 64 },
+                    paddingTop: { xs: "calc(4px + env(safe-area-inset-top))", sm: 0 },
                 }}
             >
                 <IconButton
@@ -108,7 +109,17 @@ export function Navigation() {
                     sx={{ display: { xs: "none", sm: "flex" }, flexWrap: "wrap", flexGrow: 1 }}
                 >
                     {links.map(([label, href]) => (
-                        <Button key={href} component="a" href={href} color="inherit" size="small">
+                        <Button
+                            key={href}
+                            component="a"
+                            href={href}
+                            color="inherit"
+                            size="small"
+                            sx={{
+                                minHeight: 40,
+                                px: 1.25,
+                            }}
+                        >
                             {label}
                         </Button>
                     ))}
@@ -120,9 +131,9 @@ export function Navigation() {
                             {mode === "dark" ? <LightMode /> : <DarkMode />}
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Notifications">
+                    <Tooltip title={unreadNotifications > 0 ? `${unreadNotifications} unread notifications` : "Notifications"}>
                         <IconButton component="a" href="/notifications/" color="inherit" aria-label="Notifications">
-                            <Badge badgeContent={unreadNotifications} color="secondary" max={99}>
+                            <Badge badgeContent={unreadNotifications} color="secondary" max={99} showZero={false}>
                                 <NotificationsOutlined />
                             </Badge>
                         </IconButton>
