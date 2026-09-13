@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { prisma } from "./lib/auth.js";
 import { loadConfig } from "./lib/config.js";
@@ -7,6 +8,29 @@ import { attachRealtime } from "./realtime.js";
 
 const lockPath = ".lock";
 
+function isNodeProcess(pid: number): boolean {
+    try {
+        if (process.platform === "win32") {
+            const output = execFileSync("tasklist.exe", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
+                encoding: "utf8",
+                stdio: ["ignore", "pipe", "ignore"],
+                windowsHide: true,
+            }).trim();
+
+            return /^"node(?:\.exe)?"\s*,/i.test(output);
+        }
+
+        const output = execFileSync("ps", ["-p", String(pid), "-o", "comm="], {
+            encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"],
+        }).trim();
+
+        return /(?:^|\n)\s*node(?:js)?\s*$/i.test(output);
+    } catch {
+        return false;
+    }
+}
+
 function acquireLock(): void {
     if (existsSync(lockPath)) {
         const pid = Number.parseInt(readFileSync(lockPath, "utf8").trim(), 10);
@@ -14,7 +38,10 @@ function acquireLock(): void {
         if (Number.isInteger(pid) && pid > 0) {
             try {
                 process.kill(pid, 0);
-                throw new Error(`Another instance is already running (PID ${pid}).`);
+
+                if (isNodeProcess(pid)) {
+                    throw new Error(`Another instance is already running (PID ${pid}).`);
+                }
             } catch (error) {
                 if (error instanceof Error && error.message.startsWith("Another instance")) {
                     throw error;
