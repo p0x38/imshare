@@ -9,8 +9,6 @@ interface ColorModeContextValue {
     toggle: () => void;
 }
 
-const ColorModeContext = createContext<ColorModeContextValue | null>(null);
-
 function initialMode(): ColorMode {
     const stored = window.localStorage.getItem("imshare-color-mode");
     if (stored === "light" || stored === "dark") return stored;
@@ -46,6 +44,10 @@ export function App({ children }: { children: React.ReactNode }) {
                 <CssBaseline />
                 <GlobalStyles
                     styles={{
+                        "@keyframes imshare-page-enter": {
+                            "0%": { opacity: 0, transform: "translateY(8px)" },
+                            "100%": { opacity: 1, transform: "translateY(0)" },
+                        },
                         "@keyframes imshare-ripple-enter": {
                             "0%": { opacity: 0.08 },
                             "100%": { opacity: 0.22 },
@@ -90,6 +92,12 @@ export function App({ children }: { children: React.ReactNode }) {
                             padding: "0 !important",
                         },
                         "@media (prefers-reduced-motion: reduce)": {
+                            "*": {
+                                animationDuration: "1ms !important",
+                                animationIterationCount: "1 !important",
+                                transitionDuration: "1ms !important",
+                                scrollBehavior: "auto !important",
+                            },
                             ".MuiTouchRipple-rippleVisible": {
                                 animationDuration: "1ms !important",
                             },
