@@ -31,16 +31,10 @@
             : `<header class="site-header"><nav class="site-nav" aria-label="Primary navigation"><a class="brand" href="/">imshare</a><a href="/posts/">Posts</a><a href="/users/">Users</a><a href="/tags/">Tags</a><a href="/categories/">Categories</a><a href="/search/">Search</a><a href="/account/">Account</a><a href="/notifications/">Notifications</a>${adminLink}</nav></header>`;
     }
 
-    function buildFooter() {
-        const versionLink = version ? ` · Version ${version}` : "";
-        return `<footer><a href="/about/">About</a> · <a href="/faq/">FAQ</a> · <a href="/github/">GitHub</a> · <a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a>${versionLink}</footer>`;
-    }
-
     async function mount() {
         await loadMetadata().catch(() => {});
 
         const header = buildHeader();
-        const footer = buildFooter();
 
         const existingHeaders = document.querySelectorAll("header, site-header");
         if (existingHeaders.length > 0) {
@@ -50,15 +44,6 @@
         } else if (document.body) {
             document.body.insertAdjacentHTML("afterbegin", header);
         }
-
-        const existingFooters = document.querySelectorAll("footer, site-footer");
-        if (existingFooters.length > 0) {
-            existingFooters.forEach((node) => {
-                node.outerHTML = footer;
-            });
-        } else if (document.body) {
-            document.body.insertAdjacentHTML("beforeend", footer);
-        }
     }
 
     if (document.readyState === "loading") {
@@ -66,4 +51,24 @@
     } else {
         mount();
     }
+
+    Array.from(document.querySelectorAll("button, .button")).forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+            const rect = btn.getBoundingClientRect();
+            const ripple = document.createElement("span");
+            ripple.style.position = "absolute";
+            ripple.style.borderRadius = "50%";
+            ripple.style.transform = "scale(0)";
+            ripple.style.animation = "ripple 600ms linear";
+            ripple.style.background = "rgba(255,255,255,0.4)";
+            ripple.style.pointerEvents = "none";
+            ripple.style.left = e.clientX - rect.left + "px";
+            ripple.style.top = e.clientY - rect.top + "px";
+            ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + "px";
+            btn.style.position = "relative";
+            btn.style.overflow = "hidden";
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        });
+    })();
 })();

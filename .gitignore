@@ -10,6 +10,7 @@ node_modules/
 uploads/
 **/*.db
 **/*.db.backup
+.lock
 
 # Build output
 dist/

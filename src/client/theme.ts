@@ -34,15 +34,18 @@ export function createAppTheme(mode: "light" | "dark") {
         components: {
             MuiButtonBase: {
                 defaultProps: {
-                    disableRipple: false,
-                    disableTouchRipple: false,
+                    disableRipple: true,
+                    disableTouchRipple: true,
                 },
                 styleOverrides: {
                     root: ({ theme }) => ({
                         position: "relative",
-                        transition: theme.transitions.create(["transform", "background-color", "color"], {
-                            duration: fastMotion,
-                        }),
+                        transition: theme.transitions.create(
+                            ["transform", "background-color", "color"],
+                            {
+                                duration: fastMotion,
+                            },
+                        ),
                         "&:active": {
                             transform: "scale(0.98)",
                         },
@@ -75,9 +78,12 @@ export function createAppTheme(mode: "light" | "dark") {
                 },
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["transform", "box-shadow", "background-color", "border-color"], {
-                            duration: fastMotion,
-                        }),
+                        transition: theme.transitions.create(
+                            ["transform", "box-shadow", "background-color", "border-color"],
+                            {
+                                duration: fastMotion,
+                            },
+                        ),
                         "&:hover": {
                             transform: "translateY(-1px)",
                         },
@@ -101,13 +107,19 @@ export function createAppTheme(mode: "light" | "dark") {
             MuiOutlinedInput: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["background-color", "border-color", "box-shadow"], {
-                            duration: fieldMotion,
-                        }),
-                        "& .MuiOutlinedInput-notchedOutline": {
-                            transition: theme.transitions.create(["border-color", "border-width", "box-shadow"], {
+                        transition: theme.transitions.create(
+                            ["background-color", "border-color", "box-shadow"],
+                            {
                                 duration: fieldMotion,
-                            }),
+                            },
+                        ),
+                        "& .MuiOutlinedInput-notchedOutline": {
+                            transition: theme.transitions.create(
+                                ["border-color", "border-width", "box-shadow"],
+                                {
+                                    duration: fieldMotion,
+                                },
+                            ),
                         },
                         "&:hover .MuiOutlinedInput-notchedOutline": {
                             transitionDuration: "160ms",
@@ -130,11 +142,15 @@ export function createAppTheme(mode: "light" | "dark") {
                         "&.Mui-focused.Mui-error .MuiOutlinedInput-notchedOutline": {
                             borderColor: errorColor,
                         },
-                        "&.MuiInputBase-adornedEnd .MuiInputAdornment-root, &.MuiInputBase-adornedStart .MuiInputAdornment-root": {
-                            transition: theme.transitions.create(["color", "opacity", "transform"], {
-                                duration: fieldMotion,
-                            }),
-                        },
+                        "&.MuiInputBase-adornedEnd .MuiInputAdornment-root, &.MuiInputBase-adornedStart .MuiInputAdornment-root":
+                            {
+                                transition: theme.transitions.create(
+                                    ["color", "opacity", "transform"],
+                                    {
+                                        duration: fieldMotion,
+                                    },
+                                ),
+                            },
                         "@media (prefers-reduced-motion: reduce)": {
                             transition: "none",
                             animation: "none",
@@ -168,9 +184,12 @@ export function createAppTheme(mode: "light" | "dark") {
             MuiFormHelperText: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["color", "opacity", "transform", "margin"], {
-                            duration: validationMotion,
-                        }),
+                        transition: theme.transitions.create(
+                            ["color", "opacity", "transform", "margin"],
+                            {
+                                duration: validationMotion,
+                            },
+                        ),
                         transformOrigin: "top left",
                         "&.Mui-error": {
                             animation: `imshare-helper-error ${validationMotion}ms ${motionEase}`,
@@ -260,7 +279,8 @@ export function createAppTheme(mode: "light" | "dark") {
                         },
                     }),
                     thumb: {
-                        transition: "box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), width 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+                        transition:
+                            "box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), width 180ms cubic-bezier(0.22, 1, 0.36, 1)",
                     },
                     track: ({ theme }) => ({
                         transition: theme.transitions.create(["background-color", "opacity"], {
@@ -292,18 +312,24 @@ export function createAppTheme(mode: "light" | "dark") {
             MuiCard: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["transform", "box-shadow", "border-color"], {
-                            duration: 220,
-                        }),
+                        transition: theme.transitions.create(
+                            ["transform", "box-shadow", "border-color"],
+                            {
+                                duration: 220,
+                            },
+                        ),
                     }),
                 },
             },
             MuiIconButton: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["transform", "background-color", "color"], {
-                            duration: fastMotion,
-                        }),
+                        transition: theme.transitions.create(
+                            ["transform", "background-color", "color"],
+                            {
+                                duration: fastMotion,
+                            },
+                        ),
                         "&:hover": {
                             transform: "scale(1.06)",
                         },
@@ -322,9 +348,12 @@ export function createAppTheme(mode: "light" | "dark") {
             MuiListItemButton: {
                 styleOverrides: {
                     root: ({ theme }) => ({
-                        transition: theme.transitions.create(["transform", "background-color", "color"], {
-                            duration: fastMotion,
-                        }),
+                        transition: theme.transitions.create(
+                            ["transform", "background-color", "color"],
+                            {
+                                duration: fastMotion,
+                            },
+                        ),
                         "&:active": {
                             transform: "scale(0.99)",
                         },
