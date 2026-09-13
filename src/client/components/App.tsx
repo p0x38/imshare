@@ -9,6 +9,8 @@ interface ColorModeContextValue {
     toggle: () => void;
 }
 
+export const ColorModeContext = createContext<ColorModeContextValue | null>(null);
+
 function initialMode(): ColorMode {
     const stored = window.localStorage.getItem("imshare-color-mode");
     if (stored === "light" || stored === "dark") return stored;
