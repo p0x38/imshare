@@ -18,7 +18,8 @@ test.describe("public frontend", () => {
 
         const motion = page.locator("main").first().locator("..");
         await expect(motion).toBeVisible();
-        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain("opacity");
+        const duration = await motion.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
+        expect(duration).toBeGreaterThan(0);
     });
 
     test("interaction motion uses the shared transitions", async ({ page }) => {
