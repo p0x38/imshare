@@ -7,6 +7,100 @@ test.describe("public frontend", () => {
         await expect(page.locator("header")).toBeVisible();
     });
 
+    test("main page entrance motion is wired", async ({ page }) => {
+        await page.goto("/");
+        const motion = page.locator("main").first().locator("..");
+        await expect(motion).toBeVisible();
+        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).animationName)).toContain("imshare-page-enter");
+        const keyframes = await page.evaluate(() => {
+            const sheets = Array.from(document.styleSheets);
+            return sheets.some((sheet) => {
+                try {
+                    return Array.from(sheet.cssRules).some((rule) => rule.cssText.includes("imshare-page-enter"));
+                } catch {
+                    return false;
+                }
+            });
+        });
+        expect(keyframes).toBe(true);
+    });
+
+    test("interaction motion uses the shared transitions", async ({ page }) => {
+        await page.route("**/v1/posts?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    data: [{ id: "motion-test", title: "Motion test", uploads: [], authorName: "Test" }],
+                    pagination: { page: 1, totalPages: 1 },
+                }),
+            });
+        });
+        await page.goto("/posts/");
+
+        const searchField = page.getByRole("textbox", { name: "Search posts" });
+        const labelTransition = await searchField.locator("..", { has: searchField }).locator("label").evaluate((element) => {
+            const style = getComputedStyle(element);
+            return { property: style.transitionProperty, duration: style.transitionDuration };
+        });
+        expect(labelTransition.property).toContain("transform");
+        expect(Number.parseFloat(labelTransition.duration)).toBeGreaterThan(0.2);
+
+        const searchButton = page.getByRole("button", { name: "Search" });
+        const buttonBefore = await searchButton.evaluate((element) => {
+            const style = getComputedStyle(element);
+            return { transition: style.transition, transform: style.transform };
+        });
+        expect(buttonBefore.transition).toContain("transform");
+
+        await searchButton.hover();
+        await expect.poll(async () => searchButton.evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
+
+        const card = page.locator(".MuiCard-root").filter({ hasText: "Motion test" }).first();
+        await expect(card).toBeVisible();
+        await card.hover();
+        await expect.poll(async () => card.evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
+    });
+
+    test("button ripple is visibly animated", async ({ page }) => {
+        await page.route("**/v1/posts?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }),
+            });
+        });
+        await page.goto("/posts/");
+        const button = page.getByRole("button", { name: "Search" });
+        await button.click({ position: { x: 4, y: 4 } });
+        const ripple = button.locator(".MuiTouchRipple-rippleVisible");
+        await expect(ripple).toBeVisible();
+        await expect.poll(async () => ripple.evaluate((element) => getComputedStyle(element).animationName)).toContain("imshare-ripple");
+        await expect.poll(async () => ripple.evaluate((element) => getComputedStyle(element).animationDuration)).toBe("0.52s");
+    });
+
+    test("reduced-motion mode disables custom motion", async ({ page }) => {
+        await page.emulateMedia({ reducedMotion: "reduce" });
+        await page.goto("/posts/");
+
+        const pageMotion = page.locator("main").first().locator("..");
+        await expect(pageMotion).toBeVisible();
+        await expect(pageMotion).toHaveCSS("animation-name", /^(none|unset)$/i);
+
+        const button = page.getByRole("button", { name: "Search" });
+        await expect(button).toHaveCSS("transition-duration", "0s");
+    });
+
+    test("color mode toggle persists its state", async ({ page }) => {
+        await page.goto("/");
+        const toggle = page.getByRole("button", { name: /dark mode|light mode/i });
+        const initial = await page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme);
+        await toggle.click();
+        await expect.poll(async () => page.locator("html").evaluate((element) => getComputedStyle(element).colorScheme)).not.toBe(initial);
+        const stored = await page.evaluate(() => localStorage.getItem("imshare-color-mode"));
+        expect(stored).toMatch(/^(light|dark)$/);
+    });
+
     test("navigation is usable on desktop", async ({ page }) => {
         await page.goto("/");
         await expect(page.getByRole("link", { name: "imshare" })).toBeVisible();
@@ -21,6 +115,7 @@ test.describe("public frontend", () => {
         await page.goto("/");
         const openButton = page.getByRole("button", { name: "Open navigation" });
         await expect(openButton).toBeVisible();
+        await expect(openButton).toHaveCSS("min-width", /.+/);
         await openButton.click();
         await expect(page.getByRole("button", { name: "Close navigation" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Posts" })).toBeVisible();
