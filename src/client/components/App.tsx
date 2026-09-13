@@ -1,20 +1,53 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
-import { createAppTheme } from "../theme";
+import { createAppTheme, type AccentColor, type ThemeSettings } from "../theme";
 
 type ColorMode = "light" | "dark";
+
+const defaultThemeSettings: ThemeSettings = {
+    animations: false,
+    ripple: false,
+    accentColor: "default",
+};
 
 interface ColorModeContextValue {
     mode: ColorMode;
     toggle: () => void;
 }
 
+interface ThemeSettingsContextValue {
+    settings: ThemeSettings;
+    setAnimations: (enabled: boolean) => void;
+    setRipple: (enabled: boolean) => void;
+    setAccentColor: (color: AccentColor) => void;
+}
+
 export const ColorModeContext = createContext<ColorModeContextValue | null>(null);
+export const ThemeSettingsContext = createContext<ThemeSettingsContextValue | null>(null);
 
 function initialMode(): ColorMode {
     const stored = window.localStorage.getItem("imshare-color-mode");
     if (stored === "light" || stored === "dark") return stored;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function initialThemeSettings(): ThemeSettings {
+    try {
+        const stored = window.localStorage.getItem("imshare-theme-settings");
+        if (!stored) return defaultThemeSettings;
+        const parsed = JSON.parse(stored) as Partial<ThemeSettings>;
+        const accentColor: AccentColor =
+            parsed.accentColor === "blue" || parsed.accentColor === "purple" || parsed.accentColor === "green" || parsed.accentColor === "orange"
+                ? parsed.accentColor
+                : "default";
+        return {
+            animations: parsed.animations === true,
+            ripple: parsed.ripple === true,
+            accentColor,
+        };
+    } catch {
+        return defaultThemeSettings;
+    }
 }
 
 export function useColorMode() {
@@ -23,8 +56,16 @@ export function useColorMode() {
     return context;
 }
 
+export function useThemeSettings() {
+    const context = useContext(ThemeSettingsContext);
+    if (!context) throw new Error("useThemeSettings must be used inside App.");
+    return context;
+}
+
 export function App({ children }: { children: React.ReactNode }) {
     const [mode, setMode] = useState<ColorMode>(initialMode);
+    const [settings, setSettings] = useState<ThemeSettings>(initialThemeSettings);
+
     const colorMode = useMemo(
         () => ({
             mode,
@@ -38,72 +79,44 @@ export function App({ children }: { children: React.ReactNode }) {
         }),
         [mode],
     );
-    const theme = useMemo(() => createAppTheme(mode), [mode]);
+
+    const updateSettings = (update: Partial<ThemeSettings>) => {
+        setSettings((current) => {
+            const next = { ...current, ...update };
+            window.localStorage.setItem("imshare-theme-settings", JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const themeSettings = useMemo(
+        () => ({
+            settings,
+            setAnimations: (enabled: boolean) => updateSettings({ animations: enabled }),
+            setRipple: (enabled: boolean) => updateSettings({ ripple: enabled }),
+            setAccentColor: (accentColor: AccentColor) => updateSettings({ accentColor }),
+        }),
+        [settings],
+    );
+    const theme = useMemo(() => createAppTheme(mode, settings), [mode, settings]);
 
     return (
         <ColorModeContext.Provider value={colorMode}>
-            <ThemeProvider theme={theme}>
-                <CssBaseline />
-                <GlobalStyles
-                    styles={{
-                        "@keyframes imshare-ripple": {
-                            "0%": { opacity: 0, transform: "scale(0.15)" },
-                            "35%": { opacity: 0.2 },
-                            "100%": { opacity: 0, transform: "scale(1)" },
-                        },
-                        "@keyframes imshare-field-error": {
-                            "0%": { opacity: 0.72, transform: "translateY(-2px)" },
-                            "100%": { opacity: 1, transform: "translateY(0)" },
-                        },
-                        "@keyframes imshare-helper-error": {
-                            "0%": { opacity: 0, transform: "translateY(-4px)" },
-                            "100%": { opacity: 1, transform: "translateY(0)" },
-                        },
-                        "@keyframes imshare-alert-enter": {
-                            "0%": { opacity: 0, transform: "translateY(-6px)" },
-                            "100%": { opacity: 1, transform: "translateY(0)" },
-                        },
-                        ".MuiTouchRipple-rippleVisible": {
-                            animation: "imshare-ripple 420ms cubic-bezier(0.2, 0, 0, 1) both !important",
-                            transformOrigin: "center",
-                        },
-                        ".MuiTouchRipple-child": {
-                            opacity: "1 !important",
-                        },
-                        ".MuiInputLabel-root": {
-                            transition: "color 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1), font-size 260ms cubic-bezier(0.22, 1, 0.36, 1) !important",
-                            willChange: "color, transform, font-size",
-                        },
-                        ".MuiOutlinedInput-root": {
-                            transition: "background-color 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1) !important",
-                        },
-                        ".MuiOutlinedInput-notchedOutline": {
-                            transition: "border-color 220ms cubic-bezier(0.22, 1, 0.36, 1), border-width 220ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1) !important",
-                        },
-                        "main:has(> [id$='-page']), main#post": {
-                            width: "100% !important",
-                            maxWidth: "none !important",
-                            margin: "0 !important",
-                            padding: "0 !important",
-                        },
-                        "@media (prefers-reduced-motion: reduce)": {
-                            "*": {
-                                animationDuration: "1ms !important",
-                                animationIterationCount: "1 !important",
-                                transitionDuration: "1ms !important",
-                                scrollBehavior: "auto !important",
+            <ThemeSettingsContext.Provider value={themeSettings}>
+                <ThemeProvider theme={theme}>
+                    <CssBaseline />
+                    <GlobalStyles
+                        styles={{
+                            "main:has(> [id$='-page']), main#post": {
+                                width: "100% !important",
+                                maxWidth: "none !important",
+                                margin: "0 !important",
+                                padding: "0 !important",
                             },
-                            ".MuiTouchRipple-rippleVisible": {
-                                animation: "none !important",
-                            },
-                            ".MuiInputLabel-root, .MuiOutlinedInput-root, .MuiOutlinedInput-notchedOutline": {
-                                transition: "none !important",
-                            },
-                        },
-                    }}
-                />
-                {children}
-            </ThemeProvider>
+                        }}
+                    />
+                    {children}
+                </ThemeProvider>
+            </ThemeSettingsContext.Provider>
         </ColorModeContext.Provider>
     );
 }
