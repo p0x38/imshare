@@ -46,17 +46,10 @@ export function App({ children }: { children: React.ReactNode }) {
                 <CssBaseline />
                 <GlobalStyles
                     styles={{
-                        "@keyframes imshare-page-enter": {
-                            "0%": { opacity: 0, transform: "translateY(8px)" },
-                            "100%": { opacity: 1, transform: "translateY(0)" },
-                        },
-                        "@keyframes imshare-ripple-enter": {
-                            "0%": { opacity: 0.08 },
-                            "100%": { opacity: 0.22 },
-                        },
-                        "@keyframes imshare-ripple-exit": {
-                            "0%": { opacity: 0.22 },
-                            "100%": { opacity: 0 },
+                        "@keyframes imshare-ripple": {
+                            "0%": { opacity: 0, transform: "scale(0.15)" },
+                            "35%": { opacity: 0.2 },
+                            "100%": { opacity: 0, transform: "scale(1)" },
                         },
                         "@keyframes imshare-field-error": {
                             "0%": { opacity: 0.72, transform: "translateY(-2px)" },
@@ -71,11 +64,11 @@ export function App({ children }: { children: React.ReactNode }) {
                             "100%": { opacity: 1, transform: "translateY(0)" },
                         },
                         ".MuiTouchRipple-rippleVisible": {
-                            animationDuration: "420ms !important",
-                            animationTimingFunction: "cubic-bezier(0.2, 0, 0, 1) !important",
+                            animation: "imshare-ripple 420ms cubic-bezier(0.2, 0, 0, 1) both !important",
+                            transformOrigin: "center",
                         },
                         ".MuiTouchRipple-child": {
-                            opacity: "0.22 !important",
+                            opacity: "1 !important",
                         },
                         ".MuiInputLabel-root": {
                             transition: "color 260ms cubic-bezier(0.22, 1, 0.36, 1), transform 260ms cubic-bezier(0.22, 1, 0.36, 1), font-size 260ms cubic-bezier(0.22, 1, 0.36, 1) !important",
@@ -101,7 +94,7 @@ export function App({ children }: { children: React.ReactNode }) {
                                 scrollBehavior: "auto !important",
                             },
                             ".MuiTouchRipple-rippleVisible": {
-                                animationDuration: "1ms !important",
+                                animation: "none !important",
                             },
                             ".MuiInputLabel-root, .MuiOutlinedInput-root, .MuiOutlinedInput-notchedOutline": {
                                 transition: "none !important",
