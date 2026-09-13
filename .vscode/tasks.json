@@ -7,11 +7,7 @@
             "command": "pnpm dev",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "group": "imshare"
-            }
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
         },
         {
             "label": "imshare: dev client",
@@ -19,11 +15,7 @@
             "command": "pnpm dev:client",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "group": "imshare"
-            }
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
         },
         {
             "label": "imshare: typecheck",
@@ -67,11 +59,7 @@
             "command": "pnpm test:browser:ui",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": {
-                "reveal": "always",
-                "panel": "dedicated",
-                "group": "imshare"
-            }
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
         },
         {
             "label": "imshare: format",
@@ -102,10 +90,13 @@
             "type": "shell",
             "command": "pnpm build",
             "problemMatcher": ["$tsc"],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "imshare: build client",
+            "type": "shell",
+            "command": "pnpm build:client",
+            "problemMatcher": ["$tsc"]
         },
         {
             "label": "imshare: install packages",
