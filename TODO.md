@@ -20,10 +20,15 @@
 - [x] Better empty states
 - [x] Better loading states
 - [x] Confirm-before-destructive-action dialogs
+- [ ] Make the animation preference control all shared motion components
+- [ ] Make ripple/theme preferences apply consistently to all interactive components
+- [ ] Persist theme preferences to the authenticated account
 - [ ] MUI form components for remaining upload/edit pages
 - [ ] Remove remaining legacy frontend styling where replaced
 - [ ] Browser live reload / HMR
 - [ ] Keyboard navigation improvements
+- [ ] Accessibility regression tests for navigation, dialogs, forms, and interactive cards
+- [ ] Reduced-motion support across custom animations and transitions
 - [x] Image viewer / lightbox
     - [ ] Zoom
     - [ ] Pan
@@ -135,6 +140,9 @@
 - [ ] Profile privacy settings
 - [ ] Notification preferences
 - [ ] API tokens
+- [ ] Account-synced appearance/theme preferences
+- [ ] Reset appearance/theme preferences to defaults
+- [ ] Import/export appearance/theme preferences
 
 ## Architecture
 
@@ -147,3 +155,5 @@
 - [x] Add end-to-end tests
 - [ ] Add accessibility regression tests
 - [ ] Add performance regression tests
+- [ ] Define a shared design-token layer for spacing, motion, and accent colors
+- [ ] Keep theme preferences independent from page-specific styling
