@@ -32,7 +32,6 @@ export function createAppTheme(mode: "light" | "dark") {
                 styleOverrides: {
                     root: ({ theme }) => ({
                         position: "relative",
-                        overflow: "hidden",
                         transition: theme.transitions.create(["transform", "background-color", "color"], {
                             duration: fastMotion,
                         }),
@@ -41,6 +40,7 @@ export function createAppTheme(mode: "light" | "dark") {
                         },
                         "& .MuiTouchRipple-root": {
                             overflow: "hidden",
+                            borderRadius: "inherit",
                         },
                         "& .MuiTouchRipple-rippleVisible": {
                             animationDuration: `${rippleDuration}ms`,
