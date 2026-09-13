@@ -16,10 +16,11 @@ test.describe("public frontend", () => {
         });
         await page.goto("/");
 
-        const motion = page.locator("main").first().locator("..");
+        const motion = page.locator("main:has(> h1)").first().locator("..");
         await expect(motion).toBeVisible();
-        const duration = await motion.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
-        expect(duration).toBeGreaterThan(0);
+        await expect
+            .poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange))
+            .toContain("opacity");
     });
 
     test("interaction motion uses the shared transitions", async ({ page }) => {
