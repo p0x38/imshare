@@ -7,12 +7,22 @@ interface MotionProps {
     duration?: number;
 }
 
+const motionEase = "cubic-bezier(0.22, 1, 0.36, 1)";
+
 export function PageTransition({ children, duration = 420 }: MotionProps): ReactElement {
     return (
-        <Fade in appear timeout={duration} easing="ease-out">
+        <Fade
+            in
+            appear
+            timeout={duration}
+            easing={{ enter: motionEase }}
+            style={{ willChange: "opacity, transform" }}
+        >
             <Box
                 sx={{
+                    animation: `imshare-page-enter ${duration}ms ${motionEase}`,
                     "@media (prefers-reduced-motion: reduce)": {
+                        animation: "none !important",
                         transition: "none !important",
                     },
                 }}
@@ -32,8 +42,9 @@ export function AnimatedItem({ children, delay = 0, duration = 360 }: MotionProp
             style={{
                 transformOrigin: "50% 0",
                 transitionDelay: `${delay}ms`,
+                willChange: "opacity, transform",
             }}
-            easing="ease-out"
+            easing={{ enter: motionEase }}
         >
             <Box
                 sx={{
