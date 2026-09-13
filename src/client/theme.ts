@@ -3,12 +3,19 @@ import { createTheme } from "@mui/material/styles";
 const motionEase = "cubic-bezier(0.22, 1, 0.36, 1)";
 const fastMotion = 180;
 const fieldMotion = 220;
+const validationMotion = 260;
 const rippleDuration = 420;
 
 export function createAppTheme(mode: "light" | "dark") {
+    const errorColor = mode === "dark" ? "#f28b82" : "#d32f2f";
+    const successColor = mode === "dark" ? "#81c995" : "#2e7d32";
+    const focusColor = mode === "dark" ? "#90caf9" : "#1976d2";
+
     return createTheme({
         palette: {
             mode,
+            error: { main: errorColor },
+            success: { main: successColor },
         },
         shape: {
             borderRadius: 3,
@@ -109,10 +116,28 @@ export function createAppTheme(mode: "light" | "dark") {
                             borderWidth: 2,
                         },
                         "&.Mui-focused": {
-                            boxShadow: `0 0 0 3px color-mix(in srgb, ${mode === "dark" ? "#90caf9" : "#1976d2"} 14%, transparent)`,
+                            boxShadow: `0 0 0 3px color-mix(in srgb, ${focusColor} 14%, transparent)`,
+                        },
+                        "&.Mui-error": {
+                            animation: `imshare-field-error ${validationMotion}ms ${motionEase}`,
+                        },
+                        "&.Mui-error .MuiOutlinedInput-notchedOutline": {
+                            borderColor: errorColor,
+                        },
+                        "&.Mui-focused.Mui-error": {
+                            boxShadow: `0 0 0 3px color-mix(in srgb, ${errorColor} 14%, transparent)`,
+                        },
+                        "&.Mui-focused.Mui-error .MuiOutlinedInput-notchedOutline": {
+                            borderColor: errorColor,
+                        },
+                        "&.MuiInputBase-adornedEnd .MuiInputAdornment-root, &.MuiInputBase-adornedStart .MuiInputAdornment-root": {
+                            transition: theme.transitions.create(["color", "opacity", "transform"], {
+                                duration: fieldMotion,
+                            }),
                         },
                         "@media (prefers-reduced-motion: reduce)": {
                             transition: "none",
+                            animation: "none",
                             "& .MuiOutlinedInput-notchedOutline": {
                                 transition: "none",
                             },
@@ -131,6 +156,9 @@ export function createAppTheme(mode: "light" | "dark") {
                         transition: theme.transitions.create(["color", "transform", "font-size"], {
                             duration: fieldMotion,
                         }),
+                        "&.Mui-error": {
+                            transitionDuration: `${validationMotion}ms`,
+                        },
                         "@media (prefers-reduced-motion: reduce)": {
                             transition: "none",
                         },
@@ -140,14 +168,127 @@ export function createAppTheme(mode: "light" | "dark") {
             MuiFormHelperText: {
                 styleOverrides: {
                     root: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "opacity", "transform", "margin"], {
+                            duration: validationMotion,
+                        }),
+                        transformOrigin: "top left",
+                        "&.Mui-error": {
+                            animation: `imshare-helper-error ${validationMotion}ms ${motionEase}`,
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            animation: "none",
+                        },
+                    }),
+                },
+            },
+            MuiFormControl: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["margin-bottom"], {
+                            duration: validationMotion,
+                        }),
+                    }),
+                },
+            },
+            MuiFormControlLabel: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
                         transition: theme.transitions.create(["color", "opacity", "transform"], {
                             duration: fieldMotion,
                         }),
-                        transformOrigin: "top left",
-                        "@media (prefers-reduced-motion: reduce)": {
-                            transition: "none",
+                        "& .MuiFormControlLabel-label": {
+                            transition: theme.transitions.create(["color", "opacity"], {
+                                duration: fieldMotion,
+                            }),
                         },
                     }),
+                },
+            },
+            MuiCheckbox: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "transform"], {
+                            duration: fastMotion,
+                        }),
+                        "&.Mui-checked": {
+                            transform: "scale(1.04)",
+                        },
+                        "&:active": {
+                            transform: "scale(0.94)",
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            "&.Mui-checked, &:active": {
+                                transform: "none",
+                            },
+                        },
+                    }),
+                },
+            },
+            MuiRadio: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "transform"], {
+                            duration: fastMotion,
+                        }),
+                        "&.Mui-checked": {
+                            transform: "scale(1.04)",
+                        },
+                        "&:active": {
+                            transform: "scale(0.94)",
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            "&.Mui-checked, &:active": {
+                                transform: "none",
+                            },
+                        },
+                    }),
+                },
+            },
+            MuiSwitch: {
+                styleOverrides: {
+                    switchBase: ({ theme }) => ({
+                        transitionDuration: `${fastMotion}ms`,
+                        transitionTimingFunction: motionEase,
+                        "&.Mui-checked": {
+                            transform: "translateX(16px)",
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transitionDuration: "1ms",
+                        },
+                    }),
+                    thumb: {
+                        transition: "box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1), width 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+                    },
+                    track: ({ theme }) => ({
+                        transition: theme.transitions.create(["background-color", "opacity"], {
+                            duration: fastMotion,
+                        }),
+                    }),
+                },
+            },
+            MuiAlert: {
+                styleOverrides: {
+                    root: {
+                        animation: `imshare-alert-enter ${validationMotion}ms ${motionEase}`,
+                    },
+                    icon: ({ theme }) => ({
+                        transition: theme.transitions.create(["transform", "opacity"], {
+                            duration: fieldMotion,
+                        }),
+                    }),
+                    message: ({ theme }) => ({
+                        transition: theme.transitions.create(["opacity", "transform"], {
+                            duration: fieldMotion,
+                        }),
+                    }),
+                    "@media (prefers-reduced-motion: reduce)": {
+                        root: {
+                            animation: "none",
+                        },
+                    },
                 },
             },
             MuiCard: {
