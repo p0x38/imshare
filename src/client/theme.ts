@@ -2,6 +2,7 @@ import { createTheme } from "@mui/material/styles";
 
 const motionEase = "cubic-bezier(0.22, 1, 0.36, 1)";
 const fastMotion = 180;
+const fieldMotion = 220;
 const rippleDuration = 420;
 
 export function createAppTheme(mode: "light" | "dark") {
@@ -81,6 +82,70 @@ export function createAppTheme(mode: "light" | "dark") {
                             "&:hover, &:active": {
                                 transform: "none",
                             },
+                        },
+                    }),
+                },
+            },
+            MuiTextField: {
+                defaultProps: {
+                    variant: "outlined",
+                },
+            },
+            MuiOutlinedInput: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["background-color", "border-color", "box-shadow"], {
+                            duration: fieldMotion,
+                        }),
+                        "& .MuiOutlinedInput-notchedOutline": {
+                            transition: theme.transitions.create(["border-color", "border-width", "box-shadow"], {
+                                duration: fieldMotion,
+                            }),
+                        },
+                        "&:hover .MuiOutlinedInput-notchedOutline": {
+                            transitionDuration: "160ms",
+                        },
+                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                            borderWidth: 2,
+                        },
+                        "&.Mui-focused": {
+                            boxShadow: `0 0 0 3px color-mix(in srgb, ${mode === "dark" ? "#90caf9" : "#1976d2"} 14%, transparent)`,
+                        },
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                                transition: "none",
+                            },
+                        },
+                    }),
+                    input: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "opacity"], {
+                            duration: fieldMotion,
+                        }),
+                    }),
+                },
+            },
+            MuiInputLabel: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "transform", "font-size"], {
+                            duration: fieldMotion,
+                        }),
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
+                        },
+                    }),
+                },
+            },
+            MuiFormHelperText: {
+                styleOverrides: {
+                    root: ({ theme }) => ({
+                        transition: theme.transitions.create(["color", "opacity", "transform"], {
+                            duration: fieldMotion,
+                        }),
+                        transformOrigin: "top left",
+                        "@media (prefers-reduced-motion: reduce)": {
+                            transition: "none",
                         },
                     }),
                 },
