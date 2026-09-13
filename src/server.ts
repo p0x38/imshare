@@ -8,7 +8,9 @@ import { attachRealtime } from "./realtime.js";
 
 const lockPath = ".lock";
 
-function isNodeProcess(pid: number): boolean {
+type ProcessCheck = "node" | "other" | "unknown";
+
+function checkNodeProcess(pid: number): ProcessCheck {
     try {
         if (process.platform === "win32") {
             const output = execFileSync("tasklist.exe", ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"], {
@@ -17,7 +19,8 @@ function isNodeProcess(pid: number): boolean {
                 windowsHide: true,
             }).trim();
 
-            return /^"node(?:\.exe)?"\s*,/i.test(output);
+            if (!output || /^INFO:/i.test(output)) return "other";
+            return /^"node(?:\.exe)?"\s*,/i.test(output) ? "node" : "other";
         }
 
         const output = execFileSync("ps", ["-p", String(pid), "-o", "comm="], {
@@ -25,9 +28,10 @@ function isNodeProcess(pid: number): boolean {
             stdio: ["ignore", "pipe", "ignore"],
         }).trim();
 
-        return /(?:^|\n)\s*node(?:js)?\s*$/i.test(output);
+        if (!output) return "other";
+        return /(?:^|\n)\s*node(?:js)?\s*$/i.test(output) ? "node" : "other";
     } catch {
-        return false;
+        return "unknown";
     }
 }
 
@@ -39,7 +43,8 @@ function acquireLock(): void {
             try {
                 process.kill(pid, 0);
 
-                if (isNodeProcess(pid)) {
+                const processCheck = checkNodeProcess(pid);
+                if (processCheck === "node" || processCheck === "unknown") {
                     throw new Error(`Another instance is already running (PID ${pid}).`);
                 }
             } catch (error) {
