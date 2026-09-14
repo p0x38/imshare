@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { parseConfigDsl, stringifyConfigDsl } from "./config-dsl.js";
 
 export interface ServerConfig {
     server: { host: string; port: number };
@@ -31,7 +32,8 @@ export interface PublicConfig {
     limits: { textPostCharacters: number };
 }
 
-const configPath = path.resolve(process.cwd(), "config.json");
+const CONFIG_FILE = "config.imshare";
+const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
     auth: { emailAndPasswordEnabled: true, registration: { enabled: true, public: false } },
@@ -46,13 +48,18 @@ const DEFAULTS = {
 export async function loadConfig(): Promise<ServerConfig> {
     return parseConfig(await readFile(configPath, "utf8"));
 }
-export function loadConfigSync(): ServerConfig { return parseConfig(readFileSync(configPath, "utf8")); }
+
+export function loadConfigSync(): ServerConfig {
+    return parseConfig(readFileSync(configPath, "utf8"));
+}
+
 export async function updateConfig(update: (config: ServerConfig) => ServerConfig): Promise<ServerConfig> {
     const next = normalizeConfig(update(await loadConfig()));
     if (!isServerConfig(next)) throw new Error(`Invalid server configuration: ${configPath}`);
-    await writeFile(configPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    await writeFile(configPath, stringifyConfigDsl(next), "utf8");
     return next;
 }
+
 export const getConfig = loadConfig;
 export async function saveConfig(config: ServerConfig): Promise<ServerConfig> { return updateConfig(() => config); }
 
@@ -84,17 +91,20 @@ export function resolveBaseUrl(config: ServerConfig): string {
     url.port = String(config.server.port);
     return url.toString().replace(/\/$/, "");
 }
+
 function hasExplicitPort(value: string): boolean {
     const authority = value.match(/^[a-z][a-z\d+.-]*:\/\/([^/?#]*)/i)?.[1];
     if (!authority) return false;
     const host = authority.slice(authority.lastIndexOf("@") + 1);
     return host.startsWith("[") ? /^\[[^\]]+\]:\d+$/.test(host) : /:\d+$/.test(host);
 }
+
 function parseConfig(content: string): ServerConfig {
-    const config: unknown = JSON.parse(content);
+    const config = parseConfigDsl(content);
     if (!isServerConfig(config)) throw new Error(`Invalid server configuration: ${configPath}`);
     return normalizeConfig(config);
 }
+
 function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
@@ -104,6 +114,7 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
         limits: { ...DEFAULTS.limits, ...config.limits },
     };
 }
+
 function isServerConfig(value: unknown): value is ServerConfig {
     if (!value || typeof value !== "object") return false;
     const config = value as Record<string, unknown>;
@@ -119,4 +130,5 @@ function isServerConfig(value: unknown): value is ServerConfig {
         (limits === undefined || (isObject(limits) && (limits.textPostCharacters === undefined || (typeof limits.textPostCharacters === "number" && Number.isInteger(limits.textPostCharacters) && limits.textPostCharacters > 0)))) &&
         (analytics === undefined || (isObject(analytics) && (analytics.googleAnalyticsMeasurementId === undefined || typeof analytics.googleAnalyticsMeasurementId === "string") && (analytics.googleTagManagerContainerId === undefined || typeof analytics.googleTagManagerContainerId === "string")));
 }
-function isObject(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null; }
+
+function isObject(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
