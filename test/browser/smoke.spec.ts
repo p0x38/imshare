@@ -178,13 +178,23 @@ test.describe("dashboard frontend", () => {
         "/dashboard/settings/",
     ];
 
-    test("dashboard management routes serve HTML shells", async ({ request }) => {
+    test("dashboard management routes serve React shells", async ({ request }) => {
+        const expectedShells: Record<string, { root: string; script: string }> = {
+            "/dashboard/": { root: "dashboard-page", script: "/client/dashboard.js" },
+            "/dashboard/posts/": { root: "dashboard-posts-page", script: "/client/dashboardPosts.js" },
+            "/dashboard/posts/test-post/": { root: "dashboard-post-page", script: "/client/dashboardPost.js" },
+            "/dashboard/posts/test-post/edit/": { root: "post-editor-page", script: "/client/postEditor.js" },
+            "/dashboard/tags/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
+            "/dashboard/categories/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
+            "/dashboard/settings/": { root: "settings-page", script: "/client/settings.js" },
+        };
+
         for (const path of managementPaths) {
             const response = await request.get(path, { maxRedirects: 0 });
             expect(response.status(), path).toBe(200);
             const html = await response.text();
-            expect(html, path).toMatch(/<main\b/i);
-            expect(html, path).toMatch(/<script[^>]+type=["']module["']/i);
+            expect(html, path).toContain(`id="${expectedShells[path]!.root}"`);
+            expect(html, path).toContain(`src="${expectedShells[path]!.script}"`);
         }
     });
 
@@ -222,18 +232,17 @@ test.describe("dashboard frontend", () => {
         expect(html).toContain('src="/client/settings.js"');
     });
 
-    test("dashboard post management routes expose their controls", async ({ request }) => {
+    test("dashboard post management routes mount their React entries", async ({ request }) => {
         const view = await request.get("/dashboard/posts/test-post/");
         expect(view.status()).toBe(200);
         const viewHtml = await view.text();
-        expect(viewHtml).toContain("Edit");
-        expect(viewHtml).toContain("Delete this post?");
+        expect(viewHtml).toContain('id="dashboard-post-page"');
+        expect(viewHtml).toContain('src="/client/dashboardPost.js"');
 
         const edit = await request.get("/dashboard/posts/test-post/edit/");
         expect(edit.status()).toBe(200);
         const editHtml = await edit.text();
-        expect(editHtml).toContain("Edit Post");
-        expect(editHtml).toContain('id="form"');
-        expect(editHtml).toContain("Save changes");
+        expect(editHtml).toContain('id="post-editor-page"');
+        expect(editHtml).toContain('src="/client/postEditor.js"');
     });
 });
