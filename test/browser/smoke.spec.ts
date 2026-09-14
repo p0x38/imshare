@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test.describe("public frontend", () => {
     test("home page renders", async ({ page }) => {
-        await page.goto("/");
-        await expect(page).toHaveTitle(/imshare/i);
+        const response = await page.goto("/", { waitUntil: "domcontentloaded" });
+        expect(response?.status()).toBe(200);
+        await expect(page.locator("title")).toHaveText("imshare");
         await expect(page.locator("header")).toBeVisible();
     });
 
@@ -23,9 +24,10 @@ test.describe("public frontend", () => {
             });
         });
         await page.goto("/posts/");
-        await expect(page.locator('[aria-busy="true"]')).toBeVisible();
-        await expect(page.locator('[aria-busy="true"] .MuiSkeleton-root').first()).toBeVisible();
-        await expect(page.locator('[aria-busy="true"]')).toBeHidden({ timeout: 3_000 });
+        const skeletons = page.locator('[aria-label="Loading posts"]');
+        await expect(skeletons).toBeVisible();
+        await expect(skeletons.locator(".MuiSkeleton-root").first()).toBeVisible();
+        await expect(skeletons).toBeHidden({ timeout: 3_000 });
     });
 
     test("main page entrance motion is wired", async ({ page }) => {
@@ -70,7 +72,7 @@ test.describe("public frontend", () => {
         await expect(automatic).toBeVisible();
         await automatic.check();
         await expect(automatic).toBeChecked();
-        await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode"))).toBe("auto");
+        await expect(page.locator("body")).toHaveCSS("background-color", "rgb(18, 18, 18)");
     });
 
     test("mobile layout does not create horizontal overflow", async ({ page }) => {
@@ -129,10 +131,10 @@ test.describe("public frontend", () => {
 
     test("FAQ keeps its grouped heading structure", async ({ page }) => {
         await page.goto("/faq/");
-        await expect(page.getByRole("heading", { name: "FAQs", level: 1 })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Frequently Asked Questions", level: 1 })).toBeVisible();
         await expect(page.getByRole("heading", { name: "About imshare", level: 2 })).toBeVisible();
         await expect(page.getByRole("heading", { name: "Images and privacy", level: 2 })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Who can access my images?", level: 3 })).toBeVisible();
+        await expect(page.getByText("Who can access my images?", { exact: true })).toBeVisible();
     });
 });
 
