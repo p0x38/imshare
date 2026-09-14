@@ -49,5 +49,8 @@ export interface User extends Author {
     avatarValue?: string | null;
     websiteUrl?: string | null;
     githubUrl?: string | null;
+    profileBannerUrl?: string | null;
+    accentColor?: string | null;
+    createdAt?: string;
     profileLinks?: Array<{ id: string; label: string; url: string }>;
 }
