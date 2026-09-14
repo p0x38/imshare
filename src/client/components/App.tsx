@@ -88,6 +88,13 @@ export function App({ children }: { children: React.ReactNode }) {
         return () => mediaQuery.removeEventListener("change", handleChange);
     }, []);
 
+    useEffect(() => {
+        const loading = document.getElementById("app-loading");
+        if (!loading) return;
+        loading.setAttribute("aria-busy", "false");
+        loading.remove();
+    }, []);
+
     const mode: ColorMode = preference === "auto" ? deviceMode : preference;
 
     const setPreference = (next: ColorModePreference) => {
