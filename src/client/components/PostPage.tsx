@@ -408,6 +408,14 @@ export function PostPage({ postId }: { postId: string }) {
                                                 <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" divider={<Typography color="text.disabled">・</Typography>}>{metadata}</Stack>
                                             </Stack>
                                             <PostActions post={post} />
+                                            {post.originalCreator || post.originalCreatedAt ? <>
+                                                <Divider />
+                                                <Stack spacing={0.5}>
+                                                    <Typography variant="subtitle2">Original content</Typography>
+                                                    {post.originalCreator ? <Typography color="text.secondary">Original creator: {post.originalCreator}</Typography> : null}
+                                                    {post.originalCreatedAt ? <Typography component="time" dateTime={post.originalCreatedAt} color="text.secondary">Original creation date: {absoluteTime(post.originalCreatedAt)}</Typography> : null}
+                                                </Stack>
+                                            </> : null}
                                             {post.description ? <><Divider /><Typography sx={{ whiteSpace: "pre-wrap" }}>{post.description}</Typography></> : null}
                                             {post.tags?.length || post.categories?.length ? <><Divider /><Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">{post.tags?.map((tag) => { const id = tag.id || tag.tag?.id; const name = tag.name || tag.tag?.name; return id && name ? <Chip key={`tag-${id}`} label={name} component="a" href={`/tags/${encodeURIComponent(id)}/`} clickable /> : null; })}{post.categories?.map((category) => { const id = category.id || category.category?.id; const name = category.name || category.category?.name; return id && name ? <Chip key={`category-${id}`} label={name} component="a" href={`/categories/${encodeURIComponent(id)}/`} clickable /> : null; })}</Stack></> : null}
                                         </Stack>
