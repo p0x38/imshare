@@ -21,6 +21,8 @@ export interface Author {
 export interface Post {
     id: string;
     title?: string | null;
+    contentType?: "image" | "text";
+    textContent?: string | null;
     description?: string | null;
     caption?: string | null;
     sourceUrl?: string | null;
@@ -33,6 +35,11 @@ export interface Post {
     scheduledAt?: string | null;
     hiddenAt?: string | null;
     contentWarning?: string | null;
+    permalinkPattern?: "user" | "posts";
+    permalinkIdType?: "normalizedTitle" | "internalId" | "creationDate" | "custom";
+    permalinkKey?: string | null;
+    customPostId?: string | null;
+    permalink?: string;
     author?: Author | null;
     authorName?: string | null;
     viewCount?: number;
