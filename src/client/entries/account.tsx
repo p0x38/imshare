@@ -18,6 +18,7 @@ function AccountPage() {
     const [user, setUser] = useState<User | false | null>(null);
     const [error, setError] = useState("");
     const [name, setName] = useState("");
+    const [handle, setHandle] = useState("");
     const [bio, setBio] = useState("");
     const [avatarMode, setAvatarMode] = useState("initials");
     const [avatarValue, setAvatarValue] = useState("");
@@ -32,6 +33,7 @@ function AccountPage() {
             const next = response.data;
             setUser(next);
             setName(next.name || "");
+            setHandle(next.handle || "");
             setBio(next.bio || "");
             setAvatarMode(next.avatarMode || "initials");
             setAvatarValue(next.avatarValue || "");
@@ -54,21 +56,15 @@ function AccountPage() {
         try {
             await api(`/v1/users/${encodeURIComponent(user.id)}`, {
                 method: "PATCH",
-                body: JSON.stringify({ name, bio: bio || null, websiteUrl: websiteUrl || null, githubUrl: githubUrl || null, avatarMode, avatarValue: avatarValue || null }),
+                body: JSON.stringify({ name, handle: handle.trim().replace(/^@/, "").toLowerCase() || null, bio: bio || null, websiteUrl: websiteUrl || null, githubUrl: githubUrl || null, avatarMode, avatarValue: avatarValue || null }),
             });
             const existing = new Set((user.profileLinks || []).map((link) => link.id));
             for (const [position, link] of profileLinks.entries()) {
                 if (!link.label.trim() || !link.url.trim()) continue;
                 if (link.id && existing.has(link.id)) {
-                    await api(`/v1/me/links/${encodeURIComponent(link.id)}`, {
-                        method: "PATCH",
-                        body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }),
-                    });
+                    await api(`/v1/me/links/${encodeURIComponent(link.id)}`, { method: "PATCH", body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }) });
                 } else {
-                    await api("/v1/me/links", {
-                        method: "POST",
-                        body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }),
-                    });
+                    await api("/v1/me/links", { method: "POST", body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }) });
                 }
             }
             const currentIds = new Set(profileLinks.flatMap((link) => link.id ? [link.id] : []));
@@ -92,9 +88,10 @@ function AccountPage() {
             <Stack spacing={2}>
                 <Typography variant="h4" component="h1">Account</Typography>
                 {error && <Alert severity="error">{error}</Alert>}
-                <Card variant="outlined"><CardContent><Stack direction="row" spacing={2} alignItems="center"><Avatar src={user.avatarUrl ?? undefined} sx={{ width: 80, height: 80 }}>{(user.name || "A").charAt(0).toUpperCase()}</Avatar><Stack><Typography variant="h6">{user.name || "Account"}</Typography><Typography color="text.secondary">{user.email}</Typography></Stack></Stack></CardContent></Card>
+                <Card variant="outlined"><CardContent><Stack direction="row" spacing={2} alignItems="center"><Avatar src={user.avatarUrl ?? undefined} sx={{ width: 80, height: 80 }}>{(user.name || "A").charAt(0).toUpperCase()}</Avatar><Stack><Typography variant="h6">{user.name || "Account"}</Typography><Typography color="text.secondary">{user.handle ? `@${user.handle}` : user.email}</Typography>{user.handle && <Typography variant="body2" color="text.secondary">{user.email}</Typography>}</Stack></Stack></CardContent></Card>
                 <Card variant="outlined" component="form" onSubmit={save}><CardContent><Typography variant="h6" component="h2" gutterBottom>Profile</Typography><Stack spacing={2}>
                     <TextField label="Name" value={name} onChange={(event) => setName(event.target.value)} required />
+                    <TextField label="Custom handle" value={handle} onChange={(event) => setHandle(event.target.value.replace(/^@/, "").toLowerCase())} placeholder="p0x38" helperText="3–32 characters: lowercase letters, numbers, _ and -. The @ is added automatically." />
                     <TextField label="Profile description" value={bio} onChange={(event) => setBio(event.target.value)} multiline minRows={4} />
                     <FormControl fullWidth><InputLabel id="avatar-mode-label">Profile avatar</InputLabel><Select labelId="avatar-mode-label" label="Profile avatar" value={avatarMode} onChange={(event) => setAvatarMode(event.target.value)}><MenuItem value="initials">Text / initials</MenuItem><MenuItem value="default">Default</MenuItem><MenuItem value="identicon">Identicon</MenuItem><MenuItem value="gravatar">Gravatar</MenuItem><MenuItem value="custom">Custom</MenuItem></Select></FormControl>
                     <TextField label="Custom avatar value" value={avatarValue} onChange={(event) => setAvatarValue(event.target.value)} />
@@ -108,9 +105,7 @@ function AccountPage() {
                                 <DragHandle color="disabled" />
                                 <TextField label="Label" value={link.label} onChange={(event) => setProfileLinks((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, label: event.target.value } : item))} />
                                 <TextField label="URL" type="url" value={link.url} onChange={(event) => setProfileLinks((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, url: event.target.value } : item))} sx={{ flexGrow: 1 }} />
-                                <IconButton aria-label="Delete profile link" onClick={() => setProfileLinks((current) => current.filter((_, itemIndex) => itemIndex !== index))}>
-                                    <Delete />
-                                </IconButton>
+                                <IconButton aria-label="Delete profile link" onClick={() => setProfileLinks((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Delete /></IconButton>
                             </Stack>
                         ))}
                         <Button startIcon={<Add />} onClick={() => setProfileLinks((current) => [...current, { label: "", url: "" }])} disabled={profileLinks.length >= 20}>Add profile link</Button>
