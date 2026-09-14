@@ -17,6 +17,7 @@ import { recommendationRoutes } from "./recommendations.js";
 import { reportRoutes } from "./reports.js";
 import { searchRoutes } from "./search.js";
 import { tagRoutes } from "./tags.js";
+import { textRoutes } from "./texts.js";
 import { uploadRoutes } from "./uploads.js";
 import { userRoutes } from "./users.js";
 import { avatarRoutes } from "./avatars.js";
@@ -26,6 +27,7 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(healthRoutes);
     await fastify.register(userRoutes);
     await fastify.register(postRoutes);
+    await fastify.register(textRoutes);
     await fastify.register(permalinkRoutes);
     await fastify.register(postLifecycleRoutes);
     await fastify.register(reactionRoutes);
