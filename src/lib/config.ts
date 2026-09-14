@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export interface ServerConfig {
@@ -19,6 +19,10 @@ export interface ServerConfig {
         baseUrl?: string;
         trustedOrigins?: string[];
     };
+    analytics?: {
+        googleAnalyticsMeasurementId?: string;
+        googleTagManagerContainerId?: string;
+    };
 }
 
 const configPath = path.resolve(process.cwd(), "config.json");
@@ -30,6 +34,16 @@ export async function loadConfig(): Promise<ServerConfig> {
 
 export function loadConfigSync(): ServerConfig {
     return parseConfig(readFileSync(configPath, "utf8"));
+}
+
+export async function updateConfig(
+    update: (config: ServerConfig) => ServerConfig,
+): Promise<ServerConfig> {
+    const current = await loadConfig();
+    const next = update(current);
+    if (!isServerConfig(next)) throw new Error(`Invalid server configuration: ${configPath}`);
+    await writeFile(configPath, `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    return next;
 }
 
 export function resolveBaseUrl(config: ServerConfig): string {
@@ -86,6 +100,7 @@ function isServerConfig(value: unknown): value is ServerConfig {
     const storage = config.storage;
     const site = config.site;
     const auth = config.auth;
+    const analytics = config.analytics;
 
     return (
         isObject(server) &&
@@ -110,7 +125,13 @@ function isServerConfig(value: unknown): value is ServerConfig {
             (Array.isArray(auth.trustedOrigins) &&
                 auth.trustedOrigins.every(
                     (origin): origin is string => typeof origin === "string" && origin.length > 0,
-                )))
+                ))) &&
+        (analytics === undefined ||
+            (isObject(analytics) &&
+                (analytics.googleAnalyticsMeasurementId === undefined ||
+                    typeof analytics.googleAnalyticsMeasurementId === "string") &&
+                (analytics.googleTagManagerContainerId === undefined ||
+                    typeof analytics.googleTagManagerContainerId === "string")))
     );
 }
 
