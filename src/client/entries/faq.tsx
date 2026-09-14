@@ -12,7 +12,14 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 
-const sections = [
+type FaqItem = readonly [question: string, answer: string];
+
+interface FaqSectionData {
+    title: string;
+    items: readonly FaqItem[];
+}
+
+const sections: readonly FaqSectionData[] = [
     {
         title: "About imshare",
         items: [
@@ -78,7 +85,7 @@ const sections = [
     },
 ];
 
-function FaqSection({ title, items }: { title: string; items: readonly (readonly [string, string])[] }) {
+function FaqSection({ title, items }: FaqSectionData) {
     return (
         <Card variant="outlined">
             <CardContent>
