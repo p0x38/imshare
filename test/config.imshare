@@ -1,0 +1,45 @@
+server {
+    host = "127.0.0.1"
+    port = 5454
+}
+
+storage {
+    uploadDirectory = "uploads"
+    maxFileSize = 25MiB
+}
+
+site {
+    name = "imshare-test"
+    version = "1.0.0"
+}
+
+auth {
+    baseUrl = "http://127.0.0.1:5454"
+    trustedOrigins = []
+    emailAndPasswordEnabled = true
+
+    registration {
+        enabled = true
+        public = true
+    }
+}
+
+features {
+    imagePosts = true
+    textPosts = true
+    comments = true
+    reactions = true
+    reports = true
+    recommendations = true
+    notifications = true
+    search = true
+    publicProfiles = true
+    publicPosts = true
+    apiDocs = true
+    sitemap = true
+    robots = true
+}
+
+limits {
+    textPostCharacters = 500
+}
