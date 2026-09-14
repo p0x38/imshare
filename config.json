@@ -12,6 +12,9 @@
     "version": "1.0.0"
   },
   "auth": {
-    "baseUrl": "https://uhm.p0x38.mydns.jp"
+    "baseUrl": "https://uhm.p0x38.mydns.jp",
+    "trustedOrigins": [
+      "https://uhm.p0x38.mydns.jp"
+    ]
   }
 }
