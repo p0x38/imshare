@@ -9,6 +9,7 @@
         "build": "pnpm prisma generate && pnpm build:client && tsc",
         "build:client": "tsc -p tsconfig.client.json && vite build",
         "start": "node dist/server.js",
+        "openapi:export": "tsx src/export-openapi.ts",
         "db:generate": "pnpm prisma generate",
         "db:migrate": "pnpm prisma migrate dev",
         "db:validate": "pnpm prisma validate",
