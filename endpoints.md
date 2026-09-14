@@ -2,6 +2,15 @@
 
 Current HTTP API specification for `imshare`. The API namespace is `/v1`.
 
+## OpenAPI
+
+The API specification is generated at runtime from the Fastify route schemas and exposed through `@fastify/swagger` / `@fastify/swagger-ui`:
+
+- `GET /docs` — interactive Swagger UI.
+- `GET /docs/json` — generated OpenAPI 3.1 JSON document.
+
+Use `/docs` as the canonical interactive reference; this file remains a human-oriented overview of endpoint behavior and conventions.
+
 ## Conventions
 
 Successful resources use `{ "data": ... }`; paginated collections include `pagination` with `page`, `limit`, `total`, and `totalPages`. Errors use `{ "error": { "code": "...", "message": "..." } }`.
@@ -40,9 +49,9 @@ Authentication uses the Better Auth session cookie. Roles are `user < moderator 
 ## Posts
 
 - `GET /v1/posts` — public paginated posts. Query: `page`, `limit`, `user`, `tag`, `category`, `search`, `order`. Search matches title, description, and caption.
-- `POST /v1/posts` — create post; authenticated. Fields: `title` (1–500), `description` (≤10000), `caption` (≤10000), `sourceUrl` (≤4096), `allowDownload`, `tags` (≤100), `categoryId`, `uploadIds` (≤100). Uploads must be owned and unused.
+- `POST /v1/posts` — create post; authenticated. Fields: `title` (1–500), `description` (≤10000), `caption` (≤10000), `sourceUrl` (≤4096), `originalCreator` (nullable, 1–500), `originalCreatedAt` (nullable ISO date-time), `allowDownload`, `tags` (≤100), `categoryId`, `uploadIds` (≤100). Uploads must be owned and unused.
 - `GET /v1/posts/{postId}` — public post view.
-- `PATCH /v1/posts/{postId}` — update own post.
+- `PATCH /v1/posts/{postId}` — update own post; supports `originalCreator` and `originalCreatedAt` in addition to the regular post fields.
 - `DELETE /v1/posts/{postId}` — delete own post; `204`.
 - `GET /v1/posts/{postId}/tags` — public post tags.
 - `POST /v1/posts/{postId}/tags` — add tag; owner only; body `{ "tagId": "..." }`; upserted.
@@ -78,68 +87,50 @@ Post reaction types are `like`, `favorite`, and `save`.
 - `POST /v1/tags` — create tag; authenticated. Body requires `name` and slug matching `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
 - `GET /v1/tags/{tagId}` — public tag and post count.
 - `PATCH /v1/tags/{tagId}` — update tag; authenticated.
-- `DELETE /v1/tags/{tagId}` — delete tag; authenticated; `204`.
-- `GET /v1/tags/{tagId}/posts` — public posts for tag. Query: `page`, `limit`, `order`.
+- `DELETE /v1/tags/{tagId}` — delete tag; `204`.
+- `GET /v1/tags/{tagId}/posts` — paginated public posts for a tag.
 
 ## Categories
 
 - `GET /v1/categories` — paginated public categories. Query: `page`, `limit`, `order`.
-- `POST /v1/categories` — create category; authenticated. Body requires `name` and `slug`; optional `description`.
+- `POST /v1/categories` — create category; authenticated. Body requires `name` and `slug`; `description` is optional.
 - `GET /v1/categories/{categoryId}` — public category and post count.
 - `PATCH /v1/categories/{categoryId}` — update category; authenticated.
-- `DELETE /v1/categories/{categoryId}` — delete category; authenticated; `204`.
-- `GET /v1/categories/{categoryId}/posts` — public category posts. Query: `page`, `limit`, `order`.
+- `DELETE /v1/categories/{categoryId}` — delete category; `204`.
+- `GET /v1/categories/{categoryId}/posts` — paginated public posts for a category.
 
-## Search
+## Search & Recommendations
 
-`GET /v1/search` is public. Query: `q`, `type`, `user`, `tag`, `category`, `page`, `limit`, `order`. `type` is `all`, `posts`, `users`, `tags`, or `categories`. Specific types return paginated collections; `all` returns arrays for each resource type plus combined pagination metadata.
+- `GET /v1/search` — searches posts, users, tags, and categories. Query: `q`, `type`, `user`, `tag`, `category`, `page`, `limit`, `order`.
+- `GET /v1/recommendations` — paginated public post recommendations based on authenticated reaction preferences when available.
 
-## Uploads
+## Uploads & Images
 
-- `POST /v1/uploads` — authenticated multipart image upload. Supported types: JPG/JPEG, PNG, GIF, WebP, BMP, AVIF. Validates extension, MIME type, signature, and configured size. `?multiple=true` permits up to 20 files. Returns upload object(s) containing `/v1/posts/image/{uploadId}` URLs.
-- `GET /v1/uploads/{uploadId}` — own upload metadata; authenticated owner only.
-- `DELETE /v1/uploads/{uploadId}` — delete own unused upload; `204`. Attached uploads return `409 UPLOAD_IN_USE`.
-
-## Image Delivery
-
-- `GET /v1/posts/image/{uploadId}` — public image delivery. Query: `width`, `height` (16–4096), `fit` (`cover|contain|fill|inside|outside`), `format` (`webp|jpeg|jpg|png|avif`), `download=true`. Default fit is `inside`. Transforms are cached. Downloads respect post `allowDownload`.
+- `POST /v1/uploads` — multipart image upload; supports JPG/JPEG, PNG, GIF, WebP, BMP, AVIF and optional multi-upload mode.
+- `GET /v1/uploads/{uploadId}` — upload metadata for an owned upload.
+- `DELETE /v1/uploads/{uploadId}` — delete an unused owned upload; attached uploads return `409`.
+- `GET /v1/posts/image/{uploadId}` — public image delivery with optional resize and format conversion.
 - `GET /v1/posts/image/{uploadId}/placeholder` — public ThumbHash PNG placeholder.
 
 ## Emojis
 
 - `GET /v1/emojis` — public custom emoji list.
-- `POST /v1/emojis` — authenticated custom emoji creation using an owned imshare image URL. Name: 1–32 lowercase letters/numbers/`_`/`+`/`-`.
-- `DELETE /v1/emojis/{emojiId}` — delete own emoji; `204`.
+- `POST /v1/emojis` — create a custom emoji from an owned image URL.
+- `DELETE /v1/emojis/{emojiId}` — delete an owned custom emoji; `204`.
 
-## Recommendations
+## Administration
 
-- `GET /v1/recommendations` — public paginated recommendations. Query: `page`, `limit`. Authenticated sessions use reacted post tags/categories as preferences and exclude the user's own posts.
+- `GET /v1/admin/overview` — moderation/admin overview counts.
+- `GET /v1/admin/registration-token` — current registration token; admin only.
+- `GET /v1/admin/users` — paginated moderation user list.
+- `GET /v1/admin/reports` — paginated moderation reports.
+- `PATCH /v1/admin/reports/{reportId}` — update report status.
+- `POST /v1/admin/users/{userId}/kick` — revoke all active sessions for a user.
+- `POST /v1/admin/users/{userId}/ban` — ban a user and revoke sessions.
+- `POST /v1/admin/users/{userId}/unban` — remove a user ban.
 
-## Moderation / Administration
+## Health
 
-- `GET /v1/admin/overview` — moderator/admin summary counts.
-- `GET /v1/admin/registration-token` — admin-only registration token.
-- `GET /v1/admin/users` — moderator/admin user list. Query: `page`, `limit`, `search`, `role`, `banned`; limit 1–100, default 50.
-- `GET /v1/admin/reports` — moderator/admin reports. Query: `status` (`open|resolved|dismissed`, default `open`), `page`, `limit`.
-- `PATCH /v1/admin/reports/{reportId}` — change report status.
-- `POST /v1/admin/users/{userId}/kick` — revoke target sessions; moderator/admin.
-- `POST /v1/admin/users/{userId}/ban` — ban target and revoke sessions. Body: `reason` (1–500), optional `durationHours` (0–8760; 0 is indefinite).
-- `POST /v1/admin/users/{userId}/unban` — remove ban.
-- `PATCH /v1/admin/users/{userId}/role` — admin-only role change. Roles: `user|moderator|admin`; cannot self-change or demote the last admin.
-- `GET /v1/admin/logs` — moderator/admin latest 100 moderation logs.
-
-## System
-
-- `GET /v1/health` — public lightweight health response `{ "status": "ok" }`.
-- `GET /v1/version` — public `{ "data": { "api": "v1", "version": "..." } }`.
-
-## Metadata / Crawlers
-
-These are root-level rather than `/v1`:
-
-- `GET /sitemap.xml` — XML sitemap for static pages, public users/posts/tags/categories, with image-sitemap entries for post uploads.
-- `GET /robots.txt` — crawler directives and sitemap location.
-
-## Realtime
-
-Socket.IO supplements the HTTP API for transient upload-status and post-reaction updates. HTTP endpoints remain authoritative for durable state.
+- `GET /v1/health` — lightweight health check.
+- `GET /v1/ready` — readiness check including database connectivity.
+- `GET /v1/version` — API and application version information.
