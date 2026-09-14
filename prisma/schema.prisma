@@ -201,7 +201,7 @@ model Emoji {
 }
 
 model PostReaction {
-  id String @id @default(cuid())
+  id String @id
   type String
   createdAt DateTime @default(now())
   userId String
@@ -215,7 +215,7 @@ model PostReaction {
 }
 
 model Comment {
-  id String @id @default(cuid())
+  id String @id
   body String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -232,7 +232,7 @@ model Comment {
 }
 
 model CommentReaction {
-  id String @id @default(cuid())
+  id String @id
   type String @default("like")
   createdAt DateTime @default(now())
   userId String
@@ -245,7 +245,7 @@ model CommentReaction {
 }
 
 model Report {
-  id String @id @default(cuid())
+  id String @id
   reason String
   details String?
   status String @default("open")
