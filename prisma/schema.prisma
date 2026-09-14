@@ -98,6 +98,8 @@ model Verification {
 model Post {
   id String @id @default(cuid())
   title String
+  contentType String @default("image")
+  textContent String?
   description String?
   caption String?
   sourceUrl String?
@@ -131,6 +133,7 @@ model Post {
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@index([status, visibility, scheduledAt])
+  @@index([contentType, createdAt])
   @@index([userId, permalinkKey])
   @@map("post")
 }
@@ -156,7 +159,7 @@ model PostRevision {
 }
 
 model PostView {
-  id String @id @default(cuid())
+  id String @id
   postId String
   userId String?
   viewedAt DateTime @default(now())
@@ -168,7 +171,7 @@ model PostView {
 }
 
 model Upload {
-  id String @id @default(cuid())
+  id String @id
   filename String
   originalName String
   mimeType String
@@ -190,7 +193,7 @@ model Upload {
 }
 
 model Emoji {
-  id String @id @default(cuid())
+  id String @id
   name String @unique
   url String
   createdAt DateTime @default(now())
@@ -201,7 +204,7 @@ model Emoji {
 }
 
 model PostReaction {
-  id String @id @default(cuid())
+  id String @id
   type String
   createdAt DateTime @default(now())
   userId String
@@ -215,7 +218,7 @@ model PostReaction {
 }
 
 model Comment {
-  id String @id @default(cuid())
+  id String @id
   body String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -232,7 +235,7 @@ model Comment {
 }
 
 model CommentReaction {
-  id String @id @default(cuid())
+  id String @id
   type String @default("like")
   createdAt DateTime @default(now())
   userId String
@@ -245,7 +248,7 @@ model CommentReaction {
 }
 
 model Report {
-  id String @id @default(cuid())
+  id String @id
   reason String
   details String?
   status String @default("open")
@@ -263,7 +266,7 @@ model Report {
 }
 
 model Notification {
-  id String @id @default(cuid())
+  id String @id
   type String
   message String
   createdAt DateTime @default(now())
@@ -283,7 +286,7 @@ model Notification {
 }
 
 model ProfileLink {
-  id String @id @default(cuid())
+  id String @id
   label String
   url String
   position Int @default(0)
@@ -296,7 +299,7 @@ model ProfileLink {
 }
 
 model Tag {
-  id String @id @default(cuid())
+  id String @id
   name String @unique
   slug String @unique
   createdAt DateTime @default(now())
@@ -316,7 +319,7 @@ model PostTag {
 }
 
 model Category {
-  id String @id @default(cuid())
+  id String @id
   name String @unique
   slug String @unique
   description String?
@@ -327,7 +330,7 @@ model Category {
 }
 
 model ModerationLog {
-  id String @id @default(cuid())
+  id String @id
   action String
   reason String?
   createdAt DateTime @default(now())
