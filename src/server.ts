@@ -72,27 +72,69 @@ function releaseLock(): void {
 
 acquireLock();
 process.once("exit", releaseLock);
-process.once("SIGINT", () => {
-    releaseLock();
-    process.exit(0);
-});
-process.once("SIGTERM", () => {
-    releaseLock();
-    process.exit(0);
-});
 
 const config = await loadConfig();
 const app = await buildApp();
 const io = attachRealtime(app.server);
 
-const shutdown = async () => {
-    await io.close();
-    await app.close();
-    await prisma.$disconnect();
+let shuttingDown = false;
+let inputConfigured = false;
+
+function restoreInput(): void {
+    if (!inputConfigured || !process.stdin.isTTY) return;
+
+    try {
+        process.stdin.setRawMode?.(false);
+    } catch {
+        // Terminal state may already have been restored by the parent process.
+    }
+}
+
+const shutdown = async (reason: string, exitCode = 0): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    restoreInput();
+
+    app.log.info(`shutting down (${reason})...`);
+
+    try {
+        await io.close();
+        await app.close();
+        await prisma.$disconnect();
+        process.exit(exitCode);
+    } catch (error) {
+        app.log.error(error);
+        process.exit(1);
+    }
 };
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.once("exit", restoreInput);
+
+if (process.stdin.isTTY) {
+    process.stdin.setEncoding("utf8");
+    process.stdin.setRawMode?.(true);
+    process.stdin.resume();
+    inputConfigured = true;
+
+    process.stdin.on("data", (chunk: string) => {
+        for (const char of chunk) {
+            if (char === "q" || char === "Q") {
+                void shutdown("Q");
+                return;
+            }
+            if (char === "\u0003") {
+                void shutdown("Ctrl+C");
+                return;
+            }
+            if (char === "\u0004") {
+                void shutdown("Ctrl+D");
+                return;
+            }
+        }
+    });
+}
 
 try {
     await app.listen({ host: config.server.host, port: config.server.port });
@@ -101,8 +143,10 @@ try {
     app.log.info(
         `registration access token: ${registration.token} (expires ${new Date(registration.expiresAt).toISOString()})`,
     );
+    if (process.stdin.isTTY) app.log.info("press Q, Ctrl+C, or Ctrl+D to stop");
 } catch (error) {
     app.log.error(error);
+    restoreInput();
     await io.close();
     await prisma.$disconnect();
     process.exit(1);
