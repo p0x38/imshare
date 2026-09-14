@@ -35,9 +35,9 @@ const documentation: Record<string, OperationDocumentation> = {
     "GET /v1/users/{userId}/links": { summary: "List user's profile links", description: "Returns the public profile links belonging to the specified user." },
     "GET /v1/users/{userId}/avatar": { summary: "Get user avatar", description: "Returns or redirects to the user's generated, custom, or Gravatar avatar." },
     "GET /v1/posts": { summary: "List posts", description: "Returns public posts as a paginated collection. Search matches title, description, and caption. Supports page, limit, user, tag, category, search, and order query parameters." },
-    "POST /v1/posts": { summary: "Create post", description: "Creates a post for the authenticated user. Uploads must be owned by the user and unused. Supports title (1–500), description (≤10000), caption (≤10000), sourceUrl (≤4096), allowDownload, up to 100 tags, an optional categoryId, and up to 100 uploadIds.", requestExample: { title: "Example post", description: "An example description.", caption: "Example caption", sourceUrl: "https://example.com/source", allowDownload: true, tags: ["example"], categoryId: "category-id", uploadIds: ["upload-id"] } },
-    "GET /v1/posts/{postId}": { summary: "Get post", description: "Returns the public representation of a post." },
-    "PATCH /v1/posts/{postId}": { summary: "Update post", description: "Updates a post owned by the authenticated user.", requestExample: { title: "Updated title", description: "Updated description", allowDownload: false } },
+    "POST /v1/posts": { summary: "Create post", description: "Creates a post for the authenticated user. Uploads must be owned by the user and unused. Supports title (1–500), description (≤10000), caption (≤10000), sourceUrl (≤4096), originalCreator (1–500 characters, optional credit for the original author/creator), originalCreatedAt (optional ISO 8601 date-time for when the original content was created), allowDownload, up to 100 tags, an optional categoryId, and up to 100 uploadIds. The original creator and creation date describe the referenced/original content and are separate from the imshare post's own creation timestamp.", requestExample: { title: "Example post", description: "An example description.", caption: "Example caption", sourceUrl: "https://example.com/source", originalCreator: "Original Creator", originalCreatedAt: "2025-01-15T12:00:00.000Z", allowDownload: true, tags: ["example"], categoryId: "category-id", uploadIds: ["upload-id"] } },
+    "GET /v1/posts/{postId}": { summary: "Get post", description: "Returns the public representation of a post, including original creator and original creation date metadata when provided." },
+    "PATCH /v1/posts/{postId}": { summary: "Update post", description: "Updates a post owned by the authenticated user. originalCreator may be used to set or clear the credited original author/creator, and originalCreatedAt may be used to set or clear the original content creation time. Both are optional and nullable.", requestExample: { title: "Updated title", originalCreator: "Original Creator", originalCreatedAt: "2025-01-15T12:00:00.000Z", description: "Updated description", allowDownload: false } },
     "DELETE /v1/posts/{postId}": { summary: "Delete post", description: "Deletes a post owned by the authenticated user. Returns 204 on success." },
     "GET /v1/posts/{postId}/tags": { summary: "List post tags", description: "Returns the tags attached to a public post." },
     "POST /v1/posts/{postId}/tags": { summary: "Add post tag", description: "Adds a tag to a post owned by the authenticated user. Existing associations are upserted.", requestExample: { tagId: "tag-id" } },
@@ -84,106 +84,77 @@ const documentation: Record<string, OperationDocumentation> = {
     "PATCH /v1/admin/reports/{reportId}": { summary: "Update report status", description: "Changes the status of a moderation report. Moderator/admin access is required.", requestExample: { status: "resolved" } },
     "POST /v1/admin/users/{userId}/kick": { summary: "Kick user sessions", description: "Revokes all active sessions for the target user. Moderator/admin access is required." },
     "POST /v1/admin/users/{userId}/ban": { summary: "Ban user", description: "Bans a user and revokes their sessions. The reason is 1–500 characters. durationHours is optional, accepts 0–8760, and 0 means an indefinite ban.", requestExample: { reason: "Repeated policy violations.", durationHours: 24 } },
+    "POST /v1/admin/users/{userId}/unban": { summary: "Unban user", description: "Removes a user's ban. Moderator/admin access is required." },
+    "POST /v1/admin/users/{userId}/role": { summary: "Update user role", description: "Updates a user's role. Supported roles are user, moderator, and admin.", requestExample: { role: "moderator" } },
 };
 
-export async function registerOpenApi(app: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>): Promise<void> {
-    await app.register(fastifySwagger, {
+export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>) {
+    await fastify.register(fastifySwagger, {
         openapi: {
-            openapi: "3.1.0",
-            info: { title: "imshare API", description: "Public HTTP API for imshare.", version: "1.0.0" },
-            servers: [{ url: "/" }],
+            info: {
+                title: `${config.site.name} API`,
+                description: config.site.description,
+                version: config.site.version,
+            },
+            servers: [{ url: config.auth.baseUrl }],
             tags: [
-                { name: "health", description: "Service health and metadata." },
-                { name: "me", description: "Authenticated user operations." },
-                { name: "users", description: "Public and authenticated user operations." },
-                { name: "posts", description: "Post creation, retrieval, and management." },
-                { name: "reactions", description: "Post reactions." },
-                { name: "comments", description: "Post comments and comment reactions." },
-                { name: "reports", description: "Content reporting." },
-                { name: "tags", description: "Tag management." },
-                { name: "categories", description: "Category management." },
-                { name: "search", description: "Search." },
-                { name: "uploads", description: "Image uploads and delivery." },
-                { name: "emojis", description: "Custom emojis." },
-                { name: "recommendations", description: "Post recommendations." },
-                { name: "admin", description: "Administrative and moderation operations." },
+                { name: "Health" },
+                { name: "Authentication" },
+                { name: "Users" },
+                { name: "Posts" },
+                { name: "Comments" },
+                { name: "Reports" },
+                { name: "Tags" },
+                { name: "Categories" },
+                { name: "Uploads" },
+                { name: "Emojis" },
+                { name: "Search" },
+                { name: "Recommendations" },
+                { name: "Administration" },
             ],
             components: {
                 securitySchemes: {
                     cookieAuth: { type: "apiKey", in: "cookie", name: "better-auth.session_token" },
                 },
+                schemas: {
+                    ErrorResponse: errorResponseSchema,
+                    Post: postResponseSchema.properties.data,
+                    PostCollection: postCollectionResponseSchema,
+                },
             },
         },
-        transformObject(documentObject) {
-            const document = "openapiObject" in documentObject ? documentObject.openapiObject : documentObject.swaggerObject;
-            const documentRecord = document as Record<string, unknown>;
-            const existingComponents = (documentRecord.components as Record<string, unknown> | undefined) ?? {};
-            const existingSchemas = (existingComponents.schemas as Record<string, unknown> | undefined) ?? {};
-            const paths = Object.fromEntries(
-                Object.entries(document.paths ?? {}).filter(([pathname]) => pathname.startsWith("/v1"))
-                    .map(([pathname, pathItem]) => {
-                        const tag = pathname.split("/")[2] ?? "general";
-                        const updatedPathItem = Object.fromEntries(Object.entries(pathItem ?? {}).map(([method, operation]) => {
-                            if (!operation || typeof operation !== "object") return [method, operation];
-                            const operationObject = operation as Record<string, unknown>;
-                            const key = `${method.toUpperCase()} ${pathname}`;
-                            const doc = documentation[key];
-                            const parameters = Array.isArray(operationObject.parameters) ? operationObject.parameters : [];
-                            const responses = operationObject.responses && typeof operationObject.responses === "object" ? { ...(operationObject.responses as Record<string, unknown>) } : {};
-                            for (const [status, example] of Object.entries(doc?.responseExamples ?? {})) {
-                                const existing: Record<string, unknown> = responses[status] && typeof responses[status] === "object" ? { ...(responses[status] as Record<string, unknown>) } : { description: `HTTP ${status} response.` };
-                                const content: Record<string, Record<string, unknown>> = existing.content && typeof existing.content === "object" ? { ...(existing.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
-                                const contentType = Object.keys(content)[0] ?? "application/json";
-                                const mediaType = { ...(content[contentType] ?? {}) };
-                                mediaType.example = example;
-                                content[contentType] = mediaType;
-                                responses[status] = { ...existing, content };
-                            }
-                            const schemaName = pathname === "/v1/posts" ? (method === "get" ? "PostCollectionResponse" : "PostResponse") : pathname.startsWith("/v1/posts/") && method === "get" ? "PostResponse" : null;
-                            if (schemaName && responses["200"] && typeof responses["200"] === "object") {
-                                responses["200"] = { ...(responses["200"] as Record<string, unknown>), content: { "application/json": { schema: { $ref: `#/components/schemas/${schemaName}` } } } };
-                            }
-                            const updatedOperation: Record<string, unknown> = {
-                                ...operationObject,
-                                tags: [...new Set([...(Array.isArray(operationObject.tags) ? operationObject.tags : []), tag])],
-                                ...(doc ? { summary: operationObject.summary ?? doc.summary, description: operationObject.description ? `${operationObject.description}\n\n${doc.description}` : doc.description } : { summary: operationObject.summary ?? `${method.toUpperCase()} ${pathname}`, description: operationObject.description ?? `HTTP ${method.toUpperCase()} endpoint for ${tag}.` }),
-                                parameters,
-                                responses,
-                            };
-                            if (doc?.requestExample !== undefined) {
-                                const existingRequestBody = updatedOperation.requestBody && typeof updatedOperation.requestBody === "object" ? { ...(updatedOperation.requestBody as Record<string, unknown>) } : {};
-                                const content: Record<string, Record<string, unknown>> = existingRequestBody.content && typeof existingRequestBody.content === "object" ? { ...(existingRequestBody.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
-                                const contentType = Object.keys(content)[0] ?? "application/json";
-                                const mediaType = { ...(content[contentType] ?? {}) };
-                                mediaType.example = doc.requestExample;
-                                content[contentType] = mediaType;
-                                updatedOperation.requestBody = { ...existingRequestBody, content };
-                            }
-                            return [method, updatedOperation] as const;
-                        }));
-                        return [pathname, updatedPathItem] as const;
-                    }),
-            );
-            return {
-                ...document,
-                paths,
-                components: {
-                    ...existingComponents,
-                    schemas: {
-                        ...existingSchemas,
-                        ErrorResponse: errorResponseSchema,
-                        PostResponse: postResponseSchema,
-                        PostCollectionResponse: postCollectionResponseSchema,
-                    },
-                },
-                externalDocs: { description: "imshare project documentation", url: "https://github.com/p0x38/imshare" },
-            };
+        transform: ({ schema, url, route }) => {
+            const method = route?.toUpperCase() ?? "";
+            const key = `${method} ${url}`;
+            const doc = documentation[key];
+            if (!doc) return { schema, url, route };
+            const current = (schema as Record<string, unknown>) ?? {};
+            const response = (current.responses as Record<string, unknown> | undefined) ?? {};
+            const transformed = {
+                ...current,
+                summary: doc.summary,
+                description: doc.description,
+                responses: Object.keys(response).length > 0 ? response : { "200": { description: "Successful response." } },
+            } as Record<string, unknown>;
+            if (doc.requestExample) {
+                const body = (transformed.requestBody as Record<string, unknown> | undefined) ?? {};
+                const content = (body.content as Record<string, unknown> | undefined) ?? { "application/json": {} };
+                const json = (content["application/json"] as Record<string, unknown> | undefined) ?? {};
+                transformed.requestBody = { ...body, content: { ...content, "application/json": { ...json, example: doc.requestExample } } };
+            }
+            for (const [status, example] of Object.entries(doc.responseExamples ?? {})) {
+                const responseEntry = (transformed.responses as Record<string, unknown>)[status] as Record<string, unknown> | undefined;
+                if (responseEntry) {
+                    const content = (responseEntry.content as Record<string, unknown> | undefined) ?? { "application/json": {} };
+                    const json = (content["application/json"] as Record<string, unknown> | undefined) ?? {};
+                    (transformed.responses as Record<string, unknown>)[status] = {
+                        ...responseEntry,
+                        content: { ...content, "application/json": { ...json, example } },
+                    };
+                }
+            }
+            return { schema: transformed, url, route };
         },
     });
-
-    await app.register(fastifySwaggerUi, {
-        routePrefix: "/docs",
-        staticCSP: false,
-        uiConfig: { docExpansion: "list", deepLinking: true, filter: true, displayRequestDuration: true },
-    });
+    await fastify.register(fastifySwaggerUi, { routePrefix: "/docs" });
 }
