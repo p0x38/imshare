@@ -13,12 +13,13 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { App, useColorMode, useThemeSettings } from "../components/App";
+import { App, useColorMode, useLanguage, useThemeSettings } from "../components/App";
 import type { AccentColor } from "../theme";
 import { Page } from "../components/Page";
 
 function SettingsPage() {
     const { preference, setPreference } = useColorMode();
+    const { language, setLanguage } = useLanguage();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
     const [saved, setSaved] = useState(false);
 
@@ -32,6 +33,20 @@ function SettingsPage() {
                 <Card variant="outlined">
                     <CardContent>
                         <Stack spacing={2}>
+                            <Typography variant="h6" component="h2">Language</Typography>
+                            <FormControl>
+                                <RadioGroup
+                                    aria-label="Language"
+                                    value={language}
+                                    onChange={(event) => {
+                                        setLanguage(event.target.value as "en" | "ja");
+                                        saveNotice();
+                                    }}
+                                >
+                                    <FormControlLabel value="en" control={<Radio />} label="English" />
+                                    <FormControlLabel value="ja" control={<Radio />} label="日本語" />
+                                </RadioGroup>
+                            </FormControl>
                             <Typography variant="h6" component="h2">Appearance</Typography>
                             <FormControl>
                                 <RadioGroup
