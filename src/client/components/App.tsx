@@ -4,6 +4,7 @@ import { createAppTheme, type AccentColor, type ThemeSettings } from "../theme";
 
 type ColorModePreference = "light" | "dark" | "auto";
 type ColorMode = "light" | "dark";
+export type Language = "en" | "ja";
 
 const defaultThemeSettings: ThemeSettings = {
     animations: false,
@@ -18,6 +19,11 @@ interface ColorModeContextValue {
     toggle: () => void;
 }
 
+interface LanguageContextValue {
+    language: Language;
+    setLanguage: (language: Language) => void;
+}
+
 interface ThemeSettingsContextValue {
     settings: ThemeSettings;
     setAnimations: (enabled: boolean) => void;
@@ -26,6 +32,7 @@ interface ThemeSettingsContextValue {
 }
 
 export const ColorModeContext = createContext<ColorModeContextValue | null>(null);
+export const LanguageContext = createContext<LanguageContextValue | null>(null);
 export const ThemeSettingsContext = createContext<ThemeSettingsContextValue | null>(null);
 
 function getDeviceMode(): ColorMode {
@@ -36,6 +43,12 @@ function initialColorModePreference(): ColorModePreference {
     const stored = window.localStorage.getItem("imshare-color-mode");
     if (stored === "light" || stored === "dark" || stored === "auto") return stored;
     return "auto";
+}
+
+function initialLanguage(): Language {
+    const stored = window.localStorage.getItem("imshare-language");
+    if (stored === "en" || stored === "ja") return stored;
+    return "en";
 }
 
 function initialThemeSettings(): ThemeSettings {
@@ -66,6 +79,12 @@ export function useColorMode() {
     return context;
 }
 
+export function useLanguage() {
+    const context = useContext(LanguageContext);
+    if (!context) throw new Error("useLanguage must be used inside App.");
+    return context;
+}
+
 export function useThemeSettings() {
     const context = useContext(ThemeSettingsContext);
     if (!context) throw new Error("useThemeSettings must be used inside App.");
@@ -77,6 +96,7 @@ export function App({ children }: { children: React.ReactNode }) {
         initialColorModePreference,
     );
     const [deviceMode, setDeviceMode] = useState<ColorMode>(getDeviceMode);
+    const [language, setLanguageState] = useState<Language>(initialLanguage);
     const [settings, setSettings] = useState<ThemeSettings>(initialThemeSettings);
 
     useEffect(() => {
@@ -87,6 +107,10 @@ export function App({ children }: { children: React.ReactNode }) {
         mediaQuery.addEventListener("change", handleChange);
         return () => mediaQuery.removeEventListener("change", handleChange);
     }, []);
+
+    useEffect(() => {
+        document.documentElement.lang = language;
+    }, [language]);
 
     useEffect(() => {
         const loading = document.getElementById("app-loading");
@@ -102,6 +126,11 @@ export function App({ children }: { children: React.ReactNode }) {
         window.localStorage.setItem("imshare-color-mode", next);
     };
 
+    const setLanguage = (next: Language) => {
+        setLanguageState(next);
+        window.localStorage.setItem("imshare-language", next);
+    };
+
     const colorMode = useMemo(
         () => ({
             mode,
@@ -110,6 +139,11 @@ export function App({ children }: { children: React.ReactNode }) {
             toggle: () => setPreference(mode === "light" ? "dark" : "light"),
         }),
         [mode, preference],
+    );
+
+    const languageContext = useMemo(
+        () => ({ language, setLanguage }),
+        [language],
     );
 
     const updateSettings = (update: Partial<ThemeSettings>) => {
@@ -133,22 +167,24 @@ export function App({ children }: { children: React.ReactNode }) {
 
     return (
         <ColorModeContext.Provider value={colorMode}>
-            <ThemeSettingsContext.Provider value={themeSettings}>
-                <ThemeProvider theme={theme}>
-                    <CssBaseline />
-                    <GlobalStyles
-                        styles={{
-                            "main:has(> [id$='-page']), main#post": {
-                                width: "100% !important",
-                                maxWidth: "none !important",
-                                margin: "0 !important",
-                                padding: "0 !important",
-                            },
-                        }}
-                    />
-                    {children}
-                </ThemeProvider>
-            </ThemeSettingsContext.Provider>
+            <LanguageContext.Provider value={languageContext}>
+                <ThemeSettingsContext.Provider value={themeSettings}>
+                    <ThemeProvider theme={theme}>
+                        <CssBaseline />
+                        <GlobalStyles
+                            styles={{
+                                "main:has(> [id$='-page']), main#post": {
+                                    width: "100% !important",
+                                    maxWidth: "none !important",
+                                    margin: "0 !important",
+                                    padding: "0 !important",
+                                },
+                            }}
+                        />
+                        {children}
+                    </ThemeProvider>
+                </ThemeSettingsContext.Provider>
+            </LanguageContext.Provider>
         </ColorModeContext.Provider>
     );
 }
