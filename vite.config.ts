@@ -21,6 +21,7 @@ export default defineConfig({
                 settings: path.resolve(process.cwd(), "src/client/entries/settings.tsx"),
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
                 legacy: path.resolve(process.cwd(), "src/client/entries/legacy.tsx"),
+                admin: path.resolve(process.cwd(), "src/client/entries/admin.tsx"),
                 faq: path.resolve(process.cwd(), "src/client/entries/faq.tsx"),
                 error: path.resolve(process.cwd(), "src/client/entries/error.tsx"),
             },
