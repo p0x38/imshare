@@ -1,20 +1,6 @@
 import {
-    Alert,
-    Box,
-    Button,
-    Card,
-    CardContent,
-    Checkbox,
-    FormControl,
-    FormControlLabel,
-    IconButton,
-    InputLabel,
-    LinearProgress,
-    MenuItem,
-    Select,
-    Stack,
-    TextField,
-    Typography,
+    Alert, Box, Button, Card, CardContent, Checkbox, FormControl, FormControlLabel, IconButton,
+    InputLabel, LinearProgress, MenuItem, Select, Stack, TextField, Typography,
 } from "@mui/material";
 import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
 import { useEffect, useState } from "react";
@@ -75,7 +61,11 @@ function PostEditor() {
             const target = index + delta;
             if (target < 0 || target >= current.length) return current;
             const next = [...current];
-            [next[index], next[target]] = [next[target], next[index]];
+            const currentFile = next[index];
+            const targetFile = next[target];
+            if (!currentFile || !targetFile) return current;
+            next[index] = targetFile;
+            next[target] = currentFile;
             return next;
         });
     }
@@ -122,62 +112,15 @@ function PostEditor() {
                 setProgress(100);
                 setUploadStatus("All uploads ready");
             }
-            const payload = {
-                title,
-                caption: caption || null,
-                description: description || null,
-                sourceUrl: sourceUrl || null,
-                allowDownload,
-                ...(editing ? {} : { uploadIds }),
-                tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
-                categoryId: categoryId || null,
-            };
-            const response = await api<{ data: Post }>(editing ? `/v1/posts/${encodeURIComponent(postId!)}` : "/v1/posts", {
-                method: editing ? "PATCH" : "POST",
-                body: JSON.stringify(payload),
-            });
+            const payload = { title, caption: caption || null, description: description || null, sourceUrl: sourceUrl || null, allowDownload, ...(editing ? {} : { uploadIds }), tags: tags.split(",").map((value) => value.trim()).filter(Boolean), categoryId: categoryId || null };
+            const response = await api<{ data: Post }>(editing ? `/v1/posts/${encodeURIComponent(postId!)}` : "/v1/posts", { method: editing ? "PATCH" : "POST", body: JSON.stringify(payload) });
             location.href = editing ? `/dashboard/posts/${encodeURIComponent(response.data.id)}/` : `/posts/${encodeURIComponent(response.data.id)}`;
-        } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to save post.");
-        } finally { setSaving(false); }
+        } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save post."); }
+        finally { setSaving(false); }
     }
 
     if (editing && !post && !error) return <Page><Typography>Loading…</Typography></Page>;
-    return (
-        <Page maxWidth="md">
-            <Stack spacing={2}>
-                <Typography variant="h4" component="h1">{editing ? "Edit Post" : "New Post"}</Typography>
-                {error ? <Alert severity="error">{error}</Alert> : null}
-                <Card variant="outlined">
-                    <CardContent>
-                        <Stack component="form" spacing={2} onSubmit={submit}>
-                            {!editing ? (
-                                <Box
-                                    onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
-                                    onDragLeave={() => setDragging(false)}
-                                    onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }}
-                                    sx={{ p: 2, border: 1, borderColor: dragging ? "primary.main" : "divider", borderRadius: 2, bgcolor: dragging ? "action.hover" : "transparent" }}
-                                >
-                                    <Button variant="outlined" component="label">Choose images<input hidden type="file" accept="image/*" multiple onChange={(event) => addFiles(event.target.files ?? [])} /></Button>
-                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Drop images here or use the file picker.</Typography>
-                                    {files.length ? <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 1.5, mt: 2 }}>{files.map((file, index) => <Card key={`${file.name}-${index}`} variant="outlined"><Box component="img" src={URL.createObjectURL(file)} alt={file.name} sx={{ width: "100%", aspectRatio: "1", objectFit: "cover" }} /><CardContent sx={{ p: 1 }}><Typography variant="body2" noWrap>{index + 1}. {file.name}</Typography><Stack direction="row" spacing={0.25} justifyContent="flex-end"><IconButton size="small" aria-label="Move image up" disabled={index === 0} onClick={() => moveFile(index, -1)}><ArrowUpward fontSize="small" /></IconButton><IconButton size="small" aria-label="Move image down" disabled={index === files.length - 1} onClick={() => moveFile(index, 1)}><ArrowDownward fontSize="small" /></IconButton><IconButton size="small" color="error" aria-label="Remove image" onClick={() => removeFile(index)}><Delete fontSize="small" /></IconButton></Stack></CardContent></Card>)}</Box> : null}
-                                </Box>
-                            ) : null}
-                            <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required inputProps={{ maxLength: 200 }} />
-                            <TextField label="Image caption" value={caption} onChange={(e) => setCaption(e.target.value)} multiline minRows={2} inputProps={{ maxLength: 10000 }} />
-                            <TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} />
-                            <TextField label="Source URL" type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} />
-                            <FormControlLabel control={<Checkbox checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />} label="Allow visitors to download the original image" />
-                            <TextField label="Tags" value={tags} onChange={(e) => setTags(e.target.value)} helperText="Separate tags with commas" />
-                            <FormControl fullWidth><InputLabel id="category-label">Category</InputLabel><Select labelId="category-label" label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}><MenuItem value="">None</MenuItem>{categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</Select></FormControl>
-                            {saving && !editing ? <Stack spacing={0.5}><LinearProgress variant={progress ? "determinate" : "indeterminate"} value={progress} /><Typography variant="body2" color="text.secondary">{uploadStatus}</Typography></Stack> : null}
-                            <Button type="submit" variant="contained" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create post"}</Button>
-                        </Stack>
-                    </CardContent>
-                </Card>
-            </Stack>
-        </Page>
-    );
+    return <Page maxWidth="md"><Stack spacing={2}><Typography variant="h4" component="h1">{editing ? "Edit Post" : "New Post"}</Typography>{error ? <Alert severity="error">{error}</Alert> : null}<Card variant="outlined"><CardContent><Stack component="form" spacing={2} onSubmit={submit}>{!editing ? <Box onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); addFiles(event.dataTransfer.files); }} sx={{ p: 2, border: 1, borderColor: dragging ? "primary.main" : "divider", borderRadius: 2, bgcolor: dragging ? "action.hover" : "transparent" }}><Button variant="outlined" component="label">Choose images<input hidden type="file" accept="image/*" multiple onChange={(event) => addFiles(event.target.files ?? [])} /></Button><Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>Drop images here or use the file picker.</Typography>{files.length ? <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 1.5, mt: 2 }}>{files.map((file, index) => <Card key={`${file.name}-${index}`} variant="outlined"><Box component="img" src={URL.createObjectURL(file)} alt={file.name} sx={{ width: "100%", aspectRatio: "1", objectFit: "cover" }} /><CardContent sx={{ p: 1 }}><Typography variant="body2" noWrap>{index + 1}. {file.name}</Typography><Stack direction="row" spacing={0.25} justifyContent="flex-end"><IconButton size="small" aria-label="Move image up" disabled={index === 0} onClick={() => moveFile(index, -1)}><ArrowUpward fontSize="small" /></IconButton><IconButton size="small" aria-label="Move image down" disabled={index === files.length - 1} onClick={() => moveFile(index, 1)}><ArrowDownward fontSize="small" /></IconButton><IconButton size="small" color="error" aria-label="Remove image" onClick={() => removeFile(index)}><Delete fontSize="small" /></IconButton></Stack></CardContent></Card>)}</Box> : null}</Box> : null}<TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required inputProps={{ maxLength: 200 }} /><TextField label="Image caption" value={caption} onChange={(e) => setCaption(e.target.value)} multiline minRows={2} inputProps={{ maxLength: 10000 }} /><TextField label="Description" value={description} onChange={(e) => setDescription(e.target.value)} multiline minRows={4} /><TextField label="Source URL" type="url" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} /><FormControlLabel control={<Checkbox checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} />} label="Allow visitors to download the original image" /><TextField label="Tags" value={tags} onChange={(e) => setTags(e.target.value)} helperText="Separate tags with commas" /><FormControl fullWidth><InputLabel id="category-label">Category</InputLabel><Select labelId="category-label" label="Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)}><MenuItem value="">None</MenuItem>{categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</Select></FormControl>{saving && !editing ? <Stack spacing={0.5}><LinearProgress variant={progress ? "determinate" : "indeterminate"} value={progress} /><Typography variant="body2" color="text.secondary">{uploadStatus}</Typography></Stack> : null}<Button type="submit" variant="contained" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create post"}</Button></Stack></CardContent></Card></Stack></Page>;
 }
 
 const root = document.querySelector("#post-editor-page");
