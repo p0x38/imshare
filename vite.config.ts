@@ -21,6 +21,7 @@ export default defineConfig({
                 settings: path.resolve(process.cwd(), "src/client/entries/settings.tsx"),
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
                 legacy: path.resolve(process.cwd(), "src/client/entries/legacy.tsx"),
+                error: path.resolve(process.cwd(), "src/client/entries/error.tsx"),
             },
             output: {
                 entryFileNames: "[name].js",
