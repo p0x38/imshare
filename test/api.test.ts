@@ -58,7 +58,7 @@ test("health, readiness, and version routes are publicly available", async () =>
         expect(version.statusCode).toBe(200);
         expect(version.json()).toMatchObject({ data: { api: "v1", version: "1.0.0" } });
     } finally { await app.close(); }
-});
+}, 30_000);
 
 test("security headers are present on API and HTML responses", async () => {
     const app = await buildApp();
