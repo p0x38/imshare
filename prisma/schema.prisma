@@ -100,6 +100,8 @@ model Post {
   description String?
   caption String?
   sourceUrl String?
+  originalCreator String?
+  originalCreatedAt DateTime?
   allowDownload Boolean @default(true)
   status String @default("published")
   visibility String @default("public")
