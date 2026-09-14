@@ -25,7 +25,7 @@ const documentation: Record<string, OperationDocumentation> = {
     "POST /v1/me/notifications/read-all": { summary: "Mark all notifications as read", description: "Marks all notifications owned by the authenticated user as read." },
     "POST /v1/me/links": { summary: "Create a profile link", description: "Creates a profile link for the authenticated user. The URL must be HTTP(S), the label must be 1–100 characters, and each user may have at most 20 links.", requestExample: { label: "GitHub", url: "https://github.com/example" } },
     "PATCH /v1/me/links/{linkId}": { summary: "Update a profile link", description: "Updates a profile link owned by the authenticated user.", requestExample: { label: "GitHub", url: "https://github.com/example" } },
-    "DELETE /v1/me/links/{linkId}": { summary: "Delete a profile link", description: "Deletes a profile link owned by the authenticated user. Returns 204 on success." },
+    "DELETE /v1/me/links/{linkId}": { summary: "Delete profile link", description: "Deletes a profile link owned by the authenticated user. Returns 204 on success." },
     "GET /v1/users": { summary: "List users", description: "Returns a paginated public user list. Supports page, limit, search, and order query parameters." },
     "POST /v1/users": { summary: "Create a user", description: "Creates a user directly. Authentication is required. The name and email are required.", requestExample: { name: "Example User", email: "user@example.com", bio: "Example profile" } },
     "GET /v1/users/{userId}": { summary: "Get user profile", description: "Returns a public user profile including profile fields, post count, profile links, and an avatar URL." },
@@ -84,208 +84,93 @@ const documentation: Record<string, OperationDocumentation> = {
     "PATCH /v1/admin/reports/{reportId}": { summary: "Update report status", description: "Changes the status of a moderation report. Moderator/admin access is required.", requestExample: { status: "resolved" } },
     "POST /v1/admin/users/{userId}/kick": { summary: "Kick user sessions", description: "Revokes all active sessions for the target user. Moderator/admin access is required." },
     "POST /v1/admin/users/{userId}/ban": { summary: "Ban user", description: "Bans a user and revokes their sessions. The reason is 1–500 characters. durationHours is optional, accepts 0–8760, and 0 means an indefinite ban.", requestExample: { reason: "Repeated policy violations.", durationHours: 24 } },
-    "POST /v1/admin/users/{userId}/unban": { summary: "Unban user", description: "Removes an active ban from the target user." },
-    "PATCH /v1/admin/users/{userId}/role": { summary: "Change user role", description: "Changes a user's role. Roles are user, moderator, and admin. Only administrators may use this endpoint. Self-role changes and demotion of the last administrator are rejected.", requestExample: { role: "moderator" } },
-    "GET /v1/admin/logs": { summary: "List moderation logs", description: "Returns the latest 100 moderation log entries. Moderator/admin access is required." },
-    "GET /v1/registration-token": { summary: "Get registration token", description: "Returns the current registration token and expiration for an authenticated user." },
-    "POST /v1/auth/sign-up/email": { summary: "Register with email and password", description: "Registers a user through Better Auth. imshare additionally requires registrationToken and removes it before forwarding the request to Better Auth." },
 };
 
-const queryParameters: Record<string, Array<{ name: string; example: unknown; description: string; schema: Record<string, unknown> }>> = {
-    pagination: [
-        { name: "page", example: 1, description: "1-based page number.", schema: { type: "integer", minimum: 1, default: 1 } },
-        { name: "limit", example: 20, description: "Number of items per page.", schema: { type: "integer", minimum: 1, default: 20 } },
-    ],
-    ordered: [
-        { name: "page", example: 1, description: "1-based page number.", schema: { type: "integer", minimum: 1, default: 1 } },
-        { name: "limit", example: 20, description: "Number of items per page.", schema: { type: "integer", minimum: 1, default: 20 } },
-        { name: "order", example: "desc", description: "Sort direction.", schema: { type: "string", enum: ["asc", "desc"], default: "desc" } },
-    ],
-};
-
-const queryProfile: Record<string, string[]> = {
-    "/v1/me/posts": ["ordered"],
-    "/v1/me/notifications": ["pagination"],
-    "/v1/me/sessions": ["pagination"],
-    "/v1/users": ["ordered"],
-    "/v1/users/{userId}/posts": ["ordered"],
-    "/v1/posts": ["ordered"],
-    "/v1/posts/{postId}/comments": ["pagination"],
-    "/v1/tags": ["ordered"],
-    "/v1/tags/{tagId}/posts": ["ordered"],
-    "/v1/categories": ["ordered"],
-    "/v1/categories/{categoryId}/posts": ["ordered"],
-    "/v1/recommendations": ["pagination"],
-    "/v1/admin/users": ["pagination"],
-    "/v1/admin/reports": ["pagination"],
-};
-
-function operationKey(method: string, pathname: string) {
-    return `${method.toUpperCase()} ${pathname}`;
-}
-
-function inferResponseStatuses(method: string, pathname: string) {
-    if (method === "delete")
-        return pathname.includes("/users/") || pathname.includes("/posts/") || pathname.includes("/comments/") || pathname.includes("/links/") || pathname.includes("/sessions/") || pathname.includes("/uploads/") || pathname.includes("/emojis/")
-            ? [204, 401, 403, 404]
-            : [204, 401, 404];
-    if (method === "post") return [200, 201, 400, 401, 403, 404, 409];
-    if (method === "patch" || method === "put") return [200, 400, 401, 403, 404, 409];
-    return [200, 400, 401, 403, 404];
-}
-
-function responseDescription(status: number, method: string) {
-    switch (status) {
-        case 200: return method === "get" ? "Successful response." : "Request completed successfully.";
-        case 201: return "Resource created successfully.";
-        case 204: return "Request completed successfully with no response body.";
-        case 400: return "The request is invalid or failed validation.";
-        case 401: return "Authentication is required.";
-        case 403: return "The authenticated user is not allowed to perform this action.";
-        case 404: return "The requested resource was not found.";
-        case 409: return "The request conflicts with existing state.";
-        default: return `HTTP ${status} response.`;
-    }
-}
-
-function responseSchemaFor(method: string, pathname: string) {
-    if (method === "get" && pathname === "/v1/posts") return { "200": "PostCollectionResponse" };
-    if ((method === "get" || method === "post" || method === "patch") && pathname === "/v1/posts/{postId}") return { "200": "PostResponse" };
-    if (method === "post" && pathname === "/v1/posts") return { "201": "PostResponse" };
-    return {};
-}
-
-export async function registerOpenApi(app: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>) {
-    const baseUrl = config.auth.baseUrl?.trim();
-    let serverUrl: string | undefined;
-    if (baseUrl) {
-        try { serverUrl = new URL(baseUrl).origin; } catch { /* Leave servers unset when the configured base URL is invalid. */ }
-    }
-
-    const tagForPath = (pathname: string): string => {
-        const sections = pathname.split("/").filter(Boolean);
-        const section = sections[1] ?? "";
-        const subSection = sections[2] ?? "";
-        const thirdSection = sections[3] ?? "";
-        const tagMap: Record<string, string> = {
-            account: "account", auth: "auth", posts: "posts", reactions: "reactions", comments: "comments", notifications: "notifications", uploads: "uploads", avatars: "users", tags: "tags", categories: "categories", search: "search", reports: "reports", recommendations: "recommendations", emojis: "emojis", admin: "admin", users: "users", "profile-links": "profile-links", health: "health", ready: "health", version: "health", "registration-token": "account", "post-lifecycle": "posts",
-        };
-        let tag = tagMap[section];
-        if (section === "me") tag = subSection === "posts" ? "posts" : subSection === "notifications" ? "notifications" : subSection === "links" ? "profile-links" : "account";
-        if (section === "discovery") tag = "recommendations";
-        if (section === "posts") {
-            if (subSection === "image") tag = "images";
-            if (subSection === "{postId}" && (thirdSection === "reactions" || thirdSection === "{type}")) tag = "reactions";
-        }
-        return tag ?? "meta";
-    };
-
+export async function registerOpenApi(app: FastifyInstance, config: ReturnType<typeof loadConfig>): Promise<void> {
     await app.register(fastifySwagger, {
         openapi: {
             openapi: "3.1.0",
-            info: { title: `${config.site.name} API`, description: "HTTP API for the imshare self-hosted image archive and sharing server.", version: "1.0.0" },
-            ...(serverUrl ? { servers: [{ url: serverUrl }] } : {}),
+            info: { title: "imshare API", description: "Public HTTP API for imshare.", version: "1.0.0" },
+            servers: [{ url: "/" }],
             tags: [
-                { name: "account", description: "Authenticated account and session endpoints." }, { name: "auth", description: "Authentication and registration endpoints." }, { name: "posts", description: "Post creation, retrieval, and management." }, { name: "reactions", description: "Likes, favorites, saves, and related reactions." }, { name: "comments", description: "Post comments and comment interactions." }, { name: "uploads", description: "Image upload and file management endpoints." }, { name: "images", description: "Image serving and download endpoints." }, { name: "tags", description: "Tag management and discovery." }, { name: "categories", description: "Category management and discovery." }, { name: "search", description: "Search endpoints." }, { name: "reports", description: "Content reporting endpoints." }, { name: "health", description: "Health and readiness checks." }, { name: "users", description: "User and profile endpoints." }, { name: "profile-links", description: "User profile link endpoints." }, { name: "notifications", description: "Notification endpoints." }, { name: "recommendations", description: "Recommendation endpoints." }, { name: "emojis", description: "Emoji endpoints." }, { name: "admin", description: "Administrator-only endpoints." },
+                { name: "health", description: "Service health and metadata." },
+                { name: "me", description: "Authenticated user operations." },
+                { name: "users", description: "Public and authenticated user operations." },
+                { name: "posts", description: "Post creation, retrieval, and management." },
+                { name: "reactions", description: "Post reactions." },
+                { name: "comments", description: "Post comments and comment reactions." },
+                { name: "reports", description: "Content reporting." },
+                { name: "tags", description: "Tag management." },
+                { name: "categories", description: "Category management." },
+                { name: "search", description: "Search." },
+                { name: "uploads", description: "Image uploads and delivery." },
+                { name: "emojis", description: "Custom emojis." },
+                { name: "recommendations", description: "Post recommendations." },
+                { name: "admin", description: "Administrative and moderation operations." },
             ],
-            components: { securitySchemes: { sessionCookie: { type: "apiKey", in: "cookie", name: "better-auth.session_token", description: "Better Auth session cookie used for authenticated requests." } } },
+            components: {
+                securitySchemes: {
+                    cookieAuth: { type: "apiKey", in: "cookie", name: "better-auth.session_token" },
+                },
+            },
         },
-        transform: ({ schema, url }) => {
-            const pathname = url.split("?", 1)[0] ?? "/";
-            if (!pathname.startsWith("/v1/")) return { schema: { ...(schema ?? {}), hide: true }, url };
-            return { schema: { ...(schema ?? {}), tags: [...new Set([...(schema?.tags ?? []), tagForPath(pathname)])] }, url };
-        },
-        transformObject: (documentObject) => {
-            const document = "openapiObject" in documentObject ? documentObject.openapiObject : documentObject.swaggerObject;
+        transformObject({ swaggerObject }) {
+            const document = swaggerObject;
+            const documentRecord = document as Record<string, unknown>;
+            const existingComponents = (documentRecord.components as Record<string, unknown> | undefined) ?? {};
+            const existingSchemas = (existingComponents.schemas as Record<string, unknown> | undefined) ?? {};
             const paths = Object.fromEntries(
-                Object.entries(document.paths ?? {}).filter(([pathname]) => pathname.startsWith("/v1/")).map(([pathname, pathItem]) => {
-                    if (!pathItem || typeof pathItem !== "object") return [pathname, pathItem] as const;
-                    const tag = tagForPath(pathname);
-                    const operations = new Set(["get", "post", "put", "patch", "delete", "options", "head", "trace"]);
-                    const updatedPathItem = Object.fromEntries(Object.entries(pathItem).map(([method, operation]) => {
-                        if (!operations.has(method) || !operation || typeof operation !== "object") return [method, operation] as const;
-                        const operationObject = operation as Record<string, unknown>;
-                        const key = operationKey(method, pathname);
-                        const doc = documentation[key];
-                        const examples = doc?.responseExamples ?? {};
-                        const parameters = Array.isArray(operationObject.parameters) ? [...operationObject.parameters] : [];
-
-                        for (const match of pathname.matchAll(/\{([^}]+)\}/g)) {
-                            const name = match[1];
-                            if (!name || parameters.some((parameter) => parameter && typeof parameter === "object" && (parameter as { in?: string; name?: string }).in === "path" && (parameter as { name?: string }).name === name)) continue;
-                            parameters.push({ name, in: "path", required: true, description: `${name} identifier.`, schema: { type: "string", example: `${name}-id` } });
-                        }
-                        for (const profile of queryProfile[pathname] ?? []) {
-                            for (const parameter of queryParameters[profile] ?? []) {
-                                if (parameters.some((existing) => existing && typeof existing === "object" && (existing as { in?: string; name?: string }).in === "query" && (existing as { name?: string }).name === parameter.name)) continue;
-                                parameters.push({ ...parameter, in: "query" });
+                Object.entries(document.paths ?? {}).filter(([pathname]) => pathname.startsWith("/v1"))
+                    .map(([pathname, pathItem]) => {
+                        const tag = pathname.split("/")[2] ?? "general";
+                        const updatedPathItem = Object.fromEntries(Object.entries(pathItem ?? {}).map(([method, operation]) => {
+                            if (!operation || typeof operation !== "object") return [method, operation];
+                            const operationObject = operation as Record<string, unknown>;
+                            const key = `${method.toUpperCase()} ${pathname}`;
+                            const doc = documentation[key];
+                            const parameters = Array.isArray(operationObject.parameters) ? operationObject.parameters : [];
+                            const responses = operationObject.responses && typeof operationObject.responses === "object" ? { ...(operationObject.responses as Record<string, unknown>) } : {};
+                            for (const [status, example] of Object.entries(doc?.responseExamples ?? {})) {
+                                const existing = responses[status] && typeof responses[status] === "object" ? { ...(responses[status] as Record<string, unknown>) } : { description: `HTTP ${status} response.` };
+                                const content = existing.content && typeof existing.content === "object" ? { ...(existing.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
+                                const contentType = Object.keys(content)[0] ?? "application/json";
+                                const mediaType = { ...(content[contentType] ?? {}) };
+                                mediaType.example = example;
+                                content[contentType] = mediaType;
+                                responses[status] = { ...existing, content };
                             }
-                        }
-
-                        const responses = operationObject.responses && typeof operationObject.responses === "object" ? { ...(operationObject.responses as Record<string, unknown>) } : {};
-                        for (const status of inferResponseStatuses(method, pathname)) {
-                            const code = String(status);
-                            const existing = responses[code];
-                            if (existing && typeof existing === "object") {
-                                if (examples[code] !== undefined && !("content" in (existing as Record<string, unknown>))) responses[code] = { ...(existing as Record<string, unknown>), content: { "application/json": { example: examples[code] } } };
-                                continue;
+                            const schemaName = pathname === "/v1/posts" ? (method === "get" ? "PostCollectionResponse" : "PostResponse") : pathname.startsWith("/v1/posts/") && method === "get" ? "PostResponse" : null;
+                            if (schemaName && responses["200"] && typeof responses["200"] === "object") {
+                                responses["200"] = { ...(responses["200"] as Record<string, unknown>), content: { "application/json": { schema: { $ref: `#/components/schemas/${schemaName}` } } } };
                             }
-                            const response: Record<string, unknown> = { description: responseDescription(status, method) };
-                            if (examples[code] !== undefined) response.content = { "application/json": { example: examples[code] } };
-                            responses[code] = response;
-                        }
-
-                        const concreteSchemas = responseSchemaFor(method, pathname);
-                        for (const [status, schemaName] of Object.entries(concreteSchemas)) {
-                            const existing = responses[status];
-                            const existingResponse = existing && typeof existing === "object" ? existing as Record<string, unknown> : {};
-                            const existingContent = existingResponse.content && typeof existingResponse.content === "object" ? existingResponse.content as Record<string, unknown> : {};
-                            const existingJson = existingContent["application/json"] && typeof existingContent["application/json"] === "object" ? existingContent["application/json"] as Record<string, unknown> : {};
-                            responses[status] = {
-                                ...existingResponse,
-                                content: {
-                                    ...existingContent,
-                                    "application/json": {
-                                        ...existingJson,
-                                        schema: { $ref: `#/components/schemas/${schemaName}` },
-                                    },
-                                },
+                            const updatedOperation: Record<string, unknown> = {
+                                ...operationObject,
+                                tags: [...new Set([...(Array.isArray(operationObject.tags) ? operationObject.tags : []), tag])],
+                                ...(doc ? { summary: operationObject.summary ?? doc.summary, description: operationObject.description ? `${operationObject.description}\n\n${doc.description}` : doc.description } : { summary: operationObject.summary ?? `${method.toUpperCase()} ${pathname}`, description: operationObject.description ?? `HTTP ${method.toUpperCase()} endpoint for ${tag}.` }),
+                                parameters,
+                                responses,
                             };
-                        }
-
-                        const updatedOperation: Record<string, unknown> = {
-                            ...operationObject,
-                            tags: [...new Set([...(Array.isArray(operationObject.tags) ? operationObject.tags : []), tag])],
-                            ...(doc ? { summary: operationObject.summary ?? doc.summary, description: operationObject.description ? `${operationObject.description}\n\n${doc.description}` : doc.description } : { summary: operationObject.summary ?? `${method.toUpperCase()} ${pathname}`, description: operationObject.description ?? `HTTP ${method.toUpperCase()} endpoint for ${tag}.` }),
-                            parameters,
-                            responses,
-                        };
-
-                        if (doc?.requestExample !== undefined) {
-                            const existingRequestBody = updatedOperation.requestBody && typeof updatedOperation.requestBody === "object" ? { ...(updatedOperation.requestBody as Record<string, unknown>) } : {};
-                            const content: Record<string, Record<string, unknown>> =
-                                existingRequestBody.content && typeof existingRequestBody.content === "object"
-                                    ? { ...(existingRequestBody.content as Record<string, Record<string, unknown>>) }
-                                    : { "application/json": { schema: { type: "object" } } };
-                            const contentType = Object.keys(content)[0] ?? "application/json";
-                            const mediaType = { ...(content[contentType] ?? {}) };
-                            mediaType.example = doc.requestExample;
-                            content[contentType] = mediaType;
-                            updatedOperation.requestBody = { ...existingRequestBody, content };
-                        }
-
-                        return [method, updatedOperation] as const;
-                    }));
-                    return [pathname, updatedPathItem] as const;
-                }),
+                            if (doc?.requestExample !== undefined) {
+                                const existingRequestBody = updatedOperation.requestBody && typeof updatedOperation.requestBody === "object" ? { ...(updatedOperation.requestBody as Record<string, unknown>) } : {};
+                                const content: Record<string, Record<string, unknown>> = existingRequestBody.content && typeof existingRequestBody.content === "object" ? { ...(existingRequestBody.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
+                                const contentType = Object.keys(content)[0] ?? "application/json";
+                                const mediaType = { ...(content[contentType] ?? {}) };
+                                mediaType.example = doc.requestExample;
+                                content[contentType] = mediaType;
+                                updatedOperation.requestBody = { ...existingRequestBody, content };
+                            }
+                            return [method, updatedOperation] as const;
+                        }));
+                        return [pathname, updatedPathItem] as const;
+                    }),
             );
             return {
                 ...document,
                 paths,
                 components: {
-                    ...(document.components ?? {}),
+                    ...existingComponents,
                     schemas: {
-                        ...((document.components as Record<string, unknown> | undefined)?.schemas as Record<string, unknown> | undefined ?? {}),
+                        ...existingSchemas,
                         ErrorResponse: errorResponseSchema,
                         PostResponse: postResponseSchema,
                         PostCollectionResponse: postCollectionResponseSchema,
