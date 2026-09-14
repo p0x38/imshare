@@ -57,6 +57,7 @@
         "prisma": "7.10.0",
         "tsx": "^4.23.13",
         "typescript": "^7.0.2",
+        "typescript-eslint": "^8.42.0",
         "vite": "^7.1.12",
         "vitest": "^5.0.0"
     },
