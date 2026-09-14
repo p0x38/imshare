@@ -14,6 +14,7 @@ export interface Author {
     id: string;
     name?: string | null;
     username?: string | null;
+    handle?: string | null;
     avatarUrl?: string | null;
 }
 
