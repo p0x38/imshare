@@ -63,14 +63,9 @@ export function Footer() {
                     <Link href="/privacy/" underline="hover">Privacy</Link>
                     <Typography color="text.secondary">·</Typography>
                     <Link href="/terms/" underline="hover">Terms</Link>
-                    {version ? (
-                        <>
-                            <Typography color="text.secondary">·</Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Version {version}
-                            </Typography>
-                        </>
-                    ) : null}
+                    <Typography aria-label="Version" variant="body2" color="text.secondary">
+                        {version ? `Version ${version}` : "Version"}
+                    </Typography>
                 </Stack>
             </Container>
         </Box>
