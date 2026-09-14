@@ -42,6 +42,12 @@ const postLifecycleProperties = {
     contentWarning: { anyOf: [{ type: "string", maxLength: 500 }, { type: "null" }] },
 };
 
+const permalinkProperties = {
+    permalinkPattern: { type: "string", enum: ["user", "posts"] },
+    permalinkIdType: { type: "string", enum: ["normalizedTitle", "internalId", "creationDate", "custom"] },
+    customPostId: { anyOf: [{ type: "string", minLength: 1, maxLength: 200 }, { type: "null" }] },
+};
+
 const originalPostProperties = {
     originalCreator: { anyOf: [{ type: "string", minLength: 1, maxLength: 500 }, { type: "null" }] },
     originalCreatedAt: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
@@ -58,6 +64,7 @@ export const postCreateSchema = {
             caption: { type: "string", maxLength: 10000 },
             sourceUrl: { type: "string", maxLength: 4096 },
             ...originalPostProperties,
+            ...permalinkProperties,
             allowDownload: { type: "boolean" },
             ...postLifecycleProperties,
             tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
@@ -79,6 +86,7 @@ export const postUpdateSchema = {
             allowDownload: { type: "boolean" },
             sourceUrl: { anyOf: [{ type: "string", maxLength: 4096 }, { type: "null" }] },
             ...originalPostProperties,
+            ...permalinkProperties,
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             ...postLifecycleProperties,
             tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
@@ -144,7 +152,6 @@ export const categoryUpdateSchema = {
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
             slug: { type: "string", minLength: 1, maxLength: 100, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
-            description: { anyOf: [{ type: "string", maxLength: 10000 }, { type: "null" }] },
         },
     },
 } as const;
