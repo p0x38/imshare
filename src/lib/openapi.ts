@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import type { loadConfig } from "./config.js";
+import { errorResponseSchema, postCollectionResponseSchema, postResponseSchema } from "../routes/openapi-schemas.js";
 
 type OperationDocumentation = {
     summary: string;
@@ -147,6 +148,13 @@ function responseDescription(status: number, method: string) {
     }
 }
 
+function responseSchemaFor(method: string, pathname: string) {
+    if (method === "get" && pathname === "/v1/posts") return { "200": "PostCollectionResponse" };
+    if ((method === "get" || method === "post" || method === "patch") && pathname === "/v1/posts/{postId}") return { "200": "PostResponse" };
+    if (method === "post" && pathname === "/v1/posts") return { "201": "PostResponse" };
+    return {};
+}
+
 export async function registerOpenApi(app: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>) {
     const baseUrl = config.auth.baseUrl?.trim();
     let serverUrl: string | undefined;
@@ -227,6 +235,24 @@ export async function registerOpenApi(app: FastifyInstance, config: Awaited<Retu
                             responses[code] = response;
                         }
 
+                        const concreteSchemas = responseSchemaFor(method, pathname);
+                        for (const [status, schemaName] of Object.entries(concreteSchemas)) {
+                            const existing = responses[status];
+                            const existingResponse = existing && typeof existing === "object" ? existing as Record<string, unknown> : {};
+                            const existingContent = existingResponse.content && typeof existingResponse.content === "object" ? existingResponse.content as Record<string, unknown> : {};
+                            const existingJson = existingContent["application/json"] && typeof existingContent["application/json"] === "object" ? existingContent["application/json"] as Record<string, unknown> : {};
+                            responses[status] = {
+                                ...existingResponse,
+                                content: {
+                                    ...existingContent,
+                                    "application/json": {
+                                        ...existingJson,
+                                        schema: { $ref: `#/components/schemas/${schemaName}` },
+                                    },
+                                },
+                            };
+                        }
+
                         const updatedOperation: Record<string, unknown> = {
                             ...operationObject,
                             tags: [...new Set([...(Array.isArray(operationObject.tags) ? operationObject.tags : []), tag])],
@@ -253,7 +279,20 @@ export async function registerOpenApi(app: FastifyInstance, config: Awaited<Retu
                     return [pathname, updatedPathItem] as const;
                 }),
             );
-            return { ...document, paths, externalDocs: { description: "imshare project documentation", url: "https://github.com/p0x38/imshare" } };
+            return {
+                ...document,
+                paths,
+                components: {
+                    ...(document.components ?? {}),
+                    schemas: {
+                        ...((document.components as Record<string, unknown> | undefined)?.schemas as Record<string, unknown> | undefined ?? {}),
+                        ErrorResponse: errorResponseSchema,
+                        PostResponse: postResponseSchema,
+                        PostCollectionResponse: postCollectionResponseSchema,
+                    },
+                },
+                externalDocs: { description: "imshare project documentation", url: "https://github.com/p0x38/imshare" },
+            };
         },
     });
 
