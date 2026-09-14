@@ -14,8 +14,13 @@ export const prisma = new PrismaClient({ adapter });
 const config = loadConfigSync();
 const baseUrl = resolveBaseUrl(config);
 const trustedOrigins = [
-    baseUrl,
-    ...(process.env.NODE_ENV === "production" ? [] : [`http://localhost:${config.server.port}`, `http://127.0.0.1:${config.server.port}`]),
+    ...new Set([
+        baseUrl,
+        ...(config.auth.trustedOrigins ?? []),
+        ...(process.env.NODE_ENV === "production"
+            ? []
+            : [`http://localhost:${config.server.port}`, `http://127.0.0.1:${config.server.port}`]),
+    ]),
 ];
 
 export const auth = betterAuth({
