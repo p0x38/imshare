@@ -2,8 +2,6 @@ import Fastify, { LogController, type FastifyReply, type FastifyRequest } from "
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import fastifyView from "@fastify/view";
-import ejs from "ejs";
 import { mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./lib/config.js";
@@ -68,7 +66,6 @@ export async function buildApp() {
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
-    const viewsDir = path.join(rootDir, "views");
     const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
 
     app.addHook("onRequest", async (request, reply) => {
@@ -140,19 +137,7 @@ export async function buildApp() {
         }
     };
 
-    const sendErrorPage = async (
-        status: number,
-        fallbackTitle: string,
-        message: string,
-        reply: FastifyReply,
-    ) =>
-        reply
-            .code(status)
-            .type("text/html")
-            .send(await errorPage(status, fallbackTitle, message));
-
     app.addHook("onSend", async (request, reply, payload) => {
-        // Swagger UI owns its complete HTML document and static assets.
         if (request.url === "/docs" || request.url.startsWith("/docs/")) return payload;
 
         reply.header("X-Content-Type-Options", "nosniff");
@@ -276,73 +261,11 @@ export async function buildApp() {
         prefix: "/client/",
         decorateReply: false,
     });
-    await app.register(fastifyView, {
-        engine: { ejs },
-        root: viewsDir,
-        includeViewExtension: true,
-    });
-
-    const sendPage = async (request: FastifyRequest, reply: FastifyReply, view: string) => {
-        try {
-            return await reply.view(view);
-        } catch (error) {
-            request.log.error({ err: error, view }, "Failed to render page");
-            return sendErrorPage(
-                500,
-                "Server error",
-                "The requested page could not be rendered.",
-                reply,
-            );
-        }
-    };
 
     await registerOpenApi(app, config);
     await app.register(authRoutes);
     await app.register(apiRoutes);
     await app.register(pageRoutes);
-
-    app.get("/", async (request, reply) => sendPage(request, reply, "index.ejs"));
-    app.get("/login/", async (_request, reply) => reply.redirect("/account/login/", 301));
-    app.get("/signup/", async (_request, reply) => reply.redirect("/account/register/", 301));
-    app.get("/account/", async (request, reply) => sendPage(request, reply, "account/index.ejs"));
-    app.get("/account/notifications/", async (_request, reply) => {
-        const body = await readFile(path.join(publicDir, "account", "notifications.html"), "utf8");
-        return reply.type("text/html; charset=utf-8").send(body);
-    });
-    app.get("/account/sessions/", async (_request, reply) => reply.redirect("/account/", 301));
-    app.get("/account/profile/", async (_request, reply) => {
-        const body = await readFile(path.join(publicDir, "account", "profile.html"), "utf8");
-        return reply.type("text/html; charset=utf-8").send(body);
-    });
-    app.get("/posts/", async (request, reply) => sendPage(request, reply, "posts/index.ejs"));
-    app.get("/posts/new/", async (request, reply) =>
-        sendPage(request, reply, "posts/new/index.ejs"),
-    );
-    app.get("/posts/:postId", async (request, reply) => sendPage(request, reply, "posts/view.ejs"));
-    app.get("/posts/:postId/", async (request, reply) =>
-        sendPage(request, reply, "posts/view.ejs"),
-    );
-    app.get("/dashboard/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/index.ejs"),
-    );
-    app.get("/dashboard/posts/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/posts/index.ejs"),
-    );
-    app.get("/dashboard/posts/:postId/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/posts/view.ejs"),
-    );
-    app.get("/dashboard/posts/:postId/edit/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/posts/edit.ejs"),
-    );
-    app.get("/dashboard/tags/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/tags.ejs"),
-    );
-    app.get("/dashboard/categories/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/categories.ejs"),
-    );
-    app.get("/dashboard/settings/", async (request, reply) =>
-        sendPage(request, reply, "dashboard/settings.ejs"),
-    );
 
     return app;
 }
