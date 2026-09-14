@@ -20,6 +20,7 @@
         "test:browser": "playwright test",
         "test:browser:ui": "playwright test --ui",
         "test:browser:headed": "playwright test --headed",
+        "test:coverage": "vitest run --coverage",
         "check": "pnpm typecheck && pnpm lint && pnpm test && pnpm test:integration && pnpm test:browser && pnpm build",
         "format": "prettier --write .",
         "format:check": "prettier --check ."
@@ -48,6 +49,7 @@
         "@types/react": "^19.1.12",
         "@types/react-dom": "^19.1.9",
         "@vitejs/plugin-react": "^5.1.1",
+        "@vitest/coverage-v8": "^5.0.0",
         "eslint": "^9.39.1",
         "nodemon": "^3.1.10",
         "pino-pretty": "^13.1.3",

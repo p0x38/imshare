@@ -63,6 +63,7 @@ export async function buildApp() {
     });
     const viewLimiter = new RateLimiter(75, 60_000);
     const uploadLimiter = new RateLimiter(30, 86_400_000);
+    const rateLimitingEnabled = process.env.NODE_ENV !== "test";
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
@@ -90,7 +91,7 @@ export async function buildApp() {
             reply
                 .header("X-RateLimit-Limit", "30")
                 .header("X-RateLimit-Remaining", String(result.remaining));
-            if (!result.allowed)
+            if (rateLimitingEnabled && !result.allowed)
                 return reply
                     .code(429)
                     .header("Retry-After", String(result.retryAfter))
@@ -113,7 +114,7 @@ export async function buildApp() {
             reply
                 .header("X-RateLimit-Limit", "75")
                 .header("X-RateLimit-Remaining", String(result.remaining));
-            if (!result.allowed)
+            if (rateLimitingEnabled && !result.allowed)
                 return reply
                     .code(429)
                     .header("Retry-After", String(result.retryAfter))

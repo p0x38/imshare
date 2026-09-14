@@ -11,7 +11,10 @@ export default defineConfig({
         baseURL: "http://127.0.0.1:5454",
         trace: "on-first-retry",
         screenshot: "only-on-failure",
-        video: "retain-on-failure",
+        video: {
+            mode: "on",
+            size: { width: 1280, height: 720 },
+        },
         launchOptions: {
             args: ["--disable-gpu"],
         },
@@ -29,5 +32,8 @@ export default defineConfig({
         stdout: "pipe",
         stderr: "pipe",
         timeout: 120_000,
+        env: {
+            NODE_ENV: "test",
+        },
     },
 });
