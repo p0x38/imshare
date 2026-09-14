@@ -3,11 +3,25 @@ import { useTranslation } from "react-i18next";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
 
-function imageUrl(url: string, width = 512) { const image = new URL(url, window.location.origin); image.searchParams.set("width", String(width)); image.searchParams.set("format", "webp"); return image.href; }
+function imageUrl(url: string, width = 512) {
+    const image = new URL(url, window.location.origin);
+    image.searchParams.set("width", String(width));
+    image.searchParams.set("format", "webp");
+    return image.href;
+}
 
-export function PostGrid({ posts }: { posts: Post[] }) {
+function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
+    return Array.isArray(value) ? value : Array.isArray(value.posts) ? value.posts : [];
+}
+
+export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } }) {
     const { t } = useTranslation();
-    if (posts.length === 0) return <Card variant="outlined"><CardContent sx={{ textAlign: "center", px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}><Typography variant="h5" component="h2" gutterBottom>{t("postGrid.noPosts")}</Typography><Typography color="text.secondary">{t("postGrid.noPostsDescription")}</Typography></CardContent></Card>;
+    const posts = normalizePosts(input);
+
+    if (posts.length === 0) {
+        return <Card variant="outlined"><CardContent sx={{ textAlign: "center", px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}><Typography variant="h5" component="h2" gutterBottom>{t("postGrid.noPosts")}</Typography><Typography color="text.secondary">{t("postGrid.noPostsDescription")}</Typography></CardContent></Card>;
+    }
+
     return <Box sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))", gap: { xs: 1, sm: 2 } }}>
         {posts.map((post, index) => <AnimatedItem key={post.id} delay={Math.min(index, 10) * 35}><Card variant="outlined" sx={{ overflow: "hidden", height: "100%", transition: (theme) => theme.transitions.create(["transform", "box-shadow"], { duration: 220 }), "@media (hover: hover)": { "&:has(.MuiCardActionArea-root:hover)": { transform: "translateY(-3px)", boxShadow: 3 } }, "@media (prefers-reduced-motion: reduce)": { transition: "none" } }}>
             <CardActionArea component="a" href={`/posts/${encodeURIComponent(post.id)}`} sx={{ display: "block", textAlign: "left", height: "100%" }}>
