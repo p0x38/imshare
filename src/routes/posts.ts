@@ -38,6 +38,23 @@ function lifecycleData(body: {
     };
 }
 
+function permalinkData(body: {
+    permalinkPattern?: string;
+    permalinkIdType?: string;
+    customPostId?: string | null;
+}) {
+    const permalinkPattern = body.permalinkPattern ?? "user";
+    const permalinkIdType = body.permalinkIdType ?? "internalId";
+    if (permalinkPattern !== "user" && permalinkPattern !== "posts")
+        throw new Error("Invalid permalink pattern.");
+    if (!["normalizedTitle", "internalId", "creationDate", "custom"].includes(permalinkIdType))
+        throw new Error("Invalid permalink ID type.");
+    const customPostId = body.customPostId?.trim() || null;
+    if (permalinkIdType === "custom" && !customPostId)
+        throw new Error("A custom post ID is required when using the custom ID type.");
+    return { permalinkPattern, permalinkIdType, customPostId };
+}
+
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/posts", async (request) => {
         const q = request.query as Record<string, unknown>;
@@ -77,6 +94,9 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             sourceUrl?: string;
             originalCreator?: string | null;
             originalCreatedAt?: string | null;
+            permalinkPattern?: string;
+            permalinkIdType?: string;
+            customPostId?: string | null;
             allowDownload?: boolean;
             status?: string;
             visibility?: string;
@@ -107,6 +127,12 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         }
         const tags = await findTags(body.tags ?? []);
         const lifecycle = lifecycleData(body);
+        let permalink;
+        try {
+            permalink = permalinkData(body);
+        } catch (error) {
+            return reply.code(400).send({ error: { code: "INVALID_PERMALINK", message: error instanceof Error ? error.message : "Invalid permalink configuration." } });
+        }
         const post = await prisma.post.create({
             data: {
                 title: body.title.trim(),
@@ -115,6 +141,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 sourceUrl: body.sourceUrl,
                 originalCreator: body.originalCreator?.trim() || null,
                 originalCreatedAt: body.originalCreatedAt ? new Date(body.originalCreatedAt) : null,
+                ...permalink,
                 allowDownload: body.allowDownload ?? true,
                 ...lifecycle,
                 categoryId: body.categoryId,
@@ -174,6 +201,9 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             sourceUrl?: string | null;
             originalCreator?: string | null;
             originalCreatedAt?: string | null;
+            permalinkPattern?: string;
+            permalinkIdType?: string;
+            customPostId?: string | null;
             allowDownload?: boolean;
             status?: string;
             visibility?: string;
@@ -196,6 +226,18 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                       contentWarning: body.contentWarning !== undefined ? body.contentWarning : existing.contentWarning,
                   })
                 : {};
+        let permalink = {};
+        if (body.permalinkPattern !== undefined || body.permalinkIdType !== undefined || body.customPostId !== undefined) {
+            try {
+                permalink = permalinkData({
+                    permalinkPattern: body.permalinkPattern ?? existing.permalinkPattern,
+                    permalinkIdType: body.permalinkIdType ?? existing.permalinkIdType,
+                    customPostId: body.customPostId !== undefined ? body.customPostId : existing.customPostId,
+                });
+            } catch (error) {
+                return reply.code(400).send({ error: { code: "INVALID_PERMALINK", message: error instanceof Error ? error.message : "Invalid permalink configuration." } });
+            }
+        }
         const post = await prisma.$transaction(async (tx) => {
             await tx.postRevision.create({
                 data: {
@@ -223,6 +265,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     originalCreatedAt: body.originalCreatedAt === undefined ? undefined : body.originalCreatedAt ? new Date(body.originalCreatedAt) : null,
                     allowDownload: body.allowDownload,
                     categoryId: body.categoryId,
+                    ...permalink,
                     ...(body.tags ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } } : {}),
                     ...lifecycle,
                 },
