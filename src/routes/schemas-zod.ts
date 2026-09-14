@@ -1,16 +1,16 @@
 import { createSchema } from "zod-openapi";
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const lifecycleProperties = {
-    status: z.enum(["draft", "published"]),
-    visibility: z.enum(["public", "unlisted", "private"]),
-    scheduledAt: z.iso.datetime().nullable(),
-    contentWarning: z.string().max(500).nullable(),
+    status: z.enum(["draft", "published"]).optional(),
+    visibility: z.enum(["public", "unlisted", "private"]).optional(),
+    scheduledAt: z.iso.datetime().nullable().optional(),
+    contentWarning: z.string().max(500).nullable().optional(),
 };
 
 const originalPostProperties = {
-    originalCreator: z.string().min(1).max(500).nullable(),
-    originalCreatedAt: z.iso.datetime().nullable(),
+    originalCreator: z.string().min(1).max(500).nullable().optional(),
+    originalCreatedAt: z.iso.datetime().nullable().optional(),
 };
 
 export const postCreateInput = z.object({
@@ -36,12 +36,12 @@ export const postUpdateInput = z.object({
     categoryId: z.string().min(1).nullable().optional(),
     ...lifecycleProperties,
     tags: z.array(z.string().min(1).max(100)).max(100).optional(),
-}).meta({ id: "PostUpdateInput" });
+}).refine((value) => Object.keys(value).length > 0, "At least one field is required.").meta({ id: "PostUpdateInput" });
 
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
-const jsonSchema = (schema: typeof postCreateInput) => createSchema(schema).schema;
+const jsonSchema = (schema: Parameters<typeof createSchema>[0]) => createSchema(schema).schema;
 
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 export const postUpdateBodyJsonSchema = jsonSchema(postUpdateInput);
