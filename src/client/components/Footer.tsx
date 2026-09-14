@@ -17,7 +17,8 @@ export function Footer() {
                 <Link href="/faq/" underline="hover">{t("footer.faq")}</Link><Typography color="text.secondary">·</Typography>
                 <Link href="/github/" underline="hover">{t("footer.github")}</Link><Typography color="text.secondary">·</Typography>
                 <Link href="/privacy/" underline="hover">{t("footer.privacy")}</Link><Typography color="text.secondary">·</Typography>
-                <Link href="/terms/" underline="hover">{t("footer.terms")}</Link>
+                <Link href="/terms/" underline="hover">{t("footer.terms")}</Link><Typography color="text.secondary">·</Typography>
+                <Link href="/docs/" underline="hover">{t("admin.apiDocs")}</Link>
                 <Typography aria-label={t("common.version")} variant="body2" color="text.secondary" title={version?.commitMessage ?? undefined}>{version?.version ? `${t("common.version")} ${version.version}` : t("common.version")}{buildLabel ? ` · ${buildLabel}` : ""}</Typography>
             </Stack>
         </Container>
