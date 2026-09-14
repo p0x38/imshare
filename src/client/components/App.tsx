@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
 import { createAppTheme, type AccentColor, type ThemeSettings } from "../theme";
+import i18n from "../i18n";
 
 type ColorModePreference = "light" | "dark" | "auto";
 type ColorMode = "light" | "dark";
@@ -129,6 +130,7 @@ export function App({ children }: { children: React.ReactNode }) {
     const setLanguage = (next: Language) => {
         setLanguageState(next);
         window.localStorage.setItem("imshare-language", next);
+        void i18n.changeLanguage(next);
     };
 
     const colorMode = useMemo(
