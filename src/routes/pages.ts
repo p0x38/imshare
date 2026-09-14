@@ -7,8 +7,71 @@ const reactPage = (entry: string, rootId: string, attributes = "") => `<!doctype
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="theme-color" content="#1976d2" />
     <title>imshare</title>
+    <style>
+        html,
+        body {
+            margin: 0;
+            min-height: 100%;
+        }
+
+        body {
+            background: #fff;
+            color: #111;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background: #121212;
+                color: #fff;
+            }
+        }
+
+        #app-loading {
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            box-sizing: border-box;
+            padding: 24px;
+            font: 400 14px/1.5 system-ui, sans-serif;
+        }
+
+        #app-loading-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            opacity: 0.72;
+        }
+
+        #app-loading-spinner {
+            width: 20px;
+            height: 20px;
+            box-sizing: border-box;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: app-loading-spin 700ms linear infinite;
+        }
+
+        @keyframes app-loading-spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #app-loading-spinner {
+                animation-duration: 1400ms;
+            }
+        }
+    </style>
 </head>
 <body ${attributes}>
+    <div id="app-loading" role="status" aria-live="polite">
+        <div id="app-loading-content">
+            <span id="app-loading-spinner" aria-hidden="true"></span>
+            <span>Loading…</span>
+        </div>
+    </div>
     <div id="${rootId}"></div>
     <script type="module" src="/client/${entry}.js"></script>
 </body>
