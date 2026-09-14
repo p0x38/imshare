@@ -18,7 +18,7 @@ import type { AccentColor } from "../theme";
 import { Page } from "../components/Page";
 
 function SettingsPage() {
-    const { mode, toggle } = useColorMode();
+    const { preference, setPreference } = useColorMode();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
     const [saved, setSaved] = useState(false);
 
@@ -35,14 +35,15 @@ function SettingsPage() {
                             <Typography variant="h6" component="h2">Appearance</Typography>
                             <FormControl>
                                 <RadioGroup
-                                    value={mode}
+                                    value={preference}
                                     onChange={(event) => {
-                                        if (event.target.value !== mode) toggle();
+                                        setPreference(event.target.value as "light" | "dark" | "auto");
                                         saveNotice();
                                     }}
                                 >
                                     <FormControlLabel value="light" control={<Radio />} label="Light" />
                                     <FormControlLabel value="dark" control={<Radio />} label="Dark" />
+                                    <FormControlLabel value="auto" control={<Radio />} label="Automatic (Device)" />
                                 </RadioGroup>
                             </FormControl>
                             <FormControlLabel
