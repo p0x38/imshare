@@ -18,6 +18,19 @@ function buildSearchQuery(term: string): string {
         .join(" AND ");
 }
 
+function publicPostConditions(term: string) {
+    const conditions: Record<string, unknown>[] = [
+        {
+            status: "published",
+            visibility: "public",
+            hiddenAt: null,
+            OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+            user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
+        },
+    ];
+    return { conditions, term };
+}
+
 export const searchRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/search", async (request) => {
         const q = request.query as Record<string, unknown>;
@@ -28,16 +41,8 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         const result: Record<string, unknown> = {};
         let total = 0;
 
-        if (type === "posts" || type === "all") {
-            const conditions: Record<string, unknown>[] = [
-                {
-                    status: "published",
-                    visibility: "public",
-                    hiddenAt: null,
-                    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
-                    user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
-                },
-            ];
+        if (type === "posts" || type === "texts" || type === "all") {
+            const { conditions } = publicPostConditions(term);
             if (term) {
                 const searchQuery = buildSearchQuery(term);
                 const matches = await prisma.$queryRaw<{ postId: string }[]>`
@@ -54,29 +59,24 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             if (typeof q.tag === "string" && q.tag) conditions.push({ tags: { some: { tag: { slug: q.tag } } } });
             if (typeof q.mime === "string" && q.mime) conditions.push({ uploads: { some: { mimeType: { contains: q.mime } } } });
 
+            if (type === "posts") conditions.push({ uploads: { some: {} } });
+            if (type === "texts") conditions.push({ uploads: { none: {} } });
+
             const from = parseDate(q.from);
             const to = parseDate(q.to);
             if (from || to) {
-                conditions.push({
-                    createdAt: {
-                        ...(from ? { gte: from } : {}),
-                        ...(to ? { lte: to } : {}),
-                    },
-                });
+                conditions.push({ createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } });
             }
 
             const where = { AND: conditions };
             const [items, count] = await Promise.all([
-                prisma.post.findMany({
-                    where,
-                    skip: p.skip,
-                    take: p.limit,
-                    orderBy: { createdAt: order },
-                    include: postInclude,
-                }),
+                prisma.post.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, include: postInclude }),
                 prisma.post.count({ where }),
             ]);
             result.posts = items.map(postView);
+            if (type === "texts") {
+                return collection(items.map(postView), p.page, p.limit, count);
+            }
             total += count;
             if (type === "posts") return collection(items.map(postView), p.page, p.limit, count);
         }
@@ -84,13 +84,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "users" || type === "all") {
             const where = term ? { name: { contains: term }, isPublic: true, showProfile: true, isBanned: false } : { isPublic: true, showProfile: true, isBanned: false };
             const [items, count] = await Promise.all([
-                prisma.user.findMany({
-                    where,
-                    skip: p.skip,
-                    take: p.limit,
-                    orderBy: { createdAt: order },
-                    select: { id: true, name: true, image: true, createdAt: true },
-                }),
+                prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, select: { id: true, name: true, image: true, createdAt: true } }),
                 prisma.user.count({ where }),
             ]);
             result.users = items;
@@ -101,12 +95,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "tags" || type === "all") {
             const where = term ? { name: { contains: term } } : {};
             const [items, count] = await Promise.all([
-                prisma.tag.findMany({
-                    where,
-                    skip: p.skip,
-                    take: p.limit,
-                    orderBy: { name: order },
-                }),
+                prisma.tag.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
                 prisma.tag.count({ where }),
             ]);
             result.tags = items;
@@ -117,12 +106,7 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "categories" || type === "all") {
             const where = term ? { name: { contains: term } } : {};
             const [items, count] = await Promise.all([
-                prisma.category.findMany({
-                    where,
-                    skip: p.skip,
-                    take: p.limit,
-                    orderBy: { name: order },
-                }),
+                prisma.category.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
                 prisma.category.count({ where }),
             ]);
             result.categories = items;
@@ -130,14 +114,6 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             if (type === "categories") return collection(items, p.page, p.limit, count);
         }
 
-        return {
-            data: result,
-            pagination: {
-                page: p.page,
-                limit: p.limit,
-                total,
-                totalPages: Math.ceil(total / p.limit),
-            },
-        };
+        return { data: result, pagination: { page: p.page, limit: p.limit, total, totalPages: Math.ceil(total / p.limit) } };
     });
 };
