@@ -2,10 +2,10 @@ import Fastify, { LogController, type FastifyReply, type FastifyRequest } from "
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import { mkdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./lib/config.js";
-import { renderTemplate } from "./lib/template.js";
+import { renderErrorPage } from "./client/lib/error-page.js";
 import { RateLimiter } from "./lib/rate-limit.js";
 import { isSameOriginRequest } from "./lib/csrf.js";
 import { authRoutes } from "./routes/auth.js";
@@ -128,15 +128,6 @@ export async function buildApp() {
         uploadLimiter.prune();
     });
 
-    const errorPage = async (status: number, fallbackTitle: string, message: string) => {
-        const file = path.join(publicDir, "errors", `${status}.html`);
-        try {
-            return await readFile(file, "utf8");
-        } catch {
-            return await renderTemplate("error.html", { status, title: fallbackTitle, message });
-        }
-    };
-
     app.addHook("onSend", async (request, reply, payload) => {
         if (request.url === "/docs" || request.url.startsWith("/docs/")) return payload;
 
@@ -153,7 +144,7 @@ export async function buildApp() {
             contentType.includes("application/json")
         ) {
             reply.type("text/html");
-            return errorPage(
+            return renderErrorPage(
                 reply.statusCode,
                 reply.statusCode === 404 ? "Page not found" : "Something went wrong",
                 "The requested resource could not be served as HTML.",
