@@ -23,7 +23,6 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         "/signup": "/account/register/",
         "/account": "/account/",
         "/account/sessions": "/account/",
-        "/account/sessions/": "/account/",
         "/notifications": "/account/notifications/",
         "/account/notifications": "/account/notifications/",
         "/account/profile": "/account/profile/",
@@ -51,6 +50,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.get("/", render("home", "home-page"));
     fastify.get("/account/", render("account", "account-page"));
+    fastify.get("/account/sessions/", render("account", "account-page"));
     fastify.get("/account/login/", render("legacy", "legacy-page"));
     fastify.get("/account/register/", render("legacy", "legacy-page"));
     fastify.get("/notifications/", render("legacy", "legacy-page"));
