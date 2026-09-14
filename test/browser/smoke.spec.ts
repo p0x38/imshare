@@ -65,19 +65,6 @@ test.describe("public frontend", () => {
         await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode"))).toBe(stored);
     });
 
-    test("settings can switch language and persist it", async ({ page }) => {
-        await page.goto("/dashboard/settings/");
-        const japanese = page.getByLabel("日本語");
-        await expect(japanese).toBeVisible();
-        await japanese.check();
-        await expect(japanese).toBeChecked();
-        await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-language"))).toBe("ja");
-        await expect(page.locator("html")).toHaveAttribute("lang", "ja");
-        await page.reload();
-        await expect(page.getByLabel("日本語")).toBeChecked();
-        await expect(page.locator("html")).toHaveAttribute("lang", "ja");
-    });
-
     test("settings can switch to automatic device mode", async ({ page }) => {
         await page.emulateMedia({ colorScheme: "dark" });
         await page.goto("/dashboard/settings/");
@@ -86,6 +73,20 @@ test.describe("public frontend", () => {
         await automatic.check();
         await expect(automatic).toBeChecked();
         await expect(page.locator("body")).toHaveCSS("background-color", "rgb(18, 18, 18)");
+    });
+
+    test("settings can switch language and persist it", async ({ page }) => {
+        await page.goto("/dashboard/settings/");
+        const japanese = page.getByLabel("日本語");
+        await expect(japanese).toBeVisible();
+        await japanese.check();
+        await expect(japanese).toBeChecked();
+        await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+        await expect(page.getByRole("heading", { name: "設定", level: 1 })).toBeVisible();
+        await expect(page.evaluate(() => localStorage.getItem("imshare-language"))).resolves.toBe("ja");
+        await page.reload();
+        await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+        await expect(page.getByRole("heading", { name: "設定", level: 1 })).toBeVisible();
     });
 
     test("mobile layout does not create horizontal overflow", async ({ page }) => {
