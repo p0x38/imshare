@@ -1,14 +1,22 @@
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+
+const reactPage = (entry: string, rootId: string, attributes = "") => `<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#1976d2" />
+    <title>imshare</title>
+</head>
+<body ${attributes}>
+    <div id="${rootId}"></div>
+    <script type="module" src="/client/${entry}.js"></script>
+</body>
+</html>`;
 
 export const pageRoutes: FastifyPluginAsync = async (fastify) => {
-    const publicDir = path.join(process.cwd(), "public");
-
-    const staticPage = async (reply: FastifyReply, relativePath: string) => {
-        const body = await readFile(path.join(publicDir, relativePath), "utf8");
-        return reply.type("text/html; charset=utf-8").send(body);
-    };
+    const render = (entry: string, rootId: string, attributes?: string) =>
+        async (_request: unknown, reply: FastifyReply) => reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
 
     const redirects: Record<string, string> = {
         "/login": "/account/login/",
@@ -17,7 +25,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         "/notifications": "/account/notifications/",
         "/account/notifications": "/account/notifications/",
         "/account/profile": "/account/profile/",
-        "/account/sessions": "/account/sessions/",
+        "/account/sessions": "/account/",
         "/posts": "/posts/",
         "/posts/new": "/posts/new/",
         "/dashboard": "/dashboard/",
@@ -40,33 +48,38 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     for (const [from, to] of Object.entries(redirects))
         fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
 
-    fastify.get("/account/login/", async (_request, reply) => staticPage(reply, "account/login/index.html"));
-    fastify.get("/account/register/", async (_request, reply) => staticPage(reply, "account/register/index.html"));
-    fastify.get("/notifications/", async (_request, reply) => staticPage(reply, "account/notifications.html"));
+    fastify.get("/account/login/", render("legacy", "legacy-page"));
+    fastify.get("/account/register/", render("legacy", "legacy-page"));
+    fastify.get("/notifications/", render("legacy", "legacy-page"));
+    fastify.get("/account/notifications/", render("legacy", "legacy-page"));
+    fastify.get("/account/profile/", render("legacy", "legacy-page"));
 
-    fastify.get("/users/", async (_request, reply) => staticPage(reply, "users/index.html"));
-    fastify.get("/users/:userId", async (_request, reply) => staticPage(reply, "users/view.html"));
-    fastify.get("/users/:userId/", async (_request, reply) => staticPage(reply, "users/view.html"));
-    fastify.get("/users/:userId/posts", async (_request, reply) => staticPage(reply, "users/posts.html"));
-    fastify.get("/users/:userId/posts/", async (_request, reply) => staticPage(reply, "users/posts.html"));
+    fastify.get("/users/", render("legacy", "legacy-page"));
+    fastify.get("/users/:userId", render("legacy", "legacy-page"));
+    fastify.get("/users/:userId/", render("legacy", "legacy-page"));
+    fastify.get("/users/:userId/posts", render("legacy", "legacy-page"));
+    fastify.get("/users/:userId/posts/", render("legacy", "legacy-page"));
 
-    fastify.get("/tags/", async (_request, reply) => staticPage(reply, "tags/index.html"));
-    fastify.get("/tags/:tagId", async (_request, reply) => staticPage(reply, "tags/view.html"));
-    fastify.get("/tags/:tagId/", async (_request, reply) => staticPage(reply, "tags/view.html"));
-    fastify.get("/tags/:tagId/posts", async (_request, reply) => staticPage(reply, "tags/posts.html"));
-    fastify.get("/tags/:tagId/posts/", async (_request, reply) => staticPage(reply, "tags/posts.html"));
+    fastify.get("/tags/", render("legacy", "legacy-page"));
+    fastify.get("/tags/:tagId", render("legacy", "legacy-page"));
+    fastify.get("/tags/:tagId/", render("legacy", "legacy-page"));
+    fastify.get("/tags/:tagId/posts", render("legacy", "legacy-page"));
+    fastify.get("/tags/:tagId/posts/", render("legacy", "legacy-page"));
 
-    fastify.get("/categories/", async (_request, reply) => staticPage(reply, "categories/index.html"));
-    fastify.get("/categories/:categoryId", async (_request, reply) => staticPage(reply, "categories/view.html"));
-    fastify.get("/categories/:categoryId/", async (_request, reply) => staticPage(reply, "categories/view.html"));
-    fastify.get("/categories/:categoryId/posts", async (_request, reply) => staticPage(reply, "categories/posts.html"));
-    fastify.get("/categories/:categoryId/posts/", async (_request, reply) => staticPage(reply, "categories/posts.html"));
+    fastify.get("/categories/", render("legacy", "legacy-page"));
+    fastify.get("/categories/:categoryId", render("legacy", "legacy-page"));
+    fastify.get("/categories/:categoryId/", render("legacy", "legacy-page"));
+    fastify.get("/categories/:categoryId/posts", render("legacy", "legacy-page"));
+    fastify.get("/categories/:categoryId/posts/", render("legacy", "legacy-page"));
 
-    fastify.get("/search/", async (_request, reply) => staticPage(reply, "search/index.html"));
-    fastify.get("/about/", async (_request, reply) => staticPage(reply, "about.html"));
-    fastify.get("/faq/", async (_request, reply) => staticPage(reply, "faq.html"));
-    fastify.get("/github/", async (_request, reply) => staticPage(reply, "github.html"));
-    fastify.get("/privacy/", async (_request, reply) => staticPage(reply, "privacy.html"));
-    fastify.get("/terms/", async (_request, reply) => staticPage(reply, "terms.html"));
-    fastify.get("/admin/", async (_request, reply) => staticPage(reply, "admin/index.html"));
+    fastify.get("/search/", render("legacy", "legacy-page"));
+    fastify.get("/about/", render("legacy", "legacy-page"));
+    fastify.get("/faq/", render("legacy", "legacy-page"));
+    fastify.get("/github/", render("legacy", "legacy-page"));
+    fastify.get("/privacy/", render("legacy", "legacy-page"));
+    fastify.get("/terms/", render("legacy", "legacy-page"));
+    fastify.get("/admin/", render("legacy", "legacy-page"));
+
+    fastify.get("/dashboard/tags/", render("taxonomy", "taxonomy-page", 'data-taxonomy="tags"'));
+    fastify.get("/dashboard/categories/", render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"'));
 };
