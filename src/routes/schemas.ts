@@ -40,6 +40,11 @@ const postLifecycleProperties = {
     contentWarning: { anyOf: [{ type: "string", maxLength: 500 }, { type: "null" }] },
 };
 
+const originalPostProperties = {
+    originalCreator: { anyOf: [{ type: "string", minLength: 1, maxLength: 500 }, { type: "null" }] },
+    originalCreatedAt: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
+};
+
 export const postCreateSchema = {
     body: {
         type: "object",
@@ -50,6 +55,7 @@ export const postCreateSchema = {
             description: { type: "string", maxLength: 10000 },
             caption: { type: "string", maxLength: 10000 },
             sourceUrl: { type: "string", maxLength: 4096 },
+            ...originalPostProperties,
             allowDownload: { type: "boolean" },
             ...postLifecycleProperties,
             tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
@@ -70,6 +76,7 @@ export const postUpdateSchema = {
             caption: { anyOf: [{ type: "string", maxLength: 10000 }, { type: "null" }] },
             allowDownload: { type: "boolean" },
             sourceUrl: { anyOf: [{ type: "string", maxLength: 4096 }, { type: "null" }] },
+            ...originalPostProperties,
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             ...postLifecycleProperties,
             tags: { type: "array", maxItems: 100, items: { type: "string", minLength: 1, maxLength: 100 } },
