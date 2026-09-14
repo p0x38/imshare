@@ -1,0 +1,28 @@
+services:
+  app:
+    image: node:24-bookworm-slim
+    working_dir: /app
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    command: >-
+      sh -c "corepack enable && corepack prepare pnpm@11.25.0 --activate && pnpm install --frozen-lockfile && pnpm start"
+    expose:
+      - "5454"
+
+  anubis:
+    image: ghcr.io/techarohq/anubis:v1.27.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8923:8923"
+    environment:
+      BIND: ":8923"
+      TARGET: "http://app:5454"
+    volumes:
+      - ./anubis/anubis.yaml:/etc/anubis/anubis.yaml:ro
+      - anubis-data:/data
+    depends_on:
+      - app
+
+volumes:
+  anubis-data:
