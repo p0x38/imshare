@@ -1,9 +1,9 @@
 import { Prisma } from "@prisma/client";
 import type { FastifyInstance } from "fastify";
-import { prisma } from "../lib/prisma";
-import { getConfig, saveConfig } from "../lib/config";
-import { getRegistrationToken } from "../lib/registration";
-import { ok } from "./_shared";
+import { prisma } from "../lib/prisma.js";
+import { getConfig, saveConfig } from "../lib/config.js";
+import { getRegistrationToken } from "../lib/registration.js";
+import { ok } from "./_shared.js";
 
 function canModerateTarget(actorRole: string, targetRole: string): boolean {
     if (actorRole === "admin") return true;
