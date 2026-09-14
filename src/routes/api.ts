@@ -8,6 +8,7 @@ import { healthRoutes } from "./health.js";
 import { imageRoutes } from "./images.js";
 import { metaRoutes } from "./meta.js";
 import { notificationRoutes } from "./notifications.js";
+import { permalinkRoutes } from "./permalinks.js";
 import { postLifecycleRoutes } from "./post-lifecycle.js";
 import { postRoutes } from "./posts.js";
 import { profileLinkRoutes } from "./profile-links.js";
@@ -25,6 +26,7 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(healthRoutes);
     await fastify.register(userRoutes);
     await fastify.register(postRoutes);
+    await fastify.register(permalinkRoutes);
     await fastify.register(postLifecycleRoutes);
     await fastify.register(reactionRoutes);
     await fastify.register(commentRoutes);
