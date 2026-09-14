@@ -45,49 +45,33 @@ function PostEditor() {
             setCategories(categoryResponse.data ?? []);
             if (postResponse) {
                 const value = postResponse.data;
-                setPost(value);
-                setTitle(value.title ?? "");
-                setCaption(value.caption ?? "");
-                setDescription(value.description ?? "");
-                setSourceUrl(value.sourceUrl ?? "");
-                setAllowDownload(value.allowDownload !== false);
-                setStatus(value.status === "draft" ? "draft" : "published");
+                setPost(value); setTitle(value.title ?? ""); setCaption(value.caption ?? ""); setDescription(value.description ?? "");
+                setSourceUrl(value.sourceUrl ?? ""); setAllowDownload(value.allowDownload !== false); setStatus(value.status === "draft" ? "draft" : "published");
                 setVisibility(value.visibility === "private" || value.visibility === "unlisted" ? value.visibility : "public");
-                setTags((value.tags ?? []).map((tag) => tag.name ?? tag.tag?.name ?? "").filter(Boolean).join(", "));
-                setCategoryId(value.category?.id ?? "");
+                setTags((value.tags ?? []).map((tag) => tag.name ?? tag.tag?.name ?? "").filter(Boolean).join(", ")); setCategoryId(value.category?.id ?? "");
             }
         }).catch((cause) => setError(cause instanceof Error ? cause.message : "Unable to load post editor."));
     }, [editing, postId]);
 
     function addFiles(next: FileList | File[]) {
-        const selected = Array.from(next).filter((file) => file.type.startsWith("image/"));
-        setFiles((current) => [...current, ...selected]);
+        const selected = Array.from(next).filter((file) => file.type.startsWith("image/")); setFiles((current) => [...current, ...selected]);
         if (!title.trim() && selected[0]) setTitle(selected.length === 1 ? selected[0].name.replace(/\.[^.]+$/, "") : "");
     }
-    function moveFile(index: number, delta: -1 | 1) {
-        setFiles((current) => {
-            const target = index + delta; if (target < 0 || target >= current.length) return current;
-            const next = [...current]; const currentFile = next[index]; const targetFile = next[target];
-            if (!currentFile || !targetFile) return current; next[index] = targetFile; next[target] = currentFile; return next;
-        });
-    }
+    function moveFile(index: number, delta: -1 | 1) { setFiles((current) => { const target = index + delta; if (target < 0 || target >= current.length) return current; const next = [...current]; const currentFile = next[index]; const targetFile = next[target]; if (!currentFile || !targetFile) return current; next[index] = targetFile; next[target] = currentFile; return next; }); }
     function removeFile(index: number) { setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index)); }
     function upload(file: File): Promise<UploadedFile> {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest(); xhr.open("POST", "/v1/uploads");
             xhr.upload.onprogress = (event) => { if (!event.lengthComputable) return; setProgress((event.loaded / event.total) * 100); setUploadStatus(`Uploading ${file.name}… ${Math.round((event.loaded / event.total) * 100)}%`); };
             xhr.onload = () => { if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText).data as UploadedFile); } catch { reject(new Error("Invalid upload response.")); } } else reject(new Error(xhr.status === 429 ? "Upload rate limit exceeded." : "Image upload failed.")); };
-            xhr.onerror = () => reject(new Error("Image upload failed.")); xhr.onabort = () => reject(new Error("Upload cancelled."));
-            const data = new FormData(); data.append("file", file); xhr.send(data);
+            xhr.onerror = () => reject(new Error("Image upload failed.")); xhr.onabort = () => reject(new Error("Upload cancelled.")); const data = new FormData(); data.append("file", file); xhr.send(data);
         });
     }
     async function createPost(uploadIds: string[], postTitle: string) {
-        const response = await api<{ data: Post }>("/v1/posts", { method: "POST", body: JSON.stringify({ title: postTitle, caption: caption || null, description: description || null, sourceUrl: sourceUrl || null, allowDownload, status: "draft", visibility, uploadIds, tags: tags.split(",").map((value) => value.trim()).filter(Boolean), categoryId: categoryId || null }) });
-        return response.data;
+        const response = await api<{ data: Post }>("/v1/posts", { method: "POST", body: JSON.stringify({ title: postTitle, caption: caption || null, description: description || null, sourceUrl: sourceUrl || null, allowDownload, status: "draft", visibility, uploadIds, tags: tags.split(",").map((value) => value.trim()).filter(Boolean), categoryId: categoryId || null }) }); return response.data;
     }
     async function deletePost() {
-        if (!postId || !window.confirm("Delete this post permanently? This cannot be undone.")) return;
-        setSaving(true); setError("");
+        if (!postId || !window.confirm("Delete this post permanently? This cannot be undone.")) return; setSaving(true); setError("");
         try { await api(`/v1/posts/${encodeURIComponent(postId)}`, { method: "DELETE" }); location.href = "/dashboard/posts/"; }
         catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to delete post."); setSaving(false); }
     }
@@ -98,17 +82,12 @@ function PostEditor() {
                 const response = await api<{ data: Post }>(`/v1/posts/${encodeURIComponent(postId!)}`, { method: "PATCH", body: JSON.stringify({ title, caption: caption || null, description: description || null, sourceUrl: sourceUrl || null, allowDownload, status, visibility, tags: tags.split(",").map((value) => value.trim()).filter(Boolean), categoryId: categoryId || null }) });
                 location.href = `/dashboard/posts/${encodeURIComponent(response.data.id)}/edit/`; return;
             }
-            if (!files.length) throw new Error("Please choose at least one image.");
-            const uploads: UploadedFile[] = [];
+            if (!files.length) throw new Error("Please choose at least one image."); const uploads: UploadedFile[] = [];
             for (let index = 0; index < files.length; index++) { setUploadStatus(`Uploading ${index + 1}/${files.length} images…`); uploads.push(await upload(files[index]!)); }
             setProgress(100);
-            if (mergeIntoMultiPost) {
-                setUploadStatus("All uploads ready — creating multi-image draft…");
-                const post = await createPost(uploads.map((upload) => upload.id), title.trim() || files[0]!.name.replace(/\.[^.]+$/, ""));
-                location.href = `/dashboard/posts/${encodeURIComponent(post.id)}/edit/`; return;
-            }
+            if (mergeIntoMultiPost) { setUploadStatus("All uploads ready — creating multi-image draft…"); const post = await createPost(uploads.map((upload) => upload.id), title.trim() || files[0]!.name.replace(/\.[^.]+$/, "")); location.href = `/dashboard/posts/${encodeURIComponent(post.id)}/edit/`; return; }
             let firstPost: Post | null = null;
-            for (let index = 0; index < files.length; index++) { const file = files[index]!; setUploadStatus(`Creating draft ${index + 1}/${files.length}…`); const post = await createPost([uploads[index]!.id], title.trim() || file.name.replace(/\.[^.]+$/, ""); firstPost ??= post; }
+            for (let index = 0; index < files.length; index++) { const file = files[index]!; setUploadStatus(`Creating draft ${index + 1}/${files.length}…`); const post = await createPost([uploads[index]!.id], title.trim() || file.name.replace(/\.[^.]+$/, "")); firstPost ??= post; }
             setUploadStatus(`Created ${files.length} draft posts.`); if (firstPost) location.href = `/dashboard/posts/${encodeURIComponent(firstPost.id)}/edit/`;
         } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to save post."); }
         finally { setSaving(false); }
