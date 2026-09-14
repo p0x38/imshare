@@ -5,18 +5,20 @@ import { api } from "../lib/api";
 interface VersionResponse {
     data?: {
         version?: string;
+        commitHash?: string;
+        commitMessage?: string;
     };
 }
 
 export function Footer() {
-    const [version, setVersion] = useState<string>("");
+    const [version, setVersion] = useState<VersionResponse["data"]>();
 
     useEffect(() => {
         let active = true;
 
         void api<VersionResponse>("/v1/version")
             .then((response) => {
-                if (active) setVersion(response.data?.version ?? "");
+                if (active) setVersion(response.data);
             })
             .catch(() => {
                 // Version information is optional footer metadata.
@@ -26,6 +28,10 @@ export function Footer() {
             active = false;
         };
     }, []);
+
+    const buildLabel = version?.commitHash && version.commitHash !== "unknown"
+        ? `${version.commitHash.slice(0, 7)}${version.commitMessage ? ` · ${version.commitMessage}` : ""}`
+        : "";
 
     return (
         <Box
@@ -63,8 +69,14 @@ export function Footer() {
                     <Link href="/privacy/" underline="hover">Privacy</Link>
                     <Typography color="text.secondary">·</Typography>
                     <Link href="/terms/" underline="hover">Terms</Link>
-                    <Typography aria-label="Version" variant="body2" color="text.secondary">
-                        {version ? `Version ${version}` : "Version"}
+                    <Typography
+                        aria-label="Version"
+                        variant="body2"
+                        color="text.secondary"
+                        title={version?.commitMessage ?? undefined}
+                    >
+                        {version?.version ? `Version ${version.version}` : "Version"}
+                        {buildLabel ? ` · ${buildLabel}` : ""}
                     </Typography>
                 </Stack>
             </Container>
