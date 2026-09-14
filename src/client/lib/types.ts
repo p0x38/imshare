@@ -23,6 +23,8 @@ export interface Post {
     description?: string | null;
     caption?: string | null;
     sourceUrl?: string | null;
+    originalCreator?: string | null;
+    originalCreatedAt?: string | null;
     allowDownload?: boolean;
     status?: string;
     visibility?: string;
