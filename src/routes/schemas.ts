@@ -5,6 +5,7 @@ export const userCreateSchema = {
         required: ["name", "email"],
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
+            handle: { type: ["string", "null"], minLength: 3, maxLength: 32, pattern: "^[a-z0-9_][a-z0-9_-]*$" },
             email: { type: "string", minLength: 3, maxLength: 320 },
             image: { type: "string", maxLength: 2048 },
             bio: { type: "string", maxLength: 2000 },
@@ -21,6 +22,7 @@ export const userUpdateSchema = {
         minProperties: 1,
         properties: {
             name: { type: "string", minLength: 1, maxLength: 100 },
+            handle: { anyOf: [{ type: "string", minLength: 3, maxLength: 32, pattern: "^[a-z0-9_][a-z0-9_-]*$" }, { type: "null" }] },
             image: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
             bio: { anyOf: [{ type: "string", maxLength: 2000 }, { type: "null" }] },
             websiteUrl: { anyOf: [{ type: "string", maxLength: 2048 }, { type: "null" }] },
