@@ -19,34 +19,14 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         async (_request: unknown, reply: FastifyReply) => reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
 
     const redirects: Record<string, string> = {
-        "/login": "/account/login/",
-        "/signup": "/account/register/",
-        "/account": "/account/",
-        "/account/sessions": "/account/",
-        "/notifications": "/account/notifications/",
-        "/account/notifications": "/account/notifications/",
-        "/account/profile": "/account/profile/",
-        "/posts": "/posts/",
-        "/posts/new": "/posts/new/",
-        "/dashboard": "/dashboard/",
-        "/dashboard/posts": "/dashboard/posts/",
-        "/dashboard/tags": "/dashboard/tags/",
-        "/dashboard/categories": "/dashboard/categories/",
-        "/dashboard/settings": "/dashboard/settings/",
-        "/users": "/users/",
-        "/tags": "/tags/",
-        "/categories": "/categories/",
-        "/search": "/search/",
-        "/about": "/about/",
-        "/faq": "/faq/",
-        "/github": "/github/",
-        "/privacy": "/privacy/",
-        "/terms": "/terms/",
-        "/admin": "/admin/",
+        "/login": "/account/login/", "/signup": "/account/register/", "/account": "/account/", "/account/sessions": "/account/",
+        "/notifications": "/account/notifications/", "/account/notifications": "/account/notifications/", "/account/profile": "/account/profile/",
+        "/posts": "/posts/", "/posts/new": "/posts/new/", "/dashboard": "/dashboard/", "/dashboard/posts": "/dashboard/posts/",
+        "/dashboard/tags": "/dashboard/tags/", "/dashboard/categories": "/dashboard/categories/", "/dashboard/settings": "/dashboard/settings/",
+        "/users": "/users/", "/tags": "/tags/", "/categories": "/categories/", "/search": "/search/", "/about": "/about/",
+        "/faq": "/faq/", "/github": "/github/", "/privacy": "/privacy/", "/terms": "/terms/", "/admin": "/admin/",
     };
-
-    for (const [from, to] of Object.entries(redirects))
-        fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
+    for (const [from, to] of Object.entries(redirects)) fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
 
     fastify.get("/", render("home", "home-page"));
     fastify.get("/account/", render("account", "account-page"));
@@ -56,12 +36,10 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/notifications/", render("legacy", "legacy-page"));
     fastify.get("/account/notifications/", render("legacy", "legacy-page"));
     fastify.get("/account/profile/", render("legacy", "legacy-page"));
-
     fastify.get("/posts/", render("posts", "posts-page"));
     fastify.get("/posts/new/", render("postEditor", "post-editor-page"));
     fastify.get("/posts/:postId", render("post", "post"));
     fastify.get("/posts/:postId/", render("post", "post"));
-
     fastify.get("/dashboard/", render("dashboard", "dashboard-page"));
     fastify.get("/dashboard/posts/", render("dashboardPosts", "dashboard-posts-page"));
     fastify.get("/dashboard/posts/:postId/", render("dashboardPost", "dashboard-post-page"));
@@ -69,25 +47,23 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/dashboard/tags/", render("taxonomy", "taxonomy-page", 'data-taxonomy="tags"'));
     fastify.get("/dashboard/categories/", render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"'));
     fastify.get("/dashboard/settings/", render("settings", "settings-page"));
-
     fastify.get("/users/", render("legacy", "legacy-page"));
+    fastify.get("/users/@:handle", render("legacy", "legacy-page"));
+    fastify.get("/users/@:handle/", render("legacy", "legacy-page"));
     fastify.get("/users/:userId", render("legacy", "legacy-page"));
     fastify.get("/users/:userId/", render("legacy", "legacy-page"));
     fastify.get("/users/:userId/posts", render("legacy", "legacy-page"));
     fastify.get("/users/:userId/posts/", render("legacy", "legacy-page"));
-
     fastify.get("/tags/", render("legacy", "legacy-page"));
     fastify.get("/tags/:tagId", render("legacy", "legacy-page"));
     fastify.get("/tags/:tagId/", render("legacy", "legacy-page"));
     fastify.get("/tags/:tagId/posts", render("legacy", "legacy-page"));
     fastify.get("/tags/:tagId/posts/", render("legacy", "legacy-page"));
-
     fastify.get("/categories/", render("legacy", "legacy-page"));
     fastify.get("/categories/:categoryId", render("legacy", "legacy-page"));
     fastify.get("/categories/:categoryId/", render("legacy", "legacy-page"));
     fastify.get("/categories/:categoryId/posts", render("legacy", "legacy-page"));
     fastify.get("/categories/:categoryId/posts/", render("legacy", "legacy-page"));
-
     fastify.get("/search/", render("legacy", "legacy-page"));
     fastify.get("/about/", render("legacy", "legacy-page"));
     fastify.get("/faq/", render("legacy", "legacy-page"));
