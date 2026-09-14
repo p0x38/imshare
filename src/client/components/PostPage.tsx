@@ -356,8 +356,21 @@ export function PostPage({ postId }: { postId: string }) {
 
     const authorName = post.author?.name || post.authorName || post.author?.id || "Unknown author";
     const authorHref = authorUrl(post);
+    const authorAvatar = post.author?.avatarUrl || post.author?.image || undefined;
+    const authorInitial = authorName.charAt(0).toUpperCase() || "?";
+    const authorMetadata = authorHref ? (
+        <Stack key="user" component="a" href={authorHref} direction="row" spacing={1} alignItems="center" color="text.secondary" sx={{ width: "fit-content", textDecoration: "none" }}>
+            <Avatar src={authorAvatar} alt={authorName} sx={{ width: 28, height: 28, fontSize: "0.8rem" }}>{authorInitial}</Avatar>
+            <Typography component="span" color="inherit">{authorName}</Typography>
+        </Stack>
+    ) : (
+        <Stack key="user" direction="row" spacing={1} alignItems="center" color="text.secondary">
+            <Avatar src={authorAvatar} alt={authorName} sx={{ width: 28, height: 28, fontSize: "0.8rem" }}>{authorInitial}</Avatar>
+            <Typography component="span" color="inherit">{authorName}</Typography>
+        </Stack>
+    );
     const metadata = [
-        authorHref ? <Typography key="user" component="a" href={authorHref} color="text.secondary" sx={{ width: "fit-content" }}>{authorName}</Typography> : <Typography key="user" component="span" color="text.secondary">{authorName}</Typography>,
+        authorMetadata,
         <Typography key="views" component="span" color="text.secondary">{post.viewCount ?? 0} views</Typography>,
         ...(post.createdAt ? [<Tooltip key="created" title={`Created ${absoluteTime(post.createdAt)}`}><Typography component="time" dateTime={post.createdAt} color="text.secondary" sx={{ cursor: "help" }}>{relativeTime(post.createdAt)}</Typography></Tooltip>] : []),
         ...(post.updatedAt && post.updatedAt !== post.createdAt ? [<Tooltip key="updated" title={`Updated ${absoluteTime(post.updatedAt)}`}><Typography component="time" dateTime={post.updatedAt} color="text.secondary" sx={{ cursor: "help" }}>updated {relativeTime(post.updatedAt)}</Typography></Tooltip>] : []),
