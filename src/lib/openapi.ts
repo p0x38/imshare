@@ -96,7 +96,7 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
                 description: config.site.description,
                 version: config.site.version,
             },
-            servers: [{ url: config.auth.baseUrl }],
+            ...(config.auth.baseUrl ? { servers: [{ url: config.auth.baseUrl }] } : {}),
             tags: [
                 { name: "Health" },
                 { name: "Authentication" },
@@ -117,14 +117,14 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
                     cookieAuth: { type: "apiKey", in: "cookie", name: "better-auth.session_token" },
                 },
                 schemas: {
-                    ErrorResponse: errorResponseSchema,
-                    Post: postResponseSchema.properties.data,
-                    PostCollection: postCollectionResponseSchema,
+                    ErrorResponse: JSON.parse(JSON.stringify(errorResponseSchema)),
+                    Post: JSON.parse(JSON.stringify(postResponseSchema.properties.data)),
+                    PostCollection: JSON.parse(JSON.stringify(postCollectionResponseSchema)),
                 },
             },
         },
         transform: ({ schema, url, route }) => {
-            const method = route?.toUpperCase() ?? "";
+            const method = typeof route?.method === "string" ? route.method.toUpperCase() : "";
             const key = `${method} ${url}`;
             const doc = documentation[key];
             if (!doc) return { schema, url, route };
