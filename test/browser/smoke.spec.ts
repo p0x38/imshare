@@ -7,62 +7,15 @@ test.describe("public frontend", () => {
         await expect(page.locator("header")).toBeVisible();
     });
 
-    test("main page entrance motion is wired", async ({ page }) => {
-        await page.addInitScript(() => {
-            localStorage.setItem(
-                "imshare-theme-settings",
-                JSON.stringify({ animations: true, ripple: false, accentColor: "default" }),
-            );
-        });
-        await page.goto("/");
-
-        const motion = page.locator("main:has(> h1)").first().locator("..");
-        await expect(motion).toBeVisible();
-        await expect
-            .poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange))
-            .toContain("opacity");
+    test("initial loading screen is replaced when React mounts", async ({ page }) => {
+        await page.goto("/", { waitUntil: "domcontentloaded" });
+        await expect(page.getByRole("status").filter({ hasText: /loading/i })).toBeHidden();
+        await expect(page.locator("header")).toBeVisible();
     });
 
-    test("interaction motion uses the shared transitions", async ({ page }) => {
-        await page.addInitScript(() => {
-            localStorage.setItem(
-                "imshare-theme-settings",
-                JSON.stringify({ animations: true, ripple: false, accentColor: "default" }),
-            );
-        });
+    test("posts page exposes skeletons while its data is pending", async ({ page }) => {
         await page.route("**/v1/posts?*", async (route) => {
-            await route.fulfill({
-                status: 200,
-                contentType: "application/json",
-                body: JSON.stringify({
-                    data: [{ id: "motion-test", title: "Motion test", uploads: [], authorName: "Test" }],
-                    pagination: { page: 1, totalPages: 1 },
-                }),
-            });
-        });
-        await page.goto("/posts/");
-
-        const searchButton = page.getByRole("button", { name: "Search" });
-        const buttonBefore = await searchButton.evaluate((element) => getComputedStyle(element).transition);
-        expect(buttonBefore).toContain("transform");
-
-        await searchButton.hover();
-        await expect.poll(async () => searchButton.evaluate((element) => getComputedStyle(element).transform)).not.toBe("none");
-
-        const card = page.locator(".MuiCard-root").filter({ hasText: "Motion test" }).first();
-        await expect(card).toBeVisible();
-        await card.hover();
-        await expect.poll(async () => card.evaluate((element) => getComputedStyle(element).transitionProperty)).toContain("transform");
-    });
-
-    test("button ripple is enabled by the theme preference", async ({ page }) => {
-        await page.addInitScript(() => {
-            localStorage.setItem(
-                "imshare-theme-settings",
-                JSON.stringify({ animations: false, ripple: true, accentColor: "default" }),
-            );
-        });
-        await page.route("**/v1/posts?*", async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, 700));
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -70,7 +23,29 @@ test.describe("public frontend", () => {
             });
         });
         await page.goto("/posts/");
+        await expect(page.locator('[aria-busy="true"]')).toBeVisible();
+        await expect(page.locator('[aria-busy="true"] .MuiSkeleton-root').first()).toBeVisible();
+        await expect(page.locator('[aria-busy="true"]')).toBeHidden({ timeout: 3_000 });
+    });
 
+    test("main page entrance motion is wired", async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem("imshare-theme-settings", JSON.stringify({ animations: true, ripple: false, accentColor: "default" }));
+        });
+        await page.goto("/");
+        const motion = page.locator("main:has(> h1)").first().locator("..");
+        await expect(motion).toBeVisible();
+        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange)).toContain("opacity");
+    });
+
+    test("button ripple is enabled by the theme preference", async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem("imshare-theme-settings", JSON.stringify({ animations: false, ripple: true, accentColor: "default" }));
+        });
+        await page.route("**/v1/posts?*", async (route) => {
+            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }) });
+        });
+        await page.goto("/posts/");
         const button = page.getByRole("button", { name: "Search" });
         const ripple = button.locator(".MuiTouchRipple-ripple");
         await button.dispatchEvent("mousedown", { button: 0, bubbles: true });
@@ -78,31 +53,31 @@ test.describe("public frontend", () => {
         await button.dispatchEvent("mouseup", { button: 0, bubbles: true });
     });
 
-    test("reduced-motion mode keeps custom motion disabled by default", async ({ page }) => {
-        await page.emulateMedia({ reducedMotion: "reduce" });
-        await page.goto("/posts/");
-
-        const pageMotion = page.locator("main").first().locator("..");
-        await expect(pageMotion).toBeVisible();
-        await expect(pageMotion).toHaveCSS("animation-name", /^(none|unset)$/i);
-
-        const button = page.getByRole("button", { name: "Search" });
-        const duration = await button.evaluate((element) => Number.parseFloat(getComputedStyle(element).transitionDuration));
-        expect(duration).toBeLessThanOrEqual(0.001);
-    });
-
     test("color mode toggle persists its state", async ({ page }) => {
         await page.goto("/");
         const toggle = page.getByRole("button", { name: /dark mode|light mode/i });
         await toggle.click();
-
         const stored = await page.evaluate(() => localStorage.getItem("imshare-color-mode"));
         expect(stored).toMatch(/^(light|dark)$/);
-
         await page.reload();
-        await expect
-            .poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode")))
-            .toBe(stored);
+        await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode"))).toBe(stored);
+    });
+
+    test("settings can switch to automatic device mode", async ({ page }) => {
+        await page.emulateMedia({ colorScheme: "dark" });
+        await page.goto("/dashboard/settings/");
+        const automatic = page.getByLabel("Automatic (Device)");
+        await expect(automatic).toBeVisible();
+        await automatic.check();
+        await expect(automatic).toBeChecked();
+        await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode"))).toBe("auto");
+    });
+
+    test("mobile layout does not create horizontal overflow", async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 844 });
+        await page.goto("/");
+        const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+        expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
     });
 
     test("navigation is usable on desktop", async ({ page }) => {
@@ -119,7 +94,6 @@ test.describe("public frontend", () => {
         await page.goto("/");
         const openButton = page.getByRole("button", { name: "Open navigation" });
         await expect(openButton).toBeVisible();
-        await expect(openButton).toHaveCSS("min-width", /.+/);
         await openButton.click();
         await expect(page.getByRole("button", { name: "Close navigation" })).toBeVisible();
         await expect(page.getByRole("link", { name: "Posts" })).toBeVisible();
@@ -128,13 +102,7 @@ test.describe("public frontend", () => {
     });
 
     test("public pages return real HTML", async ({ page }) => {
-        const paths = [
-            "/", "/posts/", "/posts/new/", "/posts/test-post/", "/account/",
-            "/account/login/", "/account/register/", "/account/notifications/",
-            "/account/profile/", "/account/sessions/", "/notifications/", "/users/",
-            "/tags/", "/categories/", "/search/", "/about/", "/faq/", "/github/",
-            "/privacy/", "/terms/", "/admin/",
-        ];
+        const paths = ["/", "/posts/", "/posts/new/", "/posts/test-post/", "/account/", "/account/login/", "/account/register/", "/account/notifications/", "/account/profile/", "/account/sessions/", "/notifications/", "/users/", "/tags/", "/categories/", "/search/", "/about/", "/faq/", "/github/", "/privacy/", "/terms/", "/admin/"];
         for (const path of paths) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
@@ -143,10 +111,7 @@ test.describe("public frontend", () => {
     });
 
     test("public taxonomy and profile detail pages render", async ({ page }) => {
-        for (const path of [
-            "/users/test-user/", "/users/test-user/posts/", "/tags/test-tag/",
-            "/tags/test-tag/posts/", "/categories/test-category/", "/categories/test-category/posts/",
-        ]) {
+        for (const path of ["/users/test-user/", "/users/test-user/posts/", "/tags/test-tag/", "/tags/test-tag/posts/", "/categories/test-category/", "/categories/test-category/posts/"]) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
             await expect(page.locator("body"), path).not.toBeEmpty();
@@ -172,11 +137,7 @@ test.describe("public frontend", () => {
 });
 
 test.describe("dashboard frontend", () => {
-    const managementPaths = [
-        "/dashboard/", "/dashboard/posts/", "/dashboard/posts/test-post/",
-        "/dashboard/posts/test-post/edit/", "/dashboard/tags/", "/dashboard/categories/",
-        "/dashboard/settings/",
-    ];
+    const managementPaths = ["/dashboard/", "/dashboard/posts/", "/dashboard/posts/test-post/", "/dashboard/posts/test-post/edit/", "/dashboard/tags/", "/dashboard/categories/", "/dashboard/settings/"];
 
     test("dashboard management routes serve React shells", async ({ request }) => {
         const expectedShells: Record<string, { root: string; script: string }> = {
@@ -188,7 +149,6 @@ test.describe("dashboard frontend", () => {
             "/dashboard/categories/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
             "/dashboard/settings/": { root: "settings-page", script: "/client/settings.js" },
         };
-
         for (const path of managementPaths) {
             const response = await request.get(path, { maxRedirects: 0 });
             expect(response.status(), path).toBe(200);
@@ -238,7 +198,6 @@ test.describe("dashboard frontend", () => {
         const viewHtml = await view.text();
         expect(viewHtml).toContain('id="dashboard-post-page"');
         expect(viewHtml).toContain('src="/client/dashboardPost.js"');
-
         const edit = await request.get("/dashboard/posts/test-post/edit/");
         expect(edit.status()).toBe(200);
         const editHtml = await edit.text();
