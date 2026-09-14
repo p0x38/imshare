@@ -1,7 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import en from "./locales/en.json";
-import ja from "./locales/ja.json";
+import en from "./locales/en.json" with { type: "json" };
+import ja from "./locales/ja.json" with { type: "json" };
 
 const storedLanguage = window.localStorage.getItem("imshare-language");
 const language = storedLanguage === "ja" ? "ja" : "en";
