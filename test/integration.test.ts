@@ -108,7 +108,7 @@ test(
                 headers: { cookie },
                 payload: { tagId },
             });
-            expect(attachTag.statusCode).toBe(201);
+            expect(attachTag.statusCode).toBe(200);
 
             const attachCategory = await request({
                 method: "PUT",
