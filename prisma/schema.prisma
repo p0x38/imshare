@@ -201,7 +201,7 @@ model Emoji {
 }
 
 model PostReaction {
-  id String @id
+  id String @id @default(cuid())
   type String
   createdAt DateTime @default(now())
   userId String
@@ -215,7 +215,7 @@ model PostReaction {
 }
 
 model Comment {
-  id String @id
+  id String @id @default(cuid())
   body String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -232,7 +232,7 @@ model Comment {
 }
 
 model CommentReaction {
-  id String @id
+  id String @id @default(cuid())
   type String @default("like")
   createdAt DateTime @default(now())
   userId String
@@ -245,7 +245,7 @@ model CommentReaction {
 }
 
 model Report {
-  id String @id
+  id String @id @default(cuid())
   reason String
   details String?
   status String @default("open")
@@ -263,7 +263,7 @@ model Report {
 }
 
 model Notification {
-  id String @id
+  id String @id @default(cuid())
   type String
   message String
   createdAt DateTime @default(now())
@@ -283,7 +283,7 @@ model Notification {
 }
 
 model ProfileLink {
-  id String @id
+  id String @id @default(cuid())
   label String
   url String
   position Int @default(0)
@@ -296,7 +296,7 @@ model ProfileLink {
 }
 
 model Tag {
-  id String @id
+  id String @id @default(cuid())
   name String @unique
   slug String @unique
   createdAt DateTime @default(now())
@@ -316,7 +316,7 @@ model PostTag {
 }
 
 model Category {
-  id String @id
+  id String @id @default(cuid())
   name String @unique
   slug String @unique
   description String?
@@ -327,7 +327,7 @@ model Category {
 }
 
 model ModerationLog {
-  id String @id
+  id String @id @default(cuid())
   action String
   reason String?
   createdAt DateTime @default(now())
