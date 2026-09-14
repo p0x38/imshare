@@ -4,7 +4,7 @@ test.describe("public frontend", () => {
     test("home page renders", async ({ page }) => {
         const response = await page.goto("/", { waitUntil: "domcontentloaded" });
         expect(response?.status()).toBe(200);
-        await expect(page.locator("title")).toHaveText("imshare");
+        await expect(page).toHaveTitle("imshare");
         await expect(page.locator("header")).toBeVisible();
     });
 
@@ -133,8 +133,8 @@ test.describe("public frontend", () => {
         await page.goto("/faq/");
         await expect(page.getByRole("heading", { name: "Frequently Asked Questions", level: 1 })).toBeVisible();
         await expect(page.getByRole("heading", { name: "About imshare", level: 2 })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Images and privacy", level: 2 })).toBeVisible();
-        await expect(page.getByText("Who can access my images?", { exact: true })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Privacy and moderation", level: 2 })).toBeVisible();
+        await expect(page.getByText("What is imshare?", { exact: true })).toBeVisible();
     });
 });
 
