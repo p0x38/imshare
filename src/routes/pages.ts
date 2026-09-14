@@ -66,9 +66,9 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/categories/:categoryId/posts/", render("legacy", "legacy-page"));
     fastify.get("/search/", render("legacy", "legacy-page"));
     fastify.get("/about/", render("legacy", "legacy-page"));
-    fastify.get("/faq/", render("legacy", "legacy-page"));
+    fastify.get("/faq/", render("faq", "faq-page"));
     fastify.get("/github/", render("legacy", "legacy-page"));
     fastify.get("/privacy/", render("legacy", "legacy-page"));
     fastify.get("/terms/", render("legacy", "legacy-page"));
-    fastify.get("/admin/", render("legacy", "legacy-page"));
+    fastify.get("/admin/", render("admin", "admin-page"));
 };
