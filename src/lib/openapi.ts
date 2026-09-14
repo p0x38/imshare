@@ -86,7 +86,7 @@ const documentation: Record<string, OperationDocumentation> = {
     "POST /v1/admin/users/{userId}/ban": { summary: "Ban user", description: "Bans a user and revokes their sessions. The reason is 1–500 characters. durationHours is optional, accepts 0–8760, and 0 means an indefinite ban.", requestExample: { reason: "Repeated policy violations.", durationHours: 24 } },
 };
 
-export async function registerOpenApi(app: FastifyInstance, config: ReturnType<typeof loadConfig>): Promise<void> {
+export async function registerOpenApi(app: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>): Promise<void> {
     await app.register(fastifySwagger, {
         openapi: {
             openapi: "3.1.0",
@@ -114,8 +114,8 @@ export async function registerOpenApi(app: FastifyInstance, config: ReturnType<t
                 },
             },
         },
-        transformObject({ swaggerObject }) {
-            const document = swaggerObject;
+        transformObject(documentObject) {
+            const document = "openapiObject" in documentObject ? documentObject.openapiObject : documentObject.swaggerObject;
             const documentRecord = document as Record<string, unknown>;
             const existingComponents = (documentRecord.components as Record<string, unknown> | undefined) ?? {};
             const existingSchemas = (existingComponents.schemas as Record<string, unknown> | undefined) ?? {};
@@ -131,8 +131,8 @@ export async function registerOpenApi(app: FastifyInstance, config: ReturnType<t
                             const parameters = Array.isArray(operationObject.parameters) ? operationObject.parameters : [];
                             const responses = operationObject.responses && typeof operationObject.responses === "object" ? { ...(operationObject.responses as Record<string, unknown>) } : {};
                             for (const [status, example] of Object.entries(doc?.responseExamples ?? {})) {
-                                const existing = responses[status] && typeof responses[status] === "object" ? { ...(responses[status] as Record<string, unknown>) } : { description: `HTTP ${status} response.` };
-                                const content = existing.content && typeof existing.content === "object" ? { ...(existing.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
+                                const existing: Record<string, unknown> = responses[status] && typeof responses[status] === "object" ? { ...(responses[status] as Record<string, unknown>) } : { description: `HTTP ${status} response.` };
+                                const content: Record<string, Record<string, unknown>> = existing.content && typeof existing.content === "object" ? { ...(existing.content as Record<string, Record<string, unknown>>) } : { "application/json": { schema: { type: "object" } } };
                                 const contentType = Object.keys(content)[0] ?? "application/json";
                                 const mediaType = { ...(content[contentType] ?? {}) };
                                 mediaType.example = example;
