@@ -1,7 +1,8 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { CssBaseline, GlobalStyles, ThemeProvider } from "@mui/material";
 import { createAppTheme, type AccentColor, type ThemeSettings } from "../theme";
 
+type ColorModePreference = "light" | "dark" | "auto";
 type ColorMode = "light" | "dark";
 
 const defaultThemeSettings: ThemeSettings = {
@@ -12,6 +13,8 @@ const defaultThemeSettings: ThemeSettings = {
 
 interface ColorModeContextValue {
     mode: ColorMode;
+    preference: ColorModePreference;
+    setPreference: (preference: ColorModePreference) => void;
     toggle: () => void;
 }
 
@@ -25,10 +28,14 @@ interface ThemeSettingsContextValue {
 export const ColorModeContext = createContext<ColorModeContextValue | null>(null);
 export const ThemeSettingsContext = createContext<ThemeSettingsContextValue | null>(null);
 
-function initialMode(): ColorMode {
-    const stored = window.localStorage.getItem("imshare-color-mode");
-    if (stored === "light" || stored === "dark") return stored;
+function getDeviceMode(): ColorMode {
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function initialColorModePreference(): ColorModePreference {
+    const stored = window.localStorage.getItem("imshare-color-mode");
+    if (stored === "light" || stored === "dark" || stored === "auto") return stored;
+    return "auto";
 }
 
 function initialThemeSettings(): ThemeSettings {
@@ -37,7 +44,10 @@ function initialThemeSettings(): ThemeSettings {
         if (!stored) return defaultThemeSettings;
         const parsed = JSON.parse(stored) as Partial<ThemeSettings>;
         const accentColor: AccentColor =
-            parsed.accentColor === "blue" || parsed.accentColor === "purple" || parsed.accentColor === "green" || parsed.accentColor === "orange"
+            parsed.accentColor === "blue" ||
+            parsed.accentColor === "purple" ||
+            parsed.accentColor === "green" ||
+            parsed.accentColor === "orange"
                 ? parsed.accentColor
                 : "default";
         return {
@@ -63,21 +73,36 @@ export function useThemeSettings() {
 }
 
 export function App({ children }: { children: React.ReactNode }) {
-    const [mode, setMode] = useState<ColorMode>(initialMode);
+    const [preference, setPreferenceState] = useState<ColorModePreference>(
+        initialColorModePreference,
+    );
+    const [deviceMode, setDeviceMode] = useState<ColorMode>(getDeviceMode);
     const [settings, setSettings] = useState<ThemeSettings>(initialThemeSettings);
+
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+        const handleChange = () => setDeviceMode(mediaQuery.matches ? "dark" : "light");
+
+        handleChange();
+        mediaQuery.addEventListener("change", handleChange);
+        return () => mediaQuery.removeEventListener("change", handleChange);
+    }, []);
+
+    const mode: ColorMode = preference === "auto" ? deviceMode : preference;
+
+    const setPreference = (next: ColorModePreference) => {
+        setPreferenceState(next);
+        window.localStorage.setItem("imshare-color-mode", next);
+    };
 
     const colorMode = useMemo(
         () => ({
             mode,
-            toggle: () => {
-                setMode((current) => {
-                    const next = current === "light" ? "dark" : "light";
-                    window.localStorage.setItem("imshare-color-mode", next);
-                    return next;
-                });
-            },
+            preference,
+            setPreference,
+            toggle: () => setPreference(mode === "light" ? "dark" : "light"),
         }),
-        [mode],
+        [mode, preference],
     );
 
     const updateSettings = (update: Partial<ThemeSettings>) => {
