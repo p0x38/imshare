@@ -74,6 +74,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             description?: string;
             caption?: string;
             sourceUrl?: string;
+            originalCreator?: string | null;
+            originalCreatedAt?: string | null;
             allowDownload?: boolean;
             status?: string;
             visibility?: string;
@@ -110,6 +112,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 description: body.description,
                 caption: body.caption,
                 sourceUrl: body.sourceUrl,
+                originalCreator: body.originalCreator?.trim() || null,
+                originalCreatedAt: body.originalCreatedAt ? new Date(body.originalCreatedAt) : null,
                 allowDownload: body.allowDownload ?? true,
                 ...lifecycle,
                 categoryId: body.categoryId,
@@ -167,6 +171,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             description?: string | null;
             caption?: string | null;
             sourceUrl?: string | null;
+            originalCreator?: string | null;
+            originalCreatedAt?: string | null;
             allowDownload?: boolean;
             status?: string;
             visibility?: string;
@@ -212,6 +218,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     description: body.description,
                     caption: body.caption,
                     sourceUrl: body.sourceUrl,
+                    originalCreator: body.originalCreator !== undefined ? body.originalCreator?.trim() || null : undefined,
+                    originalCreatedAt: body.originalCreatedAt !== undefined ? (body.originalCreatedAt ? new Date(body.originalCreatedAt) : null) : undefined,
                     allowDownload: body.allowDownload,
                     categoryId: body.categoryId,
                     ...lifecycle,
