@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/auth.js";
+import { postPermalink } from "../lib/post-permalink.js";
 export { ok } from "../lib/api.js";
 
 export const postInclude = {
-    user: { select: { id: true, name: true, image: true, updatedAt: true } },
+    user: { select: { id: true, name: true, handle: true, image: true, updatedAt: true } },
     category: true,
     tags: { include: { tag: true } },
     uploads: true,
@@ -28,6 +29,11 @@ export function postView(post: any) {
         scheduledAt: post.scheduledAt,
         hiddenAt: post.hiddenAt,
         contentWarning: post.contentWarning,
+        permalinkPattern: post.permalinkPattern,
+        permalinkIdType: post.permalinkIdType,
+        customPostId: post.customPostId,
+        permalinkKey: post.permalinkKey,
+        permalink: postPermalink(post, post.user),
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         author: {
