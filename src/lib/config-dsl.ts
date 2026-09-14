@@ -53,19 +53,20 @@ function tokenize(source: string): Token[] {
     let line = 1;
     let column = 1;
 
+    const charAt = (position: number): string => source.charAt(position);
     const advance = (count = 1) => {
         for (let i = 0; i < count; i++) {
-            if (source[index] === "\n") { line++; column = 1; } else column++;
+            if (charAt(index) === "\n") { line++; column = 1; } else column++;
             index++;
         }
     };
 
     while (index < source.length) {
-        const char = source[index];
+        const char = charAt(index);
         if (char === " " || char === "\t" || char === "\r") { advance(); continue; }
         if (char === "\n") { tokens.push({ type: "newline", value: "\n", line, column }); advance(); continue; }
-        if (char === "#" || (char === "/" && source[index + 1] === "/")) {
-            while (index < source.length && source[index] !== "\n") advance();
+        if (char === "#" || (char === "/" && charAt(index + 1) === "/")) {
+            while (index < source.length && charAt(index) !== "\n") advance();
             continue;
         }
         if (char === '"' || char === "'") {
@@ -77,7 +78,7 @@ function tokenize(source: string): Token[] {
         if (/[0-9-]/.test(char)) {
             const startLine = line, startColumn = column;
             let end = index + 1;
-            while (end < source.length && /[A-Za-z0-9_.+-]/.test(source[end])) end++;
+            while (end < source.length && /[A-Za-z0-9_.+-]/.test(charAt(end))) end++;
             tokens.push({ type: "number", value: source.slice(index, end), line: startLine, column: startColumn });
             advance(end - index);
             continue;
@@ -85,7 +86,7 @@ function tokenize(source: string): Token[] {
         if (/[A-Za-z_]/.test(char)) {
             const startLine = line, startColumn = column;
             let end = index + 1;
-            while (end < source.length && /[A-Za-z0-9_-]/.test(source[end])) end++;
+            while (end < source.length && /[A-Za-z0-9_-]/.test(charAt(end))) end++;
             const value = source.slice(index, end);
             tokens.push({ type: value === "true" || value === "false" ? "boolean" : "identifier", value, line: startLine, column: startColumn });
             advance(end - index);
@@ -99,16 +100,16 @@ function tokenize(source: string): Token[] {
 }
 
 function readString(source: string, start: number, line: number, column: number): { token: Token; end: number } {
-    const quote = source[start];
+    const quote = source.charAt(start);
     let index = start + 1;
     let value = "";
     while (index < source.length) {
-        const char = source[index];
+        const char = source.charAt(index);
         if (char === quote) return { token: { type: "string", value: JSON.stringify(value), line, column }, end: index + 1 };
         if (char === "\n") throw new ConfigDslError("Unterminated string", line, column);
         if (char === "\\") {
-            const next = source[index + 1];
-            if (next === undefined) throw new ConfigDslError("Unterminated string", line, column);
+            const next = source.charAt(index + 1);
+            if (!next) throw new ConfigDslError("Unterminated string", line, column);
             const escapes: Record<string, string> = { n: "\n", r: "\r", t: "\t", "\\": "\\", '"': '"', "'": "'" };
             if (escapes[next] === undefined) throw new ConfigDslError(`Unsupported escape \\${next}`, line, column);
             value += escapes[next];
@@ -177,8 +178,18 @@ class Parser {
         return values;
     }
 
-    private current(): Token { return this.tokens[this.index]; }
-    private advance(): Token { return this.tokens[this.index++]; }
+    private current(): Token {
+        const token = this.tokens[this.index];
+        if (!token) throw new Error("Config parser reached an invalid token position");
+        return token;
+    }
+
+    private advance(): Token {
+        const token = this.current();
+        this.index++;
+        return token;
+    }
+
     private at(type: TokenType): boolean { return this.current().type === type; }
     private atSymbol(value: string): boolean { const token = this.current(); return token.type === "symbol" && token.value === value; }
     private expect(type: TokenType): Token { const token = this.current(); if (token.type !== type) this.fail(`Expected ${type}`); this.index++; return token; }
