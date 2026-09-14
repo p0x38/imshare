@@ -1,9 +1,8 @@
 import {
-    Alert, Avatar, Box, Button, Card, CardActionArea, CardContent, Chip, CircularProgress,
-    Divider, FormControl, FormControlLabel, InputLabel, MenuItem, Select, Stack, Switch,
-    TextField, Typography,
+    Alert, Avatar, Box, Button, Card, CardActionArea, CardContent, Chip, FormControl, InputLabel,
+    MenuItem, Select, Stack, TextField, Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
@@ -62,7 +61,6 @@ function NotificationsPage() {
     const [items, setItems] = useState<Notification[] | null>(null); const [error, setError] = useState(""); const [busy, setBusy] = useState<string | null>(null);
     const load = async () => { try { const result = await api<{ data: Notification[]; pagination: { total: number } }>("/v1/me/notifications?limit=100"); setItems(result.data); } catch (cause) { const status = (cause as Error & { status?: number }).status; setError(status === 401 ? "Please sign in." : cause instanceof Error ? cause.message : "Unable to load notifications."); } };
     useEffect(() => { void load(); }, []);
-    useEffect(() => { const script = document.createElement("script"); script.src = "/socket.io/socket.io.js"; script.onload = () => { const io = (window as typeof window & { io?: () => { on: (event: string, cb: () => void) => void } }).io; io?.().on("notification", () => void load()); }; document.head.append(script); return () => script.remove(); }, []);
     const unread = items?.filter((x) => !x.readAt).length ?? 0;
     async function mark(id: string) { setBusy(id); try { await api(`/v1/me/notifications/${encodeURIComponent(id)}/read`, { method: "PATCH" }); await load(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to mark notification as read."); } finally { setBusy(null); } }
     async function markAll() { setBusy("all"); try { await api("/v1/me/notifications/read-all", { method: "POST" }); await load(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to mark notifications as read."); } finally { setBusy(null); } }
@@ -129,7 +127,7 @@ function LegacyPage() {
     if (current.kind === "search") return <SearchPage />;
     if (current.kind === "admin") return <AdminPage />;
     if (current.kind === "about") return <StaticPage title="About"><Typography>imshare is a self-hosted image archive and sharing server.</Typography></StaticPage>;
-    if (current.kind === "faq") return <StaticPage title="FAQ"><Typography>Ask the server administrator for local policy and account details.</Typography></StaticPage>;
+    if (current.kind === "faq") return <Page maxWidth="md"><Stack spacing={3}><Typography variant="h4" component="h1">FAQs</Typography><Stack spacing={2}><Typography variant="h5" component="h2">About imshare</Typography><Typography>imshare is a self-hosted image archive and sharing server.</Typography></Stack><Stack spacing={2}><Typography variant="h5" component="h2">Images and privacy</Typography><Typography variant="h6" component="h3">Who can access my images?</Typography><Typography>Access depends on the sharing settings and policies configured by the server operator.</Typography></Stack></Stack></Page>;
     if (current.kind === "github") return <StaticPage title="GitHub"><Typography>Source code and project information are maintained by the server owner.</Typography></StaticPage>;
     if (current.kind === "privacy") return <StaticPage title="Privacy"><Typography>Review the server operator's privacy policy for retention and access details.</Typography></StaticPage>;
     return <StaticPage title="Terms"><Typography>Use this service responsibly and follow the server operator's rules.</Typography></StaticPage>;
