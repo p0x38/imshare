@@ -75,6 +75,12 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         return ok(getRegistrationToken());
     });
 
+    fastify.post("/v1/admin/registration-token", async (request, reply) => {
+        const actor = await requireRole(request, reply, "admin");
+        if (!actor) return;
+        return ok(getRegistrationToken());
+    });
+
     fastify.get("/v1/admin/users", async (request, reply) => {
         const actor = await requireRole(request, reply, "moderator");
         if (!actor) return;
@@ -111,7 +117,13 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         const limit = Math.min(100, Math.max(1, Number(q.limit ?? 50) || 50));
         const where = { status };
         const [reports, total] = await Promise.all([
-            prisma.report.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" }, include: { reporter: { select: { id: true, name: true, email: true } }, post: { select: { id: true, title: true, userId: true } }, comment: { select: { id: true, body: true, userId: true, postId: true } } } }),
+            prisma.report.findMany({
+                where,
+                skip: (page - 1) * limit,
+                take: limit,
+                orderBy: { createdAt: "desc" },
+                include: { reporter: { select: { id: true, name: true, email: true } }, post: { select: { id: true, title: true, userId: true } }, comment: { select: { id: true, body: true, userId: true, postId: true } } },
+            }),
             prisma.report.count({ where }),
         ]);
         return collection(reports, page, limit, total);
@@ -147,7 +159,7 @@ export const adminRoutes: FastifyPluginAsync = async (fastify) => {
         const { userId } = request.params as { userId: string };
         if (actor.id === userId) return reply.code(400).send({ error: { code: "CANNOT_BAN_SELF", message: "You cannot ban yourself." } });
         const [actorUser, target] = await Promise.all([prisma.user.findUnique({ where: { id: actor.id }, select: { role: true } }), prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } })]);
-        if (!target) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
+        if (!target) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." });
         if (!actorUser || !canModerateTarget(actorUser.role, target.role)) return reply.code(403).send({ error: { code: "FORBIDDEN", message: "You cannot moderate this user." } });
         const body = request.body as { reason?: string; durationHours?: unknown };
         const reason = typeof body.reason === "string" ? body.reason.trim() : "";
