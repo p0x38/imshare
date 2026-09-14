@@ -17,6 +17,7 @@ export interface ServerConfig {
     };
     auth: {
         baseUrl?: string;
+        trustedOrigins?: string[];
     };
 }
 
@@ -104,7 +105,12 @@ function isServerConfig(value: unknown): value is ServerConfig {
         typeof site.version === "string" &&
         isObject(auth) &&
         (auth.baseUrl === undefined ||
-            (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0))
+            (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0)) &&
+        (auth.trustedOrigins === undefined ||
+            (Array.isArray(auth.trustedOrigins) &&
+                auth.trustedOrigins.every(
+                    (origin): origin is string => typeof origin === "string" && origin.length > 0,
+                )))
     );
 }
 
