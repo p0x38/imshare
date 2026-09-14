@@ -37,7 +37,7 @@ Thumbs.db
 *.swo
 
 # Local configuration
-config.json
+**/config.json
 
 # Test output
 coverage/
