@@ -32,7 +32,7 @@ export interface PublicConfig {
     limits: { textPostCharacters: number };
 }
 
-const CONFIG_FILE = "config.imshare";
+const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
 const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
