@@ -24,7 +24,7 @@ export const postCreateInput = z.object({
     tags: z.array(z.string().min(1).max(100)).max(100).optional(),
     categoryId: z.string().min(1).nullable().optional(),
     uploadIds: z.array(z.string().min(1)).max(100).optional(),
-}).meta({ id: "PostCreateInput" });
+});
 
 export const postUpdateInput = z.object({
     title: z.string().min(1).max(500).optional(),
@@ -36,12 +36,18 @@ export const postUpdateInput = z.object({
     categoryId: z.string().min(1).nullable().optional(),
     ...lifecycleProperties,
     tags: z.array(z.string().min(1).max(100)).max(100).optional(),
-}).refine((value) => Object.keys(value).length > 0, "At least one field is required.").meta({ id: "PostUpdateInput" });
+});
 
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
-const jsonSchema = (schema: Parameters<typeof createSchema>[0]) => createSchema(schema).schema;
+const jsonSchema = (
+    schema: Parameters<typeof createSchema>[0],
+): Record<string, unknown> => createSchema(schema).schema as Record<string, unknown>;
 
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
-export const postUpdateBodyJsonSchema = jsonSchema(postUpdateInput);
+
+export const postUpdateBodyJsonSchema = {
+    ...jsonSchema(postUpdateInput),
+    minProperties: 1,
+};
