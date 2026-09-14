@@ -13,11 +13,14 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
+import { useTranslation } from "react-i18next";
 import { App, useColorMode, useLanguage, useThemeSettings } from "../components/App";
+import "../i18n";
 import type { AccentColor } from "../theme";
 import { Page } from "../components/Page";
 
 function SettingsPage() {
+    const { t } = useTranslation();
     const { preference, setPreference } = useColorMode();
     const { language, setLanguage } = useLanguage();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
@@ -28,26 +31,26 @@ function SettingsPage() {
     return (
         <Page>
             <Stack spacing={2}>
-                <Typography variant="h4" component="h1">Settings</Typography>
-                {saved ? <Alert severity="success" onClose={() => setSaved(false)}>Settings saved.</Alert> : null}
+                <Typography variant="h4" component="h1">{t("settings")}</Typography>
+                {saved ? <Alert severity="success" onClose={() => setSaved(false)}>{t("settingsSaved")}</Alert> : null}
                 <Card variant="outlined">
                     <CardContent>
                         <Stack spacing={2}>
-                            <Typography variant="h6" component="h2">Language</Typography>
+                            <Typography variant="h6" component="h2">{t("language")}</Typography>
                             <FormControl>
                                 <RadioGroup
-                                    aria-label="Language"
+                                    aria-label={t("language")}
                                     value={language}
                                     onChange={(event) => {
                                         setLanguage(event.target.value as "en" | "ja");
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="en" control={<Radio />} label="English" />
-                                    <FormControlLabel value="ja" control={<Radio />} label="日本語" />
+                                    <FormControlLabel value="en" control={<Radio />} label={t("english")} />
+                                    <FormControlLabel value="ja" control={<Radio />} label={t("japanese")} />
                                 </RadioGroup>
                             </FormControl>
-                            <Typography variant="h6" component="h2">Appearance</Typography>
+                            <Typography variant="h6" component="h2">{t("appearance")}</Typography>
                             <FormControl>
                                 <RadioGroup
                                     value={preference}
@@ -56,9 +59,9 @@ function SettingsPage() {
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="light" control={<Radio />} label="Light" />
-                                    <FormControlLabel value="dark" control={<Radio />} label="Dark" />
-                                    <FormControlLabel value="auto" control={<Radio />} label="Automatic (Device)" />
+                                    <FormControlLabel value="light" control={<Radio />} label={t("light")} />
+                                    <FormControlLabel value="dark" control={<Radio />} label={t("dark")} />
+                                    <FormControlLabel value="auto" control={<Radio />} label={t("automaticDevice")} />
                                 </RadioGroup>
                             </FormControl>
                             <FormControlLabel
@@ -71,7 +74,7 @@ function SettingsPage() {
                                         }}
                                     />
                                 }
-                                label="Enable interface animations"
+                                label={t("interfaceAnimations")}
                             />
                             <FormControlLabel
                                 control={
@@ -83,10 +86,10 @@ function SettingsPage() {
                                         }}
                                     />
                                 }
-                                label="Enable button ripple"
+                                label={t("buttonRipple")}
                             />
                             <FormControl>
-                                <Typography variant="subtitle2" gutterBottom>Accent color</Typography>
+                                <Typography variant="subtitle2" gutterBottom>{t("accentColor")}</Typography>
                                 <RadioGroup
                                     row
                                     value={settings.accentColor}
@@ -95,19 +98,19 @@ function SettingsPage() {
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="default" control={<Radio />} label="Default" />
-                                    <FormControlLabel value="blue" control={<Radio />} label="Blue" />
-                                    <FormControlLabel value="purple" control={<Radio />} label="Purple" />
-                                    <FormControlLabel value="green" control={<Radio />} label="Green" />
-                                    <FormControlLabel value="orange" control={<Radio />} label="Orange" />
+                                    <FormControlLabel value="default" control={<Radio />} label={t("default")} />
+                                    <FormControlLabel value="blue" control={<Radio />} label={t("blue")} />
+                                    <FormControlLabel value="purple" control={<Radio />} label={t("purple")} />
+                                    <FormControlLabel value="green" control={<Radio />} label={t("green")} />
+                                    <FormControlLabel value="orange" control={<Radio />} label={t("orange")} />
                                 </RadioGroup>
                             </FormControl>
                         </Stack>
                     </CardContent>
                 </Card>
                 <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" component="a" href="/dashboard/">Dashboard</Button>
-                    <Button component="a" href="/account/">Account profile</Button>
+                    <Button variant="outlined" component="a" href="/dashboard/">{t("dashboard")}</Button>
+                    <Button component="a" href="/account/">{t("accountProfile")}</Button>
                 </Stack>
             </Stack>
         </Page>
