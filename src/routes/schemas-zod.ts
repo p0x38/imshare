@@ -2,10 +2,16 @@ import { createSchema } from "zod-openapi";
 import { z } from "zod";
 
 const lifecycleProperties = {
-    status: z.enum(["draft", "published"]).meta({ description: "Publication state for the post." }),
-    visibility: z.enum(["public", "unlisted", "private"]).meta({ description: "Controls who can discover the post." }),
-    scheduledAt: z
-        .iso.datetime()
+    status: z
+        .enum(["draft", "published"])
+        .optional()
+        .meta({ description: "Publication state for the post." }),
+    visibility: z
+        .enum(["public", "unlisted", "private"])
+        .optional()
+        .meta({ description: "Controls who can discover the post." }),
+    scheduledAt: z.iso
+        .datetime()
         .nullable()
         .optional()
         .meta({ description: "Optional time at which the post should become active." }),
@@ -25,8 +31,8 @@ const originalPostProperties = {
         .nullable()
         .optional()
         .meta({ description: "Creator credited for the original content." }),
-    originalCreatedAt: z
-        .iso.datetime()
+    originalCreatedAt: z.iso
+        .datetime()
         .nullable()
         .optional()
         .meta({ description: "Original creation time of the referenced content, when known." }),
@@ -111,7 +117,9 @@ export const postUpdateInput = z
             .min(1)
             .nullable()
             .optional()
-            .meta({ description: "Replacement category identifier, or null to remove the category." }),
+            .meta({
+                description: "Replacement category identifier, or null to remove the category.",
+            }),
         ...lifecycleProperties,
         tags: z
             .array(z.string().min(1).max(100))
@@ -124,9 +132,8 @@ export const postUpdateInput = z
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
-const jsonSchema = (
-    schema: Parameters<typeof createSchema>[0],
-): Record<string, unknown> => createSchema(schema).schema as Record<string, unknown>;
+const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, unknown> =>
+    createSchema(schema).schema as Record<string, unknown>;
 
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 
