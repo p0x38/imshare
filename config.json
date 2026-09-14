@@ -16,5 +16,9 @@
     "trustedOrigins": [
       "https://uhm.p0x38.mydns.jp"
     ]
+  },
+  "analytics": {
+    "googleAnalyticsMeasurementId": "",
+    "googleTagManagerContainerId": ""
   }
 }
