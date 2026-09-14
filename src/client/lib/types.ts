@@ -16,6 +16,7 @@ export interface Author {
     username?: string | null;
     handle?: string | null;
     avatarUrl?: string | null;
+    image?: string | null;
 }
 
 export interface Post {
@@ -61,6 +62,7 @@ export interface User extends Author {
     githubUrl?: string | null;
     profileBannerUrl?: string | null;
     accentColor?: string | null;
+    role?: string;
     createdAt?: string;
     profileLinks?: Array<{ id: string; label: string; url: string }>;
 }
