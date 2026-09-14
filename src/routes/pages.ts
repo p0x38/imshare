@@ -48,11 +48,26 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     for (const [from, to] of Object.entries(redirects))
         fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
 
+    fastify.get("/", render("home", "home-page"));
+    fastify.get("/account/", render("account", "account-page"));
     fastify.get("/account/login/", render("legacy", "legacy-page"));
     fastify.get("/account/register/", render("legacy", "legacy-page"));
     fastify.get("/notifications/", render("legacy", "legacy-page"));
     fastify.get("/account/notifications/", render("legacy", "legacy-page"));
     fastify.get("/account/profile/", render("legacy", "legacy-page"));
+
+    fastify.get("/posts/", render("posts", "posts-page"));
+    fastify.get("/posts/new/", render("postEditor", "post-editor-page"));
+    fastify.get("/posts/:postId", render("post", "post"));
+    fastify.get("/posts/:postId/", render("post", "post"));
+
+    fastify.get("/dashboard/", render("dashboard", "dashboard-page"));
+    fastify.get("/dashboard/posts/", render("dashboardPosts", "dashboard-posts-page"));
+    fastify.get("/dashboard/posts/:postId/", render("dashboardPost", "dashboard-post-page"));
+    fastify.get("/dashboard/posts/:postId/edit/", render("postEditor", "post-editor-page"));
+    fastify.get("/dashboard/tags/", render("taxonomy", "taxonomy-page", 'data-taxonomy="tags"'));
+    fastify.get("/dashboard/categories/", render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"'));
+    fastify.get("/dashboard/settings/", render("settings", "settings-page"));
 
     fastify.get("/users/", render("legacy", "legacy-page"));
     fastify.get("/users/:userId", render("legacy", "legacy-page"));
@@ -79,7 +94,4 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/privacy/", render("legacy", "legacy-page"));
     fastify.get("/terms/", render("legacy", "legacy-page"));
     fastify.get("/admin/", render("legacy", "legacy-page"));
-
-    fastify.get("/dashboard/tags/", render("taxonomy", "taxonomy-page", 'data-taxonomy="tags"'));
-    fastify.get("/dashboard/categories/", render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"'));
 };
