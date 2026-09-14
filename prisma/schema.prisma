@@ -110,6 +110,10 @@ model Post {
   scheduledAt DateTime?
   hiddenAt DateTime?
   contentWarning String?
+  permalinkPattern String @default("user")
+  permalinkIdType String @default("internalId")
+  permalinkKey String? @unique
+  customPostId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId String
@@ -127,6 +131,7 @@ model Post {
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@index([status, visibility, scheduledAt])
+  @@index([userId, permalinkKey])
   @@map("post")
 }
 
@@ -156,7 +161,7 @@ model PostView {
   userId String?
   viewedAt DateTime @default(now())
   post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user Post @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([postId, viewedAt])
   @@index([userId, viewedAt])
   @@map("post_view")
