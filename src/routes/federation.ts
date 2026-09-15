@@ -4,7 +4,6 @@ import { prisma } from "../lib/auth.js";
 import {
     addFollower,
     deliverActivity,
-    getFollowers,
     getOrCreateActorKey,
     removeFollower,
     storeIncomingActivity,
@@ -81,10 +80,12 @@ function postActivity(baseUrl: string, actor: string, post: { id: string; title:
 }
 async function localActor(baseUrl: string, handle: string) {
     const user = await prisma.user.findFirst({ where: { handle }, select: { id: true, name: true, handle: true, image: true } });
-    if (!user?.handle) return null;
-    const actor = actorUrl(baseUrl, user.handle);
+    const resolvedHandle = user?.handle;
+    if (!resolvedHandle) return null;
+    const normalizedUser = { ...user, handle: resolvedHandle };
+    const actor = actorUrl(baseUrl, resolvedHandle);
     const key = await getOrCreateActorKey(user.id, actor);
-    return { user, actor, key };
+    return { user: normalizedUser, actor, key };
 }
 
 async function handleActivity(baseUrl: string, activity: Record<string, unknown>, recipientUserId: string) {
@@ -177,9 +178,10 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
 
         const rawBody = typeof request.body === "string" ? request.body : JSON.stringify(request.body ?? {});
         try {
+            const requestHeaders: [string, string][] = Object.entries(request.headers).flatMap(([name, value]) => typeof value === "string" ? [[name, value]] : []);
             const webRequest = new Request(`${baseUrl}${request.raw.url ?? `/federation/actors/${encodeURIComponent(handle)}/inbox`}`, {
                 method: request.method,
-                headers: Object.fromEntries(Object.entries(request.headers).filter(([, value]) => typeof value === "string")),
+                headers: requestHeaders,
                 body: rawBody,
             });
             const verified = await verifyFederationRequest(webRequest, rawBody);
