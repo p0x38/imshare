@@ -27,6 +27,14 @@ interface SearchResponse {
 const tagSuggestionDelay = 180;
 const searchSuggestionDelay = 220;
 
+function normalizeTags(values: string[]) {
+    return values
+        .flatMap((value) => value.split(","))
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .filter((tag, index, all) => all.findIndex((candidate) => candidate.toLocaleLowerCase() === tag.toLocaleLowerCase()) === index);
+}
+
 export function TagAutocomplete({ value, onChange }: { value: string; onChange: (value: string) => void }) {
     const [inputValue, setInputValue] = useState("");
     const [options, setOptions] = useState<TagOption[]>([]);
@@ -58,6 +66,8 @@ export function TagAutocomplete({ value, onChange }: { value: string; onChange: 
         ];
     }, [options, selectedValues]);
 
+    const selectTags = (values: string[]) => onChange(normalizeTags(values).join(", "));
+
     return <Autocomplete<TagOption, true, false, true>
         multiple
         freeSolo
@@ -66,20 +76,30 @@ export function TagAutocomplete({ value, onChange }: { value: string; onChange: 
         inputValue={inputValue}
         loading={loading}
         filterOptions={(available) => available}
+        limitTags={4}
         isOptionEqualToValue={(option, selected) => option.name.toLocaleLowerCase() === selected.name.toLocaleLowerCase()}
         getOptionLabel={(option) => typeof option === "string" ? option : option.name}
         onInputChange={(_event, nextInputValue) => setInputValue(nextInputValue)}
         onChange={(_event, nextValues) => {
-            const names = nextValues
-                .map((tag) => typeof tag === "string" ? tag : tag.name)
-                .flatMap((tag) => tag.split(","))
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-                .filter((tag, index, all) => all.findIndex((candidate) => candidate.toLocaleLowerCase() === tag.toLocaleLowerCase()) === index);
-            onChange(names.join(", "));
+            selectTags(nextValues.map((tag) => typeof tag === "string" ? tag : tag.name));
             setInputValue("");
         }}
-        renderTags={(tags, getTagProps) => tags.map((tag, index) => <Chip {...getTagProps({ index })} key={`${tag.name}-${index}`} label={tag.name} size="small" />)}
+        onKeyDown={(event) => {
+            if (event.key !== ",") return;
+            const pending = inputValue.trim();
+            if (!pending) return;
+            event.preventDefault();
+            selectTags([...selectedValues, pending]);
+            setInputValue("");
+        }}
+        renderTags={(tagValues, getTagProps) => tagValues.map((tag, index) => <Chip
+            {...getTagProps({ index })}
+            key={`${tag.name.toLocaleLowerCase()}-${index}`}
+            label={tag.name}
+            size="small"
+            variant="outlined"
+            sx={{ maxWidth: 180 }}
+        />)}
         renderOption={(props, option) => <Box component="li" {...props} key={option.id}>
             <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2">{option.name}</Typography>
@@ -90,7 +110,7 @@ export function TagAutocomplete({ value, onChange }: { value: string; onChange: 
             {...params}
             label="Tags"
             placeholder={selectedValues.length ? "Add a tag" : "Search tags"}
-            helperText="Type to autocomplete existing tags; press Enter to add custom tags."
+            helperText="Tags appear as chips inside the field. Press Enter or comma to add a tag."
             slotProps={{ input: { ...params.InputProps, endAdornment: <>{loading ? <CircularProgress color="inherit" size={18} /> : null}{params.InputProps.endAdornment}</> } }}
         />}
     />;
