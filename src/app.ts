@@ -10,6 +10,7 @@ import { RateLimiter } from "./lib/rate-limit.js";
 import { isSameOriginRequest } from "./lib/csrf.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
+import { federationRoutes } from "./routes/federation.js";
 import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
 import { registerOpenApi } from "./lib/openapi.js";
@@ -182,6 +183,7 @@ export async function buildApp() {
     await registerOpenApi(app, config);
     await app.register(authRoutes);
     await app.register(apiRoutes);
+    await app.register(federationRoutes);
     await app.register(pageRoutes);
     return app;
 }
