@@ -12,6 +12,14 @@ const RESERVED_HANDLES = new Set([
     "admin", "api", "account", "dashboard", "login", "logout", "signup", "register",
     "users", "posts", "tags", "categories", "search", "about", "faq", "github", "privacy", "terms",
 ]);
+
+const publicPostWhere = {
+    status: "published",
+    visibility: "public",
+    hiddenAt: null,
+    OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+} as const;
+
 const publicUserSelect = {
     id: true,
     name: true,
@@ -26,7 +34,11 @@ const publicUserSelect = {
     accentColor: true,
     updatedAt: true,
     createdAt: true,
-    _count: { select: { posts: true } },
+    _count: {
+        select: {
+            posts: { where: publicPostWhere },
+        },
+    },
 } as const;
 
 function avatarUrl(userId: string, updatedAt: Date) {
@@ -224,7 +236,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
         if (!userId) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        const where = { userId };
+        const where = { userId, ...publicPostWhere };
         const [items, total] = await Promise.all([
             prisma.post.findMany({ where, include: postInclude, skip: p.skip, take: p.limit, orderBy: { createdAt: parseOrder(q.order) } }),
             prisma.post.count({ where }),
