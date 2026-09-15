@@ -141,7 +141,10 @@ export function SearchAutocomplete({ value, onChange, onSubmit, fullWidth = fals
                 .then((response) => {
                     const data = response.data;
                     const suggestions: SearchSuggestion[] = [
-                        ...(data?.posts ?? []).slice(0, 3).map((post) => ({ label: post.title, type: "post" as const })),
+                        ...(data?.posts ?? [])
+                            .slice(0, 3)
+                            .filter((post) => typeof post.title === "string" && post.title.trim().length > 0)
+                            .map((post) => ({ label: post.title as string, type: "post" as const })),
                         ...(data?.users ?? []).slice(0, 2).map((user) => ({ label: user.name, type: "user" as const })),
                         ...(data?.tags ?? []).slice(0, 2).map((tag) => ({ label: tag.name, type: "tag" as const })),
                         ...(data?.categories ?? []).slice(0, 2).map((category) => ({ label: category.name, type: "category" as const })),
