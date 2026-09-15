@@ -18,7 +18,7 @@ const publicPostWhere = {
     visibility: "public",
     hiddenAt: null,
     OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
-} as const;
+};
 
 const publicUserSelect = {
     id: true,
@@ -39,7 +39,7 @@ const publicUserSelect = {
             posts: { where: publicPostWhere },
         },
     },
-} as const;
+};
 
 function avatarUrl(userId: string, updatedAt: Date) {
     return `/v1/users/${encodeURIComponent(userId)}/avatar?v=${encodeURIComponent(updatedAt.toISOString())}`;
