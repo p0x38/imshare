@@ -97,6 +97,10 @@
 - [x] Scheduled publishing
 - [x] Post revision history
 
+## Federation
+
+- [ ] Plan federation architecture and interoperability model
+
 ## Dashboard
 
 - [x] React dashboard landing page
