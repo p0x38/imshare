@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
 import { collection, ok, parseOrder, parsePagination, requireUser } from "../lib/api.js";
+import { openapi, parameter, request } from "../lib/openapi-route.js";
 import { postInclude, postView } from "./_shared.js";
 import { categoryCreateSchema, categoryUpdateSchema } from "./schemas.js";
 
@@ -13,8 +14,32 @@ const publicPostWhere = {
     user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
 };
 
+const categoryId = parameter.path("categoryId", { type: "string" }, { description: "Category ID." });
+const listParameters = [
+    parameter.query("page", { type: "integer", minimum: 1, default: 1 }, { description: "1-based page number." }),
+    parameter.query("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }, { description: "Maximum number of categories to return." }),
+    parameter.query("order", { type: "string", enum: ["asc", "desc"], default: "asc" }, { description: "Sort direction." }),
+];
+const postListParameters = [
+    categoryId,
+    parameter.query("page", { type: "integer", minimum: 1, default: 1 }, { description: "1-based page number." }),
+    parameter.query("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }, { description: "Maximum number of posts to return." }),
+    parameter.query("order", { type: "string", enum: ["asc", "desc"], default: "desc" }, { description: "Sort direction." }),
+];
+
 export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get("/v1/categories", async (request) => {
+    fastify.get("/v1/categories", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "List categories",
+            description: "Returns paginated public categories ordered by name.",
+            operationId: "listCategories",
+            parameters: listParameters,
+            responses: {
+                "200": { description: "Paginated category collection." },
+            },
+        }),
+    }, async (request) => {
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
         const [items, total] = await Promise.all([
@@ -29,7 +54,21 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         return collection(items, p.page, p.limit, total);
     });
 
-    fastify.post("/v1/categories", { schema: categoryCreateSchema }, async (request, reply) => {
+    fastify.post("/v1/categories", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "Create category",
+            description: "Creates a category. Authentication is required.",
+            operationId: "createCategory",
+            requestBody: request.json({ $ref: "#/components/schemas/CategoryCreate" } as never, { required: true }),
+            responses: {
+                "201": { description: "Category created successfully." },
+                "400": { $ref: "#/components/responses/BadRequest" },
+                "401": { $ref: "#/components/responses/Unauthorized" },
+                "409": { $ref: "#/components/responses/Conflict" },
+            },
+        }, categoryCreateSchema),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const body = request.body as { name: string; slug: string; description?: string };
@@ -46,7 +85,19 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         );
     });
 
-    fastify.get("/v1/categories/:categoryId", async (request, reply) => {
+    fastify.get("/v1/categories/:categoryId", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "Get category",
+            description: "Returns a public category and its post count.",
+            operationId: "getCategory",
+            parameters: [categoryId],
+            responses: {
+                "200": { description: "Category resource." },
+                "404": { $ref: "#/components/responses/NotFound" },
+            },
+        }),
+    }, async (request, reply) => {
         const { categoryId } = request.params as { categoryId: string };
         const category = await prisma.category.findUnique({
             where: { id: categoryId },
@@ -59,38 +110,63 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         return ok(category);
     });
 
-    fastify.patch(
-        "/v1/categories/:categoryId",
-        { schema: categoryUpdateSchema },
-        async (request, reply) => {
-            const user = await requireUser(request, reply);
-            if (!user) return;
-            const { categoryId } = request.params as { categoryId: string };
-            const body = request.body as {
-                name?: string;
-                slug?: string;
-                description?: string | null;
-            };
-            try {
-                return ok(
-                    await prisma.category.update({
-                        where: { id: categoryId },
-                        data: {
-                            name: body.name?.trim(),
-                            slug: body.slug,
-                            description: body.description,
-                        },
-                    }),
-                );
-            } catch {
-                return reply.code(404).send({
-                    error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
-                });
-            }
-        },
-    );
+    fastify.patch("/v1/categories/:categoryId", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "Update category",
+            description: "Updates a category. Authentication is required.",
+            operationId: "updateCategory",
+            parameters: [categoryId],
+            requestBody: request.json({ $ref: "#/components/schemas/CategoryUpdate" } as never, { required: true }),
+            responses: {
+                "200": { description: "Category updated successfully." },
+                "400": { $ref: "#/components/responses/BadRequest" },
+                "401": { $ref: "#/components/responses/Unauthorized" },
+                "404": { $ref: "#/components/responses/NotFound" },
+                "409": { $ref: "#/components/responses/Conflict" },
+            },
+        }, categoryUpdateSchema),
+    }, async (request, reply) => {
+        const user = await requireUser(request, reply);
+        if (!user) return;
+        const { categoryId } = request.params as { categoryId: string };
+        const body = request.body as {
+            name?: string;
+            slug?: string;
+            description?: string | null;
+        };
+        try {
+            return ok(
+                await prisma.category.update({
+                    where: { id: categoryId },
+                    data: {
+                        name: body.name?.trim(),
+                        slug: body.slug,
+                        description: body.description,
+                    },
+                }),
+            );
+        } catch {
+            return reply.code(404).send({
+                error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
+            });
+        }
+    });
 
-    fastify.delete("/v1/categories/:categoryId", async (request, reply) => {
+    fastify.delete("/v1/categories/:categoryId", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "Delete category",
+            description: "Deletes a category. Authentication is required. Returns 204 on success.",
+            operationId: "deleteCategory",
+            parameters: [categoryId],
+            responses: {
+                "204": { description: "Category deleted successfully." },
+                "401": { $ref: "#/components/responses/Unauthorized" },
+                "404": { $ref: "#/components/responses/NotFound" },
+            },
+        }),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const { categoryId } = request.params as { categoryId: string };
@@ -104,7 +180,19 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.code(204).send();
     });
 
-    fastify.get("/v1/categories/:categoryId/posts", async (request) => {
+    fastify.get("/v1/categories/:categoryId/posts", {
+        schema: openapi({
+            tags: "Categories",
+            summary: "List posts for category",
+            description: "Returns a paginated list of public posts associated with a category.",
+            operationId: "listCategoryPosts",
+            parameters: postListParameters,
+            responses: {
+                "200": { description: "Paginated post collection." },
+                "404": { $ref: "#/components/responses/NotFound" },
+            },
+        }),
+    }, async (request) => {
         const { categoryId } = request.params as { categoryId: string };
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
