@@ -25,6 +25,14 @@ model User {
   showEmail Boolean @default(false)
   showPosts Boolean @default(true)
   showProfile Boolean @default(true)
+  showHandle Boolean @default(true)
+  showFollowers Boolean @default(true)
+  showFollowings Boolean @default(true)
+  allowSearchEngineIndex Boolean @default(true)
+  defaultCategoryId String?
+  defaultPostVisibility String @default("public")
+  defaultAllowDownload Boolean @default(true)
+  defaultContentWarning String?
   isBanned Boolean @default(false)
   banReason String?
   bannedAt DateTime?
@@ -47,6 +55,10 @@ model User {
   moderationTargets ModerationLog[] @relation("moderationTarget")
   postRevisions PostRevision[]
   postViews PostView[]
+  following Follow[] @relation("followFollower")
+  followers Follow[] @relation("followFollowing")
+  defaultCategory Category? @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+  @@index([defaultCategoryId])
   @@map("user")
 }
 
@@ -167,7 +179,6 @@ model PostView {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([postId, viewedAt])
   @@index([userId, viewedAt])
-  @@map("post_view")
 }
 
 model Upload {
@@ -299,7 +310,7 @@ model ProfileLink {
 }
 
 model Tag {
-  id String @id @default(cuid())
+  id String @id
   name String @unique
   slug String @unique
   createdAt DateTime @default(now())
@@ -315,7 +326,6 @@ model PostTag {
   tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
   @@id([postId, tagId])
   @@index([tagId, postId])
-  @@map("post_tag")
 }
 
 model Category {
@@ -326,7 +336,20 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   posts Post[]
+  defaultForUsers User[] @relation("userDefaultCategory")
   @@map("category")
+}
+
+model Follow {
+  followerId String
+  followingId String
+  createdAt DateTime @default(now())
+  follower User @relation("followFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("followFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  @@id([followerId, followingId])
+  @@index([followingId, createdAt])
+  @@index([followerId, createdAt])
+  @@map("follow")
 }
 
 model ModerationLog {
