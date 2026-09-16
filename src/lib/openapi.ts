@@ -211,21 +211,34 @@ export async function registerOpenApi(
         },
         transform: ({ schema, url, route }) => {
             const method = typeof route?.method === "string" ? route.method.toUpperCase() : "";
-            const current = { ...(schema as Record<string, unknown>) };
+            const {
+                "x-imshare-openapi": routeMetadata,
+                ...schemaWithoutOpenApiMetadata
+            } = schema as Record<string, unknown>;
+            const current = schemaWithoutOpenApiMetadata as Record<string, unknown>;
             const key = operationKey(method, url);
             const doc = registry.get(key);
             const currentTags = Array.isArray(current.tags)
                 ? current.tags.filter((tag): tag is string => typeof tag === "string")
                 : [];
-            const metadata: OpenApiRouteMetadata | undefined = doc
+            const localMetadata = routeMetadata && typeof routeMetadata === "object"
+                ? routeMetadata as OpenApiRouteMetadata
+                : undefined;
+            const metadata: OpenApiRouteMetadata | undefined = localMetadata || doc
                 ? {
                       ...doc,
-                      operationId: openapiOperationId(method, url),
-                      tags: currentTags.length > 0 ? currentTags : [openapiTagForPath(url)],
+                      ...localMetadata,
+                      operationId:
+                          localMetadata?.operationId ??
+                          current.operationId as string | undefined ??
+                          (doc ? openapiOperationId(method, url) : undefined),
+                      tags:
+                          localMetadata?.tags ??
+                          (currentTags.length > 0 ? currentTags : doc ? [openapiTagForPath(url)] : undefined),
                   }
                 : undefined;
 
-            const compiled = compileOpenApiOperation(current, metadata);
+            const compiled = compileOpenApiOperation(current as never, metadata);
             const responses =
                 (compiled.responses as Record<string, unknown> | undefined) ?? {};
 
