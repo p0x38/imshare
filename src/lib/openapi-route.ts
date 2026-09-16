@@ -368,33 +368,40 @@ export const parameter = {
     },
 };
 
+type RequestBodyOptions = Omit<OpenApiRequestBody, "content">;
+type RequestBodyOptionsOrRequired = RequestBodyOptions | boolean;
+
+function normalizeRequestBodyOptions(options: RequestBodyOptionsOrRequired): RequestBodyOptions {
+    return typeof options === "boolean" ? { required: options } : options;
+}
+
 export const request = {
     json(
         schema: OpenApiSchema,
-        options: Omit<OpenApiRequestBody, "content"> = {},
+        options: RequestBodyOptionsOrRequired = {},
     ): OpenApiRequestBody {
         return {
-            ...options,
+            ...normalizeRequestBodyOptions(options),
             content: { "application/json": { schema } },
         };
     },
 
     multipart(
         schema: OpenApiSchema,
-        options: Omit<OpenApiRequestBody, "content"> = {},
+        options: RequestBodyOptionsOrRequired = {},
     ): OpenApiRequestBody {
         return {
-            ...options,
+            ...normalizeRequestBodyOptions(options),
             content: { "multipart/form-data": { schema } },
         };
     },
 
     form(
         schema: OpenApiSchema,
-        options: Omit<OpenApiRequestBody, "content"> = {},
+        options: RequestBodyOptionsOrRequired = {},
     ): OpenApiRequestBody {
         return {
-            ...options,
+            ...normalizeRequestBodyOptions(options),
             content: { "application/x-www-form-urlencoded": { schema } },
         };
     },
