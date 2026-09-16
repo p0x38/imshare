@@ -1,0 +1,24 @@
+import { Alert, Button, Card, CardContent, Checkbox, FormControlLabel, Stack, TextField, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+import { App } from "../components/App";
+import { AdminLayout } from "../components/AdminLayout";
+import { api } from "../lib/api";
+
+interface Config { site: { name: string; description?: string; version: string }; auth: { emailAndPasswordEnabled?: boolean; registration?: { enabled?: boolean; public?: boolean } }; analytics?: { googleAnalyticsMeasurementId?: string; googleTagManagerContainerId?: string }; features?: Record<string, boolean>; limits?: { textPostCharacters?: number } }
+function AdminSettingsPage() {
+    const [config, setConfig] = useState<Config | null>(null); const [ga, setGa] = useState(""); const [gtm, setGtm] = useState(""); const [error, setError] = useState(""); const [notice, setNotice] = useState("");
+    useEffect(() => { void (async () => { try { const result = await api<{ data: Config }>("/v1/admin/settings"); setConfig(result.data); setGa(result.data.analytics?.googleAnalyticsMeasurementId ?? ""); setGtm(result.data.analytics?.googleTagManagerContainerId ?? ""); } catch (e) { setError(e instanceof Error ? e.message : "Failed to load settings."); } })(); }, []);
+    async function saveAnalytics() { try { const result = await api<{ data: Config }>("/v1/admin/settings", { method: "PATCH", body: JSON.stringify({ analytics: { googleAnalyticsMeasurementId: ga.trim(), googleTagManagerContainerId: gtm.trim() } }) }); setConfig(result.data); setNotice("Analytics settings saved."); } catch (e) { setError(e instanceof Error ? e.message : "Failed to save settings."); } }
+    async function saveAuth() { if (!config) return; try { const result = await api<{ data: Config }>("/v1/admin/settings", { method: "PATCH", body: JSON.stringify({ auth: config.auth }) }); setConfig(result.data); setNotice("Authentication settings saved."); } catch (e) { setError(e instanceof Error ? e.message : "Failed to save settings."); } }
+    return <AdminLayout title="Instance settings" description="Configure settings that apply to the entire imshare instance." activeHref="/admin/settings/">
+        {error ? <Alert severity="error">{error}</Alert> : null}{notice ? <Alert severity="success" onClose={() => setNotice("")}>{notice}</Alert> : null}
+        <Stack spacing={2}>
+            <Card variant="outlined"><CardContent><Stack spacing={2}><Typography variant="h6">Site</Typography><TextField label="Site name" value={config?.site.name ?? ""} slotProps={{ input: { readOnly: true } }} /><TextField label="Version" value={config?.site.version ?? ""} slotProps={{ input: { readOnly: true } }} /></Stack></CardContent></Card>
+            <Card variant="outlined"><CardContent><Stack spacing={2}><Typography variant="h6">Analytics</Typography><TextField label="Google Analytics 4 measurement ID" value={ga} onChange={(e) => setGa(e.target.value)} placeholder="G-XXXXXXXXXX" /><TextField label="Google Tag Manager container ID" value={gtm} onChange={(e) => setGtm(e.target.value)} placeholder="GTM-XXXXXXX" /><Button variant="contained" onClick={() => void saveAnalytics()}>Save analytics</Button></Stack></CardContent></Card>
+            <Card variant="outlined"><CardContent><Stack spacing={2}><Typography variant="h6">Authentication & registration</Typography><FormControlLabel control={<Checkbox checked={config?.auth.emailAndPasswordEnabled ?? false} onChange={(e) => setConfig((c) => c ? { ...c, auth: { ...c.auth, emailAndPasswordEnabled: e.target.checked } } : c)} />} label="Enable email/password authentication" /><FormControlLabel control={<Checkbox checked={config?.auth.registration?.enabled ?? false} onChange={(e) => setConfig((c) => c ? { ...c, auth: { ...c.auth, registration: { ...c.auth.registration, enabled: e.target.checked } } } : c)} />} label="Enable registration" /><FormControlLabel control={<Checkbox checked={config?.auth.registration?.public ?? false} onChange={(e) => setConfig((c) => c ? { ...c, auth: { ...c.auth, registration: { ...c.auth.registration, public: e.target.checked } } } : c)} />} label="Allow public registration" /><Button variant="contained" onClick={() => void saveAuth()}>Save authentication</Button></Stack></CardContent></Card>
+            <Card variant="outlined"><CardContent><Stack spacing={1}><Typography variant="h6">ActivityPub / federation</Typography><Typography color="text.secondary">Federation is currently derived from the instance base URL and public user/post settings. Federation-specific controls can be added here without exposing private configuration to ordinary users.</Typography></Stack></CardContent></Card>
+        </Stack>
+    </AdminLayout>;
+}
+const root = document.querySelector("#admin-settings-page"); if (root) createRoot(root).render(<App><AdminSettingsPage /></App>);
