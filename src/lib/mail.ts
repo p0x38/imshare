@@ -29,6 +29,12 @@ class SmtpConnection {
             : net.connect({ host: config.host, port: config.port });
         const connection = new SmtpConnection(socket, config.host);
         await connection.connected();
+        const greeting = await connection.readReply();
+        if (greeting.code !== 220) {
+            throw new Error(
+                `SMTP server rejected the connection (${greeting.code}): ${greeting.lines.at(-1) ?? "Unknown SMTP error."}`,
+            );
+        }
         return connection;
     }
 
@@ -141,16 +147,15 @@ function capabilities(reply: SmtpReply): Set<string> {
 export async function sendTestEmail(config: SmtpConfig, recipient: string): Promise<void> {
     const connection = await SmtpConnection.connect(config);
     try {
-        const greeting = await connection.command("EHLO imshare", 250);
+        let ehlo = await connection.command("EHLO imshare", 250);
         if (!config.secure && config.port !== 465) {
-            if (!greeting.lines.some((line) => /^250[ -]STARTTLS\b/i.test(line))) {
+            if (!ehlo.lines.some((line) => /^250[ -]STARTTLS\b/i.test(line))) {
                 throw new Error("SMTP server does not advertise STARTTLS.");
             }
             await connection.startTls();
-            await connection.command("EHLO imshare", 250);
+            ehlo = await connection.command("EHLO imshare", 250);
         }
 
-        const ehlo = await connection.command("EHLO imshare", 250);
         const auth = capabilities(ehlo);
         if (auth.has("PLAIN")) {
             const encoded = Buffer.from(`\0${config.user}\0${config.password}`).toString("base64");
