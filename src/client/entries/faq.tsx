@@ -21,6 +21,7 @@ const sections = [
     ["discovery", 4],
     ["analytics", 3],
     ["troubleshooting", 4],
+    ["community", 5],
 ] as const;
 
 type SectionKey = (typeof sections)[number][0];
@@ -62,40 +63,6 @@ function FaqSection({ section, count }: { section: SectionKey; count: number }) 
     );
 }
 
-function CommunityFaqSection() {
-    const { t } = useTranslation();
-    const items = Array.from({ length: 5 }, (_, index) => index);
-
-    return (
-        <Card variant="outlined">
-            <CardContent>
-                <Stack spacing={1.5}>
-                    <Typography variant="h5" component="h2">
-                        {t("faq.community.title")}
-                    </Typography>
-                    <List disablePadding>
-                        {items.map((index) => (
-                            <Stack key={index}>
-                                <ListItem disableGutters alignItems="flex-start">
-                                    <ListItemText
-                                        primary={t(`faq.community.items.${index}.question`)}
-                                        secondary={t(`faq.community.items.${index}.answer`)}
-                                        primaryTypographyProps={{
-                                            fontWeight: 600,
-                                            gutterBottom: true,
-                                        }}
-                                    />
-                                </ListItem>
-                                {index < items.length - 1 ? <Divider component="li" /> : null}
-                            </Stack>
-                        ))}
-                    </List>
-                </Stack>
-            </CardContent>
-        </Card>
-    );
-}
-
 function FaqPage() {
     const { t } = useTranslation();
 
@@ -111,7 +78,6 @@ function FaqPage() {
                 {sections.map(([section, count]) => (
                     <FaqSection key={section} section={section} count={count} />
                 ))}
-                <CommunityFaqSection />
             </Stack>
         </Page>
     );
