@@ -88,6 +88,44 @@ const documentation: Record<string, OperationDocumentation> = {
     "POST /v1/admin/users/{userId}/role": { summary: "Update user role", description: "Updates a user's role. Supported roles are user, moderator, and admin.", requestExample: { role: "moderator" } },
 };
 
+function operationTag(url: string) {
+    const pathname = url.split("?", 1)[0] ?? url;
+    const segment = pathname.split("/")[2] ?? "general";
+    switch (segment) {
+        case "auth":
+            return "Authentication";
+        case "me":
+        case "users":
+            return "Users";
+        case "admin":
+            return "Administration";
+        case "health":
+        case "ready":
+        case "version":
+            return "Health";
+        case "posts":
+            return "Posts";
+        case "comments":
+            return "Comments";
+        case "reports":
+            return "Reports";
+        case "tags":
+            return "Tags";
+        case "categories":
+            return "Categories";
+        case "uploads":
+            return "Uploads";
+        case "emojis":
+            return "Emojis";
+        case "search":
+            return "Search";
+        case "recommendations":
+            return "Recommendations";
+        default:
+            return "Health";
+    }
+}
+
 export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>) {
     await fastify.register(fastifySwagger, {
         openapi: {
@@ -132,6 +170,7 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
             const response = (current.responses as Record<string, unknown> | undefined) ?? {};
             const transformed = {
                 ...current,
+                tags: Array.isArray(current.tags) && current.tags.length > 0 ? current.tags : [operationTag(url)],
                 summary: doc.summary,
                 description: doc.description,
                 responses: Object.keys(response).length > 0 ? response : { "200": { description: "Successful response." } },
