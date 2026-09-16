@@ -7,13 +7,28 @@ import {
     postCollectionResponseSchema,
     postResponseSchema,
 } from "../routes/openapi-schemas.js";
-import { openapiTagForPath } from "./openapi-route.js";
+import {
+    compileOpenApiOperation,
+    openapiOperationId,
+    openapiTagForPath,
+    type OpenApiRouteMetadata,
+} from "./openapi-route.js";
 
-type OperationDocumentation = {
-    summary: string;
+type OperationDocumentation = Pick<
+    OpenApiRouteMetadata,
+    "summary" | "description" | "requestExample" | "responseExamples"
+>;
+
+type OpenApiRegistry = ReadonlyMap<string, OperationDocumentation>;
+
+type OpenApiTag = {
+    name: string;
     description: string;
-    requestExample?: unknown;
-    responseExamples?: Record<string, unknown>;
+};
+
+type OpenApiComponentResponse = {
+    description: string;
+    content?: Record<string, unknown>;
 };
 
 const documentation: Record<string, OperationDocumentation> = {
@@ -410,101 +425,170 @@ const documentation: Record<string, OperationDocumentation> = {
     },
 };
 
+const tags: readonly OpenApiTag[] = [
+    { name: "Health", description: "Service health, readiness, and version metadata." },
+    { name: "Authentication", description: "Authentication and session-related operations." },
+    { name: "Users", description: "Public profiles and authenticated user resources." },
+    { name: "Posts", description: "Post creation, discovery, media, tags, categories, and reactions." },
+    { name: "Comments", description: "Post comments and comment reactions." },
+    { name: "Reports", description: "User-submitted content reports." },
+    { name: "Tags", description: "Tag discovery and management." },
+    { name: "Categories", description: "Category discovery and management." },
+    { name: "Uploads", description: "Image upload and upload metadata management." },
+    { name: "Emojis", description: "Custom emoji resources." },
+    { name: "Search", description: "Cross-resource search." },
+    { name: "Recommendations", description: "Personalized public post recommendations." },
+    { name: "Administration", description: "Moderator and administrator operations." },
+    { name: "Federation", description: "ActivityPub/federation discovery endpoints." },
+    { name: "General", description: "Miscellaneous application endpoints." },
+];
+
+function createRegistry(): OpenApiRegistry {
+    return new Map(Object.entries(documentation));
+}
+
+function createComponentResponses(): Record<string, OpenApiComponentResponse> {
+    const errorRef = { $ref: "#/components/schemas/ErrorResponse" };
+    return {
+        BadRequest: {
+            description: "The request was invalid.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        Unauthorized: {
+            description: "Authentication is required.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        Forbidden: {
+            description: "The authenticated user is not allowed to perform this operation.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        NotFound: {
+            description: "The requested resource was not found.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        Conflict: {
+            description: "The requested operation conflicts with existing state.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        TooManyRequests: {
+            description: "The request was rate limited.",
+            content: { "application/json": { schema: errorRef } },
+        },
+        InternalServerError: {
+            description: "An unexpected server error occurred.",
+            content: { "application/json": { schema: errorRef } },
+        },
+    };
+}
+
+function operationKey(method: unknown, url: string): string {
+    const normalizedMethod = typeof method === "string" ? method.toUpperCase() : "";
+    return `${normalizedMethod} ${url}`;
+}
+
+function isDocumentedRoute(url: string): boolean {
+    return url.startsWith("/api/") ||
+        url === "/.well-known/webfinger" ||
+        url === "/.well-known/nodeinfo" ||
+        url.startsWith("/nodeinfo/") ||
+        url.startsWith("/federation/");
+}
+
 export async function registerOpenApi(
     fastify: FastifyInstance,
     config: Awaited<ReturnType<typeof loadConfig>>,
 ) {
+    const registry = createRegistry();
+
     await fastify.register(fastifySwagger, {
         openapi: {
+            openapi: "3.0.3",
             info: {
                 title: `${config.site.name} API`,
                 description: config.site.description,
                 version: config.site.version,
             },
-            ...(config.auth.baseUrl ? { servers: [{ url: config.auth.baseUrl }] } : {}),
-            tags: [
-                { name: "Health" },
-                { name: "Authentication" },
-                { name: "Users" },
-                { name: "Posts" },
-                { name: "Comments" },
-                { name: "Reports" },
-                { name: "Tags" },
-                { name: "Categories" },
-                { name: "Uploads" },
-                { name: "Emojis" },
-                { name: "Search" },
-                { name: "Recommendations" },
-                { name: "Administration" },
-                { name: "General" },
-            ],
+            ...(config.auth.baseUrl
+                ? {
+                      servers: [
+                          {
+                              url: config.auth.baseUrl,
+                              description: "Configured imshare API server",
+                          },
+                      ],
+                  }
+                : {}),
+            tags,
+            externalDocs: {
+                description: "OpenAPI 3.0.3 specification",
+                url: "https://spec.openapis.org/oas/v3.0.3.html",
+            },
             components: {
                 securitySchemes: {
-                    cookieAuth: { type: "apiKey", in: "cookie", name: "better-auth.session_token" },
+                    cookieAuth: {
+                        type: "apiKey",
+                        in: "cookie",
+                        name: "better-auth.session_token",
+                        description: "Better Auth session cookie used by the web application.",
+                    },
                 },
                 schemas: {
                     ErrorResponse: JSON.parse(JSON.stringify(errorResponseSchema)),
                     Post: JSON.parse(JSON.stringify(postResponseSchema.properties.data)),
                     PostCollection: JSON.parse(JSON.stringify(postCollectionResponseSchema)),
                 },
+                responses: createComponentResponses(),
             },
         },
         transform: ({ schema, url, route }) => {
             const method = typeof route?.method === "string" ? route.method.toUpperCase() : "";
-            const key = `${method} ${url}`;
-            const doc = documentation[key];
-            const current = (schema as Record<string, unknown>) ?? {};
-            const response = (current.responses as Record<string, unknown> | undefined) ?? {};
-            const isApiRoute = url.startsWith("/api/");
-            const isFederationRoute =
-                url === "/.well-known/webfinger" ||
-                url === "/.well-known/nodeinfo" ||
-                url.startsWith("/nodeinfo/") ||
-                url.startsWith("/federation/");
-            const transformed = {
-                ...current,
-                ...(isApiRoute || isFederationRoute ? {} : { hide: true }),
-                tags:
-                    Array.isArray(current.tags) && current.tags.length > 0
-                        ? current.tags
-                        : [openapiTagForPath(url)],
-                ...(doc ? { summary: doc.summary, description: doc.description } : {}),
-                responses:
-                    Object.keys(response).length > 0
-                        ? response
-                        : { "200": { description: "Successful response." } },
-            } as Record<string, unknown>;
-            if (doc?.requestExample) {
-                const body = (transformed.requestBody as Record<string, unknown> | undefined) ?? {};
-                const content = (body.content as Record<string, unknown> | undefined) ?? {
-                    "application/json": {},
-                };
-                const json =
-                    (content["application/json"] as Record<string, unknown> | undefined) ?? {};
-                transformed.requestBody = {
-                    ...body,
-                    content: {
-                        ...content,
-                        "application/json": { ...json, example: doc.requestExample },
-                    },
+            const current = { ...(schema as Record<string, unknown>) };
+            const key = operationKey(method, url);
+            const doc = registry.get(key);
+            const metadata: OpenApiRouteMetadata | undefined = doc
+                ? {
+                      ...doc,
+                      operationId: openapiOperationId(method, url),
+                      tags: current.tags ?? [openapiTagForPath(url)],
+                  }
+                : undefined;
+
+            const compiled = compileOpenApiOperation(current, metadata);
+            const responses =
+                (compiled.responses as Record<string, unknown> | undefined) ?? {};
+
+            if (Object.keys(responses).length === 0) {
+                compiled.responses = {
+                    "200": { description: "Successful response." },
                 };
             }
-            for (const [status, example] of Object.entries(doc?.responseExamples ?? {})) {
-                const responseEntry = (transformed.responses as Record<string, unknown>)[status] as
-                    Record<string, unknown> | undefined;
-                if (responseEntry) {
-                    const content = (responseEntry.content as
-                        Record<string, unknown> | undefined) ?? { "application/json": {} };
-                    const json =
-                        (content["application/json"] as Record<string, unknown> | undefined) ?? {};
-                    (transformed.responses as Record<string, unknown>)[status] = {
-                        ...responseEntry,
-                        content: { ...content, "application/json": { ...json, example } },
-                    };
-                }
+
+            compiled.tags =
+                Array.isArray(compiled.tags) && compiled.tags.length > 0
+                    ? compiled.tags
+                    : [openapiTagForPath(url)];
+
+            if (!compiled.operationId && method && url) {
+                compiled.operationId = openapiOperationId(method, url);
             }
-            return { schema: transformed, url, route };
+
+            if (!isDocumentedRoute(url)) {
+                compiled.hide = true;
+            }
+
+            return { schema: compiled, url, route };
         },
     });
-    await fastify.register(fastifySwaggerUi, { routePrefix: "/docs" });
+
+    await fastify.register(fastifySwaggerUi, {
+        routePrefix: "/docs",
+        uiConfig: {
+            deepLinking: true,
+            displayRequestDuration: true,
+            docExpansion: "list",
+            filter: true,
+            persistAuthorization: true,
+        },
+        staticCSP: true,
+    });
 }
