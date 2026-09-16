@@ -127,8 +127,11 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
             const doc = documentation[key];
             const current = (schema as Record<string, unknown>) ?? {};
             const response = (current.responses as Record<string, unknown> | undefined) ?? {};
+            const isApiRoute = url.startsWith("/api/");
+            const isFederationRoute = url === "/.well-known/webfinger" || url === "/.well-known/nodeinfo" || url.startsWith("/nodeinfo/") || url.startsWith("/federation/");
             const transformed = {
                 ...current,
+                ...(isApiRoute || isFederationRoute ? {} : { hide: true }),
                 tags: Array.isArray(current.tags) && current.tags.length > 0 ? current.tags : [openapiTagForPath(url)],
                 ...(doc ? { summary: doc.summary, description: doc.description } : {}),
                 responses: Object.keys(response).length > 0 ? response : { "200": { description: "Successful response." } },
