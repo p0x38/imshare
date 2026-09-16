@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseConfigDsl, stringifyConfigDsl } from "./config-dsl.js";
+import { getOpenIdProviderId } from "./openid.js";
 
 export interface ServerConfig {
     server: { host: string; port: number };
@@ -37,6 +38,7 @@ export interface PublicConfig {
     auth: {
         emailAndPasswordEnabled: boolean;
         registration: { enabled: boolean; public: boolean; tokenRequired: boolean };
+        oidcProviderId: string | null;
     };
     features: Required<NonNullable<ServerConfig["features"]>>;
     limits: { textPostCharacters: number };
@@ -103,6 +105,7 @@ export function getPublicConfig(config: ServerConfig): PublicConfig {
                 public: registration.public!,
                 tokenRequired: registration.enabled! && !registration.public!,
             },
+            oidcProviderId: getOpenIdProviderId(),
         },
         features: normalized.features as PublicConfig["features"],
         limits: { textPostCharacters: normalized.limits!.textPostCharacters! },
