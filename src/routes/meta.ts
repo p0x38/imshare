@@ -42,7 +42,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                 return `<url><loc>${escapeXml(absoluteUrl(baseUrl, pathname))}</loc><lastmod>${user.updatedAt.toISOString()}</lastmod></url>`;
             }),
             ...posts.map((post) => {
-                const images = post.uploads.map((upload) => `<image:image><image:loc>${escapeXml(absoluteUrl(baseUrl, `/v1/posts/image/${encodeURIComponent(upload.id)}`))}</image:loc></image:image>`).join("");
+                const images = post.uploads.map((upload) => `<image:image><image:loc>${escapeXml(absoluteUrl(baseUrl, `/api/v1/posts/image/${encodeURIComponent(upload.id)}`))}</image:loc></image:image>`).join("");
                 return `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod>${images}</url>`;
             }),
             ...tags.map((tag) => `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/tags/${encodeURIComponent(tag.slug)}`))}</loc><lastmod>${tag.updatedAt.toISOString()}</lastmod></url>`),
@@ -57,10 +57,13 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         const body = [
             "User-agent: *",
             "Allow: /",
-            "Disallow: /v1/",
-            "Disallow: /dashboard/",
+            "Disallow: /api/",
             "Disallow: /account/",
+            "Disallow: /dashboard/",
             "Disallow: /admin/",
+            "Disallow: /login",
+            "Disallow: /signup",
+            "Disallow: /notifications/",
             `Sitemap: ${absoluteUrl(baseUrl, "/sitemap.xml")}`,
             "",
         ].join("\n");
