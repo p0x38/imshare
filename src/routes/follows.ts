@@ -17,11 +17,11 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         const user = await resolveUser(userId);
         if (!user || !user.showProfile || user.isBanned) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         const session = await getSession(request);
-        const [posts, followers, following, isFollowing] = await Promise.all([
+        const [posts, followers, following, follow] = await Promise.all([
             user.showPosts ? prisma.post.count({ where: { userId: user.id, ...publicPostWhere } }) : Promise.resolve(0),
-            user.showFollowers ? prisma.follow.count({ where: { followingId: user.id } }) : Promise.resolve(null),
-            user.showFollowings ? prisma.follow.count({ where: { followerId: user.id } }) : Promise.resolve(null),
-            session && session.user.id !== user.id ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: user.id } }, select: { followerId: true } }) : Promise.resolve(null),
+            user.showFollowers ? prisma.follow.count({ where: { followingId: user.id, status: "approved" } }) : Promise.resolve(null),
+            user.showFollowings ? prisma.follow.count({ where: { followerId: user.id, status: "approved" } }) : Promise.resolve(null),
+            session && session.user.id !== user.id ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: user.id } }, select: { status: true } }) : Promise.resolve(null),
         ]);
         return ok({
             id: user.id, name: user.name, handle: user.showHandle ? user.handle : null, bio: user.bio,
@@ -29,23 +29,55 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
             profileBannerUrl: user.profileBannerUrl, accentColor: user.accentColor, createdAt: user.createdAt,
             allowSearchEngineIndex: user.allowSearchEngineIndex,
             profileLinks: await prisma.profileLink.findMany({ where: { userId: user.id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }),
-            stats: { posts, followers, following }, isFollowing: Boolean(isFollowing), canFollow: Boolean(session && session.user.id !== user.id && user.isPublic),
+            stats: { posts, followers, following },
+            followStatus: follow?.status ?? null,
+            isFollowing: follow?.status === "approved",
+            canFollow: Boolean(session && session.user.id !== user.id && user.isPublic),
         });
     });
+
     fastify.post("/v1/users/:userId/follow", async (request, reply) => {
         const me = await requireUser(request, reply); if (!me) return;
         const { userId } = request.params as { userId: string }; const target = await resolveUser(userId);
         if (!target || !target.showProfile || target.isBanned) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         if (target.id === me.id) return reply.code(400).send({ error: { code: "CANNOT_FOLLOW_SELF", message: "You cannot follow yourself." } });
         if (!target.isPublic) return reply.code(403).send({ error: { code: "PROFILE_PRIVATE", message: "This profile does not accept follows." } });
-        await prisma.follow.upsert({ where: { followerId_followingId: { followerId: me.id, followingId: target.id } }, create: { followerId: me.id, followingId: target.id }, update: {} });
-        return ok({ following: true });
+        const existing = await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: me.id, followingId: target.id } }, select: { status: true } });
+        const status = existing?.status === "pending" ? "pending" : "approved";
+        return ok({ following: true, status });
     });
+
     fastify.delete("/v1/users/:userId/follow", async (request, reply) => {
         const me = await requireUser(request, reply); if (!me) return;
         const { userId } = request.params as { userId: string }; const target = await resolveUser(userId);
         if (!target) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         await prisma.follow.deleteMany({ where: { followerId: me.id, followingId: target.id } });
         return ok({ following: false });
+    });
+
+    fastify.get("/v1/me/follow-requests", async (request, reply) => {
+        const me = await requireUser(request, reply); if (!me) return;
+        const requests = await prisma.follow.findMany({
+            where: { followingId: me.id, status: "pending" },
+            orderBy: { createdAt: "desc" },
+            include: { follower: { select: { id: true, name: true, handle: true, image: true, createdAt: true } } },
+        });
+        return ok(requests);
+    });
+
+    fastify.post("/v1/me/follow-requests/:userId/approve", async (request, reply) => {
+        const me = await requireUser(request, reply); if (!me) return;
+        const { userId } = request.params as { userId: string };
+        const result = await prisma.follow.updateMany({ where: { followerId: userId, followingId: me.id, status: "pending" }, data: { status: "approved" } });
+        if (!result.count) return reply.code(404).send({ error: { code: "FOLLOW_REQUEST_NOT_FOUND", message: "Follow request not found." } });
+        return ok({ approved: true });
+    });
+
+    fastify.delete("/v1/me/follow-requests/:userId", async (request, reply) => {
+        const me = await requireUser(request, reply); if (!me) return;
+        const { userId } = request.params as { userId: string };
+        const result = await prisma.follow.deleteMany({ where: { followerId: userId, followingId: me.id, status: "pending" } });
+        if (!result.count) return reply.code(404).send({ error: { code: "FOLLOW_REQUEST_NOT_FOUND", message: "Follow request not found." } });
+        return ok({ rejected: true });
     });
 };
