@@ -56,7 +56,7 @@ export function openapiTagForPath(url: string): string {
             case "health":
             case "ready":
             case "version":
-                return "Health";
+                return "Instance Info";
             case "posts":
                 return "Posts";
             case "comments":
@@ -76,7 +76,7 @@ export function openapiTagForPath(url: string): string {
             case "recommendations":
                 return "Recommendations";
             default:
-                return "API";
+                return "Uncategorized";
         }
     }
 
@@ -93,5 +93,5 @@ export function openapiTagForPath(url: string): string {
         return "Federation";
     }
 
-    return "General";
+    return "Uncategorized";
 }
