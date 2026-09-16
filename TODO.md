@@ -1,5 +1,55 @@
 # imshare TODO
 
+## Current roadmap
+
+### 1. Authentication
+
+- [x] Better Auth integration
+- [x] Email/password authentication
+- [x] Configurable OpenID Connect backend integration
+    - [x] Generic OAuth/OIDC plugin wiring
+    - [x] Discovery URL configuration
+    - [x] Client ID / optional client secret configuration
+    - [ ] Add OIDC provider login button to the frontend
+    - [ ] Add authenticated-client helper for Better Auth
+    - [ ] Verify OIDC callback URL for `/api/v1/auth`
+    - [ ] Test authorization-code flow end-to-end
+    - [ ] Test account creation/linking from OIDC claims
+    - [ ] Document required provider-side redirect URI and scopes
+    - [ ] Handle missing/invalid OIDC configuration with a clear startup error
+- [ ] Account/session management
+    - [ ] Account deletion
+    - [ ] Session management UI
+    - [ ] Login history
+
+### 2. Discovery and recommendations
+
+- [x] Related posts
+- [x] Multi-signal related-post scorer
+    - [x] Title similarity
+    - [x] Description similarity
+    - [x] Caption similarity
+    - [x] Tag similarity
+    - [x] Category similarity
+    - [x] Author similarity
+    - [x] Content-type similarity
+    - [x] Recency score
+    - [x] Engagement score
+    - [x] Extract reusable recommendation scorer helper
+- [ ] Improve recommendation ranking quality
+    - [ ] Add explicit Top-N candidate selection/re-ranking stage
+    - [ ] Add diversity / duplicate suppression to avoid near-identical results
+    - [ ] Cap repeated authors/categories in a recommendation page
+    - [ ] Add personalized signals from views/reactions
+    - [ ] Normalize popularity so older posts do not dominate
+    - [ ] Add deterministic tie-breaking
+    - [ ] Add scorer unit tests with representative fixtures
+    - [ ] Benchmark ranking cost with larger candidate pools
+    - [ ] Move expensive similarity work behind a cheaper candidate-retrieval stage
+- [x] Trending/popular posts
+- [x] Recently viewed posts
+- [ ] Add recommendation debug/inspection tooling for development
+
 ## Frontend
 
 - [x] Dark mode via system preference
@@ -72,6 +122,9 @@
 - [x] Add VS Code build task as the default build task
 - [x] Add VS Code formatting and format-check tasks
 - [x] Ignore Playwright, test-results, and coverage artifacts in `.gitignore`
+- [ ] Add OIDC authentication test coverage
+- [ ] Add recommendation scorer test fixtures
+- [ ] Add recommendation ranking regression tests
 
 ## API / documentation
 
@@ -83,6 +136,8 @@
 - [x] Fix Swagger UI CSP configuration
 - [x] Fix Swagger UI metadata/header interference
 - [x] Fix OpenAPI schema/route tagging issues
+- [ ] Document OIDC authentication endpoints and callback behavior
+- [ ] Document recommendation scoring inputs/outputs
 
 ## Posts
 
