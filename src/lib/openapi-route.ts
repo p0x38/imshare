@@ -16,11 +16,23 @@ export type OpenApiRouteSchema = FastifySchema & {
 
 /**
  * Define OpenAPI documentation next to its Fastify route.
- * The metadata is kept in a private extension and consumed by the Swagger transform.
+ *
+ * Standard OpenAPI operation fields are emitted directly into the Fastify
+ * schema so @fastify/swagger can consume them without a separate registry.
+ * Examples are retained in a private extension for the existing transformer.
  */
 export function openapi(metadata: OpenApiRouteMetadata, schema: FastifySchema = {}): OpenApiRouteSchema {
     return {
         ...schema,
-        "x-imshare-openapi": metadata,
+        ...(metadata.tags
+            ? { tags: Array.isArray(metadata.tags) ? metadata.tags : [metadata.tags] }
+            : {}),
+        ...(metadata.summary ? { summary: metadata.summary } : {}),
+        ...(metadata.description ? { description: metadata.description } : {}),
+        ...(metadata.operationId ? { operationId: metadata.operationId } : {}),
+        ...(metadata.security ? { security: metadata.security } : {}),
+        ...(metadata.requestExample !== undefined || metadata.responseExamples !== undefined
+            ? { "x-imshare-openapi": metadata }
+            : {}),
     };
 }
