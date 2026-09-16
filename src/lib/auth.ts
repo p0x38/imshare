@@ -5,6 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { env } from "./env.js";
 import { loadConfigSync, resolveBaseUrl } from "./config.js";
+import { createOpenIdPlugin } from "./openid.js";
 
 const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
 export const prisma = new PrismaClient({ adapter });
@@ -19,6 +20,7 @@ const trustedOrigins = [
             : [`http://localhost:${config.server.port}`, `http://127.0.0.1:${config.server.port}`]),
     ]),
 ];
+const openIdPlugin = createOpenIdPlugin();
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, { provider: "sqlite" }),
@@ -26,6 +28,7 @@ export const auth = betterAuth({
     baseURL: baseUrl,
     basePath: "/api/v1/auth",
     trustedOrigins,
+    plugins: openIdPlugin ? [openIdPlugin] : [],
     user: {
         additionalFields: {
             bio: { type: "string", required: false },
