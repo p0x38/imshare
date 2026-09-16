@@ -64,8 +64,8 @@
     },
     "dependencies": {
         "@better-auth/prisma-adapter": "^1.7.3",
-        "@emotion/react": "^11.14.1",
-        "@emotion/styled": "^11.14.1",
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.14.0",
         "@fastify/cookie": "^11.1.2",
         "@fastify/multipart": "^10.1.1",
         "@fastify/static": "^10.1.3",

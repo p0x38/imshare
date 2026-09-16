@@ -38,6 +38,7 @@ Thumbs.db
 
 # Local configuration
 config.json
+config.imshare
 
 # Test output
 coverage/
