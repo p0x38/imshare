@@ -43,8 +43,10 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         if (target.id === me.id) return reply.code(400).send({ error: { code: "CANNOT_FOLLOW_SELF", message: "You cannot follow yourself." } });
         if (!target.isPublic) return reply.code(403).send({ error: { code: "PROFILE_PRIVATE", message: "This profile does not accept follows." } });
         const existing = await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: me.id, followingId: target.id } }, select: { status: true } });
-        const status = existing?.status === "pending" ? "pending" : "approved";
-        return ok({ following: true, status });
+        if (existing) return ok({ following: existing.status === "approved", status: existing.status });
+        const status = target.followApprovalRequired ? "pending" : "approved";
+        await prisma.follow.create({ data: { followerId: me.id, followingId: target.id, status } });
+        return ok({ following: status === "approved", status });
     });
 
     fastify.delete("/v1/users/:userId/follow", async (request, reply) => {
