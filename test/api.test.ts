@@ -64,13 +64,13 @@ test("parseOrder defaults to descending", () => {
 test("health, readiness, and version routes are publicly available", async () => {
     const app = await buildApp();
     try {
-        const health = await app.inject({ method: "GET", url: "/v1/health" });
+        const health = await app.inject({ method: "GET", url: "/api/v1/health" });
         expect(health.statusCode).toBe(200);
         expect(health.json()).toMatchObject({ status: "ok" });
-        const ready = await app.inject({ method: "GET", url: "/v1/ready" });
+        const ready = await app.inject({ method: "GET", url: "/api/v1/ready" });
         expect(ready.statusCode).toBe(200);
         expect(ready.json()).toMatchObject({ status: "ready" });
-        const version = await app.inject({ method: "GET", url: "/v1/version" });
+        const version = await app.inject({ method: "GET", url: "/api/v1/version" });
         expect(version.statusCode).toBe(200);
         expect(version.json()).toMatchObject({ data: { api: "v1", version: "1.0.0" } });
     } finally {
@@ -81,7 +81,7 @@ test("health, readiness, and version routes are publicly available", async () =>
 test("security headers are present on API and HTML responses", async () => {
     const app = await buildApp();
     try {
-        for (const url of ["/v1/health", "/"]) {
+        for (const url of ["/api/v1/health", "/"]) {
             const response = await app.inject({
                 method: "GET",
                 url,
@@ -102,11 +102,11 @@ test("security headers are present on API and HTML responses", async () => {
 test("protected notification routes require authentication while comment listing is public", async () => {
     const app = await buildApp();
     try {
-        for (const url of ["/v1/me/notifications", "/v1/me/notifications/unread-count"]) {
+        for (const url of ["/api/v1/me/notifications", "/api/v1/me/notifications/unread-count"]) {
             const response = await app.inject({ method: "GET", url });
             expect(response.statusCode).toBe(401);
         }
-        const comments = await app.inject({ method: "GET", url: "/v1/posts/missing/comments" });
+        const comments = await app.inject({ method: "GET", url: "/api/v1/posts/missing/comments" });
         expect(comments.statusCode).toBe(200);
         expect(comments.json()).toMatchObject({
             data: [],
@@ -120,10 +120,10 @@ test("protected notification routes require authentication while comment listing
 test("reaction reads reject missing posts and writes require authentication", async () => {
     const app = await buildApp();
     try {
-        const read = await app.inject({ method: "GET", url: "/v1/posts/missing/reactions" });
+        const read = await app.inject({ method: "GET", url: "/api/v1/posts/missing/reactions" });
         expect(read.statusCode).toBe(404);
         expect(read.json().error.code).toBe("POST_NOT_FOUND");
-        const write = await app.inject({ method: "PUT", url: "/v1/posts/missing/like" });
+        const write = await app.inject({ method: "PUT", url: "/api/v1/posts/missing/like" });
         expect(write.statusCode).toBe(401);
     } finally {
         await app.close();
@@ -135,7 +135,7 @@ test("state-changing requests reject foreign origins", async () => {
     try {
         const response = await app.inject({
             method: "POST",
-            url: "/v1/me/notifications/read-all",
+            url: "/api/v1/me/notifications/read-all",
             headers: { origin: "https://attacker.example" },
         });
         expect(response.statusCode).toBe(403);
@@ -150,12 +150,12 @@ test("image route rejects invalid transformation parameters", async () => {
     try {
         const response = await app.inject({
             method: "GET",
-            url: "/v1/posts/image/missing?width=1",
+            url: "/api/v1/posts/image/missing?width=1",
         });
         expect(response.statusCode).toBe(404);
         const placeholder = await app.inject({
             method: "GET",
-            url: "/v1/posts/image/missing/placeholder",
+            url: "/api/v1/posts/image/missing/placeholder",
         });
         expect(placeholder.statusCode).toBe(404);
     } finally {
@@ -168,13 +168,13 @@ test("request schemas reject malformed post and user bodies", async () => {
     try {
         const post = await app.inject({
             method: "POST",
-            url: "/v1/posts",
+            url: "/api/v1/posts",
             payload: { title: "", unexpected: true },
         });
         expect(post.statusCode).toBe(400);
         const user = await app.inject({
             method: "POST",
-            url: "/v1/users",
+            url: "/api/v1/users",
             payload: { name: "test" },
         });
         expect(user.statusCode).toBe(400);
@@ -186,13 +186,13 @@ test("request schemas reject malformed post and user bodies", async () => {
 test("custom emoji listing is public and creation is protected", async () => {
     const app = await buildApp();
     try {
-        const list = await app.inject({ method: "GET", url: "/v1/emojis" });
+        const list = await app.inject({ method: "GET", url: "/api/v1/emojis" });
         expect(list.statusCode).toBe(200);
         expect(list.json()).toMatchObject({ data: [] });
         const create = await app.inject({
             method: "POST",
-            url: "/v1/emojis",
-            payload: { name: "blobcat", url: "/v1/posts/image/example" },
+            url: "/api/v1/emojis",
+            payload: { name: "blobcat", url: "/api/v1/posts/image/example" },
         });
         expect(create.statusCode).toBe(401);
     } finally {
@@ -203,7 +203,7 @@ test("custom emoji listing is public and creation is protected", async () => {
 test("public API rejects unsupported methods cleanly", async () => {
     const app = await buildApp();
     try {
-        const response = await app.inject({ method: "PATCH", url: "/v1/health" });
+        const response = await app.inject({ method: "PATCH", url: "/api/v1/health" });
         expect(response.statusCode).toBe(404);
     } finally {
         await app.close();
@@ -213,7 +213,7 @@ test("public API rejects unsupported methods cleanly", async () => {
 test("missing API resources return structured errors", async () => {
     const app = await buildApp();
     try {
-        for (const url of ["/v1/posts/missing", "/v1/tags/missing", "/v1/categories/missing"]) {
+        for (const url of ["/api/v1/posts/missing", "/api/v1/tags/missing", "/api/v1/categories/missing"]) {
             const response = await app.inject({ method: "GET", url });
             expect(response.statusCode).toBe(404);
             expect(response.json().error).toEqual(
@@ -230,7 +230,7 @@ test("dedicated HTML error pages are served", async () => {
     try {
         for (const [url, status] of [
             ["/does-not-exist", 404],
-            ["/v1/posts/image/missing?width=1", 404],
+            ["/api/v1/posts/image/missing?width=1", 404],
         ] as const) {
             const response = await app.inject({
                 method: "GET",
