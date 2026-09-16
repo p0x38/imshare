@@ -194,7 +194,7 @@ function PostEditor() {
                 originalCreatedAt: originalCreatedAtValue(),
                 ...permalinkValues(),
                 allowDownload,
-                status: "draft",
+                status: status,
                 visibility,
                 uploadIds,
                 tags: tags
