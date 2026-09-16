@@ -24,7 +24,7 @@ export const auth = betterAuth({
     database: prismaAdapter(prisma, { provider: "sqlite" }),
     secret: env.betterAuthSecret,
     baseURL: baseUrl,
-    basePath: "/v1/auth",
+    basePath: "/api/v1/auth",
     trustedOrigins,
     user: {
         additionalFields: {
