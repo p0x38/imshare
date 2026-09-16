@@ -26,6 +26,21 @@ import { getSession } from "../lib/api.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(accountRoutes);
+    fastify.addHook("preHandler", async (request) => {
+        if (request.method !== "POST" || request.url.split("?", 1)[0] !== "/v1/posts") return;
+        const session = await getSession(request);
+        if (!session || !request.body || typeof request.body !== "object") return;
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { defaultCategoryId: true, defaultPostVisibility: true, defaultAllowDownload: true, defaultContentWarning: true },
+        });
+        if (!user) return;
+        const body = request.body as Record<string, unknown>;
+        if (body.categoryId === undefined) body.categoryId = user.defaultCategoryId;
+        if (body.visibility === undefined) body.visibility = user.defaultPostVisibility;
+        if (body.allowDownload === undefined) body.allowDownload = user.defaultAllowDownload;
+        if (body.contentWarning === undefined) body.contentWarning = user.defaultContentWarning;
+    });
     await fastify.register(healthRoutes);
     await fastify.register(userRoutes);
     await fastify.register(postRoutes);
@@ -48,6 +63,3 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(emojiRoutes);
     await fastify.register(registerAdminRoutes);
 };
-
-// This hook is registered by the API plugin before route handlers run. It only fills
-// omitted values for post creation; explicitly supplied values always win.
