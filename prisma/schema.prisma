@@ -344,12 +344,13 @@ model Category {
 model Follow {
   followerId String
   followingId String
+  status String @default("approved")
   createdAt DateTime @default(now())
   follower User @relation("followFollower", fields: [followerId], references: [id], onDelete: Cascade)
   following User @relation("followFollowing", fields: [followingId], references: [id], onDelete: Cascade)
   @@id([followerId, followingId])
-  @@index([followingId, createdAt])
-  @@index([followerId, createdAt])
+  @@index([followingId, status, createdAt])
+  @@index([followerId, status, createdAt])
   @@map("follow")
 }
 
