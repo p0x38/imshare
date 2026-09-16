@@ -13,7 +13,62 @@ export type OpenApiHttpMethod =
 export type OpenApiParameterLocation = "query" | "path" | "header" | "cookie";
 export type OpenApiScalarType = "string" | "number" | "integer" | "boolean";
 export type OpenApiSecurityRequirement = Record<string, string[]>;
-export type OpenApiSchema = Record<string, unknown>;
+export type OpenApiReference = { $ref: string };
+export type OpenApiExternalDocumentation = {
+    description?: string;
+    url: string;
+};
+
+export type OpenApiSchema = Record<string, unknown> & {
+    title?: string;
+    multipleOf?: number;
+    maximum?: number;
+    exclusiveMaximum?: boolean;
+    minimum?: number;
+    exclusiveMinimum?: boolean;
+    maxLength?: number;
+    minLength?: number;
+    pattern?: string;
+    maxItems?: number;
+    minItems?: number;
+    uniqueItems?: boolean;
+    maxProperties?: number;
+    minProperties?: number;
+    required?: string[];
+    enum?: unknown[];
+    type?: "array" | "boolean" | "integer" | "number" | "object" | "string";
+    not?: OpenApiSchema | OpenApiReference;
+    allOf?: Array<OpenApiSchema | OpenApiReference>;
+    oneOf?: Array<OpenApiSchema | OpenApiReference>;
+    anyOf?: Array<OpenApiSchema | OpenApiReference>;
+    items?: OpenApiSchema | OpenApiReference;
+    properties?: Record<string, OpenApiSchema | OpenApiReference>;
+    additionalProperties?: boolean | OpenApiSchema | OpenApiReference;
+    description?: string;
+    format?: string;
+    default?: unknown;
+    nullable?: boolean;
+    discriminator?: OpenApiDiscriminator;
+    readOnly?: boolean;
+    writeOnly?: boolean;
+    xml?: OpenApiXml;
+    externalDocs?: OpenApiExternalDocumentation;
+    example?: unknown;
+    deprecated?: boolean;
+};
+
+export type OpenApiDiscriminator = {
+    propertyName: string;
+    mapping?: Record<string, string>;
+};
+
+export type OpenApiXml = {
+    name?: string;
+    namespace?: string;
+    prefix?: string;
+    attribute?: boolean;
+    wrapped?: boolean;
+};
 
 export type OpenApiExample = {
     summary?: string;
@@ -21,6 +76,8 @@ export type OpenApiExample = {
     value?: unknown;
     externalValue?: string;
 };
+
+export type OpenApiContent = Record<string, OpenApiMediaType | OpenApiReference>;
 
 export type OpenApiParameter = {
     name: string;
@@ -31,47 +88,41 @@ export type OpenApiParameter = {
     allowEmptyValue?: boolean;
     explode?: boolean;
     style?: string;
-    schema?: OpenApiSchema;
+    allowReserved?: boolean;
+    schema?: OpenApiSchema | OpenApiReference;
     example?: unknown;
-    examples?: Record<string, OpenApiExample>;
+    examples?: Record<string, OpenApiExample | OpenApiReference>;
+    content?: OpenApiContent;
 };
 
-export type OpenApiHeader = {
-    description?: string;
-    required?: boolean;
-    deprecated?: boolean;
-    schema?: OpenApiSchema;
-    example?: unknown;
-    examples?: Record<string, OpenApiExample>;
+export type OpenApiHeader = Omit<OpenApiParameter, "name" | "in">;
+
+export type OpenApiEncoding = {
+    contentType?: string;
+    headers?: Record<string, OpenApiHeader | OpenApiReference>;
+    style?: string;
+    explode?: boolean;
+    allowReserved?: boolean;
 };
 
 export type OpenApiMediaType = {
-    schema?: OpenApiSchema;
+    schema?: OpenApiSchema | OpenApiReference;
     example?: unknown;
-    examples?: Record<string, OpenApiExample>;
-    encoding?: Record<
-        string,
-        {
-            contentType?: string;
-            headers?: Record<string, OpenApiHeader>;
-            style?: string;
-            explode?: boolean;
-            allowReserved?: boolean;
-        }
-    >;
+    examples?: Record<string, OpenApiExample | OpenApiReference>;
+    encoding?: Record<string, OpenApiEncoding>;
 };
 
 export type OpenApiRequestBody = {
     description?: string;
     required?: boolean;
-    content: Record<string, OpenApiMediaType>;
+    content: OpenApiContent;
 };
 
 export type OpenApiResponse = {
     description: string;
-    headers?: Record<string, OpenApiHeader>;
-    content?: Record<string, OpenApiMediaType>;
-    links?: Record<string, OpenApiLink>;
+    headers?: Record<string, OpenApiHeader | OpenApiReference>;
+    content?: OpenApiContent;
+    links?: Record<string, OpenApiLink | OpenApiReference>;
 };
 
 export type OpenApiLink = {
@@ -80,42 +131,69 @@ export type OpenApiLink = {
     parameters?: Record<string, unknown>;
     requestBody?: unknown;
     description?: string;
-    server?: OpenApiServer;
+    server?: OpenApiServer | OpenApiReference;
+};
+
+export type OpenApiServerVariable = {
+    enum?: string[];
+    default: string;
+    description?: string;
 };
 
 export type OpenApiServer = {
     url: string;
     description?: string;
-    variables?: Record<
-        string,
-        {
-            enum?: string[];
-            default: string;
-            description?: string;
-        }
-    >;
+    variables?: Record<string, OpenApiServerVariable>;
 };
 
-export type OpenApiCallback = Record<string, Record<string, OpenApiSchema>>;
+export type OpenApiCallback = Record<string, OpenApiPathItem | OpenApiReference>;
+
+export type OpenApiPathItem = {
+    $ref?: string;
+    summary?: string;
+    description?: string;
+    get?: OpenApiOperation | OpenApiReference;
+    put?: OpenApiOperation | OpenApiReference;
+    post?: OpenApiOperation | OpenApiReference;
+    delete?: OpenApiOperation | OpenApiReference;
+    options?: OpenApiOperation | OpenApiReference;
+    head?: OpenApiOperation | OpenApiReference;
+    patch?: OpenApiOperation | OpenApiReference;
+    trace?: OpenApiOperation | OpenApiReference;
+    servers?: Array<OpenApiServer | OpenApiReference>;
+    parameters?: Array<OpenApiParameter | OpenApiReference>;
+};
+
+export type OpenApiOperation = {
+    tags?: string[];
+    summary?: string;
+    description?: string;
+    externalDocs?: OpenApiExternalDocumentation;
+    operationId?: string;
+    parameters?: Array<OpenApiParameter | OpenApiReference>;
+    requestBody?: OpenApiRequestBody | OpenApiReference;
+    responses?: Record<string, OpenApiResponse | OpenApiReference>;
+    callbacks?: Record<string, OpenApiCallback | OpenApiReference>;
+    deprecated?: boolean;
+    security?: OpenApiSecurityRequirement[];
+    servers?: Array<OpenApiServer | OpenApiReference>;
+};
 
 export type OpenApiRouteMetadata = {
     tags?: string | string[];
     summary?: string;
     description?: string;
-    externalDocs?: {
-        url: string;
-        description?: string;
-    };
+    externalDocs?: OpenApiExternalDocumentation;
     operationId?: string;
-    parameters?: OpenApiParameter[];
-    requestBody?: OpenApiRequestBody;
-    responses?: Record<string, OpenApiResponse>;
-    callbacks?: Record<string, OpenApiCallback>;
+    parameters?: Array<OpenApiParameter | OpenApiReference>;
+    requestBody?: OpenApiRequestBody | OpenApiReference;
+    responses?: Record<string, OpenApiResponse | OpenApiReference>;
+    callbacks?: Record<string, OpenApiCallback | OpenApiReference>;
     deprecated?: boolean;
     security?: OpenApiSecurityRequirement[];
-    servers?: OpenApiServer[];
+    servers?: Array<OpenApiServer | OpenApiReference>;
     requestExample?: unknown;
-    requestExamples?: Record<string, OpenApiExample>;
+    requestExamples?: Record<string, OpenApiExample | OpenApiReference>;
     responseExamples?: Record<string, unknown>;
 };
 
@@ -139,14 +217,15 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function mergeContentExample(
-    content: Record<string, OpenApiMediaType>,
+    content: OpenApiContent,
     example: unknown,
-): Record<string, OpenApiMediaType> {
-    const media = content["application/json"] ?? {};
+): OpenApiContent {
+    const media = content["application/json"];
+    const current = media && !("$ref" in media) ? media : {};
     return {
         ...content,
         "application/json": {
-            ...media,
+            ...current,
             example,
         },
     };
@@ -208,19 +287,23 @@ export function compileOpenApiOperation(
 
     if (metadata.requestExample !== undefined || metadata.requestExamples) {
         const requestBody = asRecord(operation.requestBody) as OpenApiRequestBody;
-        const content = (requestBody.content ?? {}) as Record<string, OpenApiMediaType>;
-        const nextContent: Record<string, OpenApiMediaType> = { ...content };
+        const content = (requestBody.content ?? {}) as OpenApiContent;
+        const nextContent: OpenApiContent = { ...content };
 
         if (metadata.requestExample !== undefined) {
+            const currentMedia = nextContent["application/json"];
+            const media = currentMedia && !("$ref" in currentMedia) ? currentMedia : {};
             nextContent["application/json"] = {
-                ...nextContent["application/json"],
+                ...media,
                 example: metadata.requestExample,
             };
         }
 
         if (metadata.requestExamples) {
+            const currentMedia = nextContent["application/json"];
+            const media = currentMedia && !("$ref" in currentMedia) ? currentMedia : {};
             nextContent["application/json"] = {
-                ...nextContent["application/json"],
+                ...media,
                 examples: metadata.requestExamples,
             };
         }
