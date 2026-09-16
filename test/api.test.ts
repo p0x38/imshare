@@ -110,7 +110,7 @@ test("protected notification routes require authentication while comment listing
         expect(comments.statusCode).toBe(200);
         expect(comments.json()).toMatchObject({
             data: [],
-            pagination: { page: 1, limit: 24, total: 0, totalPages: 0 },
+            pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
         });
     } finally {
         await app.close();
@@ -152,7 +152,7 @@ test("image route rejects invalid transformation parameters", async () => {
             method: "GET",
             url: "/api/v1/posts/image/missing?width=1",
         });
-        expect(response.statusCode).toBe(404);
+        expect(response.statusCode).toBe(400);
         const placeholder = await app.inject({
             method: "GET",
             url: "/api/v1/posts/image/missing/placeholder",
@@ -213,7 +213,11 @@ test("public API rejects unsupported methods cleanly", async () => {
 test("missing API resources return structured errors", async () => {
     const app = await buildApp();
     try {
-        for (const url of ["/api/v1/posts/missing", "/api/v1/tags/missing", "/api/v1/categories/missing"]) {
+        for (const url of [
+            "/api/v1/posts/missing",
+            "/api/v1/tags/missing",
+            "/api/v1/categories/missing",
+        ]) {
             const response = await app.inject({ method: "GET", url });
             expect(response.statusCode).toBe(404);
             expect(response.json().error).toEqual(
@@ -230,7 +234,7 @@ test("dedicated HTML error pages are served", async () => {
     try {
         for (const [url, status] of [
             ["/does-not-exist", 404],
-            ["/api/v1/posts/image/missing?width=1", 404],
+            ["/api/v1/posts/image/missing?width=1", 400],
         ] as const) {
             const response = await app.inject({
                 method: "GET",

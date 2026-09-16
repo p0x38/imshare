@@ -15,7 +15,7 @@ test.describe("public frontend", () => {
     });
 
     test("posts page exposes skeletons while its data is pending", async ({ page }) => {
-        await page.route("**/v1/posts?*", async (route) => {
+        await page.route("**/api/v1/posts?*", async (route) => {
             await new Promise((resolve) => setTimeout(resolve, 700));
             await route.fulfill({
                 status: 200,
@@ -52,7 +52,7 @@ test.describe("public frontend", () => {
                 JSON.stringify({ animations: false, ripple: true, accentColor: "default" }),
             );
         });
-        await page.route("**/v1/posts?*", async (route) => {
+        await page.route("**/api/v1/posts?*", async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
