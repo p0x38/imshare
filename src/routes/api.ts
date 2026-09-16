@@ -6,7 +6,6 @@ import { commentRoutes } from "./comments.js";
 import { emojiRoutes } from "./emojis.js";
 import { healthRoutes } from "./health.js";
 import { imageRoutes } from "./images.js";
-import { metaRoutes } from "./meta.js";
 import { notificationRoutes } from "./notifications.js";
 import { permalinkRoutes } from "./permalinks.js";
 import { postLifecycleRoutes } from "./post-lifecycle.js";
@@ -44,5 +43,4 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(recommendationRoutes);
     await fastify.register(emojiRoutes);
     await fastify.register(registerAdminRoutes);
-    await fastify.register(metaRoutes);
 };
