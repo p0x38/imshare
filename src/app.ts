@@ -89,14 +89,14 @@ export async function buildApp() {
         const requestOrigin = resolveRequestOrigin(config, request);
         if (!isSameOriginRequest(request.method, requestOrigin, request.headers.origin, request.headers.referer))
             return reply.code(403).send({ error: { code: "CSRF_ORIGIN_REJECTED", message: "The request origin is not allowed." } });
-        if (request.method === "POST" && request.url.split("?", 1)[0] === "/v1/uploads") {
+        const pathname = request.url.split("?", 1)[0] ?? "/";
+        if (request.method === "POST" && pathname === "/api/v1/uploads") {
             const result = uploadLimiter.consume(key);
             reply.header("X-RateLimit-Limit", "30").header("X-RateLimit-Remaining", String(result.remaining));
             if (rateLimitingEnabled && !result.allowed) return reply.code(429).header("Retry-After", String(result.retryAfter)).send({ error: { code: "UPLOAD_RATE_LIMITED", message: "Upload limit exceeded. Try again later." } });
             return;
         }
-        const pathname = request.url.split("?", 1)[0] ?? "/";
-        if (request.method === "GET" && pathname.startsWith("/v1/") && !pathname.startsWith("/v1/health") && !pathname.startsWith("/v1/ready")) {
+        if (request.method === "GET" && pathname.startsWith("/api/v1/") && !pathname.startsWith("/api/v1/health") && !pathname.startsWith("/api/v1/ready")) {
             const result = viewLimiter.consume(key);
             reply.header("X-RateLimit-Limit", "75").header("X-RateLimit-Remaining", String(result.remaining));
             if (rateLimitingEnabled && !result.allowed) return reply.code(429).header("Retry-After", String(result.retryAfter)).send({ error: { code: "RATE_LIMITED", message: "Too many requests. Try again later." } });
@@ -116,7 +116,7 @@ export async function buildApp() {
             reply.type("text/html");
             return renderErrorPage(reply.statusCode, reply.statusCode === 404 ? "Page not found" : "Something went wrong", "The requested resource could not be served as HTML.");
         }
-        if (typeof contentType === "string" && contentType.includes("application/json") && typeof payload === "string" && request.url.split("?", 1)[0]?.startsWith("/v1/")) {
+        if (typeof contentType === "string" && contentType.includes("application/json") && typeof payload === "string" && request.url.split("?", 1)[0]?.startsWith("/api/v1/")) {
             try {
                 const body = JSON.parse(payload) as Record<string, unknown>;
                 body.endpoint = request.url.split("?", 1)[0] ?? "/";
@@ -145,7 +145,7 @@ export async function buildApp() {
                     metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
-                    if (post.uploads[0]) metaImage = `${origin}/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
+                    if (post.uploads[0]) metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
                     metaType = "article";
                 }
             } catch {
@@ -181,8 +181,8 @@ export async function buildApp() {
     await app.register(fastifyStatic, { root: publicDir, prefix: "/", decorateReply: false });
     await app.register(fastifyStatic, { root: clientDistDir, prefix: "/client/", decorateReply: false });
     await registerOpenApi(app, config);
-    await app.register(authRoutes);
-    await app.register(apiRoutes);
+    await app.register(authRoutes, { prefix: "/api" });
+    await app.register(apiRoutes, { prefix: "/api" });
     await app.register(federationRoutes);
     await app.register(pageRoutes);
     return app;
