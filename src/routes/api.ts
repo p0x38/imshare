@@ -3,6 +3,7 @@ import { accountRoutes } from "./account.js";
 import { registerAdminRoutes } from "./admin.js";
 import { categoryRoutes } from "./categories.js";
 import { commentRoutes } from "./comments.js";
+import { configRoutes } from "./config.js";
 import { emojiRoutes } from "./emojis.js";
 import { followRoutes } from "./follows.js";
 import { healthRoutes } from "./health.js";
@@ -28,6 +29,7 @@ import { installOpenApiRouteDefaults } from "../lib/openapi-route-defaults.js";
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     installOpenApiRouteDefaults(fastify);
     await fastify.register(accountRoutes);
+    await fastify.register(configRoutes);
     fastify.addHook("preHandler", async (request) => {
         if (request.method !== "POST" || request.url.split("?", 1)[0] !== "/v1/posts") return;
         const session = await getSession(request);
