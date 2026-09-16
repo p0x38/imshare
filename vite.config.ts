@@ -29,6 +29,7 @@ export default defineConfig({
                 legacy: path.resolve(process.cwd(), "src/client/entries/legacy.tsx"),
                 admin: path.resolve(process.cwd(), "src/client/entries/admin.tsx"),
                 faq: path.resolve(process.cwd(), "src/client/entries/faq.tsx"),
+                staticPages: path.resolve(process.cwd(), "src/client/entries/static-pages.tsx"),
                 "git-commits": path.resolve(process.cwd(), "src/client/entries/git-commits.tsx"),
                 error: path.resolve(process.cwd(), "src/client/entries/error.tsx"),
             },
