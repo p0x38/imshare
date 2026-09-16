@@ -18,7 +18,7 @@ Self-hosted image archive and sharing server built with TypeScript, Fastify, Pri
 - pnpm 11.x
 - SQLite
 
-The repository declares Node.js `>=24` and uses pnpm `11.25.0`. The current application version is `1.0.0`. citeturn637file0
+The repository declares Node.js `>=24` and uses pnpm `11.25.0`. The current application version is `1.0.0`.
 
 ## Setup
 
@@ -34,7 +34,7 @@ Create the environment file from `.env.example` and set a strong `BETTER_AUTH_SE
 cp .env.example .env
 ```
 
-The example environment file configures a local SQLite database at `file:./dev.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret. citeturn680file0
+The example environment file configures a local SQLite database at `file:./dev.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret.
 
 Generate the Prisma client and create/apply the development database schema:
 
@@ -43,7 +43,39 @@ pnpm prisma generate
 pnpm prisma migrate dev
 ```
 
-Configure `config.json` for the server, storage directory, site name/version, and public authentication base URL. The checked-in example listens on `0.0.0.0:5454`, stores uploads under `uploads`, allows files up to 25 MiB, and uses `https://uhm.p0x38.mydns.jp` as its auth base URL. citeturn679file0
+### Configuration
+
+imshare uses its own native configuration DSL in `config.imshare`. Copy `config.sample.imshare` and edit it for your deployment.
+
+```sh
+cp config.sample.imshare config.imshare
+```
+
+The DSL uses simple blocks and assignments:
+
+```text
+server {
+    host = "0.0.0.0"
+    port = 5454
+}
+
+storage {
+    uploadDirectory = "uploads"
+    maxFileSize = 25MiB
+}
+
+features {
+    imagePosts = true
+    textPosts = true
+    comments = true
+}
+```
+
+Comments use `#` or `//`. Strings may use single or double quotes. Arrays use `[value, value]`. Size literals support `B`, `KB`, `MB`, `GB`, `KiB`, `MiB`, and `GiB`; duration literals support `ms`, `s`, `m`, `h`, and `d` and are stored internally as milliseconds.
+
+The parser is intentionally small and format-specific to imshare, while the application itself consumes the typed `ServerConfig` model. Configuration is validated after parsing, so unknown or malformed values cannot silently become application settings.
+
+Existing JSON/YAML/TOML configuration files are no longer the runtime configuration format. Move the values from an older configuration into `config.imshare` before starting the server.
 
 ## Development
 
@@ -97,7 +129,7 @@ Run the complete project check before submitting changes:
 pnpm check
 ```
 
-`pnpm check` currently runs type checking, linting, unit/API tests, integration tests, and a production build. citeturn637file0
+`pnpm check` runs type checking, linting, unit/API tests, integration tests, and a production build.
 
 ## API
 
@@ -106,7 +138,7 @@ The API is versioned under `/v1`. The repository keeps endpoint documentation in
 - `endpoints.md` — full endpoint reference
 - `public-endpoints.md` — publicly accessible endpoints
 
-The API includes a public version endpoint at `GET /v1/version`, which returns the configured API version and site version. fileciteturn646file0
+The API includes a public version endpoint at `GET /v1/version`, which returns the configured API version and site version.
 
 ## Administration
 
@@ -116,7 +148,7 @@ Administration is role-based:
 - `moderator` — moderation/admin overview and moderation operations
 - `admin` — moderator permissions plus administrator-only actions
 
-The backend enforces these permissions on admin endpoints. The frontend can expose administrative navigation based on the current user's role without replacing those server-side checks. The role hierarchy and enforcement helpers live in `src/lib/permissions.ts` and `src/lib/api.ts`. fileciteturn643file0 fileciteturn656file0
+The backend enforces these permissions on admin endpoints. The frontend can expose administrative navigation based on the current user's role without replacing those server-side checks. The role hierarchy and enforcement helpers live in `src/lib/permissions.ts` and `src/lib/api.ts`.
 
 ## Project structure
 
@@ -127,7 +159,7 @@ src/
 public/       static frontend pages and shared components
 prisma/       Prisma schema and migrations
 test/         automated and integration tests
-docs/         additional project documentation
+docs/        additional project documentation
 ```
 
 ## Contributing
@@ -136,4 +168,4 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the development workflow, testing e
 
 ## License
 
-This repository currently declares the `ISC` license in `package.json`. citeturn637file0
+This repository currently declares the `ISC` license in `package.json`.

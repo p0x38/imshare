@@ -1,9 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
+import { openapi } from "../lib/openapi-route.js";
 
 export const accountRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get("/v1/me/sessions", async (request, reply) => {
+    fastify.get("/v1/me/sessions", {
+        schema: openapi({
+            tags: "Users",
+            summary: "List current user's sessions",
+            description: "Returns authenticated sessions for the current user, including whether each session is the current session. Supports page and limit query parameters.",
+        }),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const q = request.query as Record<string, unknown>;
@@ -34,7 +41,17 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
         );
     });
 
-    fastify.delete("/v1/me/sessions/:sessionId", async (request, reply) => {
+    fastify.delete("/v1/me/sessions/:sessionId", {
+        schema: openapi({
+            tags: "Users",
+            summary: "Revoke a session",
+            description: "Revokes one session owned by the authenticated user.",
+            responseExamples: {
+                "200": { data: { revoked: true } },
+                "404": { error: { code: "SESSION_NOT_FOUND", message: "Session not found." } },
+            },
+        }),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const { sessionId } = request.params as { sessionId: string };

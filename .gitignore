@@ -1,9 +1,45 @@
 .history/
 node_modules/
+
+# Environment
 .env
+.env.*
+!.env.example
+
+# Runtime data
 uploads/
-dist/
 **/*.db
 **/*.db.backup
-config.json
+.lock
+
+# Build output
+dist/
 build/
+
+# Test output
+playwright-report/
+test-results/
+coverage/
+
+# Tool caches
+.vite/
+.eslintcache
+.cache/
+
+# Logs
+*.log
+logs/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local configuration
+config.json
+
+# Test output
+coverage/
+playwright-report/
+test-results/

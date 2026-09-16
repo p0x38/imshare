@@ -9,6 +9,7 @@ datasource db {
 model User {
   id String @id
   name String
+  handle String? @unique
   email String @unique
   emailVerified Boolean @default(false)
   image String?
@@ -84,7 +85,7 @@ model Account {
 }
 
 model Verification {
-  id String @id
+  id String @id @default(cuid())
   identifier String
   value String
   expiresAt DateTime
@@ -97,9 +98,13 @@ model Verification {
 model Post {
   id String @id @default(cuid())
   title String
+  contentType String @default("image")
+  textContent String?
   description String?
   caption String?
   sourceUrl String?
+  originalCreator String?
+  originalCreatedAt DateTime?
   allowDownload Boolean @default(true)
   status String @default("published")
   visibility String @default("public")
@@ -107,6 +112,10 @@ model Post {
   scheduledAt DateTime?
   hiddenAt DateTime?
   contentWarning String?
+  permalinkPattern String @default("user")
+  permalinkIdType String @default("internalId")
+  permalinkKey String? @unique
+  customPostId String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   userId String
@@ -124,6 +133,8 @@ model Post {
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@index([status, visibility, scheduledAt])
+  @@index([contentType, createdAt])
+  @@index([userId, permalinkKey])
   @@map("post")
 }
 
@@ -160,7 +171,7 @@ model PostView {
 }
 
 model Upload {
-  id String @id @default(cuid())
+  id String @id
   filename String
   originalName String
   mimeType String

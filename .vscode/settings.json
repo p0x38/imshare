@@ -1,0 +1,45 @@
+{
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": "explicit"
+    },
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "eslint.workingDirectories": [{ "mode": "location" }],
+    "eslint.useFlatConfig": true,
+    "files.exclude": {
+        "**/.history": true,
+        "**/dist": true,
+        "**/node_modules": true,
+        "**/uploads": true,
+        "**/.env": true
+    },
+    "search.exclude": {
+        "**/dist": true,
+        "**/node_modules/**": true,
+        "**/uploads": true,
+        "**/.history": true,
+        "**/.git/**": true,
+        "**/dist/**": true,
+        "**/coverage/**": true,
+        "**/playwright-report/**": true,
+        "**/test-results/**": true
+    },
+    "files.watcherExclude": {
+        "**/.git/**": true,
+        "**/node_modules/**": true,
+        "**/dist/**": true,
+        "**/coverage/**": true,
+        "**/playwright-report/**": true,
+        "**/test-results/**": true,
+        "**/uploads/**": true,
+        "**/.history/**": true
+    },
+    "js/ts.implicitProjectConfig.checkJs": false,
+    "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
+    "npm.packageManager": "pnpm",
+    "vitest.rootConfig": "./vitest.config.ts"
+}

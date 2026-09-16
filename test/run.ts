@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 
@@ -16,15 +16,12 @@ process.env.BETTER_AUTH_SECRET = "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f
 
 function cleanup(): void {
     for (const file of databaseFiles) {
-        if (existsSync(file)) {
-            rmSync(file, { force: true });
-        }
+        if (existsSync(file)) rmSync(file, { force: true });
     }
 }
 
 cleanup();
 
-const prismaCommand = "pnpm exec prisma migrate deploy";
 const pnpmOptions = {
     cwd: root,
     env: process.env,
@@ -33,26 +30,12 @@ const pnpmOptions = {
 
 try {
     if (process.platform === "win32") {
-        execFileSync(
-            process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", prismaCommand],
-            pnpmOptions,
-        );
+        execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"], pnpmOptions);
+        execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm exec vitest run --config vitest.integration.config.ts"], pnpmOptions);
     } else {
         execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
+        execFileSync("pnpm", ["exec", "vitest", "run", "--config", "vitest.integration.config.ts"], pnpmOptions);
     }
-
-    const result = spawnSync(
-        process.execPath,
-        ["--import", "tsx", "--test", "test/integration.test.ts"],
-        {
-            cwd: root,
-            env: process.env,
-            stdio: "inherit",
-        },
-    );
-
-    process.exitCode = result.status ?? 1;
 } finally {
     cleanup();
 }

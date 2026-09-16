@@ -1,0 +1,108 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "imshare: dev server",
+            "type": "shell",
+            "command": "pnpm dev",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+        },
+        {
+            "label": "imshare: dev client",
+            "type": "shell",
+            "command": "pnpm dev:client",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+        },
+        {
+            "label": "imshare: typecheck",
+            "type": "shell",
+            "command": "pnpm typecheck",
+            "problemMatcher": ["$tsc"]
+        },
+        {
+            "label": "imshare: lint",
+            "type": "shell",
+            "command": "pnpm lint",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test",
+            "type": "shell",
+            "command": "pnpm test",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test integration",
+            "type": "shell",
+            "command": "pnpm test:integration",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser",
+            "type": "shell",
+            "command": "pnpm test:browser",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser headed",
+            "type": "shell",
+            "command": "pnpm test:browser:headed",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test browser UI",
+            "type": "shell",
+            "command": "pnpm test:browser:ui",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+        },
+        {
+            "label": "imshare: format",
+            "type": "shell",
+            "command": "pnpm format",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: format check",
+            "type": "shell",
+            "command": "pnpm format:check",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: check",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: typecheck",
+                "imshare: lint",
+                "imshare: test",
+                "imshare: test integration",
+                "imshare: test browser"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: build",
+            "type": "shell",
+            "command": "pnpm build",
+            "problemMatcher": ["$tsc"],
+            "group": { "kind": "build", "isDefault": true }
+        },
+        {
+            "label": "imshare: build client",
+            "type": "shell",
+            "command": "pnpm build:client",
+            "problemMatcher": ["$tsc"]
+        },
+        {
+            "label": "imshare: install packages",
+            "type": "shell",
+            "command": "pnpm install",
+            "problemMatcher": []
+        }
+    ]
+}
