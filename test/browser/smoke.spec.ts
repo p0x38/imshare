@@ -15,7 +15,7 @@ test.describe("public frontend", () => {
     });
 
     test("posts page exposes skeletons while its data is pending", async ({ page }) => {
-        await page.route("**/api/v1/posts?*", async (route) => {
+        await page.route("**/api/v1/search?type=posts&*", async (route) => {
             await new Promise((resolve) => setTimeout(resolve, 700));
             await route.fulfill({
                 status: 200,
@@ -52,7 +52,7 @@ test.describe("public frontend", () => {
                 JSON.stringify({ animations: false, ripple: true, accentColor: "default" }),
             );
         });
-        await page.route("**/api/v1/posts?*", async (route) => {
+        await page.route("**/api/v1/search?type=posts&*", async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
@@ -220,15 +220,15 @@ test.describe("dashboard frontend", () => {
             "/dashboard/": { root: "dashboard-page", script: "/client/dashboard.js" },
             "/dashboard/posts/": {
                 root: "dashboard-posts-page",
-                script: "/client/dashboardPosts.js",
+                script: "/client/dashboard-posts.js",
             },
             "/dashboard/posts/test-post/": {
                 root: "dashboard-post-page",
-                script: "/client/dashboardPost.js",
+                script: "/client/dashboard-post.js",
             },
             "/dashboard/posts/test-post/edit/": {
                 root: "post-editor-page",
-                script: "/client/postEditor.js",
+                script: "/client/post-editor.js",
             },
             "/dashboard/tags/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
             "/dashboard/categories/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
@@ -256,7 +256,7 @@ test.describe("dashboard frontend", () => {
         expect(response.status()).toBe(200);
         const html = await response.text();
         expect(html).toContain('id="dashboard-posts-page"');
-        expect(html).toContain('src="/client/dashboardPosts.js"');
+        expect(html).toContain('src="/client/dashboard-posts.js"');
     });
 
     test("dashboard taxonomy pages mount the shared React entry", async ({ request }) => {
@@ -282,11 +282,11 @@ test.describe("dashboard frontend", () => {
         expect(view.status()).toBe(200);
         const viewHtml = await view.text();
         expect(viewHtml).toContain('id="dashboard-post-page"');
-        expect(viewHtml).toContain('src="/client/dashboardPost.js"');
+        expect(viewHtml).toContain('src="/client/dashboard-post.js"');
         const edit = await request.get("/dashboard/posts/test-post/edit/");
         expect(edit.status()).toBe(200);
         const editHtml = await edit.text();
         expect(editHtml).toContain('id="post-editor-page"');
-        expect(editHtml).toContain('src="/client/postEditor.js"');
+        expect(editHtml).toContain('src="/client/post-editor.js"');
     });
 });
