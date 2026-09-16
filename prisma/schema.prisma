@@ -180,6 +180,7 @@ model PostView {
   user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([postId, viewedAt])
   @@index([userId, viewedAt])
+  @@map("post_view")
 }
 
 model Upload {
