@@ -8,6 +8,14 @@ function apiUrl(url: string): string {
     return `/api${url}`;
 }
 
+// The upload editor uses XMLHttpRequest directly so it can report upload
+// progress. Normalize its relative API URLs just like the fetch helper does.
+const originalOpen = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+    const resolvedUrl = typeof url === "string" ? apiUrl(url) : url;
+    return originalOpen.call(this, method, resolvedUrl, ...rest);
+};
+
 export async function api<T = any>(url: string, options?: ApiOptions): Promise<T> {
     const response = await fetch(apiUrl(url), {
         headers: {
