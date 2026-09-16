@@ -1,67 +1,87 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
-import { openapi } from "../lib/openapi-route.js";
+import { openapi, parameter, request } from "../lib/openapi-route.js";
+
+const sessionId = parameter.path("sessionId", { type: "string" }, { description: "Session ID." });
+const pagination = [
+    parameter.query("page", { type: "integer", minimum: 1, default: 1 }, { description: "1-based page number." }),
+    parameter.query("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }, { description: "Maximum number of sessions to return." }),
+];
+const preferenceSchema = {
+    type: "object" as const,
+    properties: {
+        isPublic: { type: "boolean" as const }, followApprovalRequired: { type: "boolean" as const }, showEmail: { type: "boolean" as const },
+        showPosts: { type: "boolean" as const }, showProfile: { type: "boolean" as const }, showHandle: { type: "boolean" as const },
+        showFollowers: { type: "boolean" as const }, showFollowings: { type: "boolean" as const }, allowSearchEngineIndex: { type: "boolean" as const },
+        defaultCategoryId: { type: "string" as const, nullable: true }, defaultPostVisibility: { type: "string" as const, enum: ["public", "unlisted", "private"] },
+        defaultAllowDownload: { type: "boolean" as const }, defaultContentWarning: { type: "string" as const, maxLength: 500, nullable: true },
+    },
+};
 
 export const accountRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get("/v1/me/preferences", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
+    fastify.get("/v1/me/preferences", {
+        schema: openapi({
+            tags: "Account", summary: "Get account preferences", description: "Returns privacy and default-post preferences for the authenticated user.", operationId: "getMyPreferences",
+            responses: { "200": { description: "Current account preferences." }, "401": { $ref: "#/components/responses/Unauthorized" } },
+        }),
+    }, async (request, reply) => {
+        const user = await requireUser(request, reply); if (!user) return;
         const preferences = await prisma.user.findUnique({ where: { id: user.id }, select: {
-            isPublic: true, followApprovalRequired: true, showEmail: true, showPosts: true, showProfile: true,
-            showHandle: true, showFollowers: true, showFollowings: true, allowSearchEngineIndex: true,
+            isPublic: true, followApprovalRequired: true, showEmail: true, showPosts: true, showProfile: true, showHandle: true, showFollowers: true, showFollowings: true, allowSearchEngineIndex: true,
             defaultCategoryId: true, defaultPostVisibility: true, defaultAllowDownload: true, defaultContentWarning: true,
         } });
         return ok(preferences);
     });
 
-    fastify.patch("/v1/me/preferences", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
+    fastify.patch("/v1/me/preferences", {
+        schema: openapi({
+            tags: "Account", summary: "Update account preferences", description: "Updates one or more privacy or default-post preferences for the authenticated user.", operationId: "updateMyPreferences",
+            requestBody: request.json(preferenceSchema, { required: true, description: "Preferences to update. All properties are optional." }),
+            responses: { "200": { description: "Updated account preferences." }, "400": { $ref: "#/components/responses/BadRequest" }, "401": { $ref: "#/components/responses/Unauthorized" } },
+            responseExamples: { "400": { error: { code: "INVALID_PREFERENCE", message: "Invalid default post visibility." } } },
+        }),
+    }, async (request, reply) => {
+        const user = await requireUser(request, reply); if (!user) return;
         const body = request.body as Record<string, unknown>;
-        const booleanKeys = [
-            "isPublic", "followApprovalRequired", "showEmail", "showPosts", "showProfile", "showHandle",
-            "showFollowers", "showFollowings", "allowSearchEngineIndex", "defaultAllowDownload",
-        ] as const;
-        for (const key of booleanKeys) if (body[key] !== undefined && typeof body[key] !== "boolean")
-            return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: `${key} must be a boolean.` } });
+        const booleanKeys = ["isPublic", "followApprovalRequired", "showEmail", "showPosts", "showProfile", "showHandle", "showFollowers", "showFollowings", "allowSearchEngineIndex", "defaultAllowDownload"] as const;
+        for (const key of booleanKeys) if (body[key] !== undefined && typeof body[key] !== "boolean") return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: `${key} must be a boolean.` } });
         const visibility = body.defaultPostVisibility;
-        if (visibility !== undefined && !["public", "unlisted", "private"].includes(String(visibility)))
-            return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Invalid default post visibility." } });
+        if (visibility !== undefined && !["public", "unlisted", "private"].includes(String(visibility))) return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Invalid default post visibility." } });
         const categoryId = body.defaultCategoryId;
-        if (categoryId !== undefined && categoryId !== null && typeof categoryId !== "string")
-            return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Invalid default category." } });
-        if (typeof body.defaultContentWarning === "string" && body.defaultContentWarning.length > 500)
-            return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Default content warning is too long." } });
-        if (categoryId) {
-            const category = await prisma.category.findUnique({ where: { id: categoryId }, select: { id: true } });
-            if (!category) return reply.code(400).send({ error: { code: "CATEGORY_NOT_FOUND", message: "Default category not found." } });
-        }
+        if (categoryId !== undefined && categoryId !== null && typeof categoryId !== "string") return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Invalid default category." } });
+        if (typeof body.defaultContentWarning === "string" && body.defaultContentWarning.length > 500) return reply.code(400).send({ error: { code: "INVALID_PREFERENCE", message: "Default content warning is too long." } });
+        if (categoryId) { const category = await prisma.category.findUnique({ where: { id: categoryId }, select: { id: true } }); if (!category) return reply.code(400).send({ error: { code: "CATEGORY_NOT_FOUND", message: "Default category not found." } }); }
         const updated = await prisma.user.update({ where: { id: user.id }, data: {
-            ...Object.fromEntries(booleanKeys.filter((key) => body[key] !== undefined).map((key) => [key, body[key]])),
-            ...(visibility !== undefined ? { defaultPostVisibility: String(visibility) } : {}),
-            ...(categoryId !== undefined ? { defaultCategoryId: categoryId as string | null } : {}),
-            ...(body.defaultContentWarning !== undefined ? { defaultContentWarning: body.defaultContentWarning ? String(body.defaultContentWarning) : null } : {}),
+            ...Object.fromEntries(booleanKeys.filter((key) => body[key] !== undefined).map((key) => [key, body[key]])), ...(visibility !== undefined ? { defaultPostVisibility: String(visibility) } : {}),
+            ...(categoryId !== undefined ? { defaultCategoryId: categoryId as string | null } : {}), ...(body.defaultContentWarning !== undefined ? { defaultContentWarning: body.defaultContentWarning ? String(body.defaultContentWarning) : null } : {}),
         }, select: {
-            isPublic: true, followApprovalRequired: true, showEmail: true, showPosts: true, showProfile: true,
-            showHandle: true, showFollowers: true, showFollowings: true, allowSearchEngineIndex: true,
+            isPublic: true, followApprovalRequired: true, showEmail: true, showPosts: true, showProfile: true, showHandle: true, showFollowers: true, showFollowings: true, allowSearchEngineIndex: true,
             defaultCategoryId: true, defaultPostVisibility: true, defaultAllowDownload: true, defaultContentWarning: true,
         } });
         return ok(updated);
     });
 
-    fastify.get("/v1/me/sessions", { schema: openapi({ tags: "Users", summary: "List current user's sessions", description: "Returns authenticated sessions for the current user, including whether each session is the current session. Supports page and limit query parameters." }) }, async (request, reply) => {
+    fastify.get("/v1/me/sessions", {
+        schema: openapi({
+            tags: "Account", summary: "List current user's sessions", description: "Returns authenticated sessions for the current user, including whether each session is current.", operationId: "listMySessions", parameters: pagination,
+            responses: { "200": { description: "Paginated session collection." }, "401": { $ref: "#/components/responses/Unauthorized" } },
+        }),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply); if (!user) return;
         const q = request.query as Record<string, unknown>; const p = parsePagination(q);
-        const [items, total] = await Promise.all([
-            prisma.session.findMany({ where: { userId: user.id }, skip: p.skip, take: p.limit, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, updatedAt: true, expiresAt: true, ipAddress: true, userAgent: true } }),
-            prisma.session.count({ where: { userId: user.id } }),
-        ]);
+        const [items, total] = await Promise.all([prisma.session.findMany({ where: { userId: user.id }, skip: p.skip, take: p.limit, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, updatedAt: true, expiresAt: true, ipAddress: true, userAgent: true } }), prisma.session.count({ where: { userId: user.id } })]);
         const current = await getSession(request);
         return collection(items.map((session) => ({ ...session, current: session.id === current?.session.id })), p.page, p.limit, total);
     });
 
-    fastify.delete("/v1/me/sessions/:sessionId", { schema: openapi({ tags: "Users", summary: "Revoke a session", description: "Revokes one session owned by the authenticated user.", responseExamples: { "200": { data: { revoked: true } }, "404": { error: { code: "SESSION_NOT_FOUND", message: "Session not found." } } } }) }, async (request, reply) => {
+    fastify.delete("/v1/me/sessions/:sessionId", {
+        schema: openapi({
+            tags: "Account", summary: "Revoke a session", description: "Revokes one session owned by the authenticated user.", operationId: "revokeMySession", parameters: [sessionId],
+            responses: { "200": { description: "Session revoked." }, "401": { $ref: "#/components/responses/Unauthorized" }, "404": { $ref: "#/components/responses/NotFound" } },
+            responseExamples: { "200": { data: { revoked: true } }, "404": { error: { code: "SESSION_NOT_FOUND", message: "Session not found." } } },
+        }),
+    }, async (request, reply) => {
         const user = await requireUser(request, reply); if (!user) return;
         const { sessionId } = request.params as { sessionId: string };
         const session = await prisma.session.findFirst({ where: { id: sessionId, userId: user.id }, select: { id: true } });
