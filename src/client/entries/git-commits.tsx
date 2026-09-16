@@ -1,6 +1,7 @@
 import { Alert, Box, Button, Card, CardContent, CircularProgress, Link, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { App } from "../components/App";
 import { Page } from "../components/Page";
 
 interface GitCommit {
@@ -86,4 +87,5 @@ function GitCommitsPage() {
     );
 }
 
-createRoot(document.getElementById("git-commits-page")!).render(<GitCommitsPage />);
+const root = document.querySelector("#git-commits-page");
+if (root) createRoot(root).render(<App><GitCommitsPage /></App>);
