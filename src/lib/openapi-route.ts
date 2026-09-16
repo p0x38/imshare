@@ -36,3 +36,41 @@ export function openapi(metadata: OpenApiRouteMetadata, schema: FastifySchema = 
             : {}),
     };
 }
+
+export function openapiTagForPath(url: string): string {
+    const segment = url.split("?", 1)[0]?.split("/")[2] ?? "general";
+
+    switch (segment) {
+        case "auth":
+            return "Authentication";
+        case "me":
+        case "users":
+            return "Users";
+        case "admin":
+            return "Administration";
+        case "health":
+        case "ready":
+        case "version":
+            return "Health";
+        case "posts":
+            return "Posts";
+        case "comments":
+            return "Comments";
+        case "reports":
+            return "Reports";
+        case "tags":
+            return "Tags";
+        case "categories":
+            return "Categories";
+        case "uploads":
+            return "Uploads";
+        case "emojis":
+            return "Emojis";
+        case "search":
+            return "Search";
+        case "recommendations":
+            return "Recommendations";
+        default:
+            return "General";
+    }
+}
