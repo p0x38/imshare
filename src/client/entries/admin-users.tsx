@@ -5,7 +5,7 @@ import { App } from "../components/App";
 import { AdminLayout } from "../components/AdminLayout";
 import { api } from "../lib/api";
 
-interface User { id: string; name: string; handle: string | null; email: string; role: string; isBanned: boolean; banReason: string | null; bannedUntil: string | null; createdAt: string; }
+interface User { id: string; name: string; handle: string | null; role: string; isBanned: boolean; banReason: string | null; bannedUntil: string | null; createdAt: string; }
 type Role = "user" | "moderator" | "admin";
 type Action = "ban" | "kick" | "unban" | "role";
 
@@ -57,7 +57,7 @@ function AdminUsersPage() {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ sm: "center" }} justifyContent="space-between">
                     <Stack spacing={0.5}>
                         <Typography variant="h6">{user.name}</Typography>
-                        <Typography variant="body2" color="text.secondary">{user.handle ? `@${user.handle} · ` : ""}{user.email}</Typography>
+                        <Typography variant="body2" color="text.secondary">{user.handle ? `@${user.handle}` : "No handle"}</Typography>
                         <Stack direction="row" spacing={1} flexWrap="wrap"> <Chip size="small" label={user.role} /> {user.isBanned ? <Chip size="small" color="error" label={user.bannedUntil ? `Banned until ${new Date(user.bannedUntil).toLocaleString()}` : "Banned"} /> : null}</Stack>
                         {user.isBanned && user.banReason ? <Typography variant="body2">Reason: {user.banReason}</Typography> : null}
                     </Stack>
