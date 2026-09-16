@@ -124,7 +124,7 @@ function address(value: string): string {
 }
 
 function dotStuff(body: string): string {
-    return body.replace(/(^|\r\n)\./g, "$1.." ).replace(/\r?\n/g, "\r\n");
+    return body.replace(/(^|\r\n)\./g, "$1..").replace(/\r?\n/g, "\r\n");
 }
 
 function capabilities(reply: SmtpReply): Set<string> {
@@ -132,7 +132,8 @@ function capabilities(reply: SmtpReply): Set<string> {
     for (const line of reply.lines) {
         const value = line.slice(4).trim();
         const mechanism = value.match(/^AUTH\s+(.+)$/i);
-        if (mechanism) for (const item of mechanism[1].split(/\s+/)) result.add(item.toUpperCase());
+        const methods = mechanism?.[1];
+        if (methods) for (const item of methods.split(/\s+/)) result.add(item.toUpperCase());
     }
     return result;
 }
