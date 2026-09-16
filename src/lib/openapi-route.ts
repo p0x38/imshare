@@ -231,6 +231,41 @@ function mergeContentExample(
     };
 }
 
+function parameterSchema(
+    parameters: Array<OpenApiParameter | OpenApiReference> | undefined,
+    location: OpenApiParameterLocation,
+    fallback: Record<string, unknown> = {},
+): Record<string, unknown> {
+    const current = asRecord(fallback);
+    const properties = {
+        ...asRecord(current.properties),
+    } as Record<string, unknown>;
+    const required = new Set(
+        Array.isArray(current.required)
+            ? current.required.filter((value): value is string => typeof value === "string")
+            : [],
+    );
+
+    for (const parameter of parameters ?? []) {
+        if (!("name" in parameter) || parameter.in !== location) {
+            continue;
+        }
+
+        properties[parameter.name] = parameter.schema ?? {};
+        if (parameter.required) {
+            required.add(parameter.name);
+        }
+    }
+
+    return {
+        type: "object",
+        ...current,
+        properties,
+        ...(required.size > 0 ? { required: [...required] } : {}),
+        additionalProperties: current.additionalProperties ?? true,
+    };
+}
+
 /**
  * Builds a Fastify route schema with a strongly typed OpenAPI operation attached.
  *
@@ -243,6 +278,10 @@ export function openapi(
     metadata: OpenApiRouteMetadata,
     schema: FastifySchema = {},
 ): OpenApiRouteSchema {
+    const parameters = metadata.parameters?.filter(
+        (parameter): parameter is OpenApiParameter => "name" in parameter,
+    );
+
     return {
         ...schema,
         ...(metadata.tags
@@ -251,7 +290,8 @@ export function openapi(
         ...(metadata.summary ? { summary: metadata.summary } : {}),
         ...(metadata.description ? { description: metadata.description } : {}),
         ...(metadata.operationId ? { operationId: metadata.operationId } : {}),
-        ...(metadata.parameters ? { params: schema.params, querystring: schema.querystring } : {}),
+        params: parameterSchema(parameters, "path", schema.params as Record<string, unknown> | undefined),
+        querystring: parameterSchema(parameters, "query", schema.querystring as Record<string, unknown> | undefined),
         "x-imshare-openapi": metadata,
     };
 }
