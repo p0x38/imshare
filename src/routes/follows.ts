@@ -1,5 +1,4 @@
 import type { FastifyPluginAsync } from "fastify";
-import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/auth.js";
 import { getSession, ok, requireUser } from "../lib/api.js";
 
@@ -61,11 +60,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                 where: { userId: user.id },
                 orderBy: [{ position: "asc" }, { createdAt: "asc" }],
             }),
-            stats: {
-                posts,
-                followers,
-                following,
-            },
+            stats: { posts, followers, following },
             isFollowing: Boolean(isFollowing),
             canFollow: Boolean(session && session.user.id !== user.id && user.isPublic),
         });
