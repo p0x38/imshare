@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
 import { PageTransition } from "./Motion";
+import { OidcLoginButton } from "./OidcLoginButton";
 
 export function Page({
     children,
@@ -28,6 +29,10 @@ export function Page({
         if (title) document.title = title;
     }, [title]);
 
+    const isAccountAuthPage =
+        location.pathname === "/account/login" || location.pathname === "/account/register" ||
+        location.pathname === "/account/login/" || location.pathname === "/account/register/";
+
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <Navigation />
@@ -45,6 +50,7 @@ export function Page({
                     }}
                 >
                     {children}
+                    {isAccountAuthPage ? <OidcLoginButton /> : null}
                 </Container>
             </PageTransition>
             <Footer />
