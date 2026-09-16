@@ -8,6 +8,17 @@ function apiUrl(url: string): string {
     return `/api${url}`;
 }
 
+function normalizeResponseUrls(value: unknown, key?: string): unknown {
+    if (typeof value === "string" && (key === "url" || key === "avatarUrl") && value.startsWith("/v1/")) {
+        return `/api${value}`;
+    }
+    if (Array.isArray(value)) return value.map((item) => normalizeResponseUrls(item));
+    if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, normalizeResponseUrls(entryValue, entryKey)]));
+    }
+    return value;
+}
+
 // The upload editor uses XMLHttpRequest directly so it can report upload
 // progress. Normalize its relative API URLs just like the fetch helper does.
 const originalOpen = XMLHttpRequest.prototype.open;
@@ -46,5 +57,5 @@ export async function api<T = any>(url: string, options?: ApiOptions): Promise<T
         throw error;
     }
 
-    return payload as T;
+    return normalizeResponseUrls(payload) as T;
 }
