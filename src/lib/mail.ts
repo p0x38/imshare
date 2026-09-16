@@ -15,80 +15,24 @@ interface SmtpReply {
     lines: string[];
 }
 
-class SmtpConnection {
-    private socket: net.Socket | TLSSocket;
-    private buffer = "";
-    private pending: Array<{
-        resolve: (reply: SmtpReply) => void;
-        reject: (error: Error) => void;
-    }> = [];
+type Socket = net.Socket | TLSSocket;
 
+class SmtpConnection {
     private constructor(
-        socket: net.Socket | TLSSocket,
+        private socket: Socket,
         private readonly host: string,
-    ) {
-        this.socket = socket;
-        this.attachSocket();
-    }
+    ) {}
 
     static async connect(config: SmtpConfig): Promise<SmtpConnection> {
         const socket = config.secure
             ? tls.connect({ host: config.host, port: config.port, servername: config.host })
             : net.connect({ host: config.host, port: config.port });
-
         const connection = new SmtpConnection(socket, config.host);
-        await connection.waitForConnect();
+        await connection.connected();
         return connection;
     }
 
-    private attachSocket(): void {
-        this.socket.setEncoding("utf8");
-        this.socket.on("data", (chunk: string) => this.consume(chunk));
-        this.socket.on("error", (error) => this.fail(error));
-        this.socket.on("close", () => {
-            if (this.pending.length > 0) this.fail(new Error("SMTP connection closed unexpectedly."));
-        });
-    }
-
-    private consume(chunk: string): void {
-        this.buffer += chunk;
-        while (true) {
-            const match = /(?:^|\r?\n)(\d{3})([ -])(.*?)(?=\r?\n|$)/.exec(this.buffer);
-            if (!match) return;
-
-            const lineEnd = this.buffer.indexOf("\n", match.index);
-            const consumed = lineEnd === -1 ? this.buffer.length : lineEnd + 1;
-            const line = this.buffer.slice(match.index, consumed).replace(/\r?\n$/, "");
-            this.buffer = this.buffer.slice(consumed);
-
-            const pending = this.pending[0];
-            if (!pending) continue;
-
-            const code = Number(match[1]);
-            const multiline = match[2] === "-";
-            const reply = (pending as typeof pending).length;
-            void reply;
-
-            if (multiline) {
-                const existing = (pending as unknown as { lines?: string[] }).lines ?? [];
-                existing.push(line);
-                (pending as unknown as { lines: string[] }).lines = existing;
-                continue;
-            }
-
-            const state = pending as unknown as { lines?: string[] };
-            const lines = [...(state.lines ?? []), line];
-            this.pending.shift();
-            pending.resolve({ code, lines });
-        }
-    }
-
-    private fail(error: Error): void {
-        const pending = this.pending.splice(0);
-        for (const waiter of pending) waiter.reject(error);
-    }
-
-    private waitForConnect(): Promise<void> {
+    private connected(): Promise<void> {
         return new Promise((resolve, reject) => {
             if (this.socket instanceof tls.TLSSocket) {
                 if (this.socket.readyState === "open") resolve();
@@ -102,20 +46,53 @@ class SmtpConnection {
         });
     }
 
-    private command(command: string): Promise<SmtpReply> {
+    private readReply(): Promise<SmtpReply> {
         return new Promise((resolve, reject) => {
-            const pending = { resolve, reject } as {
-                resolve: (reply: SmtpReply) => void;
-                reject: (error: Error) => void;
-                lines?: string[];
+            let buffer = "";
+            const lines: string[] = [];
+            const timeout = setTimeout(() => {
+                cleanup();
+                reject(new Error("SMTP server timed out waiting for a response."));
+            }, 30_000);
+
+            const cleanup = () => {
+                clearTimeout(timeout);
+                this.socket.off("data", onData);
+                this.socket.off("error", onError);
+                this.socket.off("close", onClose);
             };
-            this.pending.push(pending);
-            this.socket.write(`${command}\r\n`);
+            const onError = (error: Error) => {
+                cleanup();
+                reject(error);
+            };
+            const onClose = () => {
+                cleanup();
+                reject(new Error("SMTP connection closed unexpectedly."));
+            };
+            const onData = (chunk: Buffer | string) => {
+                buffer += chunk.toString();
+                const parts = buffer.split(/\r?\n/);
+                buffer = parts.pop() ?? "";
+                for (const line of parts) {
+                    if (!/^\d{3}[ -]/.test(line)) continue;
+                    lines.push(line);
+                    if (/^\d{3} /.test(line)) {
+                        cleanup();
+                        resolve({ code: Number(line.slice(0, 3)), lines });
+                        return;
+                    }
+                }
+            };
+            this.socket.on("data", onData);
+            this.socket.on("error", onError);
+            this.socket.on("close", onClose);
         });
     }
 
-    async expect(command: string, ...acceptedCodes: number[]): Promise<SmtpReply> {
-        const reply = await this.command(command);
+    async command(command: string, ...acceptedCodes: number[]): Promise<SmtpReply> {
+        const replyPromise = this.readReply();
+        this.socket.write(`${command}\r\n`);
+        const reply = await replyPromise;
         if (!acceptedCodes.includes(reply.code)) {
             throw new Error(`SMTP command failed (${reply.code}): ${reply.lines.at(-1) ?? "Unknown SMTP error."}`);
         }
@@ -123,16 +100,10 @@ class SmtpConnection {
     }
 
     async startTls(): Promise<void> {
-        await this.expect("STARTTLS", 220);
-        const existing = this.socket;
-        existing.removeAllListeners("data");
-        existing.removeAllListeners("error");
-        existing.removeAllListeners("close");
-
-        const secure = tls.connect({ socket: existing, servername: this.host });
+        await this.command("STARTTLS", 220);
+        const plain = this.socket;
+        const secure = tls.connect({ socket: plain, servername: this.host });
         this.socket = secure;
-        this.buffer = "";
-        this.attachSocket();
         await new Promise<void>((resolve, reject) => {
             secure.once("secureConnect", resolve);
             secure.once("error", reject);
@@ -144,65 +115,68 @@ class SmtpConnection {
     }
 }
 
-function encodeHeader(value: string): string {
+function header(value: string): string {
     return value.replace(/[\r\n]/g, " ").trim();
 }
 
-function encodeAddress(value: string): string {
-    const match = /<([^<>\s]+)>/.exec(value);
-    return match?.[1] ?? value.trim();
+function address(value: string): string {
+    return /<([^<>\s]+)>/.exec(value)?.[1] ?? value.trim();
 }
 
 function dotStuff(body: string): string {
-    return body.replace(/(^|\n)\./g, "$1..\").replace(/\r?\n/g, "\r\n");
+    return body.replace(/(^|\r\n)\./g, "$1.." ).replace(/\r?\n/g, "\r\n");
 }
 
-function responseHasCapability(reply: SmtpReply, capability: string): boolean {
-    const needle = capability.toUpperCase();
-    return reply.lines.some((line) => line.slice(4).toUpperCase().startsWith(needle));
+function capabilities(reply: SmtpReply): Set<string> {
+    const result = new Set<string>();
+    for (const line of reply.lines) {
+        const value = line.slice(4).trim();
+        const mechanism = value.match(/^AUTH\s+(.+)$/i);
+        if (mechanism) for (const item of mechanism[1].split(/\s+/)) result.add(item.toUpperCase());
+    }
+    return result;
 }
 
 export async function sendTestEmail(config: SmtpConfig, recipient: string): Promise<void> {
     const connection = await SmtpConnection.connect(config);
     try {
-        await connection.expect("EHLO imshare", 250);
-        const capabilities = await connection.expect("EHLO imshare", 250);
-        if (!config.secure && config.port !== 465 && responseHasCapability(capabilities, "STARTTLS")) {
+        const greeting = await connection.command("EHLO imshare", 250);
+        if (!config.secure && config.port !== 465) {
+            if (!greeting.lines.some((line) => /^250[ -]STARTTLS\b/i.test(line))) {
+                throw new Error("SMTP server does not advertise STARTTLS.");
+            }
             await connection.startTls();
-            await connection.expect("EHLO imshare", 250);
-        } else if (!config.secure && config.port !== 465) {
-            throw new Error("SMTP server does not advertise STARTTLS.");
+            await connection.command("EHLO imshare", 250);
         }
 
-        const authReply = await connection.expect("EHLO imshare", 250);
-        const authLine = authReply.lines.find((line) => /^250[- ]AUTH\s/i.test(line));
-        const mechanisms = authLine?.slice(9).trim().toUpperCase().split(/\s+/) ?? [];
-
-        if (mechanisms.includes("PLAIN")) {
-            const encoded = Buffer.from(`\u0000${config.user}\u0000${config.password}`, "utf8").toString("base64");
-            await connection.expect(`AUTH PLAIN ${encoded}`, 235);
-        } else if (mechanisms.includes("LOGIN")) {
-            await connection.expect("AUTH LOGIN", 334);
-            await connection.expect(Buffer.from(config.user, "utf8").toString("base64"), 334);
-            await connection.expect(Buffer.from(config.password, "utf8").toString("base64"), 235);
+        const ehlo = await connection.command("EHLO imshare", 250);
+        const auth = capabilities(ehlo);
+        if (auth.has("PLAIN")) {
+            const encoded = Buffer.from(`\0${config.user}\0${config.password}`).toString("base64");
+            await connection.command(`AUTH PLAIN ${encoded}`, 235);
+        } else if (auth.has("LOGIN")) {
+            await connection.command("AUTH LOGIN", 334);
+            await connection.command(Buffer.from(config.user).toString("base64"), 334);
+            await connection.command(Buffer.from(config.password).toString("base64"), 235);
         } else {
             throw new Error("SMTP server does not advertise AUTH PLAIN or AUTH LOGIN.");
         }
 
-        const from = encodeAddress(config.from);
-        const to = encodeAddress(recipient);
-        if (!from || !to) throw new Error("SMTP sender or recipient address is invalid.");
+        const from = address(config.from);
+        const to = address(recipient);
+        if (!from || !to || !from.includes("@") || !to.includes("@")) {
+            throw new Error("SMTP sender or recipient address is invalid.");
+        }
 
-        await connection.expect(`MAIL FROM:<${from}>`, 250);
-        await connection.expect(`RCPT TO:<${to}>`, 250, 251);
-        await connection.expect("DATA", 354);
-
-        const now = new Date().toISOString();
+        await connection.command(`MAIL FROM:<${from}>`, 250);
+        await connection.command(`RCPT TO:<${to}>`, 250, 251);
+        await connection.command("DATA", 354);
+        const now = new Date().toUTCString();
         const body = [
-            `From: ${encodeHeader(config.from)}`,
-            `To: ${encodeHeader(recipient)}`,
+            `From: ${header(config.from)}`,
+            `To: ${header(recipient)}`,
             "Subject: imshare SMTP test",
-            "Date: " + now,
+            `Date: ${now}`,
             "Content-Type: text/plain; charset=utf-8",
             "Content-Transfer-Encoding: 8bit",
             "",
@@ -212,12 +186,12 @@ export async function sendTestEmail(config: SmtpConfig, recipient: string): Prom
             "",
             "If you received this message, SMTP submission is working.",
         ].join("\r\n");
-        connection.expect(`${dotStuff(body)}\r\n.`, 250);
+        await connection.command(`${dotStuff(body)}\r\n.`, 250);
     } finally {
         try {
-            await connection.expect("QUIT", 221);
+            await connection.command("QUIT", 221);
         } catch {
-            // Ignore cleanup failures after a successful or failed send attempt.
+            // The connection may already have failed; cleanup is best effort.
         }
         connection.close();
     }
