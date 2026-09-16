@@ -23,8 +23,10 @@ import { userRoutes } from "./users.js";
 import { avatarRoutes } from "./avatars.js";
 import { prisma } from "../lib/auth.js";
 import { getSession } from "../lib/api.js";
+import { installOpenApiRouteDefaults } from "../lib/openapi-route-defaults.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
+    installOpenApiRouteDefaults(fastify);
     await fastify.register(accountRoutes);
     fastify.addHook("preHandler", async (request) => {
         if (request.method !== "POST" || request.url.split("?", 1)[0] !== "/v1/posts") return;
