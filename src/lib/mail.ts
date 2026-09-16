@@ -10,6 +10,12 @@ export interface SmtpConfig {
     from: string;
 }
 
+export interface MailMessage {
+    to: string;
+    subject: string;
+    text: string;
+}
+
 interface SmtpReply {
     code: number;
     lines: string[];
@@ -40,6 +46,8 @@ class SmtpConnection {
 
     private connected(): Promise<void> {
         return new Promise((resolve, reject) => {
+            const onError = (error: Error) => reject(error);
+            this.socket.once("error", onError);
             if (this.socket instanceof tls.TLSSocket) {
                 if (this.socket.readyState === "open") resolve();
                 else this.socket.once("secureConnect", resolve);
@@ -48,7 +56,6 @@ class SmtpConnection {
             } else {
                 this.socket.once("connect", resolve);
             }
-            this.socket.once("error", reject);
         });
     }
 
@@ -144,61 +151,81 @@ function capabilities(reply: SmtpReply): Set<string> {
     return result;
 }
 
-export async function sendTestEmail(config: SmtpConfig, recipient: string): Promise<void> {
-    const connection = await SmtpConnection.connect(config);
-    try {
-        let ehlo = await connection.command("EHLO imshare", 250);
-        if (!config.secure && config.port !== 465) {
-            if (!ehlo.lines.some((line) => /^250[ -]STARTTLS\b/i.test(line))) {
-                throw new Error("SMTP server does not advertise STARTTLS.");
-            }
-            await connection.startTls();
-            ehlo = await connection.command("EHLO imshare", 250);
-        }
+export class MailService {
+    constructor(private readonly config: SmtpConfig) {}
 
-        const auth = capabilities(ehlo);
-        if (auth.has("PLAIN")) {
-            const encoded = Buffer.from(`\0${config.user}\0${config.password}`).toString("base64");
-            await connection.command(`AUTH PLAIN ${encoded}`, 235);
-        } else if (auth.has("LOGIN")) {
-            await connection.command("AUTH LOGIN", 334);
-            await connection.command(Buffer.from(config.user).toString("base64"), 334);
-            await connection.command(Buffer.from(config.password).toString("base64"), 235);
-        } else {
-            throw new Error("SMTP server does not advertise AUTH PLAIN or AUTH LOGIN.");
-        }
-
-        const from = address(config.from);
-        const to = address(recipient);
-        if (!from || !to || !from.includes("@") || !to.includes("@")) {
-            throw new Error("SMTP sender or recipient address is invalid.");
-        }
-
-        await connection.command(`MAIL FROM:<${from}>`, 250);
-        await connection.command(`RCPT TO:<${to}>`, 250, 251);
-        await connection.command("DATA", 354);
-        const now = new Date().toUTCString();
-        const body = [
-            `From: ${header(config.from)}`,
-            `To: ${header(recipient)}`,
-            "Subject: imshare SMTP test",
-            `Date: ${now}`,
-            "Content-Type: text/plain; charset=utf-8",
-            "Content-Transfer-Encoding: 8bit",
-            "",
-            "This is a test email from imshare.",
-            "",
-            `Sent at: ${now}`,
-            "",
-            "If you received this message, SMTP submission is working.",
-        ].join("\r\n");
-        await connection.command(`${dotStuff(body)}\r\n.`, 250);
-    } finally {
+    async send(message: MailMessage): Promise<void> {
+        const connection = await SmtpConnection.connect(this.config);
         try {
-            await connection.command("QUIT", 221);
-        } catch {
-            // The connection may already have failed; cleanup is best effort.
+            let ehlo = await connection.command("EHLO imshare", 250);
+            if (!this.config.secure && this.config.port !== 465) {
+                if (!ehlo.lines.some((line) => /^250[ -]STARTTLS\b/i.test(line))) {
+                    throw new Error("SMTP server does not advertise STARTTLS.");
+                }
+                await connection.startTls();
+                ehlo = await connection.command("EHLO imshare", 250);
+            }
+
+            const auth = capabilities(ehlo);
+            if (auth.has("PLAIN")) {
+                const encoded = Buffer.from(`\0${this.config.user}\0${this.config.password}`).toString("base64");
+                await connection.command(`AUTH PLAIN ${encoded}`, 235);
+            } else if (auth.has("LOGIN")) {
+                await connection.command("AUTH LOGIN", 334);
+                await connection.command(Buffer.from(this.config.user).toString("base64"), 334);
+                await connection.command(Buffer.from(this.config.password).toString("base64"), 235);
+            } else {
+                throw new Error("SMTP server does not advertise AUTH PLAIN or AUTH LOGIN.");
+            }
+
+            const from = address(this.config.from);
+            const to = address(message.to);
+            if (!from || !to || !from.includes("@") || !to.includes("@")) {
+                throw new Error("SMTP sender or recipient address is invalid.");
+            }
+
+            await connection.command(`MAIL FROM:<${from}>`, 250);
+            await connection.command(`RCPT TO:<${to}>`, 250, 251);
+            await connection.command("DATA", 354);
+            const now = new Date().toUTCString();
+            const body = [
+                `From: ${header(this.config.from)}`,
+                `To: ${header(message.to)}`,
+                `Subject: ${header(message.subject)}`,
+                `Date: ${now}`,
+                "MIME-Version: 1.0",
+                "Content-Type: text/plain; charset=utf-8",
+                "Content-Transfer-Encoding: 8bit",
+                "",
+                message.text.replace(/\r?\n/g, "\r\n"),
+            ].join("\r\n");
+            await connection.command(`${dotStuff(body)}\r\n.`, 250);
+        } finally {
+            try {
+                await connection.command("QUIT", 221);
+            } catch {
+                // The connection may already have failed; cleanup is best effort.
+            }
+            connection.close();
         }
-        connection.close();
     }
+
+    async sendTest(recipient: string): Promise<void> {
+        await this.send({
+            to: recipient,
+            subject: "imshare SMTP test",
+            text: [
+                "This is a test email from imshare.",
+                "",
+                "The configured SMTP server accepted this message.",
+                "",
+                `Sent at: ${new Date().toUTCString()}`,
+            ].join("\n"),
+        });
+    }
+}
+
+export function createMailService(smtp: SmtpConfig | null): MailService | null {
+    if (!smtp?.host || !smtp.port || !smtp.user || !smtp.password || !smtp.from) return null;
+    return new MailService(smtp);
 }
