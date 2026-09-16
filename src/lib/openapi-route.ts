@@ -38,39 +38,57 @@ export function openapi(metadata: OpenApiRouteMetadata, schema: FastifySchema = 
 }
 
 export function openapiTagForPath(url: string): string {
-    const segment = url.split("?", 1)[0]?.split("/")[2] ?? "general";
+    const path = url.split("?", 1)[0] ?? "/";
+    const segments = path.split("/").filter(Boolean);
 
-    switch (segment) {
-        case "auth":
-            return "Authentication";
-        case "me":
-        case "users":
-            return "Users";
-        case "admin":
-            return "Administration";
-        case "health":
-        case "ready":
-        case "version":
-            return "Health";
-        case "posts":
-            return "Posts";
-        case "comments":
-            return "Comments";
-        case "reports":
-            return "Reports";
-        case "tags":
-            return "Tags";
-        case "categories":
-            return "Categories";
-        case "uploads":
-            return "Uploads";
-        case "emojis":
-            return "Emojis";
-        case "search":
-            return "Search";
-        case "recommendations":
-            return "Recommendations";
-        default:
-            return "General";
+    if (segments[0] === "api" && segments[1] === "v1") {
+        switch (segments[2]) {
+            case "auth":
+                return "Authentication";
+            case "me":
+            case "users":
+                return "Users";
+            case "admin":
+                return "Administration";
+            case "health":
+            case "ready":
+            case "version":
+                return "Health";
+            case "posts":
+                return "Posts";
+            case "comments":
+                return "Comments";
+            case "reports":
+                return "Reports";
+            case "tags":
+                return "Tags";
+            case "categories":
+                return "Categories";
+            case "uploads":
+                return "Uploads";
+            case "emojis":
+                return "Emojis";
+            case "search":
+                return "Search";
+            case "recommendations":
+                return "Recommendations";
+            default:
+                return "API";
+        }
     }
+
+    if (segments[0] === "v1") {
+        return openapiTagForPath(`/api/${path}`);
+    }
+
+    if (
+        path === "/.well-known/webfinger" ||
+        path === "/.well-known/nodeinfo" ||
+        segments[0] === "nodeinfo" ||
+        segments[0] === "federation"
+    ) {
+        return "Federation";
+    }
+
+    return "General";
 }
