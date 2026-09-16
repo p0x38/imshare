@@ -38,8 +38,8 @@
         "next": "Next",
         "version": "Version",
         "user": "user",
-        "users": "Users",
-        "post": "Post",
+        "users": "users",
+        "post": "post",
         "image": "image",
         "images": "images"
     },
@@ -243,178 +243,89 @@
     },
     "faq": {
         "title": "Frequently Asked Questions",
-        "description": "Common questions about accounts, posts, privacy, discovery, administration, and troubleshooting.",
+        "description": "Common questions about accounts, posts, privacy, discovery, administration, federation, and troubleshooting.",
         "sections": {
             "about": {
                 "title": "About imshare",
                 "items": [
-                    {
-                        "question": "What is imshare?",
-                        "answer": "imshare is a self-hosted image archive and sharing server. It lets the server operator control storage, accounts, moderation, and the public site."
-                    },
-                    {
-                        "question": "Who operates this server?",
-                        "answer": "The server operator controls the instance, including its storage, moderation policy, registration policy, and privacy practices. Check the Privacy and Terms pages for instance-specific information."
-                    },
-                    {
-                        "question": "Is imshare the same as a public image host?",
-                        "answer": "No. Each imshare instance is independently operated. Features and policies can differ between instances."
-                    }
+                    {"question": "What is imshare?", "answer": "imshare is a self-hosted image archive and sharing server. It lets the server operator control storage, accounts, moderation, and the public site."},
+                    {"question": "Who operates this server?", "answer": "The server operator controls the instance, including its storage, moderation policy, registration policy, and privacy practices. Check the Privacy and Terms pages for instance-specific information."},
+                    {"question": "Is imshare the same as a public image host?", "answer": "No. Each imshare instance is independently operated. Features and policies can differ between instances."}
                 ]
             },
             "accounts": {
                 "title": "Accounts and registration",
                 "items": [
-                    {
-                        "question": "How do I create an account?",
-                        "answer": "Open the registration page and provide your name, email address, password, and the current registration access token when the instance requires one."
-                    },
-                    {
-                        "question": "Why is a registration token required?",
-                        "answer": "This instance can restrict new account creation using a rotating registration token. The server operator controls that token."
-                    },
-                    {
-                        "question": "Can I use a custom username handle?",
-                        "answer": "Yes. A handle uses the /users/@handle URL form while your internal user ID remains unchanged. Handles are normalized to lowercase and must be unique."
-                    },
-                    {
-                        "question": "What happens when a handle is already taken?",
-                        "answer": "The server rejects the change and reports that the handle is already taken. Choosing another available handle does not change your user ID."
-                    },
-                    {
-                        "question": "Can I change my profile later?",
-                        "answer": "Yes. Account and profile settings can be updated from the account pages, subject to the permissions and fields provided by the server."
-                    }
+                    {"question": "How do I create an account?", "answer": "Open the registration page and provide your name, email address, password, and the current registration access token when the instance requires one."},
+                    {"question": "Why is a registration token required?", "answer": "This instance can restrict new account creation using a rotating registration token. The server operator controls that token."},
+                    {"question": "Can I use a custom username handle?", "answer": "Yes. A handle uses the /users/@handle URL form while your internal user ID remains unchanged. Handles are normalized to lowercase and must be unique."},
+                    {"question": "What happens when a handle is already taken?", "answer": "The server rejects the change and reports that the handle is already taken. Choosing another available handle does not change your user ID."},
+                    {"question": "Can I change my profile later?", "answer": "Yes. Account and profile settings can be updated from the account pages, subject to the permissions and fields provided by the server."}
                 ]
             },
             "posts": {
                 "title": "Posts and uploads",
                 "items": [
-                    {
-                        "question": "How do uploads become posts?",
-                        "answer": "New uploads are created as draft posts. You can then edit their metadata and publish them when they are ready."
-                    },
-                    {
-                        "question": "What happens when I upload multiple images?",
-                        "answer": "By default, each selected image becomes its own draft post. You can enable the multi-image option to put all selected images into one post."
-                    },
-                    {
-                        "question": "What are the visibility options?",
-                        "answer": "Public posts can be shown publicly, unlisted posts are intended for sharing without normal listing, and private posts are restricted according to the instance's access rules."
-                    },
-                    {
-                        "question": "Can I delete a post?",
-                        "answer": "Yes. The post editor provides a delete action for posts you are allowed to manage."
-                    },
-                    {
-                        "question": "Can I download original files?",
-                        "answer": "Downloads depend on the post's allow-download setting and the permissions enforced by the server."
-                    }
+                    {"question": "How do uploads become posts?", "answer": "New uploads are created as draft posts. You can then edit their metadata and publish them when they are ready."},
+                    {"question": "What happens when I upload multiple images?", "answer": "By default, each selected image becomes its own draft post. You can enable the multi-image option to put all selected images into one post."},
+                    {"question": "What are the visibility options?", "answer": "Public posts can be shown publicly, unlisted posts are intended for sharing without normal listing, and private posts are restricted according to the instance's access rules."},
+                    {"question": "Can I delete a post?", "answer": "Yes. The post editor provides a delete action for posts you are allowed to manage."},
+                    {"question": "Can I download original files?", "answer": "Downloads depend on the post's allow-download setting and the permissions enforced by the server."}
                 ]
             },
             "privacy": {
                 "title": "Privacy and moderation",
                 "items": [
-                    {
-                        "question": "Who can see my profile?",
-                        "answer": "Profile visibility depends on your account privacy settings and the instance's configuration. Public profiles can appear in public profile pages and search results."
-                    },
-                    {
-                        "question": "Who can see my posts?",
-                        "answer": "Post visibility and your profile's post visibility settings both affect whether a post is publicly accessible."
-                    },
-                    {
-                        "question": "What can moderators do?",
-                        "answer": "Moderators can review reports and perform supported moderation actions. Administrators have additional instance-management permissions."
-                    },
-                    {
-                        "question": "What happens when content is reported?",
-                        "answer": "Reports can be reviewed by moderators. A report may be left open, resolved, or dismissed depending on the moderation decision."
-                    }
+                    {"question": "Who can see my profile?", "answer": "Profile visibility depends on your account privacy settings and the instance's configuration. Public profiles can appear in public profile pages and search results."},
+                    {"question": "Who can see my posts?", "answer": "Post visibility and your profile's post visibility settings both affect whether a post is publicly accessible."},
+                    {"question": "What can moderators do?", "answer": "Moderators can review reports and perform supported moderation actions. Administrators have additional instance-management permissions."},
+                    {"question": "What happens when content is reported?", "answer": "Reports can be reviewed by moderators. A report may be left open, resolved, or dismissed depending on the moderation decision."}
                 ]
             },
             "discovery": {
                 "title": "Search, discovery, and indexing",
                 "items": [
-                    {
-                        "question": "Why can a public post still be missing from search engines?",
-                        "answer": "Being publicly reachable does not guarantee indexing. Search engines decide which pages to crawl and index based on accessibility, site signals, content quality, and their own policies."
-                    },
-                    {
-                        "question": "What is sitemap.xml?",
-                        "answer": "The sitemap lists public URLs that the instance wants search engines to discover. It does not force a search engine to index every URL."
-                    },
-                    {
-                        "question": "What does robots.txt do?",
-                        "answer": "robots.txt communicates crawler rules for the site and points crawlers to the sitemap."
-                    },
-                    {
-                        "question": "Why are dashboard and account pages excluded?",
-                        "answer": "Those areas are intended for authenticated management and personal use rather than public search discovery."
-                    }
+                    {"question": "Why can a public post still be missing from search engines?", "answer": "Being publicly reachable does not guarantee indexing. Search engines decide which pages to crawl and index based on accessibility, site signals, content quality, and their own policies."},
+                    {"question": "What is sitemap.xml?", "answer": "The sitemap lists public URLs that the instance wants search engines to discover. It does not force a search engine to index every URL."},
+                    {"question": "What does robots.txt do?", "answer": "robots.txt communicates crawler rules for the site and points crawlers to the sitemap."},
+                    {"question": "Why are dashboard and account pages excluded?", "answer": "Those areas are intended for authenticated management and personal use rather than public search discovery."}
                 ]
             },
             "analytics": {
                 "title": "Analytics and cookies",
                 "items": [
-                    {
-                        "question": "Does this site use Google Analytics or Google Tag Manager?",
-                        "answer": "The server operator can configure Google Analytics 4 and Google Tag Manager from the administrator dashboard. They can also leave both disabled."
-                    },
-                    {
-                        "question": "Where are analytics settings changed?",
-                        "answer": "Administrators can manage the configured measurement and container IDs from the Admin dashboard. The values are stored in the server configuration."
-                    },
-                    {
-                        "question": "Does changing an analytics ID require changing the frontend code?",
-                        "answer": "No. The site reads the configured values from the server configuration and injects the enabled integration into rendered pages."
-                    }
+                    {"question": "Does this site use Google Analytics or Google Tag Manager?", "answer": "The server operator can configure Google Analytics 4 and Google Tag Manager from the administrator dashboard. They can also leave both disabled."},
+                    {"question": "Where are analytics settings changed?", "answer": "Administrators can manage the configured measurement and container IDs from the Admin dashboard. The values are stored in the server configuration."},
+                    {"question": "Does changing an analytics ID require changing the frontend code?", "answer": "No. The site reads the configured values from the server configuration and injects the enabled integration into rendered pages."}
                 ]
             },
             "troubleshooting": {
                 "title": "Troubleshooting",
                 "items": [
-                    {
-                        "question": "Registration says the origin is invalid. Why?",
-                        "answer": "The browser origin must be included in the server's Better Auth trusted origins. The instance configuration supports this through auth.trustedOrigins."
-                    },
-                    {
-                        "question": "The site shows an old version after deployment. What should I check?",
-                        "answer": "Rebuild the application, restart the server, and make sure the deployed dist directory matches the source branch you intended to deploy."
-                    },
-                    {
-                        "question": "An API request returns 401 or 403. What does that usually mean?",
-                        "answer": "401 normally indicates that authentication is required or the session is missing. 403 can indicate insufficient permissions or a rejected request origin."
-                    },
-                    {
-                        "question": "Where can I find the API documentation?",
-                        "answer": "The instance exposes its OpenAPI documentation at /docs when API documentation is enabled."
-                    }
+                    {"question": "Registration says the origin is invalid. Why?", "answer": "The browser origin must be included in the server's Better Auth trusted origins. The instance configuration supports this through auth.trustedOrigins."},
+                    {"question": "The site shows an old version after deployment. What should I check?", "answer": "Rebuild the application, restart the server, and make sure the deployed dist directory matches the source branch you intended to deploy."},
+                    {"question": "An API request returns 401 or 403. What does that usually mean?", "answer": "401 normally indicates that authentication is required or the session is missing. 403 can indicate insufficient permissions or a rejected request origin."},
+                    {"question": "Where can I find the API documentation?", "answer": "The instance exposes its OpenAPI documentation at /docs when API documentation is enabled."}
                 ]
             },
             "community": {
                 "title": "GitHub and contributing",
                 "items": [
-                    {
-                        "question": "Where can I find the source code?",
-                        "answer": "The source code is maintained in the p0x38/imshare GitHub repository."
-                    },
-                    {
-                        "question": "How can I contribute to imshare?",
-                        "answer": "Fork the repository, make a focused change, run the relevant checks, and open a pull request. Larger changes should be discussed in an issue first. See CONTRIBUTING.md for the development workflow and pull request expectations."
-                    },
-                    {
-                        "question": "Can I use AI tools when contributing?",
-                        "answer": "Yes. AI-assisted development can be used when working on imshare. Contributors are still responsible for reviewing the generated code, understanding the changes, checking for security and privacy problems, and testing the result before submitting it."
-                    },
-                    {
-                        "question": "Does imshare require an AI service to run?",
-                        "answer": "No. The normal imshare runtime does not require an external AI service. AI tools can be used during development, research, debugging, or documentation work without making AI a runtime dependency."
-                    },
-                    {
-                        "question": "What should I check before submitting AI-assisted changes?",
-                        "answer": "Treat AI-generated code like any other draft: verify it against the existing architecture, review authentication and authorization boundaries, avoid exposing secrets or private data, and run type checking, linting, tests, integration tests, and the production build when applicable."
-                    }
+                    {"question": "Where can I find the source code?", "answer": "The source code is maintained in the p0x38/imshare GitHub repository."},
+                    {"question": "How can I contribute to imshare?", "answer": "Fork the repository, make a focused change, run the relevant checks, and open a pull request. Larger changes should be discussed in an issue first. See CONTRIBUTING.md for the development workflow and pull request expectations."},
+                    {"question": "Can I use AI tools when contributing?", "answer": "AI-assisted development is allowed for contributors, but generated code must be reviewed and understood by the contributor. Do not submit unreviewed AI output, and do not provide AI tools with secrets, credentials, private user data, or other information you are not authorized to disclose."},
+                    {"question": "Are there cases where AI use is limited?", "answer": "Yes. AI use is limited where it would expose secrets, credentials, private user data, or other non-public information, and contributors remain responsible for the resulting changes. When a task or repository policy imposes additional restrictions, those restrictions take precedence."},
+                    {"question": "What should I check before submitting AI-assisted changes?", "answer": "Treat AI-generated code like any other draft: verify it against the existing architecture, review authentication and authorization boundaries, avoid exposing secrets or private data, and run type checking, linting, tests, integration tests, and the production build when applicable."}
+                ]
+            },
+            "federation": {
+                "title": "Federation and ActivityPub",
+                "items": [
+                    {"question": "Does imshare support federation?", "answer": "Yes. imshare includes ActivityPub federation support for public user actors and public posts."},
+                    {"question": "What federation protocol does imshare use?", "answer": "The federation implementation uses ActivityPub and exposes WebFinger and NodeInfo endpoints for interoperability and discovery."},
+                    {"question": "What can a federated imshare account do?", "answer": "Public users can be represented as ActivityPub Person actors with actor, inbox, outbox, followers, and following endpoints. Public posts are exposed as Create activities containing Note objects."},
+                    {"question": "How are incoming federation requests verified?", "answer": "Incoming activities require HTTP signatures and a recent Date header. imshare verifies the request digest and signature against the remote actor's public key before processing the activity."},
+                    {"question": "Which federation activities are handled?", "answer": "The current implementation handles Follow, Undo of Follow, Accept, Reject, public Create activities, and Delete activities. Unsupported activity types are rejected."}
                 ]
             }
         }
