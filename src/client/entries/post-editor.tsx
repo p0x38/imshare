@@ -490,8 +490,10 @@ function PostEditor() {
     );
 }
 
-createRoot(document.getElementById("root")!).render(
-    <App>
-        <PostEditor />
-    </App>,
-);
+const root = document.querySelector("#post-editor-page");
+if (root)
+    createRoot(root).render(
+        <App>
+            <PostEditor />
+        </App>,
+    );
