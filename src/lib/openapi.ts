@@ -31,8 +31,15 @@ type OpenApiComponentResponse = {
     content?: Record<string, {
         schema?: Record<string, unknown>;
         example?: unknown;
-        examples?: Record<string, unknown>;
+        examples?: Record<string, OpenApiComponentExample | { $ref: string }>;
     }>;
+};
+
+type OpenApiComponentExample = {
+    summary?: string;
+    description?: string;
+    value?: unknown;
+    externalValue?: string;
 };
 
 const documentation: Record<string, OperationDocumentation> = {
