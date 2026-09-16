@@ -127,8 +127,10 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
                 caption: true,
                 contentType: true,
                 categoryId: true,
+                createdAt: true,
                 user: { select: { name: true, handle: true } },
                 tags: { include: { tag: { select: { name: true } } } },
+                _count: { select: { views: true, reactions: true, comments: true } },
             },
         });
         if (!source)
