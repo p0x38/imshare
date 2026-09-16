@@ -1,30 +1,13 @@
-import {
-    Alert,
-    Box,
-    Button,
-    Card,
-    CardContent,
-    Chip,
-    Divider,
-    List,
-    ListItem,
-    ListItemButton,
-    ListItemIcon,
-    ListItemText,
-    Stack,
-    TextField,
-    Typography,
-} from "@mui/material";
-import Dashboard from "@mui/icons-material/Dashboard";
-import Article from "@mui/icons-material/Article";
+import { Alert, Box, Button, Card, CardContent, Stack, Typography } from "@mui/material";
 import Group from "@mui/icons-material/Group";
-import Api from "@mui/icons-material/Api";
+import Article from "@mui/icons-material/Article";
+import ReportProblem from "@mui/icons-material/ReportProblem";
 import Settings from "@mui/icons-material/Settings";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
-import { Page } from "../components/Page";
+import { AdminLayout } from "../components/AdminLayout";
 import { api } from "../lib/api";
 
 interface Overview {
@@ -36,468 +19,52 @@ interface Overview {
     moderators: number;
 }
 
-interface Analytics {
-    googleAnalyticsMeasurementId: string;
-    googleTagManagerContainerId: string;
-}
-
-interface RegistrationToken {
-    token: string;
-    expiresAt?: string | null;
-}
-
-function StatCard({ label, value, href }: { label: string; value: number; href?: string }) {
-    const content = (
-        <Card variant="outlined" sx={{ height: "100%" }}>
-            <CardContent>
-                <Stack spacing={0.5}>
-                    <Typography variant="body2" color="text.secondary">
-                        {label}
-                    </Typography>
-                    <Typography variant="h4" component="p">
-                        {value.toLocaleString()}
-                    </Typography>
-                </Stack>
-            </CardContent>
-        </Card>
-    );
-
-    return href ? (
-        <Box
-            component="a"
-            href={href}
-            sx={{ textDecoration: "none", display: "block", height: "100%" }}
-        >
-            {content}
-        </Box>
-    ) : (
-        content
-    );
-}
-
-interface SidebarItem {
-    id: string;
-    label: string;
-    icon: typeof Dashboard;
-}
-
-function AdminSidebar({ items }: { items: SidebarItem[] }) {
+function StatCard({ label, value, href }: { label: string; value: number; href: string }) {
     return (
-        <Card
-            variant="outlined"
-            sx={{
-                position: { xs: "static", lg: "sticky" },
-                top: { lg: 88 },
-            }}
-        >
-            <CardContent sx={{ p: 1 }}>
-                <List disablePadding>
-                    {items.map(({ id, label, icon: Icon }) => (
-                        <ListItem key={id} disablePadding>
-                            <ListItemButton
-                                component="a"
-                                href={`#${id}`}
-                                sx={{ borderRadius: 1 }}
-                            >
-                                <ListItemIcon sx={{ minWidth: 40 }}>
-                                    <Icon />
-                                </ListItemIcon>
-                                <ListItemText primary={label} />
-                            </ListItemButton>
-                        </ListItem>
-                    ))}
-                </List>
-            </CardContent>
-        </Card>
+        <Box component="a" href={href} sx={{ display: "block", height: "100%", textDecoration: "none" }}>
+            <Card variant="outlined" sx={{ height: "100%" }}>
+                <CardContent>
+                    <Typography variant="body2" color="text.secondary">{label}</Typography>
+                    <Typography variant="h4" component="p">{value.toLocaleString()}</Typography>
+                </CardContent>
+            </Card>
+        </Box>
     );
 }
 
 function AdminPage() {
     const { t } = useTranslation();
     const [overview, setOverview] = useState<Overview | null>(null);
-    const [analytics, setAnalytics] = useState<Analytics>({
-        googleAnalyticsMeasurementId: "",
-        googleTagManagerContainerId: "",
-    });
-    const [token, setToken] = useState<RegistrationToken | null>(null);
-    const [ga, setGa] = useState("");
-    const [gtm, setGtm] = useState("");
     const [error, setError] = useState("");
-    const [notice, setNotice] = useState("");
-    const [savingAnalytics, setSavingAnalytics] = useState(false);
-    const [loadingToken, setLoadingToken] = useState(false);
-
-    async function load() {
-        setError("");
-        try {
-            const [a, b, c] = await Promise.all([
-                api<{ data: Overview }>("/v1/admin/overview"),
-                api<{ data: Analytics }>("/v1/admin/analytics"),
-                api<{ data: RegistrationToken }>("/v1/admin/registration-token"),
-            ]);
-            setOverview(a.data);
-            setAnalytics(b.data);
-            setGa(b.data.googleAnalyticsMeasurementId);
-            setGtm(b.data.googleTagManagerContainerId);
-            setToken(c.data);
-        } catch (cause) {
-            setError(cause instanceof Error ? cause.message : t("admin.loadError"));
-        }
-    }
 
     useEffect(() => {
-        void load();
-    }, []);
-
-    async function saveAnalytics(event: React.FormEvent) {
-        event.preventDefault();
-        setSavingAnalytics(true);
-        setError("");
-        setNotice("");
-        try {
-            const result = await api<{ data: Analytics }>("/v1/admin/analytics", {
-                method: "PATCH",
-                body: JSON.stringify({
-                    googleAnalyticsMeasurementId: ga.trim(),
-                    googleTagManagerContainerId: gtm.trim(),
-                }),
-            });
-            setAnalytics(result.data);
-            setGa(result.data.googleAnalyticsMeasurementId);
-            setGtm(result.data.googleTagManagerContainerId);
-            setNotice(t("admin.analyticsSaved"));
-        } catch (cause) {
-            setError(cause instanceof Error ? cause.message : t("admin.saveError"));
-        } finally {
-            setSavingAnalytics(false);
-        }
-    }
-
-    async function refreshToken() {
-        setLoadingToken(true);
-        setError("");
-        try {
-            const result = await api<{ data: RegistrationToken }>("/v1/admin/registration-token", {
-                method: "POST",
-            });
-            setToken(result.data);
-            setNotice(t("admin.tokenRefreshed"));
-        } catch (cause) {
-            setError(cause instanceof Error ? cause.message : t("admin.refreshError"));
-        } finally {
-            setLoadingToken(false);
-        }
-    }
-
-    const expiresLabel = token?.expiresAt
-        ? new Date(token.expiresAt).toLocaleString()
-        : t("admin.tokenPolicy");
-
-    const sidebarItems: SidebarItem[] = [
-        { id: "overview", label: t("admin.administration"), icon: Dashboard },
-        { id: "users", label: t("admin.users"), icon: Group },
-        { id: "posts", label: t("admin.posts"), icon: Article },
-        { id: "api", label: "API", icon: Api },
-        { id: "configuration", label: t("settings"), icon: Settings },
-    ];
+        void api<{ data: Overview }>("/v1/admin/overview")
+            .then((result) => setOverview(result.data))
+            .catch((cause) => setError(cause instanceof Error ? cause.message : t("admin.loadError")));
+    }, [t]);
 
     return (
-        <Page maxWidth="xl">
-            <Box
-                sx={{
-                    display: "grid",
-                    gridTemplateColumns: { xs: "1fr", lg: "220px minmax(0, 1fr)" },
-                    gap: { xs: 2, lg: 3 },
-                    alignItems: "start",
-                }}
-            >
-                <AdminSidebar items={sidebarItems} />
+        <AdminLayout title={t("admin.administration")} description="Instance administration overview." activeHref="/admin/">
+            {error ? <Alert severity="error">{error}</Alert> : null}
+            <Stack spacing={3}>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", xl: "repeat(4, 1fr)" }, gap: 2 }}>
+                    <StatCard label={t("admin.users")} value={overview?.users ?? 0} href="/admin/users/" />
+                    <StatCard label={t("admin.posts")} value={overview?.posts ?? 0} href="/admin/posts/" />
+                    <StatCard label={t("admin.openReports")} value={overview?.openReports ?? 0} href="/admin/reports/" />
+                    <StatCard label={t("admin.bannedUsers")} value={overview?.bannedUsers ?? 0} href="/admin/users/" />
+                </Box>
 
-                <Stack spacing={3} sx={{ minWidth: 0 }}>
-                    <Stack spacing={0.5} id="overview" sx={{ scrollMarginTop: 88 }}>
-                        <Typography variant="h4" component="h1">
-                            {t("admin.administration")}
-                        </Typography>
-                        <Typography color="text.secondary">{t("admin.description")}</Typography>
-                    </Stack>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" }, gap: 2 }}>
+                    <Card variant="outlined"><CardContent><Stack spacing={1.5}><Group color="action" /><Typography variant="h6">Users</Typography><Typography variant="body2" color="text.secondary">Manage accounts and roles.</Typography><Button href="/admin/users/" variant="outlined">Manage users</Button></Stack></CardContent></Card>
+                    <Card variant="outlined"><CardContent><Stack spacing={1.5}><Article color="action" /><Typography variant="h6">Posts</Typography><Typography variant="body2" color="text.secondary">Review and manage posts.</Typography><Button href="/admin/posts/" variant="outlined">Manage posts</Button></Stack></CardContent></Card>
+                    <Card variant="outlined"><CardContent><Stack spacing={1.5}><ReportProblem color="action" /><Typography variant="h6">Reports</Typography><Typography variant="body2" color="text.secondary">Review moderation reports.</Typography><Button href="/admin/reports/" variant="outlined">Review reports</Button></Stack></CardContent></Card>
+                </Box>
 
-                    {error ? <Alert severity="error">{error}</Alert> : null}
-                    {notice ? (
-                        <Alert severity="success" onClose={() => setNotice("")}>
-                            {notice}
-                        </Alert>
-                    ) : null}
-
-                    <Stack spacing={2} id="users" sx={{ scrollMarginTop: 88 }}>
-                        <Stack spacing={0.5}>
-                            <Typography variant="h5" component="h2">
-                                {t("admin.users")}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t("admin.description")}
-                            </Typography>
-                        </Stack>
-                        <Box
-                            sx={{
-                                display: "grid",
-                                gridTemplateColumns: {
-                                    xs: "1fr",
-                                    sm: "repeat(2, 1fr)",
-                                    xl: "repeat(4, 1fr)",
-                                },
-                                gap: 2,
-                            }}
-                        >
-                            <StatCard
-                                label={t("admin.users")}
-                                value={overview?.users ?? 0}
-                                href="/users/"
-                            />
-                            <StatCard
-                                label={t("admin.openReports")}
-                                value={overview?.openReports ?? 0}
-                            />
-                            <StatCard
-                                label={t("admin.bannedUsers")}
-                                value={overview?.bannedUsers ?? 0}
-                            />
-                            <StatCard
-                                label={t("admin.administrators")}
-                                value={overview?.admins ?? 0}
-                            />
-                            <StatCard
-                                label={t("admin.moderators")}
-                                value={overview?.moderators ?? 0}
-                            />
-                        </Box>
-                    </Stack>
-
-                    <Stack spacing={2} id="posts" sx={{ scrollMarginTop: 88 }}>
-                        <Stack spacing={0.5}>
-                            <Typography variant="h5" component="h2">
-                                {t("admin.posts")}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t("admin.shortcutsDescription")}
-                            </Typography>
-                        </Stack>
-                        <StatCard
-                            label={t("admin.posts")}
-                            value={overview?.posts ?? 0}
-                            href="/posts/"
-                        />
-                        <Card variant="outlined">
-                            <CardContent>
-                                <Stack spacing={1.5}>
-                                    <Stack spacing={0.5}>
-                                        <Typography variant="h6" component="h3">
-                                            {t("admin.shortcuts")}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t("admin.shortcutsDescription")}
-                                        </Typography>
-                                    </Stack>
-                                    <List disablePadding>
-                                        <ListItem disablePadding>
-                                            <ListItemButton component="a" href="/dashboard/posts/">
-                                                <ListItemText
-                                                    primary={t("dashboardPage.managePosts")}
-                                                    secondary={t("admin.reviewPosts")}
-                                                />
-                                            </ListItemButton>
-                                        </ListItem>
-                                        <Divider component="li" />
-                                        <ListItem disablePadding>
-                                            <ListItemButton component="a" href="/dashboard/tags/">
-                                                <ListItemText
-                                                    primary={t("dashboardPage.manageTags")}
-                                                    secondary={t("admin.taxonomyHelp")}
-                                                />
-                                            </ListItemButton>
-                                        </ListItem>
-                                        <Divider component="li" />
-                                        <ListItem disablePadding>
-                                            <ListItemButton
-                                                component="a"
-                                                href="/dashboard/categories/"
-                                            >
-                                                <ListItemText
-                                                    primary={t("dashboardPage.manageCategories")}
-                                                    secondary={t("admin.categoryHelp")}
-                                                />
-                                            </ListItemButton>
-                                        </ListItem>
-                                    </List>
-                                </Stack>
-                            </CardContent>
-                        </Card>
-                    </Stack>
-
-                    <Stack spacing={2} id="api" sx={{ scrollMarginTop: 88 }}>
-                        <Stack spacing={0.5}>
-                            <Typography variant="h5" component="h2">
-                                API
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t("admin.apiDocsHelp")}
-                            </Typography>
-                        </Stack>
-                        <Card variant="outlined">
-                            <CardContent>
-                                <List disablePadding>
-                                    <ListItem disablePadding>
-                                        <ListItemButton component="a" href="/docs/">
-                                            <ListItemText
-                                                primary={t("admin.apiDocs")}
-                                                secondary={t("admin.apiDocsHelp")}
-                                            />
-                                        </ListItemButton>
-                                    </ListItem>
-                                </List>
-                            </CardContent>
-                        </Card>
-                    </Stack>
-
-                    <Stack spacing={2} id="configuration" sx={{ scrollMarginTop: 88 }}>
-                        <Stack spacing={0.5}>
-                            <Typography variant="h5" component="h2">
-                                {t("settings")}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                {t("admin.description")}
-                            </Typography>
-                        </Stack>
-
-                        <Box
-                            sx={{
-                                display: "grid",
-                                gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1.5fr) minmax(320px,1fr)" },
-                                gap: 2,
-                                alignItems: "start",
-                            }}
-                        >
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Stack spacing={2} component="form" onSubmit={saveAnalytics}>
-                                        <Stack spacing={0.5}>
-                                            <Typography variant="h6" component="h3">
-                                                {t("admin.analytics")}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t("admin.analyticsDescription")}
-                                            </Typography>
-                                        </Stack>
-                                        <TextField
-                                            label={t("admin.gaId")}
-                                            value={ga}
-                                            onChange={(e) => setGa(e.target.value)}
-                                            placeholder="G-XXXXXXXXXX"
-                                            helperText={t("admin.gaHelp")}
-                                            fullWidth
-                                        />
-                                        <TextField
-                                            label={t("admin.gtmId")}
-                                            value={gtm}
-                                            onChange={(e) => setGtm(e.target.value)}
-                                            placeholder="GTM-XXXXXXX"
-                                            helperText={t("admin.gtmHelp")}
-                                            fullWidth
-                                        />
-                                        <Stack
-                                            direction="row"
-                                            justifyContent="space-between"
-                                            alignItems="center"
-                                            flexWrap="wrap"
-                                            gap={1}
-                                        >
-                                            <Stack direction="row" spacing={1}>
-                                                {analytics.googleAnalyticsMeasurementId ? (
-                                                    <Chip
-                                                        label={t("admin.gaEnabled")}
-                                                        size="small"
-                                                        color="success"
-                                                        variant="outlined"
-                                                    />
-                                                ) : (
-                                                    <Chip
-                                                        label={t("admin.gaDisabled")}
-                                                        size="small"
-                                                        variant="outlined"
-                                                    />
-                                                )}
-                                                {analytics.googleTagManagerContainerId ? (
-                                                    <Chip
-                                                        label={t("admin.gtmEnabled")}
-                                                        size="small"
-                                                        color="success"
-                                                        variant="outlined"
-                                                    />
-                                                ) : (
-                                                    <Chip
-                                                        label={t("admin.gtmDisabled")}
-                                                        size="small"
-                                                        variant="outlined"
-                                                    />
-                                                )}
-                                            </Stack>
-                                            <Button
-                                                type="submit"
-                                                variant="contained"
-                                                disabled={savingAnalytics}
-                                            >
-                                                {savingAnalytics
-                                                    ? t("admin.saving")
-                                                    : t("admin.saveAnalytics")}
-                                            </Button>
-                                        </Stack>
-                                    </Stack>
-                                </CardContent>
-                            </Card>
-
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Stack spacing={2}>
-                                        <Stack spacing={0.5}>
-                                            <Typography variant="h6" component="h3">
-                                                {t("admin.registrationAccess")}
-                                            </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {t("admin.registrationDescription")}
-                                            </Typography>
-                                        </Stack>
-                                        <TextField
-                                            label={t("admin.currentToken")}
-                                            value={token?.token ?? ""}
-                                            slotProps={{ input: { readOnly: true } }}
-                                            fullWidth
-                                        />
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t("admin.expires", { value: expiresLabel })}
-                                        </Typography>
-                                        <Button
-                                            variant="outlined"
-                                            onClick={() => void refreshToken()}
-                                            disabled={loadingToken}
-                                        >
-                                            {loadingToken
-                                                ? t("admin.refreshing")
-                                                : t("admin.refreshToken")}
-                                        </Button>
-                                    </Stack>
-                                </CardContent>
-                            </Card>
-                        </Box>
-                    </Stack>
-                </Stack>
-            </Box>
-        </Page>
+                <Card variant="outlined"><CardContent><Stack spacing={1.5}><Stack direction="row" spacing={1} alignItems="center"><Settings color="action" /><Typography variant="h6">Instance</Typography></Stack><Typography variant="body2" color="text.secondary">Configure instance-wide settings.</Typography><Button href="/admin/settings/" variant="outlined">Open settings</Button></Stack></CardContent></Card>
+            </Stack>
+        </AdminLayout>
     );
 }
 
 const root = document.querySelector("#admin-page");
-if (root)
-    createRoot(root).render(
-        <App>
-            <AdminPage />
-        </App>,
-    );
+if (root) createRoot(root).render(<App><AdminPage /></App>);
