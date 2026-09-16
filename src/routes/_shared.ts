@@ -13,7 +13,12 @@ export const postInclude = {
 } as const;
 
 export function postView(post: any) {
-    const reactionCounts = Object.fromEntries(["like", "favorite", "save"].map((type) => [type, post.reactions?.filter((reaction: any) => reaction.type === type).length ?? 0]));
+    const reactionCounts = Object.fromEntries(
+        ["like", "favorite", "save"].map((type) => [
+            type,
+            post.reactions?.filter((reaction: any) => reaction.type === type).length ?? 0,
+        ]),
+    );
     return {
         id: post.id,
         title: post.title,
@@ -46,7 +51,16 @@ export function postView(post: any) {
         viewCount: post._count?.views ?? 0,
         category: post.category,
         tags: post.tags.map((x: any) => x.tag),
-        uploads: post.uploads.map((x: any) => ({ id: x.id, filename: x.filename, originalName: x.originalName, mimeType: x.mimeType, size: x.size, createdAt: x.createdAt, thumbhash: x.thumbhash, url: `/v1/posts/image/${encodeURIComponent(x.id)}` })),
+        uploads: post.uploads.map((x: any) => ({
+            id: x.id,
+            filename: x.filename,
+            originalName: x.originalName,
+            mimeType: x.mimeType,
+            size: x.size,
+            createdAt: x.createdAt,
+            thumbhash: x.thumbhash,
+            url: `/v1/posts/image/${encodeURIComponent(x.id)}`,
+        })),
         reactions: reactionCounts,
     };
 }
@@ -56,7 +70,13 @@ export async function findTags(names: string[]) {
     const result = [];
     for (const name of unique) {
         const slug = name.replace(/[^a-z0-9-]+/g, "-").replace(/^-|-$/g, "") || name;
-        result.push(await prisma.tag.upsert({ where: { slug }, update: { name }, create: { name, slug: slug || `tag-${randomUUID().slice(0, 8)}` } }));
+        result.push(
+            await prisma.tag.upsert({
+                where: { slug },
+                update: { name },
+                create: { name, slug: slug || `tag-${randomUUID().slice(0, 8)}` },
+            }),
+        );
     }
     return result;
 }

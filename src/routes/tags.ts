@@ -35,19 +35,23 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
         const q = request.query as Record<string, unknown>;
         const term = typeof q.q === "string" ? q.q.trim() : "";
         const parsedLimit = Number(q.limit);
-        const limit = Number.isFinite(parsedLimit) ? Math.min(Math.max(Math.trunc(parsedLimit), 1), 20) : 10;
+        const limit = Number.isFinite(parsedLimit)
+            ? Math.min(Math.max(Math.trunc(parsedLimit), 1), 20)
+            : 10;
         const items = await prisma.tag.findMany({
             where: term ? { OR: [{ name: { contains: term } }, { slug: { contains: term } }] } : {},
             take: limit,
             orderBy: { name: "asc" },
             include: { _count: { select: { posts: true } } },
         });
-        return ok(items.map((tag) => ({
-            id: tag.id,
-            name: tag.name,
-            slug: tag.slug,
-            postCount: tag._count.posts,
-        })));
+        return ok(
+            items.map((tag) => ({
+                id: tag.id,
+                name: tag.name,
+                slug: tag.slug,
+                postCount: tag._count.posts,
+            })),
+        );
     });
 
     fastify.post("/v1/tags", { schema: tagCreateSchema }, async (request, reply) => {

@@ -55,9 +55,12 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
                 conditions.push({ id: { in: matches.map((match) => match.postId) } });
             }
             if (typeof q.user === "string" && q.user) conditions.push({ userId: q.user });
-            if (typeof q.category === "string" && q.category) conditions.push({ category: { slug: q.category } });
-            if (typeof q.tag === "string" && q.tag) conditions.push({ tags: { some: { tag: { slug: q.tag } } } });
-            if (typeof q.mime === "string" && q.mime) conditions.push({ uploads: { some: { mimeType: { contains: q.mime } } } });
+            if (typeof q.category === "string" && q.category)
+                conditions.push({ category: { slug: q.category } });
+            if (typeof q.tag === "string" && q.tag)
+                conditions.push({ tags: { some: { tag: { slug: q.tag } } } });
+            if (typeof q.mime === "string" && q.mime)
+                conditions.push({ uploads: { some: { mimeType: { contains: q.mime } } } });
 
             if (type === "posts") conditions.push({ uploads: { some: {} } });
             if (type === "texts") conditions.push({ uploads: { none: {} } });
@@ -65,12 +68,20 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             const from = parseDate(q.from);
             const to = parseDate(q.to);
             if (from || to) {
-                conditions.push({ createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) } });
+                conditions.push({
+                    createdAt: { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) },
+                });
             }
 
             const where = { AND: conditions };
             const [items, count] = await Promise.all([
-                prisma.post.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, include: postInclude }),
+                prisma.post.findMany({
+                    where,
+                    skip: p.skip,
+                    take: p.limit,
+                    orderBy: { createdAt: order },
+                    include: postInclude,
+                }),
                 prisma.post.count({ where }),
             ]);
             result.posts = items.map(postView);
@@ -82,9 +93,17 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         }
 
         if (type === "users" || type === "all") {
-            const where = term ? { name: { contains: term }, isPublic: true, showProfile: true, isBanned: false } : { isPublic: true, showProfile: true, isBanned: false };
+            const where = term
+                ? { name: { contains: term }, isPublic: true, showProfile: true, isBanned: false }
+                : { isPublic: true, showProfile: true, isBanned: false };
             const [items, count] = await Promise.all([
-                prisma.user.findMany({ where, skip: p.skip, take: p.limit, orderBy: { createdAt: order }, select: { id: true, name: true, image: true, createdAt: true } }),
+                prisma.user.findMany({
+                    where,
+                    skip: p.skip,
+                    take: p.limit,
+                    orderBy: { createdAt: order },
+                    select: { id: true, name: true, image: true, createdAt: true },
+                }),
                 prisma.user.count({ where }),
             ]);
             result.users = items;
@@ -95,7 +114,12 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "tags" || type === "all") {
             const where = term ? { name: { contains: term } } : {};
             const [items, count] = await Promise.all([
-                prisma.tag.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
+                prisma.tag.findMany({
+                    where,
+                    skip: p.skip,
+                    take: p.limit,
+                    orderBy: { name: order },
+                }),
                 prisma.tag.count({ where }),
             ]);
             result.tags = items;
@@ -106,7 +130,12 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "categories" || type === "all") {
             const where = term ? { name: { contains: term } } : {};
             const [items, count] = await Promise.all([
-                prisma.category.findMany({ where, skip: p.skip, take: p.limit, orderBy: { name: order } }),
+                prisma.category.findMany({
+                    where,
+                    skip: p.skip,
+                    take: p.limit,
+                    orderBy: { name: order },
+                }),
                 prisma.category.count({ where }),
             ]);
             result.categories = items;
@@ -114,6 +143,14 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
             if (type === "categories") return collection(items, p.page, p.limit, count);
         }
 
-        return { data: result, pagination: { page: p.page, limit: p.limit, total, totalPages: Math.ceil(total / p.limit) } };
+        return {
+            data: result,
+            pagination: {
+                page: p.page,
+                limit: p.limit,
+                total,
+                totalPages: Math.ceil(total / p.limit),
+            },
+        };
     });
 };

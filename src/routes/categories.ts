@@ -33,19 +33,17 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const body = request.body as { name: string; slug: string; description?: string };
-        return reply
-            .code(201)
-            .send(
-                ok(
-                    await prisma.category.create({
-                        data: {
-                            name: body.name.trim(),
-                            slug: body.slug,
-                            description: body.description,
-                        },
-                    }),
-                ),
-            );
+        return reply.code(201).send(
+            ok(
+                await prisma.category.create({
+                    data: {
+                        name: body.name.trim(),
+                        slug: body.slug,
+                        description: body.description,
+                    },
+                }),
+            ),
+        );
     });
 
     fastify.get("/v1/categories/:categoryId", async (request, reply) => {
@@ -85,11 +83,9 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                     }),
                 );
             } catch {
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
+                });
             }
         },
     );

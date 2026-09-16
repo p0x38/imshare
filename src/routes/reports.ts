@@ -23,38 +23,30 @@ export const reportRoutes: FastifyPluginAsync = async (fastify) => {
             commentId?: string;
         };
         if (!body.reason || !REASONS.includes(body.reason as (typeof REASONS)[number]))
-            return reply
-                .code(400)
-                .send({
-                    error: { code: "INVALID_REPORT_REASON", message: "Invalid report reason." },
-                });
+            return reply.code(400).send({
+                error: { code: "INVALID_REPORT_REASON", message: "Invalid report reason." },
+            });
         if (!body.postId && !body.commentId)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "REPORT_TARGET_REQUIRED",
-                        message: "A postId or commentId is required.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "REPORT_TARGET_REQUIRED",
+                    message: "A postId or commentId is required.",
+                },
+            });
         if (body.postId && body.commentId)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "MULTIPLE_REPORT_TARGETS",
-                        message: "Report one target at a time.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "MULTIPLE_REPORT_TARGETS",
+                    message: "Report one target at a time.",
+                },
+            });
         if (body.details && body.details.length > 2000)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_REPORT_DETAILS",
-                        message: "Report details are limited to 2000 characters.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_REPORT_DETAILS",
+                    message: "Report details are limited to 2000 characters.",
+                },
+            });
         if (
             body.postId &&
             !(await prisma.post.findUnique({ where: { id: body.postId }, select: { id: true } }))
@@ -81,14 +73,12 @@ export const reportRoutes: FastifyPluginAsync = async (fastify) => {
             },
         });
         if (existing)
-            return reply
-                .code(409)
-                .send({
-                    error: {
-                        code: "REPORT_EXISTS",
-                        message: "You already have an open report for this item.",
-                    },
-                });
+            return reply.code(409).send({
+                error: {
+                    code: "REPORT_EXISTS",
+                    message: "You already have an open report for this item.",
+                },
+            });
         const report = await prisma.report.create({
             data: {
                 reason: body.reason,

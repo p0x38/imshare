@@ -13,7 +13,16 @@ export function Page({
     maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
     title?: string;
 }) {
-    const width = maxWidth === "xs" ? 444 : maxWidth === "sm" ? 600 : maxWidth === "md" ? 900 : maxWidth === "lg" ? 1200 : 1200;
+    const width =
+        maxWidth === "xs"
+            ? 444
+            : maxWidth === "sm"
+              ? 600
+              : maxWidth === "md"
+                ? 900
+                : maxWidth === "lg"
+                  ? 1200
+                  : 1200;
 
     useEffect(() => {
         if (title) document.title = title;

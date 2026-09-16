@@ -85,11 +85,9 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Unsupported image type.",
                     });
-                    return reply
-                        .code(400)
-                        .send({
-                            error: { code: "INVALID_FILE", message: "Unsupported image type." },
-                        });
+                    return reply.code(400).send({
+                        error: { code: "INVALID_FILE", message: "Unsupported image type." },
+                    });
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "uploading", progress: 0 });
                 const temporaryPath = path.join(uploadDir, `.upload-${uploadId}${ext}`);
@@ -106,11 +104,9 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         error: cancelled ? undefined : "Upload failed.",
                     });
                     if (cancelled)
-                        return reply
-                            .code(499)
-                            .send({
-                                error: { code: "UPLOAD_CANCELLED", message: "Upload cancelled." },
-                            });
+                        return reply.code(499).send({
+                            error: { code: "UPLOAD_CANCELLED", message: "Upload cancelled." },
+                        });
                     throw error;
                 }
                 if (part.file.truncated) {
@@ -120,14 +116,12 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Maximum file size exceeded.",
                     });
-                    return reply
-                        .code(413)
-                        .send({
-                            error: {
-                                code: "FILE_TOO_LARGE",
-                                message: "Maximum file size exceeded.",
-                            },
-                        });
+                    return reply.code(413).send({
+                        error: {
+                            code: "FILE_TOO_LARGE",
+                            message: "Maximum file size exceeded.",
+                        },
+                    });
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "processing", progress: 100 });
                 const content = await readFile(temporaryPath);
@@ -138,14 +132,12 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Invalid image content.",
                     });
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_FILE",
-                                message: "File content does not match its image type.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_FILE",
+                            message: "File content does not match its image type.",
+                        },
+                    });
                 }
                 const metadata = await sharp(content, { animated: true }).metadata();
                 if (!metadata.width || !metadata.height) {
@@ -155,14 +147,12 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Unable to read image dimensions.",
                     });
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_IMAGE",
-                                message: "Unable to read image dimensions.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_IMAGE",
+                            message: "Unable to read image dimensions.",
+                        },
+                    });
                 }
                 const normalized = await sharp(content, { animated: true })
                     .rotate()
@@ -203,9 +193,11 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 await unlink(temporaryPath).catch(() => undefined);
                 const filename = `${contentHash}${ext}`;
                 const destination = path.join(uploadDir, filename);
-                await writeFile(destination, normalized, { flag: "wx" }).catch((error: NodeJS.ErrnoException) => {
-                    if (error.code !== "EEXIST") throw error;
-                });
+                await writeFile(destination, normalized, { flag: "wx" }).catch(
+                    (error: NodeJS.ErrnoException) => {
+                        if (error.code !== "EEXIST") throw error;
+                    },
+                );
                 try {
                     const thumbhash = await generateThumbHash(destination);
                     const upload = await prisma.upload.create({
@@ -297,11 +289,9 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 .code(403)
                 .send({ error: { code: "FORBIDDEN", message: "You do not own this upload." } });
         if (upload.postId)
-            return reply
-                .code(409)
-                .send({
-                    error: { code: "UPLOAD_IN_USE", message: "Upload is attached to a post." },
-                });
+            return reply.code(409).send({
+                error: { code: "UPLOAD_IN_USE", message: "Upload is attached to a post." },
+            });
         await prisma.upload.delete({ where: { id: uploadId } });
         const stillReferenced = await prisma.upload.count({ where: { filename: upload.filename } });
         if (!stillReferenced)

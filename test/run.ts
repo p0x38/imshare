@@ -30,11 +30,23 @@ const pnpmOptions = {
 
 try {
     if (process.platform === "win32") {
-        execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"], pnpmOptions);
-        execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", "pnpm exec vitest run --config vitest.integration.config.ts"], pnpmOptions);
+        execFileSync(
+            process.env.ComSpec ?? "cmd.exe",
+            ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"],
+            pnpmOptions,
+        );
+        execFileSync(
+            process.env.ComSpec ?? "cmd.exe",
+            ["/d", "/s", "/c", "pnpm exec vitest run --config vitest.integration.config.ts"],
+            pnpmOptions,
+        );
     } else {
         execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
-        execFileSync("pnpm", ["exec", "vitest", "run", "--config", "vitest.integration.config.ts"], pnpmOptions);
+        execFileSync(
+            "pnpm",
+            ["exec", "vitest", "run", "--config", "vitest.integration.config.ts"],
+            pnpmOptions,
+        );
     }
 } finally {
     cleanup();

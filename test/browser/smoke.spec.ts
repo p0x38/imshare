@@ -32,20 +32,32 @@ test.describe("public frontend", () => {
 
     test("main page entrance motion is wired", async ({ page }) => {
         await page.addInitScript(() => {
-            localStorage.setItem("imshare-theme-settings", JSON.stringify({ animations: true, ripple: false, accentColor: "default" }));
+            localStorage.setItem(
+                "imshare-theme-settings",
+                JSON.stringify({ animations: true, ripple: false, accentColor: "default" }),
+            );
         });
         await page.goto("/");
         const motion = page.locator("main:has(> h1)").first().locator("..");
         await expect(motion).toBeVisible();
-        await expect.poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange)).toContain("opacity");
+        await expect
+            .poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange))
+            .toContain("opacity");
     });
 
     test("button ripple is enabled by the theme preference", async ({ page }) => {
         await page.addInitScript(() => {
-            localStorage.setItem("imshare-theme-settings", JSON.stringify({ animations: false, ripple: true, accentColor: "default" }));
+            localStorage.setItem(
+                "imshare-theme-settings",
+                JSON.stringify({ animations: false, ripple: true, accentColor: "default" }),
+            );
         });
         await page.route("**/v1/posts?*", async (route) => {
-            await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }) });
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }),
+            });
         });
         await page.goto("/posts/");
         const button = page.getByRole("button", { name: "Search" });
@@ -62,7 +74,9 @@ test.describe("public frontend", () => {
         const stored = await page.evaluate(() => localStorage.getItem("imshare-color-mode"));
         expect(stored).toMatch(/^(light|dark)$/);
         await page.reload();
-        await expect.poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode"))).toBe(stored);
+        await expect
+            .poll(() => page.evaluate(() => localStorage.getItem("imshare-color-mode")))
+            .toBe(stored);
     });
 
     test("settings can switch to automatic device mode", async ({ page }) => {
@@ -83,7 +97,9 @@ test.describe("public frontend", () => {
         await expect(japanese).toBeChecked();
         await expect(page.locator("html")).toHaveAttribute("lang", "ja");
         await expect(page.getByRole("heading", { name: "設定", level: 1 })).toBeVisible();
-        await expect(page.evaluate(() => localStorage.getItem("imshare-language"))).resolves.toBe("ja");
+        await expect(page.evaluate(() => localStorage.getItem("imshare-language"))).resolves.toBe(
+            "ja",
+        );
         await page.reload();
         await expect(page.locator("html")).toHaveAttribute("lang", "ja");
         await expect(page.getByRole("heading", { name: "設定", level: 1 })).toBeVisible();
@@ -92,7 +108,10 @@ test.describe("public frontend", () => {
     test("mobile layout does not create horizontal overflow", async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 844 });
         await page.goto("/");
-        const dimensions = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+        const dimensions = await page.evaluate(() => ({
+            viewport: document.documentElement.clientWidth,
+            content: document.documentElement.scrollWidth,
+        }));
         expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport + 1);
     });
 
@@ -118,7 +137,29 @@ test.describe("public frontend", () => {
     });
 
     test("public pages return real HTML", async ({ page }) => {
-        const paths = ["/", "/posts/", "/posts/new/", "/posts/test-post/", "/account/", "/account/login/", "/account/register/", "/account/notifications/", "/account/profile/", "/account/sessions/", "/notifications/", "/users/", "/tags/", "/categories/", "/search/", "/about/", "/faq/", "/github/", "/privacy/", "/terms/", "/admin/"];
+        const paths = [
+            "/",
+            "/posts/",
+            "/posts/new/",
+            "/posts/test-post/",
+            "/account/",
+            "/account/login/",
+            "/account/register/",
+            "/account/notifications/",
+            "/account/profile/",
+            "/account/sessions/",
+            "/notifications/",
+            "/users/",
+            "/tags/",
+            "/categories/",
+            "/search/",
+            "/about/",
+            "/faq/",
+            "/github/",
+            "/privacy/",
+            "/terms/",
+            "/admin/",
+        ];
         for (const path of paths) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
@@ -127,7 +168,14 @@ test.describe("public frontend", () => {
     });
 
     test("public taxonomy and profile detail pages render", async ({ page }) => {
-        for (const path of ["/users/test-user/", "/users/test-user/posts/", "/tags/test-tag/", "/tags/test-tag/posts/", "/categories/test-category/", "/categories/test-category/posts/"]) {
+        for (const path of [
+            "/users/test-user/",
+            "/users/test-user/posts/",
+            "/tags/test-tag/",
+            "/tags/test-tag/posts/",
+            "/categories/test-category/",
+            "/categories/test-category/posts/",
+        ]) {
             const response = await page.goto(path);
             expect(response?.status(), path).toBe(200);
             await expect(page.locator("body"), path).not.toBeEmpty();
@@ -145,22 +193,43 @@ test.describe("public frontend", () => {
 
     test("FAQ keeps its grouped heading structure", async ({ page }) => {
         await page.goto("/faq/");
-        await expect(page.getByRole("heading", { name: "Frequently Asked Questions", level: 1 })).toBeVisible();
+        await expect(
+            page.getByRole("heading", { name: "Frequently Asked Questions", level: 1 }),
+        ).toBeVisible();
         await expect(page.getByRole("heading", { name: "About imshare", level: 2 })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Privacy and moderation", level: 2 })).toBeVisible();
+        await expect(
+            page.getByRole("heading", { name: "Privacy and moderation", level: 2 }),
+        ).toBeVisible();
         await expect(page.getByText("What is imshare?", { exact: true })).toBeVisible();
     });
 });
 
 test.describe("dashboard frontend", () => {
-    const managementPaths = ["/dashboard/", "/dashboard/posts/", "/dashboard/posts/test-post/", "/dashboard/posts/test-post/edit/", "/dashboard/tags/", "/dashboard/categories/", "/dashboard/settings/"];
+    const managementPaths = [
+        "/dashboard/",
+        "/dashboard/posts/",
+        "/dashboard/posts/test-post/",
+        "/dashboard/posts/test-post/edit/",
+        "/dashboard/tags/",
+        "/dashboard/categories/",
+        "/dashboard/settings/",
+    ];
 
     test("dashboard management routes serve React shells", async ({ request }) => {
         const expectedShells: Record<string, { root: string; script: string }> = {
             "/dashboard/": { root: "dashboard-page", script: "/client/dashboard.js" },
-            "/dashboard/posts/": { root: "dashboard-posts-page", script: "/client/dashboardPosts.js" },
-            "/dashboard/posts/test-post/": { root: "dashboard-post-page", script: "/client/dashboardPost.js" },
-            "/dashboard/posts/test-post/edit/": { root: "post-editor-page", script: "/client/postEditor.js" },
+            "/dashboard/posts/": {
+                root: "dashboard-posts-page",
+                script: "/client/dashboardPosts.js",
+            },
+            "/dashboard/posts/test-post/": {
+                root: "dashboard-post-page",
+                script: "/client/dashboardPost.js",
+            },
+            "/dashboard/posts/test-post/edit/": {
+                root: "post-editor-page",
+                script: "/client/postEditor.js",
+            },
             "/dashboard/tags/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
             "/dashboard/categories/": { root: "taxonomy-page", script: "/client/taxonomy.js" },
             "/dashboard/settings/": { root: "settings-page", script: "/client/settings.js" },

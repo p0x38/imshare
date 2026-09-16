@@ -84,8 +84,14 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
         const user = await requireUser(request, reply);
         if (!user) return;
         const { postId } = request.params as { postId: string };
-        const post = await prisma.post.findFirst({ where: { id: postId, ...publicPostWhere }, select: { id: true } });
-        if (!post) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+        const post = await prisma.post.findFirst({
+            where: { id: postId, ...publicPostWhere },
+            select: { id: true },
+        });
+        if (!post)
+            return reply
+                .code(404)
+                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
         await prisma.postView.create({ data: { postId, userId: user.id } });
         return { data: { recorded: true } };
     });
@@ -115,7 +121,10 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             where: { id: postId, ...publicPostWhere },
             select: { id: true, categoryId: true, tags: { select: { tagId: true } } },
         });
-        if (!source) return reply.code(404).send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+        if (!source)
+            return reply
+                .code(404)
+                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
         const tagIds = source.tags.map((tag) => tag.tagId);
         const where = {
             ...publicPostWhere,
@@ -134,10 +143,14 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
         const ranked = candidates
             .map((post) => {
                 const sharedTags = post.tags.filter((tag) => tagIds.includes(tag.tagId)).length;
-                const categoryMatch = source.categoryId && post.categoryId === source.categoryId ? 2 : 0;
+                const categoryMatch =
+                    source.categoryId && post.categoryId === source.categoryId ? 2 : 0;
                 return { post, score: sharedTags * 3 + categoryMatch };
             })
-            .sort((a, b) => b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime());
+            .sort(
+                (a, b) =>
+                    b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime(),
+            );
         const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
         return collection(items, p.page, p.limit, ranked.length);
     });

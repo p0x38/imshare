@@ -31,12 +31,20 @@ function SettingsPage() {
     return (
         <Page>
             <Stack spacing={2}>
-                <Typography variant="h4" component="h1">{t("settings")}</Typography>
-                {saved ? <Alert severity="success" onClose={() => setSaved(false)}>{t("settingsSaved")}</Alert> : null}
+                <Typography variant="h4" component="h1">
+                    {t("settings")}
+                </Typography>
+                {saved ? (
+                    <Alert severity="success" onClose={() => setSaved(false)}>
+                        {t("settingsSaved")}
+                    </Alert>
+                ) : null}
                 <Card variant="outlined">
                     <CardContent>
                         <Stack spacing={2}>
-                            <Typography variant="h6" component="h2">{t("language")}</Typography>
+                            <Typography variant="h6" component="h2">
+                                {t("language")}
+                            </Typography>
                             <FormControl>
                                 <RadioGroup
                                     aria-label={t("language")}
@@ -46,22 +54,46 @@ function SettingsPage() {
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="en" control={<Radio />} label={t("english")} />
-                                    <FormControlLabel value="ja" control={<Radio />} label={t("japanese")} />
+                                    <FormControlLabel
+                                        value="en"
+                                        control={<Radio />}
+                                        label={t("english")}
+                                    />
+                                    <FormControlLabel
+                                        value="ja"
+                                        control={<Radio />}
+                                        label={t("japanese")}
+                                    />
                                 </RadioGroup>
                             </FormControl>
-                            <Typography variant="h6" component="h2">{t("appearance")}</Typography>
+                            <Typography variant="h6" component="h2">
+                                {t("appearance")}
+                            </Typography>
                             <FormControl>
                                 <RadioGroup
                                     value={preference}
                                     onChange={(event) => {
-                                        setPreference(event.target.value as "light" | "dark" | "auto");
+                                        setPreference(
+                                            event.target.value as "light" | "dark" | "auto",
+                                        );
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="light" control={<Radio />} label={t("light")} />
-                                    <FormControlLabel value="dark" control={<Radio />} label={t("dark")} />
-                                    <FormControlLabel value="auto" control={<Radio />} label={t("automaticDevice")} />
+                                    <FormControlLabel
+                                        value="light"
+                                        control={<Radio />}
+                                        label={t("light")}
+                                    />
+                                    <FormControlLabel
+                                        value="dark"
+                                        control={<Radio />}
+                                        label={t("dark")}
+                                    />
+                                    <FormControlLabel
+                                        value="auto"
+                                        control={<Radio />}
+                                        label={t("automaticDevice")}
+                                    />
                                 </RadioGroup>
                             </FormControl>
                             <FormControlLabel
@@ -89,7 +121,9 @@ function SettingsPage() {
                                 label={t("buttonRipple")}
                             />
                             <FormControl>
-                                <Typography variant="subtitle2" gutterBottom>{t("accentColor")}</Typography>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    {t("accentColor")}
+                                </Typography>
                                 <RadioGroup
                                     row
                                     value={settings.accentColor}
@@ -98,19 +132,43 @@ function SettingsPage() {
                                         saveNotice();
                                     }}
                                 >
-                                    <FormControlLabel value="default" control={<Radio />} label={t("default")} />
-                                    <FormControlLabel value="blue" control={<Radio />} label={t("blue")} />
-                                    <FormControlLabel value="purple" control={<Radio />} label={t("purple")} />
-                                    <FormControlLabel value="green" control={<Radio />} label={t("green")} />
-                                    <FormControlLabel value="orange" control={<Radio />} label={t("orange")} />
+                                    <FormControlLabel
+                                        value="default"
+                                        control={<Radio />}
+                                        label={t("default")}
+                                    />
+                                    <FormControlLabel
+                                        value="blue"
+                                        control={<Radio />}
+                                        label={t("blue")}
+                                    />
+                                    <FormControlLabel
+                                        value="purple"
+                                        control={<Radio />}
+                                        label={t("purple")}
+                                    />
+                                    <FormControlLabel
+                                        value="green"
+                                        control={<Radio />}
+                                        label={t("green")}
+                                    />
+                                    <FormControlLabel
+                                        value="orange"
+                                        control={<Radio />}
+                                        label={t("orange")}
+                                    />
                                 </RadioGroup>
                             </FormControl>
                         </Stack>
                     </CardContent>
                 </Card>
                 <Stack direction="row" spacing={1}>
-                    <Button variant="outlined" component="a" href="/dashboard/">{t("dashboard")}</Button>
-                    <Button component="a" href="/account/">{t("accountProfile")}</Button>
+                    <Button variant="outlined" component="a" href="/dashboard/">
+                        {t("dashboard")}
+                    </Button>
+                    <Button component="a" href="/account/">
+                        {t("accountProfile")}
+                    </Button>
                 </Stack>
             </Stack>
         </Page>
@@ -118,4 +176,9 @@ function SettingsPage() {
 }
 
 const root = document.querySelector("#settings-page");
-if (root) createRoot(root).render(<App><SettingsPage /></App>);
+if (root)
+    createRoot(root).render(
+        <App>
+            <SettingsPage />
+        </App>,
+    );

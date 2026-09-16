@@ -40,11 +40,9 @@ export const notificationRoutes: FastifyPluginAsync = async (fastify) => {
             where: { id: notificationId, recipientId: user.id },
         });
         if (!notification)
-            return reply
-                .code(404)
-                .send({
-                    error: { code: "NOTIFICATION_NOT_FOUND", message: "Notification not found." },
-                });
+            return reply.code(404).send({
+                error: { code: "NOTIFICATION_NOT_FOUND", message: "Notification not found." },
+            });
         return ok(
             await prisma.notification.update({
                 where: { id: notificationId },

@@ -9,7 +9,11 @@ export function apiUrl(url: string): string {
 }
 
 function normalizeResponseUrls(value: unknown, key?: string): unknown {
-    if (typeof value === "string" && (key === "url" || key === "avatarUrl") && value.startsWith("/v1/")) {
+    if (
+        typeof value === "string" &&
+        (key === "url" || key === "avatarUrl") &&
+        value.startsWith("/v1/")
+    ) {
         return `/api${value}`;
     }
     if (Array.isArray(value)) return value.map((item) => normalizeResponseUrls(item));
@@ -44,7 +48,10 @@ export async function api<T = any>(url: string, options?: ApiOptions): Promise<T
     if (!response.ok) {
         const message =
             typeof payload === "object" && payload !== null && "error" in payload
-                ? String((payload as { error?: { message?: string } }).error?.message ?? "Request failed.")
+                ? String(
+                      (payload as { error?: { message?: string } }).error?.message ??
+                          "Request failed.",
+                  )
                 : typeof payload === "string" && payload
                   ? payload
                   : "Request failed.";

@@ -41,5 +41,6 @@
     "js/ts.implicitProjectConfig.checkJs": false,
     "js/ts.tsserver.automaticTypeAcquisition.enabled": false,
     "npm.packageManager": "pnpm",
-    "vitest.rootConfig": "./vitest.config.ts"
+    "vitest.rootConfig": "./vitest.config.ts",
+    "i18n-ally.localesPaths": ["src/client/locales"]
 }

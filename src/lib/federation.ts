@@ -65,7 +65,12 @@ export async function getOrCreateActorKey(actorId: string, actorUrl: string): Pr
 
     const store = await readJson<KeyStore>(KEYS_FILE, {});
     const existing = store[actorId];
-    if (existing && existing.actorUrl === actorUrl && existing.privateKeyPem && existing.publicKeyPem) {
+    if (
+        existing &&
+        existing.actorUrl === actorUrl &&
+        existing.privateKeyPem &&
+        existing.publicKeyPem
+    ) {
         cache.set(actorId, existing);
         return existing;
     }
@@ -92,13 +97,18 @@ export function sha256Base64(value: string): string {
 
 function parseSignatureHeader(value: string): SignatureFields | null {
     const fields = new Map<string, string>();
-    for (const match of value.matchAll(/([a-zA-Z][a-zA-Z0-9_-]*)="([^"]*)"/g)) fields.set(match[1]!.toLowerCase(), match[2]!);
+    for (const match of value.matchAll(/([a-zA-Z][a-zA-Z0-9_-]*)="([^"]*)"/g))
+        fields.set(match[1]!.toLowerCase(), match[2]!);
     const keyId = fields.get("keyid");
     const algorithm = fields.get("algorithm");
     const signature = fields.get("signature");
     const headers = fields.get("headers");
     if (!keyId || !algorithm || !signature || !headers) return null;
-    const parsedHeaders = headers.trim().split(/\s+/).filter(Boolean).map((header) => header.toLowerCase());
+    const parsedHeaders = headers
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((header) => header.toLowerCase());
     if (!parsedHeaders.includes("(request-target)") || !parsedHeaders.includes("host")) return null;
     return { keyId, algorithm, headers: parsedHeaders, signature };
 }
@@ -112,7 +122,9 @@ function signingString(request: Request, fields: SignatureFields): string | null
     const values: string[] = [];
     for (const name of fields.headers) {
         if (name === "(request-target)") {
-            values.push(`(request-target): ${request.method.toLowerCase()} ${url.pathname}${url.search}`);
+            values.push(
+                `(request-target): ${request.method.toLowerCase()} ${url.pathname}${url.search}`,
+            );
             continue;
         }
         const value = headerValue(request.headers, name);
@@ -140,11 +152,17 @@ export function signFederationRequest(
         headers.set("digest", `SHA-256=${sha256Base64(body)}`);
     }
 
-    const signedHeaders = body === undefined
-        ? ["(request-target)", "host", "date"]
-        : ["(request-target)", "host", "date", "digest", "content-type"];
+    const signedHeaders =
+        body === undefined
+            ? ["(request-target)", "host", "date"]
+            : ["(request-target)", "host", "date", "digest", "content-type"];
     const request = new Request(url, { method, headers, body });
-    const fields: SignatureFields = { keyId, algorithm: "hs2019", headers: signedHeaders, signature: "" };
+    const fields: SignatureFields = {
+        keyId,
+        algorithm: "hs2019",
+        headers: signedHeaders,
+        signature: "",
+    };
     const canonical = signingString(request, fields);
     if (!canonical) throw new Error("Unable to construct federation signature.");
 
@@ -175,8 +193,10 @@ async function fetchRemoteActor(actorUrl: string): Promise<RemoteActor> {
     } catch {
         throw new Error("Remote actor URL is invalid.");
     }
-    if (parsed.protocol !== "https:" && process.env.NODE_ENV === "production") throw new Error("Remote federation requires HTTPS.");
-    if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname)) throw new Error("Remote actor must not resolve to a local host.");
+    if (parsed.protocol !== "https:" && process.env.NODE_ENV === "production")
+        throw new Error("Remote federation requires HTTPS.");
+    if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname))
+        throw new Error("Remote actor must not resolve to a local host.");
 
     const response = await fetch(parsed, {
         headers: { accept: "application/activity+json, application/ld+json" },
@@ -185,22 +205,33 @@ async function fetchRemoteActor(actorUrl: string): Promise<RemoteActor> {
     });
     if (!response.ok) throw new Error(`Remote actor returned HTTP ${response.status}.`);
     const actor = (await response.json()) as RemoteActor;
-    if (typeof actor.id !== "string" || actor.id !== actorUrl || typeof actor.publicKey?.publicKeyPem !== "string") throw new Error("Remote actor has no usable public key.");
+    if (
+        typeof actor.id !== "string" ||
+        actor.id !== actorUrl ||
+        typeof actor.publicKey?.publicKeyPem !== "string"
+    )
+        throw new Error("Remote actor has no usable public key.");
     return actor;
 }
 
-export async function verifyFederationRequest(request: Request, body: string): Promise<{ actor: RemoteActor; keyId: string }> {
+export async function verifyFederationRequest(
+    request: Request,
+    body: string,
+): Promise<{ actor: RemoteActor; keyId: string }> {
     const signatureHeader = request.headers.get("signature");
     if (!signatureHeader) throw new Error("Federation signature is required.");
     const fields = parseSignatureHeader(signatureHeader);
-    if (!fields || !["hs2019", "rsa-sha256"].includes(fields.algorithm.toLowerCase())) throw new Error("Invalid federation signature.");
+    if (!fields || !["hs2019", "rsa-sha256"].includes(fields.algorithm.toLowerCase()))
+        throw new Error("Invalid federation signature.");
 
     const date = request.headers.get("date");
     const timestamp = date ? Date.parse(date) : Number.NaN;
-    if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > MAX_CLOCK_SKEW_MS) throw new Error("Federation signature timestamp is outside the allowed window.");
+    if (!Number.isFinite(timestamp) || Math.abs(Date.now() - timestamp) > MAX_CLOCK_SKEW_MS)
+        throw new Error("Federation signature timestamp is outside the allowed window.");
 
     const expectedDigest = `SHA-256=${sha256Base64(body)}`;
-    if (request.headers.get("digest") !== expectedDigest) throw new Error("Federation content digest does not match the request body.");
+    if (request.headers.get("digest") !== expectedDigest)
+        throw new Error("Federation content digest does not match the request body.");
 
     const actorUrl = actorUrlFromKeyId(fields.keyId);
     if (!actorUrl) throw new Error("Federation key ID is invalid.");
@@ -208,13 +239,15 @@ export async function verifyFederationRequest(request: Request, body: string): P
     const keyId = actor.publicKey?.id;
     const owner = actor.publicKey?.owner;
     const publicKeyPem = actor.publicKey?.publicKeyPem;
-    if (keyId !== fields.keyId || owner !== actorUrl || !publicKeyPem) throw new Error("Federation actor key metadata does not match the signature.");
+    if (keyId !== fields.keyId || owner !== actorUrl || !publicKeyPem)
+        throw new Error("Federation actor key metadata does not match the signature.");
 
     const canonical = signingString(request, fields);
     if (!canonical) throw new Error("Federation signature references an unavailable header.");
     const verifier = createVerify("sha256");
     verifier.update(canonical, "utf8");
-    if (!verifier.verify(publicKeyPem, fields.signature, "base64")) throw new Error("Federation signature verification failed.");
+    if (!verifier.verify(publicKeyPem, fields.signature, "base64"))
+        throw new Error("Federation signature verification failed.");
     return { actor, keyId: fields.keyId };
 }
 
@@ -238,9 +271,13 @@ export async function removeFollower(userId: string, actorId: string): Promise<v
 
 export async function storeIncomingActivity(activity: unknown): Promise<string> {
     const serialized = JSON.stringify(activity);
-    const id = typeof activity === "object" && activity !== null && "id" in activity && typeof activity.id === "string"
-        ? activity.id
-        : `${Date.now()}-${Math.random()}`;
+    const id =
+        typeof activity === "object" &&
+        activity !== null &&
+        "id" in activity &&
+        typeof activity.id === "string"
+            ? activity.id
+            : `${Date.now()}-${Math.random()}`;
     const digest = createHash("sha256").update(id, "utf8").digest("hex");
     const file = path.join(INBOX_DIR, `${digest}.json`);
     await writeJson(file, JSON.parse(serialized));
@@ -255,7 +292,13 @@ export async function deliverActivity(options: {
 }): Promise<{ ok: boolean; status: number }> {
     const body = JSON.stringify(options.activity);
     const keyId = `${options.actorUrl}#main-key`;
-    const headers = signFederationRequest("POST", options.inbox, body, keyId, options.privateKeyPem);
+    const headers = signFederationRequest(
+        "POST",
+        options.inbox,
+        body,
+        keyId,
+        options.privateKeyPem,
+    );
     const response = await fetch(options.inbox, {
         method: "POST",
         headers,

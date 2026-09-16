@@ -1,4 +1,13 @@
-import { Card, CardContent, Divider, List, ListItem, ListItemText, Stack, Typography } from "@mui/material";
+import {
+    Card,
+    CardContent,
+    Divider,
+    List,
+    ListItem,
+    ListItemText,
+    Stack,
+    Typography,
+} from "@mui/material";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
@@ -31,9 +40,16 @@ function FaqSection({ section, count }: { section: SectionKey; count: number }) 
                             <Stack key={index}>
                                 <ListItem disableGutters alignItems="flex-start">
                                     <ListItemText
-                                        primary={t(`faq.sections.${section}.items.${index}.question`)}
-                                        secondary={t(`faq.sections.${section}.items.${index}.answer`)}
-                                        primaryTypographyProps={{ fontWeight: 600, gutterBottom: true }}
+                                        primary={t(
+                                            `faq.sections.${section}.items.${index}.question`,
+                                        )}
+                                        secondary={t(
+                                            `faq.sections.${section}.items.${index}.answer`,
+                                        )}
+                                        primaryTypographyProps={{
+                                            fontWeight: 600,
+                                            gutterBottom: true,
+                                        }}
                                     />
                                 </ListItem>
                                 {index < count - 1 ? <Divider component="li" /> : null}
@@ -56,9 +72,7 @@ function FaqPage() {
                     <Typography variant="h4" component="h1">
                         {t("faq.title")}
                     </Typography>
-                    <Typography color="text.secondary">
-                        {t("faq.description")}
-                    </Typography>
+                    <Typography color="text.secondary">{t("faq.description")}</Typography>
                 </Stack>
                 {sections.map(([section, count]) => (
                     <FaqSection key={section} section={section} count={count} />
@@ -69,4 +83,9 @@ function FaqPage() {
 }
 
 const root = document.querySelector("#faq-page");
-if (root) createRoot(root).render(<App><FaqPage /></App>);
+if (root)
+    createRoot(root).render(
+        <App>
+            <FaqPage />
+        </App>,
+    );

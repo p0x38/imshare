@@ -14,9 +14,19 @@ export interface ServerConfig {
         registration?: { enabled?: boolean; public?: boolean };
     };
     features?: {
-        imagePosts?: boolean; textPosts?: boolean; comments?: boolean; reactions?: boolean;
-        reports?: boolean; recommendations?: boolean; notifications?: boolean; search?: boolean;
-        publicProfiles?: boolean; publicPosts?: boolean; apiDocs?: boolean; sitemap?: boolean; robots?: boolean;
+        imagePosts?: boolean;
+        textPosts?: boolean;
+        comments?: boolean;
+        reactions?: boolean;
+        reports?: boolean;
+        recommendations?: boolean;
+        notifications?: boolean;
+        search?: boolean;
+        publicProfiles?: boolean;
+        publicPosts?: boolean;
+        apiDocs?: boolean;
+        sitemap?: boolean;
+        robots?: boolean;
     };
     limits?: { textPostCharacters?: number };
     analytics?: { googleAnalyticsMeasurementId?: string; googleTagManagerContainerId?: string };
@@ -38,9 +48,19 @@ const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
     auth: { emailAndPasswordEnabled: true, registration: { enabled: true, public: false } },
     features: {
-        imagePosts: true, textPosts: true, comments: true, reactions: true, reports: true,
-        recommendations: true, notifications: true, search: true, publicProfiles: true,
-        publicPosts: true, apiDocs: true, sitemap: true, robots: true,
+        imagePosts: true,
+        textPosts: true,
+        comments: true,
+        reactions: true,
+        reports: true,
+        recommendations: true,
+        notifications: true,
+        search: true,
+        publicProfiles: true,
+        publicPosts: true,
+        apiDocs: true,
+        sitemap: true,
+        robots: true,
     },
     limits: { textPostCharacters: 500 },
 } as const;
@@ -53,7 +73,9 @@ export function loadConfigSync(): ServerConfig {
     return parseConfig(readFileSync(configPath, "utf8"));
 }
 
-export async function updateConfig(update: (config: ServerConfig) => ServerConfig): Promise<ServerConfig> {
+export async function updateConfig(
+    update: (config: ServerConfig) => ServerConfig,
+): Promise<ServerConfig> {
     const next = normalizeConfig(update(await loadConfig()));
     if (!isServerConfig(next)) throw new Error(`Invalid server configuration: ${configPath}`);
     await writeFile(configPath, stringifyConfigDsl(next), "utf8");
@@ -61,17 +83,24 @@ export async function updateConfig(update: (config: ServerConfig) => ServerConfi
 }
 
 export const getConfig = loadConfig;
-export async function saveConfig(config: ServerConfig): Promise<ServerConfig> { return updateConfig(() => config); }
+export async function saveConfig(config: ServerConfig): Promise<ServerConfig> {
+    return updateConfig(() => config);
+}
 
 export function getPublicConfig(config: ServerConfig): PublicConfig {
     const normalized = normalizeConfig(config);
     const registration = normalized.auth.registration!;
     return {
-        site: { name: normalized.site.name, version: normalized.site.version, description: normalized.site.description! },
+        site: {
+            name: normalized.site.name,
+            version: normalized.site.version,
+            description: normalized.site.description!,
+        },
         auth: {
             emailAndPasswordEnabled: normalized.auth.emailAndPasswordEnabled!,
             registration: {
-                enabled: registration.enabled!, public: registration.public!,
+                enabled: registration.enabled!,
+                public: registration.public!,
                 tokenRequired: registration.enabled! && !registration.public!,
             },
         },
@@ -83,7 +112,10 @@ export function getPublicConfig(config: ServerConfig): PublicConfig {
 export function resolveBaseUrl(config: ServerConfig): string {
     const baseUrl = config.auth.baseUrl?.trim();
     if (!baseUrl) {
-        const host = config.server.host.includes(":") && !config.server.host.startsWith("[") ? `[${config.server.host}]` : config.server.host;
+        const host =
+            config.server.host.includes(":") && !config.server.host.startsWith("[")
+                ? `[${config.server.host}]`
+                : config.server.host;
         return `http://${host}:${config.server.port}`;
     }
     const url = new URL(baseUrl);
@@ -109,7 +141,12 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
-        auth: { ...config.auth, emailAndPasswordEnabled: config.auth.emailAndPasswordEnabled ?? DEFAULTS.auth.emailAndPasswordEnabled, registration: { ...DEFAULTS.auth.registration, ...config.auth.registration } },
+        auth: {
+            ...config.auth,
+            emailAndPasswordEnabled:
+                config.auth.emailAndPasswordEnabled ?? DEFAULTS.auth.emailAndPasswordEnabled,
+            registration: { ...DEFAULTS.auth.registration, ...config.auth.registration },
+        },
         features: { ...DEFAULTS.features, ...config.features },
         limits: { ...DEFAULTS.limits, ...config.limits },
     };
@@ -118,17 +155,64 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
 function isServerConfig(value: unknown): value is ServerConfig {
     if (!value || typeof value !== "object") return false;
     const config = value as Record<string, unknown>;
-    const server = config.server, storage = config.storage, site = config.site, auth = config.auth, features = config.features, limits = config.limits, analytics = config.analytics;
-    return isObject(server) && typeof server.host === "string" && typeof server.port === "number" && Number.isInteger(server.port) && server.port > 0 && server.port <= 65535 &&
-        isObject(storage) && typeof storage.uploadDirectory === "string" && storage.uploadDirectory.length > 0 && typeof storage.maxFileSize === "number" && Number.isInteger(storage.maxFileSize) && storage.maxFileSize > 0 &&
-        isObject(site) && typeof site.name === "string" && typeof site.version === "string" && (site.description === undefined || typeof site.description === "string") &&
-        isObject(auth) && (auth.baseUrl === undefined || (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0)) &&
-        (auth.trustedOrigins === undefined || (Array.isArray(auth.trustedOrigins) && auth.trustedOrigins.every((origin) => typeof origin === "string" && origin.length > 0))) &&
-        (auth.emailAndPasswordEnabled === undefined || typeof auth.emailAndPasswordEnabled === "boolean") &&
-        (auth.registration === undefined || (isObject(auth.registration) && (auth.registration.enabled === undefined || typeof auth.registration.enabled === "boolean") && (auth.registration.public === undefined || typeof auth.registration.public === "boolean"))) &&
-        (features === undefined || (isObject(features) && Object.values(features).every((flag) => typeof flag === "boolean"))) &&
-        (limits === undefined || (isObject(limits) && (limits.textPostCharacters === undefined || (typeof limits.textPostCharacters === "number" && Number.isInteger(limits.textPostCharacters) && limits.textPostCharacters > 0)))) &&
-        (analytics === undefined || (isObject(analytics) && (analytics.googleAnalyticsMeasurementId === undefined || typeof analytics.googleAnalyticsMeasurementId === "string") && (analytics.googleTagManagerContainerId === undefined || typeof analytics.googleTagManagerContainerId === "string")));
+    const server = config.server,
+        storage = config.storage,
+        site = config.site,
+        auth = config.auth,
+        features = config.features,
+        limits = config.limits,
+        analytics = config.analytics;
+    return (
+        isObject(server) &&
+        typeof server.host === "string" &&
+        typeof server.port === "number" &&
+        Number.isInteger(server.port) &&
+        server.port > 0 &&
+        server.port <= 65535 &&
+        isObject(storage) &&
+        typeof storage.uploadDirectory === "string" &&
+        storage.uploadDirectory.length > 0 &&
+        typeof storage.maxFileSize === "number" &&
+        Number.isInteger(storage.maxFileSize) &&
+        storage.maxFileSize > 0 &&
+        isObject(site) &&
+        typeof site.name === "string" &&
+        typeof site.version === "string" &&
+        (site.description === undefined || typeof site.description === "string") &&
+        isObject(auth) &&
+        (auth.baseUrl === undefined ||
+            (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0)) &&
+        (auth.trustedOrigins === undefined ||
+            (Array.isArray(auth.trustedOrigins) &&
+                auth.trustedOrigins.every(
+                    (origin) => typeof origin === "string" && origin.length > 0,
+                ))) &&
+        (auth.emailAndPasswordEnabled === undefined ||
+            typeof auth.emailAndPasswordEnabled === "boolean") &&
+        (auth.registration === undefined ||
+            (isObject(auth.registration) &&
+                (auth.registration.enabled === undefined ||
+                    typeof auth.registration.enabled === "boolean") &&
+                (auth.registration.public === undefined ||
+                    typeof auth.registration.public === "boolean"))) &&
+        (features === undefined ||
+            (isObject(features) &&
+                Object.values(features).every((flag) => typeof flag === "boolean"))) &&
+        (limits === undefined ||
+            (isObject(limits) &&
+                (limits.textPostCharacters === undefined ||
+                    (typeof limits.textPostCharacters === "number" &&
+                        Number.isInteger(limits.textPostCharacters) &&
+                        limits.textPostCharacters > 0)))) &&
+        (analytics === undefined ||
+            (isObject(analytics) &&
+                (analytics.googleAnalyticsMeasurementId === undefined ||
+                    typeof analytics.googleAnalyticsMeasurementId === "string") &&
+                (analytics.googleTagManagerContainerId === undefined ||
+                    typeof analytics.googleTagManagerContainerId === "string")))
+    );
 }
 
-function isObject(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
+function isObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}

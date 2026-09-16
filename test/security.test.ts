@@ -6,15 +6,21 @@ test("safe methods do not require an origin", () => {
 });
 
 test("matching origin is accepted", () => {
-    expect(isSameOriginRequest("POST", "https://example.com", "https://example.com", undefined)).toBe(true);
+    expect(
+        isSameOriginRequest("POST", "https://example.com", "https://example.com", undefined),
+    ).toBe(true);
 });
 
 test("foreign origin is rejected", () => {
-    expect(isSameOriginRequest("POST", "https://example.com", "https://attacker.example", undefined)).toBe(false);
+    expect(
+        isSameOriginRequest("POST", "https://example.com", "https://attacker.example", undefined),
+    ).toBe(false);
 });
 
 test("referer is used when Origin is absent", () => {
-    expect(isSameOriginRequest("PATCH", "https://example.com", undefined, "https://example.com/path")).toBe(true);
+    expect(
+        isSameOriginRequest("PATCH", "https://example.com", undefined, "https://example.com/path"),
+    ).toBe(true);
 });
 
 test("legacy clients without origin metadata remain compatible", () => {

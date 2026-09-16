@@ -18,7 +18,10 @@ export default defineConfig({
                 textEditor: path.resolve(process.cwd(), "src/client/entries/text-editor.tsx"),
                 account: path.resolve(process.cwd(), "src/client/entries/account.tsx"),
                 dashboard: path.resolve(process.cwd(), "src/client/entries/dashboard.tsx"),
-                dashboardPosts: path.resolve(process.cwd(), "src/client/entries/dashboard-posts.tsx"),
+                dashboardPosts: path.resolve(
+                    process.cwd(),
+                    "src/client/entries/dashboard-posts.tsx",
+                ),
                 dashboardPost: path.resolve(process.cwd(), "src/client/entries/dashboard-post.tsx"),
                 postEditor: path.resolve(process.cwd(), "src/client/entries/post-editor.tsx"),
                 settings: path.resolve(process.cwd(), "src/client/entries/settings.tsx"),

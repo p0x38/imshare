@@ -90,14 +90,12 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         const { postId } = request.params as { postId: string };
         const text = (request.body as { body?: string }).body?.trim() ?? "";
         if (!text || text.length > 5000)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_COMMENT",
-                        message: "Comment must contain 1–5000 characters.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_COMMENT",
+                    message: "Comment must contain 1–5000 characters.",
+                },
+            });
         const post = await prisma.post.findUnique({
             where: { id: postId },
             select: { id: true, userId: true, title: true },
@@ -143,14 +141,12 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                 .send({ error: { code: "FORBIDDEN", message: "You do not own this comment." } });
         const text = (request.body as { body?: string }).body?.trim() ?? "";
         if (!text || text.length > 5000)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_COMMENT",
-                        message: "Comment must contain 1–5000 characters.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_COMMENT",
+                    message: "Comment must contain 1–5000 characters.",
+                },
+            });
         return ok(
             await commentView(
                 (await prisma.comment.update({ where: { id: commentId }, data: { body: text } }))

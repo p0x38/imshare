@@ -62,10 +62,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
                 ? body.googleTagManagerContainerId.trim()
                 : "";
 
-        if (
-            googleAnalyticsMeasurementId &&
-            !/^G-[A-Z0-9]+$/i.test(googleAnalyticsMeasurementId)
-        ) {
+        if (googleAnalyticsMeasurementId && !/^G-[A-Z0-9]+$/i.test(googleAnalyticsMeasurementId)) {
             return reply.code(400).send({
                 error: {
                     code: "INVALID_GA_ID",
@@ -74,10 +71,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
             });
         }
 
-        if (
-            googleTagManagerContainerId &&
-            !/^GTM-[A-Z0-9]+$/i.test(googleTagManagerContainerId)
-        ) {
+        if (googleTagManagerContainerId && !/^GTM-[A-Z0-9]+$/i.test(googleTagManagerContainerId)) {
             return reply.code(400).send({
                 error: {
                     code: "INVALID_GTM_ID",
@@ -170,11 +164,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
         const { reportId } = request.params as { reportId: string };
         const body = request.body as { status?: unknown };
-        if (
-            body.status !== "open" &&
-            body.status !== "resolved" &&
-            body.status !== "dismissed"
-        ) {
+        if (body.status !== "open" && body.status !== "resolved" && body.status !== "dismissed") {
             return reply.code(400).send({
                 error: {
                     code: "INVALID_REPORT_STATUS",
@@ -391,11 +381,7 @@ export async function registerAdminRoutes(fastify: FastifyInstance): Promise<voi
 
         const { userId } = request.params as { userId: string };
         const body = request.body as { role?: unknown };
-        if (
-            body.role !== "user" &&
-            body.role !== "moderator" &&
-            body.role !== "admin"
-        ) {
+        if (body.role !== "user" && body.role !== "moderator" && body.role !== "admin") {
             return reply.code(400).send({
                 error: {
                     code: "INVALID_ROLE",

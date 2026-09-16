@@ -2,7 +2,10 @@ export function renderErrorPage(status: number, title: string, message: string):
     const escape = (value: string) =>
         value.replace(
             /[&<>"']/g,
-            (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ?? character,
+            (character) =>
+                ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+                    character
+                ] ?? character,
         );
 
     return `<!doctype html>

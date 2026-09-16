@@ -67,14 +67,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             select: { thumbhash: true },
         });
         if (!upload?.thumbhash)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "THUMBHASH_NOT_FOUND",
-                        message: "Image placeholder is not available.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "THUMBHASH_NOT_FOUND",
+                    message: "Image placeholder is not available.",
+                },
+            });
         try {
             const cachePath = path.join(cacheDir, `${uploadId}-thumbhash.png`);
             try {
@@ -94,14 +92,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             if (request.headers["if-none-match"] === etag) return reply.code(304).send();
             return reply.type("image/png").send(output);
         } catch {
-            return reply
-                .code(500)
-                .send({
-                    error: {
-                        code: "THUMBHASH_FAILED",
-                        message: "The image placeholder could not be generated.",
-                    },
-                });
+            return reply.code(500).send({
+                error: {
+                    code: "THUMBHASH_FAILED",
+                    message: "The image placeholder could not be generated.",
+                },
+            });
         }
     });
     fastify.get("/v1/posts/image/:uploadId", async (request, reply) => {
@@ -145,14 +141,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
         }
         const transformed = width !== undefined || height !== undefined || format !== undefined;
         if (query.download === "true" && upload.post && !upload.post.allowDownload)
-            return reply
-                .code(403)
-                .send({
-                    error: {
-                        code: "DOWNLOAD_DISABLED",
-                        message: "The creator has disabled downloads for this image.",
-                    },
-                });
+            return reply.code(403).send({
+                error: {
+                    code: "DOWNLOAD_DISABLED",
+                    message: "The creator has disabled downloads for this image.",
+                },
+            });
         if (!transformed) {
             const output = await readFile(source);
             const etag = setCacheHeaders(reply, output);
@@ -204,14 +198,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.send(output);
         } catch (error) {
             request.log.error(error);
-            return reply
-                .code(415)
-                .send({
-                    error: {
-                        code: "IMAGE_PROCESSING_FAILED",
-                        message: "The image could not be processed.",
-                    },
-                });
+            return reply.code(415).send({
+                error: {
+                    code: "IMAGE_PROCESSING_FAILED",
+                    message: "The image could not be processed.",
+                },
+            });
         }
     });
 };

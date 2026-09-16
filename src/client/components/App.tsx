@@ -143,10 +143,7 @@ export function App({ children }: { children: React.ReactNode }) {
         [mode, preference],
     );
 
-    const languageContext = useMemo(
-        () => ({ language, setLanguage }),
-        [language],
-    );
+    const languageContext = useMemo(() => ({ language, setLanguage }), [language]);
 
     const updateSettings = (update: Partial<ThemeSettings>) => {
         setSettings((current) => {

@@ -21,7 +21,10 @@ export type OpenApiRouteSchema = FastifySchema & {
  * schema so @fastify/swagger can consume them without a separate registry.
  * Examples are retained in a private extension for the existing transformer.
  */
-export function openapi(metadata: OpenApiRouteMetadata, schema: FastifySchema = {}): OpenApiRouteSchema {
+export function openapi(
+    metadata: OpenApiRouteMetadata,
+    schema: FastifySchema = {},
+): OpenApiRouteSchema {
     return {
         ...schema,
         ...(metadata.tags

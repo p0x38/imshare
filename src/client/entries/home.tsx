@@ -11,8 +11,36 @@ import type { Post } from "../lib/types";
 
 function HomePage() {
     const { t } = useTranslation();
-    const [posts, setPosts] = useState<Post[]>([]); const [error, setError] = useState(""); const [loading, setLoading] = useState(true);
-    useEffect(() => { void api<{ data?: Post[] }>("/v1/posts?limit=24").then((response) => setPosts(response.data || [])).catch((cause) => setError(cause instanceof Error ? cause.message : t("postsPage.loadError"))).finally(() => setLoading(false)); }, [t]);
-    return <Page><Typography variant="h4" component="h1" gutterBottom>{t("home.recentPosts")}</Typography>{loading ? <SkeletonGrid count={12} /> : error ? <ErrorState message={error} /> : <PostGrid posts={posts} />}</Page>;
+    const [posts, setPosts] = useState<Post[]>([]);
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(true);
+    useEffect(() => {
+        void api<{ data?: Post[] }>("/v1/posts?limit=24")
+            .then((response) => setPosts(response.data || []))
+            .catch((cause) =>
+                setError(cause instanceof Error ? cause.message : t("postsPage.loadError")),
+            )
+            .finally(() => setLoading(false));
+    }, [t]);
+    return (
+        <Page>
+            <Typography variant="h4" component="h1" gutterBottom>
+                {t("home.recentPosts")}
+            </Typography>
+            {loading ? (
+                <SkeletonGrid count={12} />
+            ) : error ? (
+                <ErrorState message={error} />
+            ) : (
+                <PostGrid posts={posts} />
+            )}
+        </Page>
+    );
 }
-const root = document.querySelector("#home-page"); if (root) createRoot(root).render(<App><HomePage /></App>);
+const root = document.querySelector("#home-page");
+if (root)
+    createRoot(root).render(
+        <App>
+            <HomePage />
+        </App>,
+    );
