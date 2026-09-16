@@ -2,7 +2,7 @@ export interface ApiOptions extends RequestInit {
     body?: BodyInit | null;
 }
 
-function apiUrl(url: string): string {
+export function apiUrl(url: string): string {
     if (/^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(url)) return url;
     if (!url.startsWith("/v1/")) return url;
     return `/api${url}`;
@@ -14,18 +14,15 @@ function normalizeResponseUrls(value: unknown, key?: string): unknown {
     }
     if (Array.isArray(value)) return value.map((item) => normalizeResponseUrls(item));
     if (value && typeof value === "object") {
-        return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [entryKey, normalizeResponseUrls(entryValue, entryKey)]));
+        return Object.fromEntries(
+            Object.entries(value).map(([entryKey, entryValue]) => [
+                entryKey,
+                normalizeResponseUrls(entryValue, entryKey),
+            ]),
+        );
     }
     return value;
 }
-
-// The upload editor uses XMLHttpRequest directly so it can report upload
-// progress. Normalize its relative API URLs just like the fetch helper does.
-const originalOpen = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-    const resolvedUrl = typeof url === "string" ? apiUrl(url) : url;
-    return originalOpen.call(this, method, resolvedUrl, ...rest);
-};
 
 export async function api<T = any>(url: string, options?: ApiOptions): Promise<T> {
     const response = await fetch(apiUrl(url), {
