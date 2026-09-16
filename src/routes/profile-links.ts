@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { openapi, parameter, request } from "../lib/openapi-route.js";
+import type { OpenApiSchema } from "../lib/openapi-route.js";
 
 const linkId = parameter.path("linkId", { type: "string" }, { description: "Profile link ID." });
 const userId = parameter.path("userId", { type: "string" }, { description: "User ID." });
@@ -13,7 +14,7 @@ const linkBody = {
         url: { type: "string", format: "uri" },
         position: { type: "integer", minimum: 0, maximum: 999 },
     },
-};
+} satisfies OpenApiSchema;
 
 function normalizeUrl(value: string): string | undefined {
     try {
