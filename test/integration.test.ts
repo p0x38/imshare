@@ -30,13 +30,13 @@ test("API integration: authentication, users, posts, tags, categories, and searc
     };
 
     try {
-        const anonymous = await request({ method: "GET", url: "/v1/me" });
+        const anonymous = await request({ method: "GET", url: "/api/v1/me" });
         expect(anonymous.statusCode).toBe(401);
 
         const registrationToken = getRegistrationToken().token;
         const signup = await request({
             method: "POST",
-            url: "/v1/auth/sign-up/email",
+            url: "/api/v1/auth/sign-up/email",
             payload: {
                 name: "Integration User",
                 email,
@@ -49,21 +49,21 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         cookie = extractCookie(signup);
         expect(cookie).not.toBe("");
 
-        const me = await request({ method: "GET", url: "/v1/me", headers: { cookie } });
+        const me = await request({ method: "GET", url: "/api/v1/me", headers: { cookie } });
         expect(me.statusCode).toBe(200);
         expect(me.json().data.email).toBe(email);
         const userId = me.json().data.id as string;
 
         const session = await request({
             method: "GET",
-            url: "/v1/auth/get-session",
+            url: "/api/v1/auth/get-session",
             headers: { cookie },
         });
         expect(session.statusCode).toBe(200);
 
         const category = await request({
             method: "POST",
-            url: "/v1/categories",
+            url: "/api/v1/categories",
             headers: { cookie },
             payload: { name: "Integration Category", slug: "integration-category" },
         });
@@ -72,7 +72,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const tag = await request({
             method: "POST",
-            url: "/v1/tags",
+            url: "/api/v1/tags",
             headers: { cookie },
             payload: { name: "Integration Tag", slug: "integration-tag" },
         });
@@ -81,7 +81,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const post = await request({
             method: "POST",
-            url: "/v1/posts",
+            url: "/api/v1/posts",
             headers: { cookie },
             payload: {
                 title: "Integration Post",
@@ -92,21 +92,21 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         expect(post.statusCode).toBe(201);
         postId = post.json().data.id as string;
 
-        const postRead = await request({ method: "GET", url: `/v1/posts/${postId}` });
+        const postRead = await request({ method: "GET", url: `/api/v1/posts/${postId}` });
         expect(postRead.statusCode).toBe(200);
 
-        const posts = await request({ method: "GET", url: "/v1/posts" });
+        const posts = await request({ method: "GET", url: "/api/v1/posts" });
         expect(posts.statusCode).toBe(200);
 
-        const userPosts = await request({ method: "GET", url: `/v1/users/${userId}/posts` });
+        const userPosts = await request({ method: "GET", url: `/api/v1/users/${userId}/posts` });
         expect(userPosts.statusCode).toBe(200);
 
-        const tags = await request({ method: "GET", url: "/v1/tags" });
+        const tags = await request({ method: "GET", url: "/api/v1/tags" });
         expect(tags.statusCode).toBe(200);
 
         const attachTag = await request({
             method: "POST",
-            url: `/v1/posts/${postId}/tags`,
+            url: `/api/v1/posts/${postId}/tags`,
             headers: { cookie },
             payload: { tagId },
         });
@@ -114,19 +114,19 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const attachCategory = await request({
             method: "PUT",
-            url: `/v1/posts/${postId}/category`,
+            url: `/api/v1/posts/${postId}/category`,
             headers: { cookie },
             payload: { categoryId },
         });
         expect(attachCategory.statusCode).toBe(200);
 
-        const search = await request({ method: "GET", url: "/v1/search?q=Integration&type=all" });
+        const search = await request({ method: "GET", url: "/api/v1/search?q=Integration&type=all" });
         expect(search.statusCode).toBe(200);
         expect(search.json().data.posts).toHaveLength(1);
 
         const update = await request({
             method: "PATCH",
-            url: `/v1/posts/${postId}`,
+            url: `/api/v1/posts/${postId}`,
             headers: { cookie },
             payload: { title: "Updated Integration Post" },
         });
@@ -134,7 +134,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const updateUser = await request({
             method: "PATCH",
-            url: `/v1/users/${userId}`,
+            url: `/api/v1/users/${userId}`,
             headers: { cookie },
             payload: { name: "Updated Integration User" },
         });
@@ -142,7 +142,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const signupSecond = await request({
             method: "POST",
-            url: "/v1/auth/sign-up/email",
+            url: "/api/v1/auth/sign-up/email",
             payload: {
                 name: "Integration User Two",
                 email: secondEmail,
@@ -157,7 +157,7 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const forbiddenUpdate = await request({
             method: "PATCH",
-            url: `/v1/posts/${postId}`,
+            url: `/api/v1/posts/${postId}`,
             headers: { cookie: secondCookie },
             payload: { title: "Forbidden" },
         });
@@ -165,30 +165,30 @@ test("API integration: authentication, users, posts, tags, categories, and searc
 
         const forbiddenDelete = await request({
             method: "DELETE",
-            url: `/v1/posts/${postId}`,
+            url: `/api/v1/posts/${postId}`,
             headers: { cookie: secondCookie },
         });
         expect(forbiddenDelete.statusCode).toBe(403);
 
-        const tagPosts = await request({ method: "GET", url: `/v1/tags/${tagId}/posts` });
+        const tagPosts = await request({ method: "GET", url: `/api/v1/tags/${tagId}/posts` });
         expect(tagPosts.statusCode).toBe(200);
         expect(tagPosts.json().pagination.total).toBe(1);
 
         const categoryPosts = await request({
             method: "GET",
-            url: `/v1/categories/${categoryId}/posts`,
+            url: `/api/v1/categories/${categoryId}/posts`,
         });
         expect(categoryPosts.statusCode).toBe(200);
         expect(categoryPosts.json().pagination.total).toBe(1);
 
         const logout = await request({
             method: "POST",
-            url: "/v1/auth/sign-out",
+            url: "/api/v1/auth/sign-out",
             headers: { cookie },
         });
         expect(logout.statusCode).toBe(200);
 
-        const afterLogout = await request({ method: "GET", url: "/v1/me", headers: { cookie } });
+        const afterLogout = await request({ method: "GET", url: "/api/v1/me", headers: { cookie } });
         expect(afterLogout.statusCode).toBe(401);
     } finally {
         await app.close();
