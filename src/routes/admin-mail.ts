@@ -2,24 +2,24 @@ import type { FastifyInstance } from "fastify";
 
 import { requireRole, ok } from "../lib/api.js";
 import { env } from "../lib/env.js";
-import { sendTestEmail } from "../lib/mail.js";
-
-function configured() {
-    return Boolean(
-        env.smtp.host &&
-            env.smtp.port &&
-            env.smtp.user &&
-            env.smtp.password &&
-            env.smtp.from,
-    );
-}
+import { createMailService } from "../lib/mail.js";
 
 export async function registerAdminMailRoutes(fastify: FastifyInstance): Promise<void> {
     fastify.post("/v1/admin/mail/test", async (request, reply) => {
         const actor = await requireRole(request, reply, "admin");
         if (!actor) return;
 
-        if (!configured()) {
+        const mail = createMailService(env.smtp.host && env.smtp.port && env.smtp.user && env.smtp.password && env.smtp.from
+            ? {
+                  host: env.smtp.host,
+                  port: env.smtp.port,
+                  secure: env.smtp.secure,
+                  user: env.smtp.user,
+                  password: env.smtp.password,
+                  from: env.smtp.from,
+              }
+            : null);
+        if (!mail) {
             return reply.code(503).send({
                 error: {
                     code: "SMTP_NOT_CONFIGURED",
@@ -37,17 +37,7 @@ export async function registerAdminMailRoutes(fastify: FastifyInstance): Promise
         }
 
         try {
-            await sendTestEmail(
-                {
-                    host: env.smtp.host!,
-                    port: env.smtp.port!,
-                    secure: env.smtp.secure,
-                    user: env.smtp.user!,
-                    password: env.smtp.password!,
-                    from: env.smtp.from!,
-                },
-                recipient,
-            );
+            await mail.sendTest(recipient);
         } catch (error) {
             request.log.error({ err: error }, "SMTP test email failed");
             return reply.code(502).send({
