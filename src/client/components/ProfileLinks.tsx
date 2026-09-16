@@ -2,7 +2,6 @@ import {
     GitHub,
     Instagram,
     Language,
-    Link as LinkIcon,
     Twitter,
     YouTube,
 } from "@mui/icons-material";
@@ -36,7 +35,11 @@ function getSocialInfo(url: string): SocialInfo {
             return { name: "GitHub", username: parts[0], icon: GitHub };
         }
         if (host === "youtube.com" || host === "youtu.be") {
-            return { name: "YouTube", username: parts[0]?.startsWith("@") ? parts[0] : undefined, icon: YouTube };
+            return {
+                name: "YouTube",
+                username: parts[0]?.startsWith("@") ? parts[0] : undefined,
+                icon: YouTube,
+            };
         }
         if (host === "instagram.com") {
             return { name: "Instagram", username: parts[0], icon: Instagram };
@@ -51,7 +54,7 @@ function getSocialInfo(url: string): SocialInfo {
     return { name: "Website", icon: Language };
 }
 
-function getLinkLabel(label: string, url: string, social: SocialInfo): string {
+function getLinkLabel(label: string, social: SocialInfo): string {
     if (social.username) return `${social.name} (${social.username.replace(/^@/, "")})`;
     if (label.trim()) return label.trim();
     return social.name;
@@ -75,7 +78,7 @@ export function ProfileLinks({ websiteUrl, githubUrl, links = [] }: ProfileLinks
             {unique.map((entry) => {
                 const social = getSocialInfo(entry.url);
                 const Icon = social.icon;
-                const label = getLinkLabel(entry.label, entry.url, social);
+                const label = getLinkLabel(entry.label, social);
 
                 return (
                     <Stack
