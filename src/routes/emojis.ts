@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { openapi, parameter, request } from "../lib/openapi-route.js";
+import type { OpenApiSchema } from "../lib/openapi-route.js";
 
 const NAME_RE = /^[a-z0-9_+-]{1,32}$/;
 const UPLOAD_URL_RE = /^\/v1\/posts\/image\/([^/]+)$/;
@@ -13,7 +14,7 @@ const emojiBody = {
         name: { type: "string", pattern: "^[a-z0-9_+-]{1,32}$", minLength: 1, maxLength: 32 },
         url: { type: "string", format: "uri", description: "An imshare upload URL under /v1/posts/image/." },
     },
-};
+} satisfies OpenApiSchema;
 
 export const emojiRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/v1/emojis", {
