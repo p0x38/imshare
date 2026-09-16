@@ -5,6 +5,7 @@ import { AnimatedItem } from "./Motion";
 
 function imageUrl(url: string, width = 512) {
     const image = new URL(url, window.location.origin);
+    if (image.pathname.startsWith("/v1/")) image.pathname = `/api${image.pathname}`;
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
     return image.href;
