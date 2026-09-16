@@ -49,13 +49,16 @@ export type OpenApiMediaType = {
     schema?: OpenApiSchema;
     example?: unknown;
     examples?: Record<string, OpenApiExample>;
-    encoding?: Record<string, {
-        contentType?: string;
-        headers?: Record<string, OpenApiHeader>;
-        style?: string;
-        explode?: boolean;
-        allowReserved?: boolean;
-    }>;
+    encoding?: Record<
+        string,
+        {
+            contentType?: string;
+            headers?: Record<string, OpenApiHeader>;
+            style?: string;
+            explode?: boolean;
+            allowReserved?: boolean;
+        }
+    >;
 };
 
 export type OpenApiRequestBody = {
@@ -83,11 +86,14 @@ export type OpenApiLink = {
 export type OpenApiServer = {
     url: string;
     description?: string;
-    variables?: Record<string, {
-        enum?: string[];
-        default: string;
-        description?: string;
-    }>;
+    variables?: Record<
+        string,
+        {
+            enum?: string[];
+            default: string;
+            description?: string;
+        }
+    >;
 };
 
 export type OpenApiCallback = Record<string, Record<string, OpenApiSchema>>;
@@ -133,10 +139,10 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function mergeContentExample(
-    content: Record<string, unknown>,
+    content: Record<string, OpenApiMediaType>,
     example: unknown,
-): Record<string, unknown> {
-    const media = asRecord(content["application/json"]);
+): Record<string, OpenApiMediaType> {
+    const media = content["application/json"] ?? {};
     return {
         ...content,
         "application/json": {
@@ -201,20 +207,20 @@ export function compileOpenApiOperation(
     };
 
     if (metadata.requestExample !== undefined || metadata.requestExamples) {
-        const requestBody = asRecord(operation.requestBody);
-        const content = asRecord(requestBody.content);
-        const nextContent = { ...content };
+        const requestBody = asRecord(operation.requestBody) as OpenApiRequestBody;
+        const content = (requestBody.content ?? {}) as Record<string, OpenApiMediaType>;
+        const nextContent: Record<string, OpenApiMediaType> = { ...content };
 
         if (metadata.requestExample !== undefined) {
             nextContent["application/json"] = {
-                ...asRecord(nextContent["application/json"]),
+                ...nextContent["application/json"],
                 example: metadata.requestExample,
             };
         }
 
         if (metadata.requestExamples) {
             nextContent["application/json"] = {
-                ...asRecord(nextContent["application/json"]),
+                ...nextContent["application/json"],
                 examples: metadata.requestExamples,
             };
         }
@@ -226,11 +232,13 @@ export function compileOpenApiOperation(
     }
 
     if (metadata.responseExamples) {
-        const responses = asRecord(operation.responses);
+        const responses: Record<string, OpenApiResponse> = {
+            ...((operation.responses as Record<string, OpenApiResponse> | undefined) ?? {}),
+        };
 
         for (const [status, example] of Object.entries(metadata.responseExamples)) {
-            const response = asRecord(responses[status]);
-            const content = asRecord(response.content);
+            const response = responses[status] ?? { description: "Successful response." };
+            const content = response.content ?? {};
             responses[status] = {
                 ...response,
                 content: mergeContentExample(content, example),
@@ -353,7 +361,7 @@ export const security = {
     },
 
     optional(scheme: string, scopes: string[] = []): OpenApiSecurityRequirement[] {
-        return [ {}, { [scheme]: scopes } ];
+        return [{}, { [scheme]: scopes }];
     },
 
     public(): OpenApiSecurityRequirement[] {
@@ -379,7 +387,9 @@ export function openapiOperationId(method: OpenApiHttpMethod | string, url: stri
         .filter(Boolean);
 
     return [normalizedMethod, ...path]
-        .map((segment, index) => (index === 0 ? segment : segment[0]?.toUpperCase() + segment.slice(1)))
+        .map((segment, index) =>
+            index === 0 ? segment : `${segment[0]?.toUpperCase() ?? ""}${segment.slice(1)}`,
+        )
         .join("");
 }
 
