@@ -22,6 +22,7 @@ model User {
   accentColor String?
   role String @default("user")
   isPublic Boolean @default(true)
+  followApprovalRequired Boolean @default(false)
   showEmail Boolean @default(false)
   showPosts Boolean @default(true)
   showProfile Boolean @default(true)
