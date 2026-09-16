@@ -22,6 +22,7 @@ const sections = [
     ["analytics", 3],
     ["troubleshooting", 4],
     ["community", 5],
+    ["federation", 5],
 ] as const;
 
 type SectionKey = (typeof sections)[number][0];
