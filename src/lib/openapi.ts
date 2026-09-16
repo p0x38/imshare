@@ -108,46 +108,24 @@ const documentation: Record<string, OperationDocumentation> = {
     "POST /v1/emojis": { summary: "Create custom emoji", description: "Creates a custom emoji from an owned imshare image URL. The name must be 1–32 lowercase letters, numbers, underscore, plus, or hyphen characters.", requestExample: { name: "cool_emoji", imageUrl: "https://example.com/v1/posts/image/upload-id" } },
     "DELETE /v1/emojis/{emojiId}": { summary: "Delete custom emoji", description: "Deletes a custom emoji owned by the authenticated user. Returns 204 on success." },
     "GET /v1/recommendations": { summary: "Get recommendations", description: "Returns paginated public post recommendations. Authenticated sessions use reacted post tags and categories as preferences and exclude the authenticated user's own posts." },
-    "GET /v1/admin/overview": { summary: "Get moderation overview", description: "Returns moderator/admin summary counts." },
-    "GET /v1/admin/registration-token": { summary: "Get registration token", description: "Returns the current registration token. Admin access is required." },
-    "GET /v1/admin/users": { summary: "List users for moderation", description: "Returns a paginated user list for moderators and administrators. Supports page, limit, search, role, and banned filters. Limit is 1–100 and defaults to 50." },
-    "GET /v1/admin/reports": { summary: "List moderation reports", description: "Returns moderation reports for moderators and administrators. status may be open, resolved, or dismissed; the default is open. Supports page and limit." },
-    "PATCH /v1/admin/reports/{reportId}": { summary: "Update moderation report", description: "Updates the status of a moderation report. Moderators and administrators may resolve or dismiss reports." },
 };
 
 const tags: OpenApiTag[] = [
-    { name: "Health", description: "Service health, readiness, and version metadata." },
-    { name: "Authentication", description: "Authentication and session-related operations." },
-    { name: "Users", description: "Public profiles and authenticated user resources." },
-    { name: "Posts", description: "Post creation, discovery, media, tags, categories, and reactions." },
-    { name: "Comments", description: "Post comments and comment reactions." },
-    { name: "Reports", description: "User-submitted content reports." },
-    { name: "Tags", description: "Tag discovery and management." },
-    { name: "Categories", description: "Category discovery and management." },
-    { name: "Uploads", description: "Image upload and upload metadata management." },
-    { name: "Emojis", description: "Custom emoji resources." },
-    { name: "Search", description: "Cross-resource search." },
-    { name: "Recommendations", description: "Personalized public post recommendations." },
-    { name: "Administration", description: "Moderator and administrator operations." },
-    { name: "Federation", description: "ActivityPub/federation discovery endpoints." },
-    { name: "General", description: "Miscellaneous application endpoints." },
+    { name: "System", description: "Health, readiness, version, and public system information." },
+    { name: "Authentication", description: "Authentication, registration, and account session operations." },
+    { name: "Users", description: "Public user discovery and user profile management." },
+    { name: "Posts", description: "Post creation, retrieval, categorization, tagging, reactions, and comments." },
+    { name: "Tags", description: "Post tag management and discovery." },
+    { name: "Categories", description: "Post category management and discovery." },
+    { name: "Uploads", description: "Image upload lifecycle and image delivery." },
+    { name: "Emojis", description: "Custom emoji management." },
+    { name: "Notifications", description: "Authenticated notification management." },
+    { name: "Social", description: "Follow, reaction, report, and recommendation operations." },
+    { name: "Federation", description: "Federation and ActivityPub-compatible endpoints." },
 ];
 
 function createRegistry(): OpenApiRegistry {
     return new Map(Object.entries(documentation));
-}
-
-function createComponentResponses(): Record<string, OpenApiComponentResponse> {
-    const errorRef = { $ref: "#/components/schemas/ErrorResponse" };
-    return {
-        BadRequest: { description: "The request was invalid.", content: { "application/json": { schema: errorRef } } },
-        Unauthorized: { description: "Authentication is required.", content: { "application/json": { schema: errorRef } } },
-        Forbidden: { description: "The authenticated user is not allowed to perform this operation.", content: { "application/json": { schema: errorRef } } },
-        NotFound: { description: "The requested resource was not found.", content: { "application/json": { schema: errorRef } } },
-        Conflict: { description: "The requested operation conflicts with existing state.", content: { "application/json": { schema: errorRef } } },
-        TooManyRequests: { description: "The request was rate limited.", content: { "application/json": { schema: errorRef } } },
-        InternalServerError: { description: "An unexpected server error occurred.", content: { "application/json": { schema: errorRef } } },
-    };
 }
 
 function operationKey(method: unknown, url: string): string {
@@ -211,10 +189,13 @@ export async function registerOpenApi(
         },
         transform: ({ schema, url, route }) => {
             const method = typeof route?.method === "string" ? route.method.toUpperCase() : "";
+            const sourceSchema = schema && typeof schema === "object"
+                ? schema as Record<string, unknown>
+                : {};
             const {
                 "x-imshare-openapi": routeMetadata,
                 ...schemaWithoutOpenApiMetadata
-            } = schema as Record<string, unknown>;
+            } = sourceSchema;
             const current = schemaWithoutOpenApiMetadata as Record<string, unknown>;
             const key = operationKey(method, url);
             const doc = registry.get(key);
@@ -258,22 +239,89 @@ export async function registerOpenApi(
             }
 
             if (!isDocumentedRoute(url)) {
-                compiled.hide = true;
+                return undefined;
             }
 
-            return { schema: compiled, url, route };
+            return {
+                ...compiled,
+                ...schemaWithoutOpenApiMetadata,
+            };
         },
     });
 
     await fastify.register(fastifySwaggerUi, {
         routePrefix: "/docs",
-        uiConfig: {
-            deepLinking: true,
-            displayRequestDuration: true,
-            docExpansion: "list",
-            filter: true,
-            persistAuthorization: true,
-        },
-        staticCSP: true,
     });
+}
+
+function createComponentResponses(): Record<string, OpenApiComponentResponse> {
+    return {
+        BadRequest: {
+            description: "The request could not be validated or parsed.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                    examples: {
+                        invalidRequest: {
+                            summary: "Invalid request",
+                            value: {
+                                error: {
+                                    code: "BAD_REQUEST",
+                                    message: "Request validation failed.",
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        Unauthorized: {
+            description: "Authentication is required or the current session is invalid.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+        Forbidden: {
+            description: "The authenticated user is not allowed to perform this operation.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+        NotFound: {
+            description: "The requested resource does not exist.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+        Conflict: {
+            description: "The requested operation conflicts with the current resource state.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+        RateLimited: {
+            description: "The request was rate limited.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+        InternalServerError: {
+            description: "An unexpected server error occurred.",
+            content: {
+                "application/json": {
+                    schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+            },
+        },
+    };
 }
