@@ -6,21 +6,29 @@ export type OpenApiRouteMetadata = {
     description?: string;
     operationId?: string;
     security?: Array<Record<string, string[]>>;
-    requestExample?: unknown;
-    responseExamples?: Record<string, unknown>;
 };
 
 export type OpenApiRouteSchema = FastifySchema & {
-    "x-imshare-openapi"?: OpenApiRouteMetadata;
+    tags?: string[];
+    summary?: string;
+    description?: string;
+    operationId?: string;
+    security?: Array<Record<string, string[]>>;
 };
 
 /**
- * Keeps OpenAPI documentation next to the Fastify route that it describes.
- * The returned value remains a normal Fastify schema.
+ * Define OpenAPI metadata next to its Fastify route.
+ * The result is a normal Fastify schema, so no custom routing layer is needed.
  */
 export function openapi(metadata: OpenApiRouteMetadata, schema: FastifySchema = {}): OpenApiRouteSchema {
     return {
         ...schema,
-        "x-imshare-openapi": metadata,
+        ...(metadata.tags
+            ? { tags: Array.isArray(metadata.tags) ? metadata.tags : [metadata.tags] }
+            : {}),
+        ...(metadata.summary ? { summary: metadata.summary } : {}),
+        ...(metadata.description ? { description: metadata.description } : {}),
+        ...(metadata.operationId ? { operationId: metadata.operationId } : {}),
+        ...(metadata.security ? { security: metadata.security } : {}),
     };
 }
