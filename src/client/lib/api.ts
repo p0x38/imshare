@@ -2,8 +2,14 @@ export interface ApiOptions extends RequestInit {
     body?: BodyInit | null;
 }
 
+function apiUrl(url: string): string {
+    if (/^(?:[a-z][a-z\d+.-]*:)?\/\//i.test(url)) return url;
+    if (!url.startsWith("/v1/")) return url;
+    return `/api${url}`;
+}
+
 export async function api<T = any>(url: string, options?: ApiOptions): Promise<T> {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
         headers: {
             Accept: "application/json",
             ...(options?.body && !(options.body instanceof FormData)
