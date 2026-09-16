@@ -39,12 +39,12 @@ function AdminUsersPage() {
             const path = action === "role"
                 ? `/v1/admin/users/${encodeURIComponent(target.id)}/role`
                 : `/v1/admin/users/${encodeURIComponent(target.id)}/${action}`;
-            const body = action === "ban"
-                ? JSON.stringify({ reason: reason.trim(), durationHours: Number(duration) })
-                : action === "role"
-                  ? JSON.stringify({ role })
-                  : undefined;
-            await api(path, { method: "POST" === action || action === "role" ? (action === "role" ? "PATCH" : "POST") : "POST", body });
+            const options = action === "role"
+                ? { method: "PATCH", body: JSON.stringify({ role }) }
+                : action === "ban"
+                  ? { method: "POST", body: JSON.stringify({ reason: reason.trim(), durationHours: Number(duration) }) }
+                  : { method: "POST" };
+            await api(path, options);
             setTarget(null); setAction(null); setReason(""); await load();
         } catch (e) { setError(e instanceof Error ? e.message : "Action failed."); }
         finally { setBusy(false); }
