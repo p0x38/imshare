@@ -3,6 +3,7 @@ import { prisma } from "../lib/auth.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
 import { createNotification } from "../lib/notifications.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
+import type { OpenApiSchema } from "../lib/openapi-route.js";
 
 const commentUserSelect = {
     id: true,
@@ -24,7 +25,7 @@ const commentBody = {
     properties: {
         body: { type: "string", minLength: 1, maxLength: 5000, description: "Comment text." },
     },
-};
+} satisfies OpenApiSchema;
 
 function view(comment: any) {
     return {
