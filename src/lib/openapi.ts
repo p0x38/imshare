@@ -3,6 +3,7 @@ import fastifySwagger from "@fastify/swagger";
 import fastifySwaggerUi from "@fastify/swagger-ui";
 import type { loadConfig } from "./config.js";
 import { errorResponseSchema, postCollectionResponseSchema, postResponseSchema } from "../routes/openapi-schemas.js";
+import { openapiTagForPath } from "./openapi-route.js";
 
 type OperationDocumentation = {
     summary: string;
@@ -81,50 +82,8 @@ const documentation: Record<string, OperationDocumentation> = {
     "GET /v1/admin/registration-token": { summary: "Get registration token", description: "Returns the current registration token. Admin access is required." },
     "GET /v1/admin/users": { summary: "List users for moderation", description: "Returns a paginated user list for moderators and administrators. Supports page, limit, search, role, and banned filters. Limit is 1–100 and defaults to 50." },
     "GET /v1/admin/reports": { summary: "List moderation reports", description: "Returns moderation reports for moderators and administrators. status may be open, resolved, or dismissed; the default is open. Supports page and limit." },
-    "PATCH /v1/admin/reports/{reportId}": { summary: "Update report status", description: "Changes the status of a moderation report. Moderator/admin access is required.", requestExample: { status: "resolved" } },
-    "POST /v1/admin/users/{userId}/kick": { summary: "Kick user sessions", description: "Revokes all active sessions for the target user. Moderator/admin access is required." },
-    "POST /v1/admin/users/{userId}/ban": { summary: "Ban user", description: "Bans a user and revokes their sessions. The reason is 1–500 characters. durationHours is optional, accepts 0–8760, and 0 means an indefinite ban.", requestExample: { reason: "Repeated policy violations.", durationHours: 24 } },
-    "POST /v1/admin/users/{userId}/unban": { summary: "Unban user", description: "Removes a user's ban. Moderator/admin access is required." },
-    "POST /v1/admin/users/{userId}/role": { summary: "Update user role", description: "Updates a user's role. Supported roles are user, moderator, and admin.", requestExample: { role: "moderator" } },
+    "PATCH /v1/admin/reports/{reportId}": { summary: "Update moderation report", description: "Updates the status of a moderation report. Moderators and administrators may resolve or dismiss reports." },
 };
-
-function operationTag(url: string) {
-    const pathname = url.split("?", 1)[0] ?? url;
-    const segment = pathname.split("/")[2] ?? "general";
-    switch (segment) {
-        case "auth":
-            return "Authentication";
-        case "me":
-        case "users":
-            return "Users";
-        case "admin":
-            return "Administration";
-        case "health":
-        case "ready":
-        case "version":
-            return "Health";
-        case "posts":
-            return "Posts";
-        case "comments":
-            return "Comments";
-        case "reports":
-            return "Reports";
-        case "tags":
-            return "Tags";
-        case "categories":
-            return "Categories";
-        case "uploads":
-            return "Uploads";
-        case "emojis":
-            return "Emojis";
-        case "search":
-            return "Search";
-        case "recommendations":
-            return "Recommendations";
-        default:
-            return "Health";
-    }
-}
 
 export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<ReturnType<typeof loadConfig>>) {
     await fastify.register(fastifySwagger, {
@@ -149,6 +108,7 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
                 { name: "Search" },
                 { name: "Recommendations" },
                 { name: "Administration" },
+                { name: "General" },
             ],
             components: {
                 securitySchemes: {
@@ -165,23 +125,21 @@ export async function registerOpenApi(fastify: FastifyInstance, config: Awaited<
             const method = typeof route?.method === "string" ? route.method.toUpperCase() : "";
             const key = `${method} ${url}`;
             const doc = documentation[key];
-            if (!doc) return { schema, url, route };
             const current = (schema as Record<string, unknown>) ?? {};
             const response = (current.responses as Record<string, unknown> | undefined) ?? {};
             const transformed = {
                 ...current,
-                tags: Array.isArray(current.tags) && current.tags.length > 0 ? current.tags : [operationTag(url)],
-                summary: doc.summary,
-                description: doc.description,
+                tags: Array.isArray(current.tags) && current.tags.length > 0 ? current.tags : [openapiTagForPath(url)],
+                ...(doc ? { summary: doc.summary, description: doc.description } : {}),
                 responses: Object.keys(response).length > 0 ? response : { "200": { description: "Successful response." } },
             } as Record<string, unknown>;
-            if (doc.requestExample) {
+            if (doc?.requestExample) {
                 const body = (transformed.requestBody as Record<string, unknown> | undefined) ?? {};
                 const content = (body.content as Record<string, unknown> | undefined) ?? { "application/json": {} };
                 const json = (content["application/json"] as Record<string, unknown> | undefined) ?? {};
                 transformed.requestBody = { ...body, content: { ...content, "application/json": { ...json, example: doc.requestExample } } };
             }
-            for (const [status, example] of Object.entries(doc.responseExamples ?? {})) {
+            for (const [status, example] of Object.entries(doc?.responseExamples ?? {})) {
                 const responseEntry = (transformed.responses as Record<string, unknown>)[status] as Record<string, unknown> | undefined;
                 if (responseEntry) {
                     const content = (responseEntry.content as Record<string, unknown> | undefined) ?? { "application/json": {} };
