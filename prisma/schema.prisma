@@ -310,7 +310,7 @@ model ProfileLink {
 }
 
 model Tag {
-  id String @id
+  id String @id @default(cuid())
   name String @unique
   slug String @unique
   createdAt DateTime @default(now())
@@ -326,6 +326,7 @@ model PostTag {
   tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
   @@id([postId, tagId])
   @@index([tagId, postId])
+  @@map("post_tag")
 }
 
 model Category {
