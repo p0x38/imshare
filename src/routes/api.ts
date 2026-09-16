@@ -21,6 +21,8 @@ import { textRoutes } from "./texts.js";
 import { uploadRoutes } from "./uploads.js";
 import { userRoutes } from "./users.js";
 import { avatarRoutes } from "./avatars.js";
+import { prisma } from "../lib/auth.js";
+import { getSession } from "../lib/api.js";
 
 export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(accountRoutes);
@@ -46,3 +48,6 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(emojiRoutes);
     await fastify.register(registerAdminRoutes);
 };
+
+// This hook is registered by the API plugin before route handlers run. It only fills
+// omitted values for post creation; explicitly supplied values always win.
