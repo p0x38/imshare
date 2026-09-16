@@ -1,10 +1,23 @@
 import { Box, Container } from "@mui/material";
+import { useEffect } from "react";
 import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
 import { PageTransition } from "./Motion";
 
-export function Page({ children, maxWidth = "xl" }: { children: React.ReactNode; maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" }) {
+export function Page({
+    children,
+    maxWidth = "xl",
+    title,
+}: {
+    children: React.ReactNode;
+    maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
+    title?: string;
+}) {
     const width = maxWidth === "xs" ? 444 : maxWidth === "sm" ? 600 : maxWidth === "md" ? 900 : maxWidth === "lg" ? 1200 : 1200;
+
+    useEffect(() => {
+        if (title) document.title = title;
+    }, [title]);
 
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
