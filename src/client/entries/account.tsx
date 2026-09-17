@@ -7,6 +7,7 @@ import { App } from "../components/App";
 import { AccountPreferences } from "../components/AccountPreferences";
 import { Page } from "../components/Page";
 import { LoadingState } from "../components/States";
+import { TwoFactorChallenge } from "../components/TwoFactorChallenge";
 import { api } from "../lib/api";
 import type { User } from "../lib/types";
 interface EditableProfileLink { id?: string; label: string; url: string; }
@@ -19,6 +20,7 @@ function AccountPage() {
     if (error && user === null) return <Page><Alert severity="error">{error}</Alert></Page>;
     if (user === null) return <Page><LoadingState label={t("accountPage.loadingAccount")} /></Page>;
     if (user === false) return <Page><Card variant="outlined"><CardContent><Typography variant="h4" component="h1" gutterBottom>{t("accountPage.account")}</Typography><Typography paragraph>{t("accountPage.notSignedIn")}</Typography><Button variant="contained" component="a" href="/account/login/">{t("accountPage.logIn")}</Button><Button component="a" href="/account/register/" sx={{ ml: 1 }}>{t("accountPage.createAccount")}</Button></CardContent></Card></Page>;
+    if (new URLSearchParams(location.search).get("twoFactor") === "1") return <Page maxWidth="sm"><TwoFactorChallenge /></Page>;
     return <Page><Stack spacing={2}>
         <Typography variant="h4" component="h1">{t("accountPage.account")}</Typography>
         {error && <Alert severity="error">{error}</Alert>}
