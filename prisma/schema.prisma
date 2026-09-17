@@ -22,6 +22,7 @@ model User {
   profileBannerUrl String?
   accentColor String?
   role String @default("user")
+  registrationStatus String @default("approved")
   isPublic Boolean @default(true)
   followApprovalRequired Boolean @default(false)
   showEmail Boolean @default(false)
@@ -63,6 +64,7 @@ model User {
   pushSubscriptions PushSubscription[]
   defaultCategory Category? @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
   @@index([defaultCategoryId])
+  @@index([registrationStatus, createdAt])
   @@map("user")
 }
 
@@ -397,5 +399,4 @@ model ModerationLog {
   targetUser User @relation("moderationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
   @@index([createdAt])
   @@index([targetUserId, createdAt])
-  @@map("moderation_log")
 }
