@@ -399,4 +399,5 @@ model ModerationLog {
   targetUser User @relation("moderationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
   @@index([createdAt])
   @@index([targetUserId, createdAt])
+  @@map("moderation_log")
 }
