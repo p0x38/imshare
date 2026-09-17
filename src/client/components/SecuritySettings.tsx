@@ -1,6 +1,8 @@
 import { Alert, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
 import { useState } from "react";
+
 import { authClient } from "../lib/auth-client";
+import { ConnectedAccounts } from "./ConnectedAccounts";
 
 export function SecuritySettings() {
     const [password, setPassword] = useState("");
@@ -44,14 +46,23 @@ export function SecuritySettings() {
         setLoading(false);
     }
 
-    return <Card variant="outlined"><CardContent><Stack spacing={2}>
-        <Typography variant="h6">Authenticator & recovery</Typography>
-        <Typography variant="body2" color="text.secondary">Use an authenticator app for sign-in verification. Recovery codes can be used if you lose access to the authenticator.</Typography>
-        <TextField label="Account password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
-        {!enabled && !totpUri ? <Button variant="contained" onClick={() => void enable()} disabled={loading || !password}>Set up authenticator</Button> : null}
-        {totpUri ? <><TextField label="TOTP setup URI" value={totpUri} slotProps={{ input: { readOnly: true } }} multiline minRows={3} helperText="Keep this URI private. It contains the authenticator secret." /><TextField label="Authenticator code" value={code} onChange={(event) => setCode(event.target.value)} autoComplete="one-time-code" inputProps={{ inputMode: "numeric" }} /><Button variant="contained" onClick={() => void verify()} disabled={loading || code.trim().length < 6}>Verify and enable</Button></> : null}
-        {enabled ? <><Button variant="outlined" onClick={() => void regenerate()} disabled={loading || !password}>Regenerate recovery codes</Button><Button color="error" variant="outlined" onClick={() => void disable()} disabled={loading || !password}>Disable authenticator</Button></> : null}
-        {backupCodes.length ? <Alert severity="warning"><Stack spacing={1}><Typography>Save these recovery codes somewhere secure. Each code can be used once.</Typography>{backupCodes.map((item) => <Typography key={item} component="code">{item}</Typography>)}</Stack></Alert> : null}
-        {error ? <Alert severity="error">{error}</Alert> : null}{notice ? <Alert severity="success">{notice}</Alert> : null}
-    </Stack></CardContent></Card>;
+    return (
+        <Stack spacing={2}>
+            <Card variant="outlined">
+                <CardContent>
+                    <Stack spacing={2}>
+                        <Typography variant="h6">Authenticator & recovery</Typography>
+                        <Typography variant="body2" color="text.secondary">Use an authenticator app for sign-in verification. Recovery codes can be used if you lose access to the authenticator.</Typography>
+                        <TextField label="Account password" type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" />
+                        {!enabled && !totpUri ? <Button variant="contained" onClick={() => void enable()} disabled={loading || !password}>Set up authenticator</Button> : null}
+                        {totpUri ? <><TextField label="TOTP setup URI" value={totpUri} slotProps={{ input: { readOnly: true } }} multiline minRows={3} helperText="Keep this URI private. It contains the authenticator secret." /><TextField label="Authenticator code" value={code} onChange={(event) => setCode(event.target.value)} autoComplete="one-time-code" inputProps={{ inputMode: "numeric" }} /><Button variant="contained" onClick={() => void verify()} disabled={loading || code.trim().length < 6}>Verify and enable</Button></> : null}
+                        {enabled ? <><Button variant="outlined" onClick={() => void regenerate()} disabled={loading || !password}>Regenerate recovery codes</Button><Button color="error" variant="outlined" onClick={() => void disable()} disabled={loading || !password}>Disable authenticator</Button></> : null}
+                        {backupCodes.length ? <Alert severity="warning"><Stack spacing={1}><Typography>Save these recovery codes somewhere secure. Each code can be used once.</Typography>{backupCodes.map((item) => <Typography key={item} component="code">{item}</Typography>)}</Stack></Alert> : null}
+                        {error ? <Alert severity="error">{error}</Alert> : null}{notice ? <Alert severity="success">{notice}</Alert> : null}
+                    </Stack>
+                </CardContent>
+            </Card>
+            <ConnectedAccounts />
+        </Stack>
+    );
 }
