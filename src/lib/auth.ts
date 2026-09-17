@@ -45,7 +45,10 @@ function sendAuthEmail(task: Promise<void>, type: string): void {
 export const auth = betterAuth({
     database: prismaAdapter(prisma, { provider: "sqlite" }),
     secret: env.betterAuthSecret,
-    baseURL: baseUrl,
+    baseURL: {
+        allowedHosts: [new URL(baseUrl).host, "localhost:*", "127.0.0.1:*"],
+        fallback: baseUrl,
+    },
     basePath: "/api/v1/auth",
     trustedOrigins,
     appName: config.site.name,
