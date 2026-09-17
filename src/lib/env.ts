@@ -34,4 +34,9 @@ export const env = {
         password: optional("SMTP_PASSWORD"),
         from: optional("SMTP_FROM"),
     },
+    push: {
+        publicKey: optional("VAPID_PUBLIC_KEY"),
+        privateKey: optional("VAPID_PRIVATE_KEY"),
+        subject: optional("VAPID_SUBJECT"),
+    },
 };
