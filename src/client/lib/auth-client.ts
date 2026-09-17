@@ -6,7 +6,7 @@ export const authClient = createAuthClient({
     plugins: [
         genericOAuthClient(),
         twoFactorClient({
-            twoFactorPage: "/account/two-factor/",
+            twoFactorPage: "/account/?twoFactor=1",
         }),
     ],
 });
