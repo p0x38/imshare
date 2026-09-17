@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { AccountPreferences } from "../components/AccountPreferences";
+import { OidcLoginButton } from "../components/OidcLoginButton";
 import { Page } from "../components/Page";
 import { LoadingState } from "../components/States";
 import { TwoFactorChallenge } from "../components/TwoFactorChallenge";
@@ -19,7 +20,7 @@ function AccountPage() {
     async function save(event: React.FormEvent) { event.preventDefault(); if (!user) return; setSaving(true); setError(""); try { await api(`/v1/users/${encodeURIComponent(user.id)}`, { method: "PATCH", body: JSON.stringify({ name, handle: handle.trim().replace(/^@/, "").toLowerCase() || null, bio: bio || null, websiteUrl: websiteUrl || null, githubUrl: githubUrl || null, avatarMode, avatarValue: avatarValue || null }) }); const existing = new Set((user.profileLinks || []).map((link) => link.id)); for (const [position, link] of profileLinks.entries()) { if (!link.label.trim() || !link.url.trim()) continue; if (link.id && existing.has(link.id)) await api(`/v1/me/links/${encodeURIComponent(link.id)}`, { method: "PATCH", body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }) }); else await api("/v1/me/links", { method: "POST", body: JSON.stringify({ label: link.label.trim(), url: link.url.trim(), position }) }); } const currentIds = new Set(profileLinks.flatMap((link) => (link.id ? [link.id] : []))); for (const link of user.profileLinks || []) if (!currentIds.has(link.id)) await api(`/v1/me/links/${encodeURIComponent(link.id)}`, { method: "DELETE" }); await load(); } catch (cause) { setError(cause instanceof Error ? cause.message : t("accountPage.saveError")); } finally { setSaving(false); } }
     if (error && user === null) return <Page><Alert severity="error">{error}</Alert></Page>;
     if (user === null) return <Page><LoadingState label={t("accountPage.loadingAccount")} /></Page>;
-    if (user === false) return <Page><Card variant="outlined"><CardContent><Typography variant="h4" component="h1" gutterBottom>{t("accountPage.account")}</Typography><Typography paragraph>{t("accountPage.notSignedIn")}</Typography><Button variant="contained" component="a" href="/account/login/">{t("accountPage.logIn")}</Button><Button component="a" href="/account/register/" sx={{ ml: 1 }}>{t("accountPage.createAccount")}</Button></CardContent></Card></Page>;
+    if (user === false) return <Page maxWidth="sm"><Stack spacing={2}><Card variant="outlined"><CardContent><Stack spacing={2}><Typography variant="h4" component="h1" gutterBottom>{t("accountPage.account")}</Typography><Typography paragraph>{t("accountPage.notSignedIn")}</Typography><Button variant="contained" component="a" href="/account/login/">{t("accountPage.logIn")}</Button><Button component="a" href="/account/register/">{t("accountPage.createAccount")}</Button><OidcLoginButton /></Stack></CardContent></Card></Stack></Page>;
     if (new URLSearchParams(location.search).get("twoFactor") === "1") return <Page maxWidth="sm"><TwoFactorChallenge /></Page>;
     return <Page><Stack spacing={2}>
         <Typography variant="h4" component="h1">{t("accountPage.account")}</Typography>
