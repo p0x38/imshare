@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import { ok, requireUser } from "../lib/api.js";
-import { getPushPublicKey } from "../lib/push.js";
 import { prisma } from "../lib/auth.js";
+import { getPushPublicKey, sendWebPushNotification } from "../lib/push.js";
 import { openapi, parameter, type OpenApiSchema } from "../lib/openapi-route.js";
 
 const subscriptionSchema: OpenApiSchema = {
@@ -36,6 +36,40 @@ export const pushRoutes: FastifyPluginAsync = async (fastify) => {
             }),
         },
         async () => ok({ publicKey: getPushPublicKey() }),
+    );
+
+    fastify.post(
+        "/v1/me/push-test",
+        {
+            schema: openapi({
+                tags: "Notifications",
+                summary: "Send a Web Push test notification",
+                description: "Sends a test notification to the authenticated user's registered push subscriptions.",
+                operationId: "sendPushTestNotification",
+                security: [{ cookieAuth: [] }],
+                responses: { "200": { description: "Test notification queued." } },
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+            const subscriptionCount = await prisma.pushSubscription.count({ where: { userId: user.id } });
+            if (subscriptionCount === 0) {
+                return reply.code(400).send({
+                    error: {
+                        code: "PUSH_NOT_CONFIGURED",
+                        message: "No Web Push subscription is registered for this account.",
+                    },
+                });
+            }
+            await sendWebPushNotification(user.id, {
+                title: "imshare",
+                body: "Web Push test notification is working!",
+                url: "/account/?tab=notifications",
+                tag: "push-test",
+            });
+            return ok({ sent: true, subscriptions: subscriptionCount });
+        },
     );
 
     fastify.post<{ Body: { endpoint: string; keys: { p256dh: string; auth: string } } }>(
