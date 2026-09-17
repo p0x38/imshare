@@ -29,16 +29,8 @@
     "keywords": [],
     "author": "",
     "license": "ISC",
-    "engines": {
-        "node": ">=24"
-    },
-    "devEngines": {
-        "runtime": {
-            "name": "node",
-            "version": "24.x",
-            "onFail": "download"
-        }
-    },
+    "engines": { "node": ">=24" },
+    "devEngines": { "runtime": { "name": "node", "version": "24.x", "onFail": "download" } },
     "packageManager": "pnpm@11.25.0",
     "type": "module",
     "devDependencies": {
@@ -50,6 +42,7 @@
         "@types/nodemailer": "^8.0.2",
         "@types/react": "^19.1.12",
         "@types/react-dom": "^19.1.9",
+        "@types/web-push": "^3.6.7",
         "@vitejs/plugin-react": "^5.1.1",
         "@vitest/coverage-v8": "^5.0.0",
         "eslint": "^9.39.1",
@@ -91,6 +84,7 @@
         "sharp": "^0.35.4",
         "socket.io": "^4.8.3",
         "thumbhash": "^0.1.1",
+        "web-push": "^3.8.0",
         "zod": "^4.1.11",
         "zod-openapi": "^6.0.2"
     }
