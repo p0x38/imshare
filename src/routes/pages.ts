@@ -1,4 +1,4 @@
-import type { FastifyPluginAsync, FastifyReply } from "fastify";
+import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { getSession } from "../lib/api.js";
 import { loadConfigSync, resolveBaseUrl } from "../lib/config.js";
 import { hasRole } from "../lib/permissions.js";
@@ -26,21 +26,21 @@ const maintenancePage = (reply: FastifyReply) =>
         .send(reactPage("maintenance", "maintenance-page"));
 
 export const pageRoutes: FastifyPluginAsync = async (fastify) => {
-    const render = (entry: string, rootId: string, attributes?: string) => async (_request, reply: FastifyReply) => {
+    const render = (entry: string, rootId: string, attributes?: string) => async (_request: FastifyRequest, reply: FastifyReply) => {
         if (isMaintenanceMode()) return maintenancePage(reply);
         return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
     };
-    const requireAdminPage = (entry: string, rootId: string) => async (_request, reply: FastifyReply) => {
+    const requireAdminPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
         if (isMaintenanceMode()) return maintenancePage(reply);
-        const session = await getSession(_request);
+        const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
         if (!user || !hasRole(user.role, "admin")) return reply.code(403).send("Forbidden");
         return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId));
     };
-    const requireModeratorPage = (entry: string, rootId: string) => async (_request, reply: FastifyReply) => {
+    const requireModeratorPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
         if (isMaintenanceMode()) return maintenancePage(reply);
-        const session = await getSession(_request);
+        const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
         if (!user || !hasRole(user.role, "moderator")) return reply.code(403).send("Forbidden");
