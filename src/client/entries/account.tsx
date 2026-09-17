@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { AccountPreferences } from "../components/AccountPreferences";
+import { DevicesSecurity } from "../components/DevicesSecurity";
 import { OidcLoginButton } from "../components/OidcLoginButton";
 import { Page } from "../components/Page";
 import { LoadingState } from "../components/States";
@@ -26,7 +27,7 @@ function AccountPage() {
     return <Page><Stack spacing={2}>
         <Typography variant="h4" component="h1">{t("accountPage.account")}</Typography>
         {error && <Alert severity="error">{error}</Alert>}
-        <Card variant="outlined"><Tabs value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth"><Tab label="Profile" /><Tab label="Settings" /></Tabs></Card>
+        <Card variant="outlined"><Tabs value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth"><Tab label="Profile" /><Tab label="Settings" /><Tab label="Devices & Security" /></Tabs></Card>
         {tab === 0 ? <Stack spacing={2}>
             <Card variant="outlined"><CardContent><Stack direction="row" spacing={2} alignItems="center"><Avatar src={user.avatarUrl ?? undefined} sx={{ width: 80, height: 80 }}>{(user.name || "A").charAt(0).toUpperCase()}</Avatar><Stack><Typography variant="h6">{user.name || t("common.account")}</Typography><Typography color="text.secondary">{user.handle ? `@${user.handle}` : user.email}</Typography>{user.handle && <Typography variant="body2" color="text.secondary">{user.email}</Typography>}</Stack></Stack></CardContent></Card>
             <Card variant="outlined" component="form" onSubmit={save}><CardContent><Typography variant="h6" component="h2" gutterBottom>{t("accountPage.profile")}</Typography><Stack spacing={2}>
@@ -40,7 +41,7 @@ function AccountPage() {
                 <Stack spacing={1}><Typography variant="h6" component="h2">{t("accountPage.profileLinks")}</Typography><Typography variant="body2" color="text.secondary">{t("accountPage.profileLinksHelp")}</Typography>{profileLinks.map((link, index) => <Stack key={link.id || `new-${index}`} direction="row" spacing={1} alignItems="center"><DragHandle color="disabled" /><TextField label={t("accountPage.label")} value={link.label} onChange={(e) => setProfileLinks((c) => c.map((item, i) => i === index ? { ...item, label: e.target.value } : item))} /><TextField label={t("accountPage.url")} type="url" value={link.url} onChange={(e) => setProfileLinks((c) => c.map((item, i) => i === index ? { ...item, url: e.target.value } : item))} sx={{ flexGrow: 1 }} /><Button color="error" onClick={() => setProfileLinks((c) => c.filter((_, i) => i !== index))}>Delete</Button></Stack>)}<Button startIcon={<Add />} onClick={() => setProfileLinks((c) => [...c, { label: "", url: "" }])} disabled={profileLinks.length >= 20}>{t("accountPage.addProfileLink")}</Button></Stack>
                 <Button type="submit" variant="contained" disabled={saving}>{saving ? t("accountPage.saving") : t("accountPage.saveProfile")}</Button>
             </Stack></CardContent></Card>
-        </Stack> : <AccountPreferences />}
+        </Stack> : tab === 1 ? <AccountPreferences /> : <DevicesSecurity />}
         <Stack direction="row" spacing={1}><Button variant="outlined" component="a" href="/dashboard/">{t("accountPage.dashboard")}</Button><Button component="a" href="/account/logout/">{t("accountPage.logOut")}</Button></Stack>
     </Stack></Page>;
 }
