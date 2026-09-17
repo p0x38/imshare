@@ -21,6 +21,7 @@ site {
 
 auth {
     baseUrl = "https://uhm.p0x38.mydns.jp"
+    appendPort = false
     trustedOrigins = [
         "https://uhm.p0x38.mydns.jp",
     ]
