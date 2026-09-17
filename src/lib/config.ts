@@ -10,6 +10,7 @@ export interface ServerConfig {
     site: { name: string; version: string; description?: string };
     auth: {
         baseUrl?: string;
+        appendPort?: boolean;
         trustedOrigins?: string[];
         emailAndPasswordEnabled?: boolean;
         registration?: { enabled?: boolean; public?: boolean };
@@ -48,7 +49,11 @@ const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
 const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
-    auth: { emailAndPasswordEnabled: true, registration: { enabled: true, public: false } },
+    auth: {
+        emailAndPasswordEnabled: true,
+        appendPort: true,
+        registration: { enabled: true, public: false },
+    },
     features: {
         imagePosts: true,
         textPosts: true,
@@ -122,7 +127,9 @@ export function resolveBaseUrl(config: ServerConfig): string {
         return `http://${host}:${config.server.port}`;
     }
     const url = new URL(baseUrl);
-    if (hasExplicitPort(baseUrl)) return baseUrl.replace(/\/+$/, "");
+    if (hasExplicitPort(baseUrl) || config.auth.appendPort === false) {
+        return baseUrl.replace(/\/+$/, "");
+    }
     url.port = String(config.server.port);
     return url.toString().replace(/\/$/, "");
 }
@@ -148,6 +155,7 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
             ...config.auth,
             emailAndPasswordEnabled:
                 config.auth.emailAndPasswordEnabled ?? DEFAULTS.auth.emailAndPasswordEnabled,
+            appendPort: config.auth.appendPort ?? DEFAULTS.auth.appendPort,
             registration: { ...DEFAULTS.auth.registration, ...config.auth.registration },
         },
         features: { ...DEFAULTS.features, ...config.features },
@@ -185,6 +193,7 @@ function isServerConfig(value: unknown): value is ServerConfig {
         isObject(auth) &&
         (auth.baseUrl === undefined ||
             (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0)) &&
+        (auth.appendPort === undefined || typeof auth.appendPort === "boolean") &&
         (auth.trustedOrigins === undefined ||
             (Array.isArray(auth.trustedOrigins) &&
                 auth.trustedOrigins.every(
