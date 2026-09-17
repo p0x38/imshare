@@ -29,7 +29,7 @@ Better Auth's current Generic OAuth implementation uses `/callback/:providerId` 
 
 ## Browser flow
 
-When OIDC is configured, the login and registration pages display **Continue with OpenID Connect**. The browser starts Better Auth's standard `signIn.social` flow and returns to `/dashboard/` after authentication.
+When OIDC is configured, the account page shows **Continue with OpenID Connect** for signed-out users. The browser starts Better Auth's standard `signIn.social` flow and returns to `/dashboard/` after authentication.
 
 The browser receives only the provider ID through `/api/v1/config`; the client ID, client secret, and discovery URL remain server-side.
 
