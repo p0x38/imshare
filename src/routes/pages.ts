@@ -5,9 +5,30 @@ import { hasRole } from "../lib/permissions.js";
 const reactPage = (entry: string, rootId: string, attributes = "") =>
     `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#1976d2" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>imshare</title><style>html,body{margin:0;min-height:100%}body{background:#fff;color:#111}@media(prefers-color-scheme:dark){body{background:#121212;color:#fff}}#app-loading{min-height:100vh;display:grid;place-items:center;box-sizing:border-box;padding:24px;font:400 14px/1.5 system-ui,sans-serif}#app-loading-content{display:flex;align-items:center;gap:12px;opacity:.72}#app-loading-spinner{width:20px;height:20px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:app-loading-spin 700ms linear infinite}@keyframes app-loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#app-loading-spinner{animation-duration:1400ms}}</style></head><body ${attributes}><div id="app-loading" role="status" aria-live="polite"><div id="app-loading-content"><span id="app-loading-spinner" aria-hidden="true"></span><span>Loading…</span></div></div><div id="${rootId}"></div><script type="module" src="/client/${entry}.js"></script></body></html>`;
 
+function isMaintenanceMode(request: FastifyRequest): boolean {
+    const hostname = request.hostname.toLowerCase();
+    return (
+        process.env.NODE_ENV === "test" ||
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "::1"
+    );
+}
+
+const maintenancePage = (reply: FastifyReply) =>
+    reply
+        .code(503)
+        .header("Retry-After", "300")
+        .type("text/html; charset=utf-8")
+        .send(reactPage("maintenance", "maintenance-page"));
+
 export const pageRoutes: FastifyPluginAsync = async (fastify) => {
-    const render = (entry: string, rootId: string, attributes?: string) => async (_request: FastifyRequest, reply: FastifyReply) => reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
+    const render = (entry: string, rootId: string, attributes?: string) => async (request: FastifyRequest, reply: FastifyReply) => {
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
+        return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
+    };
     const requireAdminPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
         const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
@@ -15,6 +36,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId));
     };
     const requireModeratorPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
         const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
