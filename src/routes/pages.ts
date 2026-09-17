@@ -9,13 +9,17 @@ const reactPage = (entry: string, rootId: string, attributes = "") =>
 const baseUrl = resolveBaseUrl(loadConfigSync());
 const baseUrlHostname = new URL(baseUrl).hostname.toLowerCase();
 
-function isMaintenanceMode(): boolean {
-    return (
-        process.env.NODE_ENV === "test" ||
-        baseUrlHostname === "localhost" ||
-        baseUrlHostname === "127.0.0.1" ||
-        baseUrlHostname === "::1"
-    );
+function isLocalhost(hostname: string): boolean {
+    const normalized = hostname.toLowerCase().replace(/\[|\]/g, "");
+    return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1";
+}
+
+function isMaintenanceMode(request: FastifyRequest): boolean {
+    if (process.env.NODE_ENV === "test") return true;
+
+    // A localhost base URL means the public/deployed hostname should show the
+    // maintenance page, while direct local development access stays usable.
+    return isLocalhost(baseUrlHostname) && !isLocalhost(request.hostname);
 }
 
 const maintenancePage = (reply: FastifyReply) =>
@@ -26,12 +30,12 @@ const maintenancePage = (reply: FastifyReply) =>
         .send(reactPage("maintenance", "maintenance-page"));
 
 export const pageRoutes: FastifyPluginAsync = async (fastify) => {
-    const render = (entry: string, rootId: string, attributes?: string) => async (_request: FastifyRequest, reply: FastifyReply) => {
-        if (isMaintenanceMode()) return maintenancePage(reply);
+    const render = (entry: string, rootId: string, attributes?: string) => async (request: FastifyRequest, reply: FastifyReply) => {
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
         return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId, attributes));
     };
     const requireAdminPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
-        if (isMaintenanceMode()) return maintenancePage(reply);
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
         const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
@@ -39,7 +43,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId));
     };
     const requireModeratorPage = (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
-        if (isMaintenanceMode()) return maintenancePage(reply);
+        if (isMaintenanceMode(request)) return maintenancePage(reply);
         const session = await getSession(request);
         if (!session) return reply.redirect("/account/login/", 302);
         const user = await import("../lib/auth.js").then(({ prisma }) => prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }));
@@ -57,7 +61,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/account/login/", render("legacy", "legacy-page")); fastify.get("/account/register/", render("legacy", "legacy-page"));
     fastify.get("/notifications/", render("legacy", "legacy-page")); fastify.get("/account/notifications/", render("legacy", "legacy-page")); fastify.get("/account/profile/", render("legacy", "legacy-page"));
     fastify.get("/posts/", render("posts", "posts-page")); fastify.get("/posts/new/", render("post-editor", "post-editor-page")); fastify.get("/posts/:postId", render("post", "post")); fastify.get("/posts/:postId/", render("post", "post"));
-    fastify.get("/texts/", render("texts", "texts-page")); fastify.get("/texts/new/", render("text-editor", "text-editor-page")); fastify.get("/texts/:textId", render("text", "text-page")); fastify.get("/texts/:textId/", render("text", "text-page")); fastify.get("/texts/:textId/edit/", render("text-editor", "text-editor-page"));
+    fastify.get("/texts/", render("texts", "texts-page")); fastify.get("/texts/new/", render("text-editor", "text-editor-page")); fastify.get("/texts/:textId", render("text", "text-page")); fastify.get("/texts/:textId/", render("text", "text-page")); fastify.get("/texts/:textId/edit/", render("text-editor", "text-page"));
     fastify.get("/dashboard/", render("dashboard", "dashboard-page")); fastify.get("/dashboard/posts/", render("dashboard-posts", "dashboard-posts-page")); fastify.get("/dashboard/posts/:postId/", render("dashboard-post", "dashboard-post-page")); fastify.get("/dashboard/posts/:postId/edit/", render("post-editor", "post-editor-page"));
     fastify.get("/dashboard/tags/", render("taxonomy", "taxonomy-page", 'data-taxonomy="tags"')); fastify.get("/dashboard/categories/", render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"')); fastify.get("/dashboard/settings/", render("settings", "settings-page"));
     fastify.get("/users/", render("legacy", "legacy-page")); fastify.get("/users/@:handle", render("profile", "profile-page")); fastify.get("/users/@:handle/", render("profile", "profile-page")); fastify.get("/users/:userId", render("profile", "profile-page")); fastify.get("/users/:userId/", render("profile", "profile-page")); fastify.get("/users/:userId/posts", render("legacy", "legacy-page")); fastify.get("/users/:userId/posts/", render("legacy", "legacy-page"));
