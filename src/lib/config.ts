@@ -4,6 +4,8 @@ import path from "node:path";
 import { parseConfigDsl, stringifyConfigDsl } from "./config-dsl.js";
 import { getOpenIdProviderId } from "./openid.js";
 
+export type RegistrationMode = "disabled" | "open" | "token" | "approval";
+
 export interface ServerConfig {
     server: { host: string; port: number };
     storage: { uploadDirectory: string; maxFileSize: number };
@@ -13,7 +15,7 @@ export interface ServerConfig {
         appendPort?: boolean;
         trustedOrigins?: string[];
         emailAndPasswordEnabled?: boolean;
-        registration?: { enabled?: boolean; public?: boolean };
+        registration?: { enabled?: boolean; public?: boolean; manualApproval?: boolean };
     };
     features?: {
         imagePosts?: boolean;
@@ -38,7 +40,12 @@ export interface PublicConfig {
     site: { name: string; version: string; description: string };
     auth: {
         emailAndPasswordEnabled: boolean;
-        registration: { enabled: boolean; public: boolean; tokenRequired: boolean };
+        registration: {
+            enabled: boolean;
+            public: boolean;
+            tokenRequired: boolean;
+            approvalRequired: boolean;
+        };
         oidcProviderId: string | null;
     };
     features: Required<NonNullable<ServerConfig["features"]>>;
@@ -52,7 +59,7 @@ const DEFAULTS = {
     auth: {
         emailAndPasswordEnabled: true,
         appendPort: true,
-        registration: { enabled: true, public: false },
+        registration: { enabled: true, public: false, manualApproval: false },
     },
     features: {
         imagePosts: true,
@@ -108,7 +115,8 @@ export function getPublicConfig(config: ServerConfig): PublicConfig {
             registration: {
                 enabled: registration.enabled!,
                 public: registration.public!,
-                tokenRequired: registration.enabled! && !registration.public!,
+                tokenRequired: registration.enabled! && !registration.public! && !registration.manualApproval!,
+                approvalRequired: registration.enabled! && registration.manualApproval!,
             },
             oidcProviderId: getOpenIdProviderId(),
         },
@@ -206,7 +214,9 @@ function isServerConfig(value: unknown): value is ServerConfig {
                 (auth.registration.enabled === undefined ||
                     typeof auth.registration.enabled === "boolean") &&
                 (auth.registration.public === undefined ||
-                    typeof auth.registration.public === "boolean"))) &&
+                    typeof auth.registration.public === "boolean") &&
+                (auth.registration.manualApproval === undefined ||
+                    typeof auth.registration.manualApproval === "boolean"))) &&
         (features === undefined ||
             (isObject(features) &&
                 Object.values(features).every((flag) => typeof flag === "boolean"))) &&
