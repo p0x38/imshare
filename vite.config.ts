@@ -24,6 +24,7 @@ export default defineConfig({
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
                 profile: path.resolve(process.cwd(), "src/client/entries/profile.tsx"),
                 legacy: path.resolve(process.cwd(), "src/client/entries/legacy.tsx"),
+                maintenance: path.resolve(process.cwd(), "src/client/entries/maintenance.tsx"),
                 admin: path.resolve(process.cwd(), "src/client/entries/admin.tsx"),
                 "admin-users": path.resolve(process.cwd(), "src/client/entries/admin-users.tsx"),
                 "admin-posts": path.resolve(process.cwd(), "src/client/entries/admin-posts.tsx"),
