@@ -12,6 +12,7 @@ model User {
   handle String? @unique
   email String @unique
   emailVerified Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
   image String?
   bio String?
   websiteUrl String?
@@ -58,6 +59,8 @@ model User {
   postViews PostView[]
   following Follow[] @relation("followFollower")
   followers Follow[] @relation("followFollowing")
+  twoFactor twoFactor?
+  pushSubscriptions PushSubscription[]
   defaultCategory Category? @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
   @@index([defaultCategoryId])
   @@map("user")
@@ -106,6 +109,32 @@ model Verification {
   updatedAt DateTime @updatedAt
   @@index([identifier])
   @@map("verification")
+}
+
+model twoFactor {
+  id String @id @default(cuid())
+  userId String @unique
+  secret String
+  backupCodes String
+  verified Boolean @default(false)
+  failedVerificationCount Int @default(0)
+  lockedUntil DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("two_factor")
+}
+
+model PushSubscription {
+  id String @id @default(cuid())
+  endpoint String @unique
+  p256dh String
+  auth String
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@map("push_subscription")
 }
 
 model Post {
