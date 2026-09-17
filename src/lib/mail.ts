@@ -16,7 +16,7 @@ export interface MailMessage {
 }
 
 export class MailService {
-    private readonly transporter: nodemailer.Transporter;
+    private readonly transporter: ReturnType<typeof nodemailer.createTransport>;
 
     constructor(private readonly config: SmtpConfig) {
         this.transporter = nodemailer.createTransport({
