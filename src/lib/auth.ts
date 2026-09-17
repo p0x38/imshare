@@ -17,9 +17,9 @@ const trustedOrigins = [
     ...new Set([
         baseUrl,
         ...(config.auth.trustedOrigins ?? []),
-        ...(process.env.NODE_ENV === "production"
-            ? []
-            : [`http://localhost:${config.server.port}`, `http://127.0.0.1:${config.server.port}`]),
+        `http://localhost:${config.server.port}`,
+        `http://127.0.0.1:${config.server.port}`,
+        ...(process.env.NODE_ENV === "production" ? [] : [`http://[::1]:${config.server.port}`]),
     ]),
 ];
 const openIdPlugin = createOpenIdPlugin();
