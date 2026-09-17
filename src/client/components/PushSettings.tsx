@@ -25,6 +25,8 @@ export function PushSettings() {
     const [publicKey, setPublicKey] = useState<string | null>(null);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [testing, setTesting] = useState(false);
+    const [testMessage, setTestMessage] = useState("");
 
     useEffect(() => {
         if (
@@ -51,6 +53,7 @@ export function PushSettings() {
         if (!publicKey) return;
         setLoading(true);
         setError("");
+        setTestMessage("");
         try {
             const permission = await Notification.requestPermission();
             if (permission !== "granted")
@@ -82,6 +85,7 @@ export function PushSettings() {
     async function disable() {
         setLoading(true);
         setError("");
+        setTestMessage("");
         try {
             const registration = await navigator.serviceWorker.getRegistration("/push-sw.js");
             const subscription = await registration?.pushManager.getSubscription();
@@ -105,6 +109,20 @@ export function PushSettings() {
         }
     }
 
+    async function sendTest() {
+        setTesting(true);
+        setError("");
+        setTestMessage("");
+        try {
+            await api("/v1/me/push-test", { method: "POST" });
+            setTestMessage("Test notification sent.");
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to send test notification.");
+        } finally {
+            setTesting(false);
+        }
+    }
+
     if (!supported) return null;
     return (
         <Card variant="outlined">
@@ -118,14 +136,24 @@ export function PushSettings() {
                         <Alert severity="info">Web Push is not configured on this instance.</Alert>
                     ) : null}
                     {error ? <Alert severity="error">{error}</Alert> : null}
+                    {testMessage ? <Alert severity="success">{testMessage}</Alert> : null}
                     {enabled ? (
-                        <Button
-                            variant="outlined"
-                            onClick={() => void disable()}
-                            disabled={loading}
-                        >
-                            Disable browser notifications
-                        </Button>
+                        <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                            <Button
+                                variant="outlined"
+                                onClick={() => void disable()}
+                                disabled={loading || testing}
+                            >
+                                Disable browser notifications
+                            </Button>
+                            <Button
+                                variant="contained"
+                                onClick={() => void sendTest()}
+                                disabled={testing}
+                            >
+                                {testing ? "Sending…" : "Send test notification"}
+                            </Button>
+                        </Stack>
                     ) : (
                         <Button
                             variant="contained"
