@@ -1,5 +1,6 @@
 import { prisma } from "./auth.js";
 import { broadcastNotification } from "./realtime.js";
+import { sendWebPushNotification } from "./push.js";
 
 export async function createNotification(input: {
     recipientId: string;
@@ -15,7 +16,7 @@ export async function createNotification(input: {
         data: input,
         include: { actor: { select: { id: true, name: true } } },
     });
-    broadcastNotification(notification.recipientId, {
+    const payload = {
         id: notification.id,
         type: notification.type,
         message: notification.message,
@@ -24,6 +25,18 @@ export async function createNotification(input: {
         actor: notification.actor,
         postId: notification.postId,
         commentId: notification.commentId,
+    };
+    broadcastNotification(notification.recipientId, payload);
+    const url = notification.postId
+        ? `/posts/${encodeURIComponent(notification.postId)}${notification.commentId ? `#comment-${encodeURIComponent(notification.commentId)}` : ""}`
+        : "/account/?tab=notifications";
+    void sendWebPushNotification(notification.recipientId, {
+        title: notification.actor?.name ? `${notification.actor.name} on imshare` : "imshare",
+        body: notification.message,
+        url,
+        tag: `notification-${notification.id}`,
+    }).catch((error) => {
+        console.error("[push] failed to deliver notification:", error);
     });
     return notification;
 }
