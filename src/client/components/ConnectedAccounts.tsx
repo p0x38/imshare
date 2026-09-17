@@ -16,6 +16,10 @@ interface LinkedAccount {
     accountId: string;
 }
 
+function unwrapConfig(response: PublicConfig | { data: PublicConfig }): PublicConfig {
+    return "data" in response ? response.data : response;
+}
+
 export function ConnectedAccounts() {
     const [providerId, setProviderId] = useState<string | null>(null);
     const [accounts, setAccounts] = useState<LinkedAccount[]>([]);
@@ -29,12 +33,12 @@ export function ConnectedAccounts() {
         setLoading(true);
         setError("");
         try {
-            const [{ data: config }, accountsResult] = await Promise.all([
-                api<{ data: PublicConfig }>("/v1/config"),
-                authClient.listAccounts(),
-            ]);
-            if (accountsResult.error) throw new Error(accountsResult.error.message);
+            const configResponse = await api<PublicConfig | { data: PublicConfig }>("/v1/config");
+            const config = unwrapConfig(configResponse);
             setProviderId(config.auth.oidcProviderId);
+
+            const accountsResult = await authClient.listAccounts();
+            if (accountsResult.error) throw new Error(accountsResult.error.message);
             setAccounts((accountsResult.data ?? []) as LinkedAccount[]);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to load connected accounts.");
