@@ -2,6 +2,7 @@ import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { twoFactor } from "better-auth/plugins";
 
 import { env } from "./env.js";
 import { loadConfigSync, resolveBaseUrl } from "./config.js";
@@ -47,7 +48,11 @@ export const auth = betterAuth({
     baseURL: baseUrl,
     basePath: "/api/v1/auth",
     trustedOrigins,
-    plugins: openIdPlugin ? [openIdPlugin] : [],
+    appName: config.site.name,
+    plugins: [
+        ...(openIdPlugin ? [openIdPlugin] : []),
+        twoFactor(),
+    ],
     user: {
         additionalFields: {
             bio: { type: "string", required: false },
