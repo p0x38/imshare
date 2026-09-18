@@ -502,6 +502,17 @@ function registerMetricHooks(
             metricsSet.postsDeleted.add(1);
         if (pathname.match(/^\/api\/v1\/posts\/[^/]+$/) && request.method === "GET" && reply.statusCode === 200)
             metricsSet.postViews.add(1);
+        if (pathname.startsWith("/uploads/") && reply.statusCode >= 200 && reply.statusCode < 400)
+            metricsSet.imageServed.add(1);
+        if (request.method === "POST" && reply.statusCode >= 200 && reply.statusCode < 300) {
+            if (pathname.includes("/reactions")) metricsSet.reactions.add(1);
+            if (pathname.endsWith("/follow") || pathname.includes("/follows")) metricsSet.follows.add(1);
+            if (pathname.includes("/notifications")) metricsSet.notifications.add(1);
+            if (pathname.includes("/reports")) metricsSet.reports.add(1);
+            if (pathname.includes("/auth/")) metricsSet.authAttempts.add(1, { result: "success" });
+        }
+        if (pathname.includes("/auth/") && (reply.statusCode === 401 || reply.statusCode === 403))
+            metricsSet.authAttempts.add(1, { result: "failure" });
     });
 }
 
