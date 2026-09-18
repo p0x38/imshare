@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { canModerateTarget } from "../lib/permissions.js";
 import { requireRole, ok } from "../lib/api.js";
 import { prisma } from "../lib/auth.js";
-import { loadConfig, updateConfig } from "../lib/config.js";
+import { loadConfig, readConfigText, saveConfigText, updateConfig } from "../lib/config.js";
 import { getRegistrationToken } from "../lib/registration-token.js";
 import { sanitizeManualBadges, userBadges } from "../lib/user-badges.js";
 import { buildDailyAnalytics } from "../lib/analytics.js";
@@ -258,6 +258,34 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
             features: updated.features ?? {},
             limits: updated.limits ?? {},
         });
+    });
+    fastify.get("/v1/admin/config", async (request, reply) => {
+        const actor = await requireRole(request, reply, "admin");
+        if (!actor) return;
+        return ok({ content: await readConfigText() });
+    });
+    fastify.put("/v1/admin/config", async (request, reply) => {
+        const actor = await requireRole(request, reply, "admin");
+        if (!actor) return;
+        const body = request.body as { content?: unknown };
+        if (typeof body.content !== "string")
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_CONFIG",
+                    message: "Configuration content must be a string.",
+                },
+            });
+        try {
+            const config = await saveConfigText(body.content);
+            return ok({ config, restartRequired: true });
+        } catch (error) {
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_CONFIG",
+                    message: error instanceof Error ? error.message : "Invalid configuration.",
+                },
+            });
+        }
     });
     fastify.get("/v1/admin/registration-token", async (request, reply) => {
         const actor = await requireRole(request, reply, "admin");
