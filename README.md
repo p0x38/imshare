@@ -43,6 +43,20 @@ pnpm prisma generate
 pnpm prisma migrate dev
 ```
 
+### Local administration
+
+imshare can expose the normal authenticated administration dashboard through a
+loopback-only HTTP proxy. It is enabled by default at `http://127.0.0.1:5107`
+and forwards to the configured server port.
+
+The local admin listener is intentionally restricted to `127.0.0.1`; it is not
+intended to be exposed through a network interface. The same administrator
+authentication and authorization checks are used as on the main server.
+
+The **Instance settings** page includes a raw `config.imshare` editor. The
+configuration is parsed and validated before it replaces the file. Changes to
+startup-time settings require restarting imshare.
+
 ### Configuration
 
 imshare uses its own native configuration DSL in `config.imshare`. Copy `config.sample.imshare` and edit it for your deployment.
