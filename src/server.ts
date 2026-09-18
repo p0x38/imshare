@@ -1,3 +1,4 @@
+import "./instrumentation.js";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { prisma } from "./lib/auth.js";
