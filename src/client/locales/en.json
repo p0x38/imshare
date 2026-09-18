@@ -62,7 +62,8 @@
         "faq": "FAQ",
         "github": "GitHub",
         "privacy": "Privacy",
-        "terms": "Terms"
+        "terms": "Terms",
+        "badges": "Badges"
     },
     "home": {
         "recentPosts": "Recent posts"
@@ -449,6 +450,77 @@
                         "answer": "The current implementation handles Follow, Undo of Follow, Accept, Reject, public Create activities, and Delete activities. Unsupported activity types are rejected."
                     }
                 ]
+            }
+        }
+    },
+    "badges": {
+        "title": "User badges",
+        "description": "Badges identify roles, milestones, and contributions on this imshare instance.",
+        "howToEarn": "How to earn",
+        "kind": {
+            "automatic": "Automatic",
+            "manual": "Granted by an administrator"
+        },
+        "items": {
+            "admin": {
+                "name": "Admin",
+                "description": "Identifies an account with administrator privileges.",
+                "howToEarn": "Automatically shown while the account has the admin role."
+            },
+            "moderator": {
+                "name": "Moderator",
+                "description": "Identifies an account with moderation privileges.",
+                "howToEarn": "Automatically shown while the account has the moderator role."
+            },
+            "veteran": {
+                "name": "Veteran",
+                "description": "Marks an account that has been active for at least one year.",
+                "howToEarn": "Automatically awarded after the account reaches one year of age."
+            },
+            "contributor": {
+                "name": "Contributor",
+                "description": "Recognizes meaningful contributions to the project or community.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "verified": {
+                "name": "Verified",
+                "description": "Marks an account that has been verified by the instance.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "early-adopter": {
+                "name": "Early Adopter",
+                "description": "Recognizes people who joined during the early stage of the instance.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "bug-hunter": {
+                "name": "Bug Hunter",
+                "description": "Recognizes people who help identify and report bugs.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "supporter": {
+                "name": "Supporter",
+                "description": "Recognizes people who support the project or community.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "founder": {
+                "name": "Founder",
+                "description": "Recognizes a person who founded or established the instance or project.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "developer": {
+                "name": "Developer",
+                "description": "Recognizes people who contribute code or technical development.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "community-helper": {
+                "name": "Community Helper",
+                "description": "Recognizes people who regularly help other members.",
+                "howToEarn": "Granted by an administrator."
+            },
+            "curator": {
+                "name": "Curator",
+                "description": "Recognizes people who help organize, classify, or curate content.",
+                "howToEarn": "Granted by an administrator."
             }
         }
     }
