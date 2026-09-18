@@ -102,13 +102,25 @@ export async function buildApp() {
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
         const requestOrigin = resolveRequestOrigin(config, request);
+        const localAdminOrigin =
+            config.admin?.local?.enabled === false
+                ? null
+                : `http://127.0.0.1:${config.admin?.local?.port ?? 5107}`;
         if (
             !isSameOriginRequest(
                 request.method,
                 requestOrigin,
                 request.headers.origin,
                 request.headers.referer,
-            )
+            ) &&
+            (request.method === "GET" ||
+                !localAdminOrigin ||
+                isSameOriginRequest(
+                    request.method,
+                    localAdminOrigin,
+                    request.headers.origin,
+                    request.headers.referer,
+                ))
         ) {
             observability.recordCsrfRejection();
             return reply.code(403).send({
