@@ -26,7 +26,8 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "migrate:uploads": "tsx src/tools/migrate-uploads.ts",
-        "migrate:cache": "tsx src/tools/migrate-cache.ts"
+        "migrate:cache": "tsx src/tools/migrate-cache.ts",
+        "serve:unavailable": "tsx src/tools/serve-service-unavailable.ts"
     },
     "keywords": [],
     "author": "",
