@@ -6,6 +6,7 @@ import { loadConfig } from "./lib/config.js";
 import { getRegistrationToken } from "./lib/registration-token.js";
 import { buildApp } from "./app.js";
 import { attachRealtime } from "./realtime.js";
+import { startLocalAdminProxy } from "./local-admin.js";
 const lockPath = ".lock";
 type ProcessCheck = "node" | "other" | "unknown";
 function checkNodeProcess(pid: number): ProcessCheck {
@@ -57,6 +58,7 @@ process.once("exit", releaseLock);
 const config = await loadConfig();
 const app = await buildApp();
 const io = attachRealtime(app.server);
+let localAdmin: ReturnType<typeof startLocalAdminProxy> = null;
 let shuttingDown = false;
 let inputConfigured = false;
 function restoreInput(): void {
@@ -71,6 +73,7 @@ const shutdown = async (reason: string, exitCode = 0): Promise<void> => {
     restoreInput();
     app.log.info(`shutting down (${reason})...`);
     try {
+        localAdmin?.close();
         await io.close();
         await app.observability.shutdown();
         await app.close();
@@ -109,6 +112,7 @@ if (process.stdin.isTTY) {
 try {
     await app.listen({ host: config.server.host, port: config.server.port });
     app.log.info(`imshare listening on http://${config.server.host}:${config.server.port}`);
+    localAdmin = startLocalAdminProxy();
     if (config.auth.registration?.enabled && !config.auth.registration.public) {
         const registration = getRegistrationToken();
         app.log.info(
