@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { getSession, ok, requireUser } from "../lib/api.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
+import { userBadges } from "../lib/user-badges.js";
 
 const publicPostWhere = { status: "published", visibility: "public", hiddenAt: null, OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] };
 function avatarUrl(userId: string, updatedAt: Date) { return `/v1/users/${encodeURIComponent(userId)}/avatar?v=${encodeURIComponent(updatedAt.toISOString())}`; }
@@ -16,8 +17,8 @@ async function visibleRelationshipUser(userId: string, relation: "followers" | "
     return { user, visible: relation === "followers" ? user.showFollowers : user.showFollowings };
 }
 
-function publicFollowUser(user: { id: string; name: string; handle: string | null; image: string | null; updatedAt: Date }) {
-    return { id: user.id, name: user.name, handle: user.handle, image: user.image, avatarUrl: avatarUrl(user.id, user.updatedAt) };
+function publicFollowUser(user: { id: string; name: string; handle: string | null; image: string | null; role: string; badgesJson: string | null; createdAt: Date; updatedAt: Date }) {
+    return { id: user.id, name: user.name, handle: user.handle, image: user.image, avatarUrl: avatarUrl(user.id, user.updatedAt), badges: userBadges(user) };
 }
 
 export const followRoutes: FastifyPluginAsync = async (fastify) => {
@@ -31,14 +32,14 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
             user.showFollowings ? prisma.follow.count({ where: { followerId: user.id, status: "approved" } }) : Promise.resolve(null),
             session && session.user.id !== user.id ? prisma.follow.findUnique({ where: { followerId_followingId: { followerId: session.user.id, followingId: user.id } }, select: { status: true } }) : Promise.resolve(null),
         ]);
-        return ok({ id: user.id, name: user.name, handle: user.showHandle ? user.handle : null, bio: user.bio, websiteUrl: user.websiteUrl, githubUrl: user.githubUrl, avatarUrl: avatarUrl(user.id, user.updatedAt), profileBannerUrl: user.profileBannerUrl, accentColor: user.accentColor, createdAt: user.createdAt, allowSearchEngineIndex: user.allowSearchEngineIndex, profileLinks: await prisma.profileLink.findMany({ where: { userId: user.id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }), stats: { posts, followers, following }, followStatus: follow?.status ?? null, isFollowing: follow?.status === "approved", canFollow: Boolean(session && session.user.id !== user.id && user.isPublic) });
+        return ok({ id: user.id, name: user.name, handle: user.showHandle ? user.handle : null, badges: userBadges(user), bio: user.bio, websiteUrl: user.websiteUrl, githubUrl: user.githubUrl, avatarUrl: avatarUrl(user.id, user.updatedAt), profileBannerUrl: user.profileBannerUrl, accentColor: user.accentColor, createdAt: user.createdAt, allowSearchEngineIndex: user.allowSearchEngineIndex, profileLinks: await prisma.profileLink.findMany({ where: { userId: user.id }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] }), stats: { posts, followers, following }, followStatus: follow?.status ?? null, isFollowing: follow?.status === "approved", canFollow: Boolean(session && session.user.id !== user.id && user.isPublic) });
     });
 
     fastify.get("/v1/users/:userId/followers", { schema: openapi({ tags: "Follows", summary: "List a user's followers", description: "Lists approved followers when the profile owner allows followers to be visible.", operationId: "listUserFollowers", parameters: [userId, ...pagination], security: [{}, { cookieAuth: [] }], responses: { "200": { description: "Follower collection." }, "403": { $ref: "#/components/responses/Forbidden" }, "404": { $ref: "#/components/responses/NotFound" } } }) }, async (request, reply) => {
         const { userId: value } = request.params as { userId: string }; const result = await visibleRelationshipUser(value, "followers");
         if (!result) return reply.code(404).send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         if (!result.visible) return reply.code(403).send({ error: { code: "FOLLOWERS_HIDDEN", message: "This user does not allow others to see their followers." } });
-        const q = request.query as Record<string, unknown>; const page = Math.max(1, Number(q.page) || 1); const limit = Math.min(100, Math.max(1, Number(q.limit) || 20)); const [items, total] = await Promise.all([prisma.follow.findMany({ where: { followingId: result.user.id, status: "approved" }, include: { follower: { select: { id: true, name: true, handle: true, image: true, updatedAt: true } } }, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" } }), prisma.follow.count({ where: { followingId: result.user.id, status: "approved" } })]);
+        const q = request.query as Record<string, unknown>; const page = Math.max(1, Number(q.page) || 1); const limit = Math.min(100, Math.max(1, Number(q.limit) || 20)); const [items, total] = await Promise.all([prisma.follow.findMany({ where: { followingId: result.user.id, status: "approved" }, include: { follower: { select: { id: true, name: true, handle: true, image: true, role: true, badgesJson: true, createdAt: true, updatedAt: true } } }, skip: (page - 1) * limit, take: limit, orderBy: { createdAt: "desc" } }), prisma.follow.count({ where: { followingId: result.user.id, status: "approved" } })]);
         return { data: items.map((item) => publicFollowUser(item.follower)), page, limit, total, totalPages: Math.ceil(total / limit) };
     });
 
