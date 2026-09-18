@@ -1,0 +1,36 @@
+{
+    "name": "imshare-config",
+    "displayName": "imshare Configuration",
+    "description": "VS Code language support for the imshare configuration DSL.",
+    "version": "0.1.0",
+    "publisher": "p0x38",
+    "license": "ISC",
+    "engines": {
+        "vscode": "^1.90.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [
+            {
+                "id": "imshare-config",
+                "aliases": [
+                    "imshare config",
+                    "imshare configuration"
+                ],
+                "extensions": [
+                    ".imshare"
+                ],
+                "configuration": "./language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "imshare-config",
+                "scopeName": "source.imshare-config",
+                "path": "./syntaxes/imshare-config.tmLanguage.json"
+            }
+        ]
+    }
+}
