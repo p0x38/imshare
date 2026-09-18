@@ -48,7 +48,7 @@ export async function setupObservability(
         ? normalizeMetricsPath(config.prometheus?.path)
         : null;
     const prometheusExporter = prometheusEnabled
-        ? new PrometheusExporter({ endpoint: prometheusPath ?? PROMETHEUS_DEFAULT_PATH })
+        ? new PrometheusExporter({ endpoint: prometheusPath ?? PROMETHEUS_DEFAULT_PATH, preventServerStart: true })
         : null;
 
     const readers: MetricReader[] = prometheusExporter ? [prometheusExporter] : [];
@@ -67,24 +67,14 @@ export async function setupObservability(
     metrics.setGlobalMeterProvider(meterProvider);
     const meter = meterProvider.getMeter("imshare", serviceVersion);
 
-    const requestCount = meter.createCounter("imshare_http_requests_total", {
-        description: "Total number of completed HTTP requests.",
-    });
-    const requestDuration = meter.createHistogram("imshare_http_request_duration_seconds", {
-        description: "HTTP request duration in seconds.", unit: "s",
-    });
-    const activeRequests = meter.createUpDownCounter("imshare_http_active_requests", {
-        description: "Number of HTTP requests currently being processed.",
-    });
+    const requestCount = meter.createCounter("imshare_http_requests_total", { description: "Total number of completed HTTP requests." });
+    const requestDuration = meter.createHistogram("imshare_http_request_duration_seconds", { description: "HTTP request duration in seconds.", unit: "s" });
+    const activeRequests = meter.createUpDownCounter("imshare_http_active_requests", { description: "Number of HTTP requests currently being processed." });
 
-    const processUptime = meter.createObservableGauge("imshare_process_uptime_seconds", {
-        description: "Process uptime in seconds.", unit: "s",
-    });
+    const processUptime = meter.createObservableGauge("imshare_process_uptime_seconds", { description: "Process uptime in seconds.", unit: "s" });
     processUptime.addCallback((result) => result.observe(process.uptime()));
 
-    const processMemory = meter.createObservableGauge("imshare_process_memory_bytes", {
-        description: "Process resident and heap memory in bytes.", unit: "By",
-    });
+    const processMemory = meter.createObservableGauge("imshare_process_memory_bytes", { description: "Process resident and heap memory in bytes.", unit: "By" });
     processMemory.addCallback((result) => {
         const memory = process.memoryUsage();
         result.observe(memory.rss, { area: "rss" });
@@ -92,9 +82,7 @@ export async function setupObservability(
         result.observe(memory.heapTotal, { area: "heap_total" });
     });
 
-    const processCpu = meter.createObservableCounter("imshare_process_cpu_seconds_total", {
-        description: "Process CPU time in seconds.", unit: "s",
-    });
+    const processCpu = meter.createObservableCounter("imshare_process_cpu_seconds_total", { description: "Process CPU time in seconds.", unit: "s" });
     processCpu.addCallback((result) => {
         const cpu = process.cpuUsage();
         result.observe((cpu.user + cpu.system) / 1_000_000);
@@ -131,9 +119,8 @@ export async function setupObservability(
 
     if (prometheusExporter && prometheusPath) {
         app.get(prometheusPath, async (_request, reply) => {
-            const response = await prometheusExporter.getMetricsRequestHandler;
-            void response;
-            reply.type("text/plain; version=0.0.4").send(await collectPrometheusMetrics(prometheusExporter));
+            reply.hijack();
+            prometheusExporter.getMetricsRequestHandler(_request.raw, reply.raw);
         });
     }
 
@@ -148,20 +135,6 @@ export async function setupObservability(
             if (errors.length > 0) throw errors[0];
         },
     };
-}
-
-async function collectPrometheusMetrics(exporter: PrometheusExporter): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        const response = {
-            statusCode: 200,
-            headers: {},
-            setHeader() {},
-            write(chunk: string | Buffer) { chunks.push(Buffer.from(chunk)); },
-            end(chunk?: string | Buffer) { if (chunk) chunks.push(Buffer.from(chunk)); resolve(Buffer.concat(chunks).toString("utf8")); },
-        } as never;
-        try { exporter.getMetricsRequestHandler({} as never, response); } catch (error) { reject(error); }
-    });
 }
 
 function normalizeMetricsPath(value: string | undefined): string {
