@@ -23,6 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { SecuritySettings } from "./SecuritySettings";
 import { api } from "../lib/api";
+import { authClient } from "../lib/auth-client";
 
 interface SessionInfo {
     id: string;
