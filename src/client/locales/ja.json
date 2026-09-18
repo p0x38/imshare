@@ -505,6 +505,27 @@
                         "answer": "Issueまたはプルリクエストで、対象言語、対象ページや機能、現在の文言、修正案を示してください。文脈によって問題が変わる場合はスクリーンショットや再現手順があると役立ちます。"
                     }
                 ]
+            },
+            "general": {
+                "title": "一般",
+                "items": [
+                    {
+                        "question": "保存とは何ですか？",
+                        "answer": "保存は後で見つけやすくするためのブックマークです。いいねやお気に入りとは別の操作です。"
+                    },
+                    {
+                        "question": "通知はどのように動作しますか？",
+                        "answer": "フォローやリアクションなど、アカウントに関係するイベントを通知として確認できます。"
+                    },
+                    {
+                        "question": "プロフィールの公開範囲を変更できますか？",
+                        "answer": "はい。アカウント設定のプライバシーからプロフィールや投稿、フォロー関係の公開範囲を設定できます。"
+                    },
+                    {
+                        "question": "画像以外の投稿もできますか？",
+                        "answer": "はい。imshareでは画像投稿に加えてテキスト投稿も利用できます。"
+                    }
+                ]
             }
         }
     },
@@ -608,5 +629,52 @@
         "saving": "保存中…",
         "loadError": "アカウント設定を読み込めませんでした。",
         "saveError": "アカウント設定を保存できませんでした。"
+    },
+    "accountUi": {
+        "preferences": "設定",
+        "privacy": "プライバシー",
+        "postingDefaults": "投稿のデフォルト",
+        "security": "セキュリティ",
+        "notifications": "通知",
+        "profileVisibility": "プロフィールの公開範囲",
+        "allowProfile": "他のユーザーにプロフィールの閲覧を許可",
+        "showPosts": "公開投稿をプロフィールに表示",
+        "showHandle": "カスタムハンドルを公開",
+        "showEmail": "メールアドレスを公開",
+        "indexProfile": "検索エンジンによるプロフィールのインデックスを許可",
+        "socialVisibility": "ソーシャル公開設定",
+        "allowFollow": "他のユーザーからのフォローを許可",
+        "followApproval": "新しいフォロワーを承認制にする",
+        "showFollowers": "フォロワーを他のユーザーに表示",
+        "showFollowing": "フォロー中のユーザーを他のユーザーに表示",
+        "defaultCategory": "デフォルトカテゴリ",
+        "none": "なし",
+        "defaultVisibility": "デフォルトの公開範囲",
+        "public": "公開",
+        "unlisted": "限定公開",
+        "private": "非公開",
+        "allowDownloads": "デフォルトでダウンロードを許可",
+        "contentWarning": "デフォルトのコンテンツ警告",
+        "saving": "保存中…",
+        "save": "設定を保存"
+    },
+    "postUi": {
+        "like": "いいね",
+        "favorite": "お気に入り",
+        "save": "保存",
+        "moreActions": "その他の操作",
+        "copyLink": "リンクをコピー",
+        "openNewTab": "新しいタブで開く",
+        "openSource": "ソースを開く",
+        "edit": "投稿を編集",
+        "report": "投稿を報告",
+        "reportTitle": "投稿を報告",
+        "reason": "理由",
+        "noComments": "まだコメントはありません。",
+        "linkCopied": "リンクをクリップボードにコピーしました。",
+        "reportSubmitted": "報告を送信しました。ありがとうございます。",
+        "deleteConfirm": "この投稿を削除しますか？この操作は取り消せません。",
+        "download": "ダウンロード",
+        "downloadImage": "画像 {{number}} をダウンロード"
     }
 }
