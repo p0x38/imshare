@@ -95,7 +95,7 @@ export async function buildApp() {
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
     const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
-    const observability = setupObservability(app, config.observability);
+    const observability = await setupObservability(app, {\n        ...config.observability,\n        serviceName: config.site.name,\n        serviceVersion: config.site.version,\n    });\n    app.decorate("observability", observability);
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
