@@ -221,7 +221,6 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
-        admin: { ...DEFAULTS.admin, ...config.admin, local: { ...DEFAULTS.admin.local, ...config.admin?.local } },
         admin: {
             ...DEFAULTS.admin,
             ...config.admin,
