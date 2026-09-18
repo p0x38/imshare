@@ -10,7 +10,6 @@ import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import { useEffect, useState } from "react";
 import type { Post } from "../lib/types";
 import { api } from "../lib/api";
-import { UserBadges } from "./UserBadges";
 
 function TextCard({
     text,
