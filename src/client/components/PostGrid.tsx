@@ -6,6 +6,7 @@ import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
+import { UserBadges } from "./UserBadges";
 
 function imageUrl(url: string, width = 512) {
     const image = new URL(url, window.location.origin);
@@ -115,6 +116,7 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                                         post.authorName ||
                                         t("common.unknownAuthor")}
                                 </Typography>
+                                <UserBadges user={post.author ?? { badges: [] }} compact />
                                 <Stack
                                     direction="row"
                                     spacing={0.75}
