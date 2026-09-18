@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { AdminLayout } from "../components/AdminLayout";
 import { api } from "../lib/api";
+import { TimeSeriesGraph, type TimeSeriesPoint } from "../components/TimeSeriesGraph";
 
 interface Analytics {
     periodDays: number;
