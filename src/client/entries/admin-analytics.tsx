@@ -9,6 +9,7 @@ interface Analytics {
     periodDays: number;
     totals: { users: number; posts: number; comments: number; reactions: number; uploads: number; views: number; uniqueViewers: number };
     viewsByDay: Array<{ day: string; views: number }>;
+    activityByDay: TimeSeriesPoint[];
     topPosts: Array<{ postId: string; title: string; views: number }>;
 }
 
@@ -20,7 +21,7 @@ function AnalyticsPage() {
     const [data, setData] = useState<Analytics | null>(null);
     const [error, setError] = useState("");
     useEffect(() => { void api<{ data: Analytics }>("/v1/admin/analytics?days=30").then((result) => setData(result.data)).catch((cause) => setError(cause instanceof Error ? cause.message : "Failed to load analytics.")); }, []);
-    const maxViews = useMemo(() => Math.max(1, ...(data?.viewsByDay.map((item) => item.views) ?? [0])), [data]);
+
 
     return <AdminLayout title="Analytics" description="First-party instance analytics from imshare's own database." activeHref="/admin/analytics/">
         {error ? <Alert severity="error">{error}</Alert> : null}
@@ -35,14 +36,15 @@ function AnalyticsPage() {
                 <Stat label="Uploads" value={data.totals.uploads} />
             </Box>
             <Card variant="outlined"><CardContent><Stack spacing={2}>
-                <Typography variant="h6">Views — last {data.periodDays} days</Typography>
-                <Stack direction="row" alignItems="end" spacing={0.5} sx={{ height: 220, overflowX: "auto", pb: 1 }}>
-                    {data.viewsByDay.map((item) => <Stack key={item.day} spacing={0.5} alignItems="center" justifyContent="end" sx={{ minWidth: 22, height: "100%" }}>
-                        <Typography variant="caption">{item.views || ""}</Typography>
-                        <Box sx={{ width: 16, minHeight: item.views ? 3 : 1, height: Math.max(1, (item.views / maxViews) * 170) + "px", borderRadius: "4px 4px 0 0", bgcolor: "primary.main" }} />
-                        <Typography variant="caption" sx={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}>{item.day.slice(5)}</Typography>
-                    </Stack>)}
-                </Stack>
+                <Typography variant="h6">Activity — last {data.periodDays} days</Typography>
+                <TimeSeriesGraph data={data.activityByDay} series={[
+                    { key: "views", label: "Views" },
+                    { key: "users", label: "New users" },
+                    { key: "posts", label: "New posts" },
+                    { key: "comments", label: "Comments" },
+                    { key: "reactions", label: "Reactions" },
+                    { key: "uploads", label: "Uploads" },
+                ]} />
             </Stack></CardContent></Card>
             <Card variant="outlined"><CardContent><Stack spacing={1.5}>
                 <Typography variant="h6">Most viewed posts</Typography>
