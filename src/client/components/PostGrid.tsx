@@ -1,5 +1,9 @@
-import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CardContent, CardMedia, Stack, Tooltip, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
 
@@ -105,39 +109,64 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                                     sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
                                 >
                                     {post.title || t("common.untitled")}
-                                </Typography>
-                                <Typography
-                                    variant="subtitle1"
-                                    noWrap
-                                    sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
-                                >
-                                    {post.title || t("common.untitled")}
                                     {" · "}
                                     {post.author?.name ||
                                         post.author?.username ||
                                         post.authorName ||
                                         t("common.unknownAuthor")}
                                 </Typography>
-                                <Typography
-                                    variant="body2"
+                                <Stack
+                                    direction="row"
+                                    spacing={0.75}
+                                    alignItems="center"
                                     color="text.secondary"
-                                    noWrap
-                                    sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                                    sx={{ minWidth: 0 }}
                                 >
-                                    {post.createdAt
-                                        ? new Date(post.createdAt).toLocaleDateString()
-                                        : ""}
-                                    {" · "}
-                                    {post.viewCount ?? 0} views
-                                    {" · "}
-                                    {post.reactions?.like ?? 0} likes
-                                    {" · "}
-                                    {post.reactions?.favorite ?? 0} favs
-                                    {" · "}
-                                    {post.reactions?.save ?? 0} saves
-                                    {" · "}
-                                    ...
-                                </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        noWrap
+                                        sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                                    >
+                                        {post.createdAt
+                                            ? new Date(post.createdAt).toLocaleDateString()
+                                            : ""}
+                                    </Typography>
+                                    <Typography component="span" variant="body2" aria-hidden="true">
+                                        ·
+                                    </Typography>
+                                    <Tooltip title="Views">
+                                        <Stack direction="row" spacing={0.25} alignItems="center">
+                                            <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
+                                            <Typography component="span" variant="caption">
+                                                {post.viewCount ?? 0}
+                                            </Typography>
+                                        </Stack>
+                                    </Tooltip>
+                                    <Tooltip title="Likes">
+                                        <Stack direction="row" spacing={0.25} alignItems="center">
+                                            <ThumbUpAltOutlinedIcon sx={{ fontSize: 15 }} />
+                                            <Typography component="span" variant="caption">
+                                                {post.reactions?.like ?? 0}
+                                            </Typography>
+                                        </Stack>
+                                    </Tooltip>
+                                    <Tooltip title="Favorites">
+                                        <Stack direction="row" spacing={0.25} alignItems="center">
+                                            <FavoriteBorderIcon sx={{ fontSize: 15 }} />
+                                            <Typography component="span" variant="caption">
+                                                {post.reactions?.favorite ?? 0}
+                                            </Typography>
+                                        </Stack>
+                                    </Tooltip>
+                                    <Tooltip title="Saves">
+                                        <Stack direction="row" spacing={0.25} alignItems="center">
+                                            <BookmarkBorderIcon sx={{ fontSize: 15 }} />
+                                            <Typography component="span" variant="caption">
+                                                {post.reactions?.save ?? 0}
+                                            </Typography>
+                                        </Stack>
+                                    </Tooltip>
+                                </Stack>
                             </CardContent>
                         </CardActionArea>
                     </Card>
