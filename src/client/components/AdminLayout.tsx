@@ -4,7 +4,7 @@ import Group from "@mui/icons-material/Group";
 import Article from "@mui/icons-material/Article";
 import ReportProblem from "@mui/icons-material/ReportProblem";
 import Settings from "@mui/icons-material/Settings";
-import History from "@mui/icons-material/History";
+import History from "@mui/icons-material/History";\nimport Insights from "@mui/icons-material/Insights";
 import { PropsWithChildren, type ReactNode } from "react";
 import { Page } from "./Page";
 
@@ -35,7 +35,7 @@ const sections: AdminNavSection[] = [
     },
     {
         label: "Instance",
-        items: [{ label: "Settings", href: "/admin/settings/", icon: <Settings /> }],
+        items: [{ label: "Analytics", href: "/admin/analytics/", icon: <Insights /> },\n            { label: "Settings", href: "/admin/settings/", icon: <Settings /> }],
     },
 ];
 
