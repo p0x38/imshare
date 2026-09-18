@@ -47,6 +47,10 @@ export function Footer() {
                         {t("footer.faq")}
                     </Link>
                     <Typography color="text.secondary">·</Typography>
+                    <Link href="/badges/" underline="hover">
+                        {t("footer.badges")}
+                    </Link>
+                    <Typography color="text.secondary">·</Typography>
                     <Link href="/github/" underline="hover">
                         {t("footer.github")}
                     </Link>
