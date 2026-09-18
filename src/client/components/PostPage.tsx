@@ -528,7 +528,8 @@ function CommentItem({
     );
 }
 
-function Comments({ postId }: { postId: string }) {
+function Comments({
+    const { t } = useTranslation(); postId }: { postId: string }) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const [body, setBody] = useState("");
