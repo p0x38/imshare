@@ -220,6 +220,7 @@ export function createObservability(
               meterProvider.getMeter("imshare", serviceVersion),
           )
         : null;
+    activeMetricHandles = metricHandles;
 
     const tracesEnabled = config.traces?.enabled === true;
     const traceEndpoint = tracesEnabled ? config.traces?.endpoint?.trim() : undefined;
@@ -324,6 +325,22 @@ export function createObservability(
         meterProvider,
         sdk,
         prometheusPath,
+        recordUpload(size, mimeType) {
+            metricHandles?.uploadBytes.add(size, { mime_type: mimeType });
+            metricHandles?.uploads.add(1, { mime_type: mimeType });
+        },
+        recordDatabaseQuery(durationSeconds, operation) {
+            const histogram = meterProvider?.getMeter("imshare", serviceVersion).createHistogram("imshare_db_query_duration_seconds", { description: "Database query duration in seconds.", unit: "s" });
+            histogram?.record(durationSeconds, { operation });
+        },
+        recordDatabaseError(operation) {
+            meterProvider?.getMeter("imshare", serviceVersion).createCounter("imshare_db_errors_total", { description: "Total database errors." }).add(1, { operation });
+        },
+        recordRealtimeConnection(delta) { metricHandles?.realtimeConnections.add(delta); },
+        recordRealtimeConnectionEvent(event) { metricHandles?.realtimeConnectionEvents.add(1, { event }); },
+        recordRealtimeMessage(event) { metricHandles?.realtimeMessages.add(1, { event }); },
+        recordRealtimeError() { metricHandles?.realtimeErrors.add(1); },
+        recordRateLimitHit(scope) { metricHandles?.rateLimitHits.add(1, { scope }); },
         register(app) {
             if (metricHandles) {
                 registerMetricHooks(app, metricHandles, requestStarted, prometheusPath);
@@ -364,64 +381,67 @@ export function createObservability(
 }
 
 function createMetricHandles(meter: Meter): MetricHandles {
-    const requestCount = meter.createCounter("imshare_http_requests_total", {
-        description: "Total number of completed HTTP requests.",
-    });
-    const requestDuration = meter.createHistogram(
-        "imshare_http_request_duration_seconds",
-        {
-            description: "HTTP request duration in seconds.",
-            unit: "s",
-        },
-    );
-    const activeRequests = meter.createUpDownCounter(
-        "imshare_http_active_requests",
-        {
-            description: "Number of HTTP requests currently being processed.",
-        },
-    );
-    const processUptime = meter.createObservableGauge(
-        "imshare_process_uptime_seconds",
-        {
-            description: "Process uptime in seconds.",
-            unit: "s",
-        },
-    );
-    processUptime.addCallback((result) => result.observe(process.uptime()));
+    const counter = (name: string, description: string, unit?: string) =>
+        meter.createCounter(name, { description, ...(unit ? { unit } : {}) });
+    const histogram = (name: string, description: string, unit: string) =>
+        meter.createHistogram(name, { description, unit });
 
-    const processMemory = meter.createObservableGauge(
-        "imshare_process_memory_bytes",
-        {
-            description: "Process resident and heap memory in bytes.",
-            unit: "By",
-        },
-    );
+    const requestCount = counter("imshare_http_requests_total", "Total number of completed HTTP requests.");
+    const requestDuration = histogram("imshare_http_request_duration_seconds", "HTTP request duration in seconds.", "s");
+    const responseSize = histogram("imshare_http_response_size_bytes", "HTTP response body size in bytes.", "By");
+    const activeRequests = meter.createUpDownCounter("imshare_http_active_requests", { description: "Number of HTTP requests currently being processed." });
+    const processUptime = meter.createObservableGauge("imshare_process_uptime_seconds", { description: "Process uptime in seconds.", unit: "s" });
+    processUptime.addCallback((result) => result.observe(process.uptime()));
+    const processMemory = meter.createObservableGauge("imshare_process_memory_bytes", { description: "Process resident and heap memory in bytes.", unit: "By" });
     processMemory.addCallback((result) => {
         const memory = process.memoryUsage();
         result.observe(memory.rss, { area: "rss" });
         result.observe(memory.heapUsed, { area: "heap_used" });
         result.observe(memory.heapTotal, { area: "heap_total" });
     });
-
-    const processCpu = meter.createObservableCounter(
-        "imshare_process_cpu_seconds_total",
-        {
-            description: "Process CPU time in seconds.",
-            unit: "s",
-        },
-    );
+    const processCpu = meter.createObservableCounter("imshare_process_cpu_seconds_total", { description: "Process CPU time in seconds.", unit: "s" });
     processCpu.addCallback((result) => {
         const cpu = process.cpuUsage();
         result.observe((cpu.user + cpu.system) / 1_000_000);
     });
 
+    const postsCreated = counter("imshare_posts_created_total", "Total posts created.");
+    const postsDeleted = counter("imshare_posts_deleted_total", "Total posts deleted.");
+    const textsCreated = counter("imshare_texts_created_total", "Total text posts created.");
+    const postViews = counter("imshare_post_views_total", "Total post views.");
+    const commentsCreated = counter("imshare_comments_created_total", "Total comments created.");
+    const reactions = counter("imshare_reactions_total", "Total post reactions.");
+    const follows = counter("imshare_follows_total", "Total follow actions.");
+    const reports = counter("imshare_reports_total", "Total reports submitted.");
+    const notifications = counter("imshare_notifications_total", "Total notifications created.");
+    const usersRegistered = counter("imshare_users_registered_total", "Total users registered.");
+    const authAttempts = counter("imshare_auth_attempts_total", "Total authentication attempts.");
+    const apiErrors = counter("imshare_api_errors_total", "Total API errors.");
+    const permissionDenials = counter("imshare_permission_denials_total", "Total permission denials.");
+    const csrfRejections = counter("imshare_csrf_rejections_total", "Total CSRF rejections.");
+    const rateLimitHits = counter("imshare_rate_limit_hits_total", "Total rate limit rejections.");
+    const uploadBytes = counter("imshare_upload_bytes_total", "Total uploaded bytes.", "By");
+    const uploads = counter("imshare_uploads_total", "Total uploads accepted.");
+    const uploadDuration = histogram("imshare_upload_duration_seconds", "Upload processing duration in seconds.", "s");
+    const imageServed = counter("imshare_images_served_total", "Total image responses served.");
+    const imageTransformations = counter("imshare_image_transformations_total", "Total image transformations.");
+    const imageProcessingDuration = histogram("imshare_image_processing_duration_seconds", "Image processing duration in seconds.", "s");
+    const imageProcessingErrors = counter("imshare_image_processing_errors_total", "Total image processing errors.");
+    const realtimeConnections = meter.createUpDownCounter("imshare_realtime_connections", { description: "Number of active realtime connections." });
+    const realtimeConnectionEvents = counter("imshare_realtime_connection_events_total", "Total realtime connection events.");
+    const realtimeMessages = counter("imshare_realtime_messages_total", "Total realtime messages.");
+    const realtimeErrors = counter("imshare_realtime_errors_total", "Total realtime errors.");
+    const registeredUsers = meter.createObservableGauge("imshare_registered_users", { description: "Current number of registered users." });
+    const publishedPosts = meter.createObservableGauge("imshare_published_posts", { description: "Current number of published posts." });
+    const pendingReports = meter.createObservableGauge("imshare_pending_reports", { description: "Current number of pending reports." });
+
     return {
-        requestCount,
-        requestDuration,
-        activeRequests,
-        processUptime,
-        processMemory,
-        processCpu,
+        requestCount, requestDuration, responseSize, activeRequests, processUptime, processMemory, processCpu,
+        postsCreated, postsDeleted, textsCreated, postViews, commentsCreated, reactions, follows, reports,
+        notifications, usersRegistered, authAttempts, apiErrors, permissionDenials, csrfRejections, rateLimitHits,
+        uploadBytes, uploads, uploadDuration, imageServed, imageTransformations, imageProcessingDuration,
+        imageProcessingErrors, realtimeConnections, realtimeConnectionEvents, realtimeMessages, realtimeErrors,
+        registeredUsers, publishedPosts, pendingReports,
     };
 }
 
@@ -442,20 +462,38 @@ function registerMetricHooks(
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (pathname === prometheusPath) return;
         metricsSet.activeRequests.add(-1);
-
         const startedAt = requestStarted.get(request);
         if (startedAt === undefined) return;
-
-        const durationSeconds =
-            Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
+        const durationSeconds = Number(process.hrtime.bigint() - startedAt) / 1_000_000_000;
         const labels = {
             method: request.method,
             route: request.routeOptions?.url ?? pathname,
             status_code: String(reply.statusCode),
         };
-
         metricsSet.requestCount.add(1, labels);
         metricsSet.requestDuration.record(durationSeconds, labels);
+        const responseLength = Number(reply.getHeader("content-length") ?? 0);
+        if (Number.isFinite(responseLength) && responseLength > 0) metricsSet.responseSize.record(responseLength, labels);
+
+        if (pathname.startsWith("/api/") && reply.statusCode >= 400)
+            metricsSet.apiErrors.add(1, { route: labels.route, status_code: labels.status_code });
+        if (reply.statusCode === 401 || reply.statusCode === 403)
+            metricsSet.permissionDenials.add(1, { route: labels.route, status_code: labels.status_code });
+
+        if (request.method === "POST" && reply.statusCode >= 200 && reply.statusCode < 300) {
+            if (pathname === "/api/v1/posts") metricsSet.postsCreated.add(1);
+            if (pathname === "/api/v1/texts") {
+                metricsSet.textsCreated.add(1);
+                metricsSet.postsCreated.add(1);
+            }
+            if (pathname === "/api/v1/comments") metricsSet.commentsCreated.add(1);
+            if (pathname === "/api/v1/uploads") metricsSet.uploads.add(1);
+            if (pathname === "/api/v1/reports") metricsSet.reports.add(1);
+        }
+        if (pathname.match(/^\/api\/v1\/posts\/[^/]+$/) && request.method === "DELETE" && reply.statusCode >= 200 && reply.statusCode < 300)
+            metricsSet.postsDeleted.add(1);
+        if (pathname.match(/^\/api\/v1\/posts\/[^/]+$/) && request.method === "GET" && reply.statusCode === 200)
+            metricsSet.postViews.add(1);
     });
 }
 
@@ -515,6 +553,14 @@ function disabledRuntime(): ObservabilityRuntime {
         meterProvider: null,
         sdk: null,
         prometheusPath: null,
+        recordUpload() {},
+        recordDatabaseQuery() {},
+        recordDatabaseError() {},
+        recordRealtimeConnection() {},
+        recordRealtimeConnectionEvent() {},
+        recordRealtimeMessage() {},
+        recordRealtimeError() {},
+        recordRateLimitHit() {},
         register() {},
         async shutdown() {},
     };
