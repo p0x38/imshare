@@ -10,7 +10,6 @@ export interface ServerConfig {
     server: { host: string; port: number };
     storage: { uploadDirectory: string; maxFileSize: number };
     site: { name: string; version: string; description?: string };
-    admin?: { local?: { enabled?: boolean; host?: string; port?: number } };
     admin?: {
         local?: {
             enabled?: boolean;
@@ -102,7 +101,6 @@ const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
     admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
-    admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
     auth: {
         emailAndPasswordEnabled: true,
         appendPort: true,
@@ -125,22 +123,6 @@ const DEFAULTS = {
     },
     limits: { textPostCharacters: 500 },
 } as const;
-
-export async function readConfigText(): Promise<string> {
-    return readFile(configPath, "utf8");
-}
-
-export function validateConfigText(content: string): ServerConfig {
-    return parseConfig(content);
-}
-
-export async function saveConfigText(content: string): Promise<ServerConfig> {
-    const validated = validateConfigText(content);
-    const temporaryPath = `${configPath}.tmp`;
-    await writeFile(temporaryPath, content.trimEnd() + "\n", "utf8");
-    await rename(temporaryPath, configPath);
-    return validated;
-}
 
 export async function readConfigText(): Promise<string> {
     return readFile(configPath, "utf8");
