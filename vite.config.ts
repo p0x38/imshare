@@ -47,6 +47,7 @@ export default defineConfig({
                 ),
                 "admin-analytics": path.resolve(process.cwd(), "src/client/entries/admin-analytics.tsx"),
                 faq: path.resolve(process.cwd(), "src/client/entries/faq.tsx"),
+                badges: path.resolve(process.cwd(), "src/client/entries/badges.tsx"),
                 "static-pages": path.resolve(process.cwd(), "src/client/entries/static-pages.tsx"),
                 "git-commits": path.resolve(process.cwd(), "src/client/entries/git-commits.tsx"),
                 error: path.resolve(process.cwd(), "src/client/entries/error.tsx"),
