@@ -8,6 +8,7 @@ import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
+import { ensureCacheDirectory } from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
 
 const MAX_DIMENSION = 4096;
@@ -22,7 +23,7 @@ function cacheKey(uploadId: string, width?: number, height?: number, fit?: Fit, 
 function setCacheHeaders(reply: any, output: Buffer) { const etag = `"${createHash("sha256").update(output).digest("hex")}"`; reply.header("Cache-Control", "public, max-age=31536000, immutable"); reply.header("ETag", etag); reply.header("X-Content-Type-Options", "nosniff"); return etag; }
 
 export const imageRoutes: FastifyPluginAsync = async (fastify) => {
-    const config = await loadConfig(); const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory); const cacheDir = path.join(uploadDir, ".cache"); await mkdir(cacheDir, { recursive: true });
+    const config = await loadConfig(); const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory); const cacheDir = await ensureCacheDirectory();
     const uploadId = parameter.path("uploadId", { type: "string" }, { description: "Upload ID." });
     const transformParameters = [
         uploadId,
@@ -56,7 +57,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
         const key = cacheKey(upload.id, width, height, fit, format); const cached = path.join(cacheDir, key);
         try { const output = await readFile(cached); const etag = setCacheHeaders(reply, output); if (request.headers["if-none-match"] === etag) return reply.code(304).send(); reply.type(format ? FORMATS[format].mime : upload.mimeType); return reply.send(output); } catch {}
         try {
-            if (width !== undefined && height === undefined && fit === "inside" && format === "webp" && [320, 640, 1280].includes(width)) queueThumbnailGeneration(source, cacheDir, upload.id);
+            if (width !== undefined && height === undefined && fit === "inside" && format === "webp" && [320, 640, 1280].includes(width)) queueThumbnailGeneration(source, upload.id);
             let pipeline = sharp(source, { animated: false }); if (width !== undefined || height !== undefined) pipeline = pipeline.resize({ width, height, fit, withoutEnlargement: true });
             if (format !== undefined) { const targetFormat = format === "jpg" ? "jpeg" : format; pipeline = pipeline.toFormat(targetFormat, targetFormat === "jpeg" || targetFormat === "png" ? { progressive: true } : {}); reply.type(FORMATS[format].mime); } else reply.type(upload.mimeType);
             const output = await pipeline.toBuffer(); await writeFile(cached, output, { flag: "wx" }).catch(async (error) => { if ((error as NodeJS.ErrnoException).code === "EEXIST") return; throw error; }); const etag = setCacheHeaders(reply, output); if (request.headers["if-none-match"] === etag) return reply.code(304).send(); return reply.send(output);
