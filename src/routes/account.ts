@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
+import { buildDailyAnalytics } from "../lib/analytics.js";
 import { lookupApproxLocation } from "../lib/ip-location.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
 import { openapi, parameter, request } from "../lib/openapi-route.js";
@@ -53,7 +54,23 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 distinct: ["userId"],
                 select: { userId: true },
             }),
-            prisma.$queryRaw<Array<{ day: string; views: number | bigint }>>`SELECT date("viewedAt") AS day, COUNT(*) AS views FROM "post_view" WHERE "viewedAt" >= ${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = ${user.id}) GROUP BY date("viewedAt") ORDER BY day ASC`,
+            prisma.$queryRaw<Array<{ day: string; metric: string; value: number | bigint }>>`SELECT day, metric, value FROM (
+                SELECT date("viewedAt") AS day, 'views' AS metric, COUNT(*) AS value FROM "post_view"
+                WHERE "viewedAt" >= ${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = ${user.id})
+                GROUP BY date("viewedAt")
+                UNION ALL
+                SELECT date("createdAt") AS day, 'comments' AS metric, COUNT(*) AS value FROM "comment"
+                WHERE "createdAt" >= ${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = ${user.id})
+                GROUP BY date("createdAt")
+                UNION ALL
+                SELECT date("createdAt") AS day, 'reactions' AS metric, COUNT(*) AS value FROM "post_reaction"
+                WHERE "createdAt" >= ${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = ${user.id})
+                GROUP BY date("createdAt")
+                UNION ALL
+                SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS value FROM "upload"
+                WHERE "createdAt" >= ${since} AND "userId" = ${user.id}
+                GROUP BY date("createdAt")
+            ) ORDER BY day ASC`,
             prisma.postView.groupBy({
                 by: ["postId"],
                 where: { viewedAt: { gte: since }, post: { userId: user.id } },
@@ -90,7 +107,8 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 uploads: recentUploads,
                 uniqueViewers: recentUniqueViewers.length,
             },
-            viewsByDay: recentViewTrend.map((row) => ({ day: row.day, views: Number(row.views) })),
+            viewsByDay: recentViewTrend.filter((row) => row.metric === "views").map((row) => ({ day: row.day, views: Number(row.value) })),
+            activityByDay: buildDailyAnalytics(days, recentViewTrend),
             topPosts: topPosts.map((row) => ({ postId: row.postId, title: titles.get(row.postId) ?? "Untitled", views: row._count._all })),
         });
     });
