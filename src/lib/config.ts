@@ -10,6 +10,7 @@ export interface ServerConfig {
     server: { host: string; port: number };
     storage: { uploadDirectory: string; maxFileSize: number };
     site: { name: string; version: string; description?: string };
+    admin?: { local?: { enabled?: boolean; host?: string; port?: number } };
     admin?: {
         local?: {
             enabled?: boolean;
@@ -101,6 +102,7 @@ const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
     admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
+    admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
     auth: {
         emailAndPasswordEnabled: true,
         appendPort: true,
@@ -123,6 +125,22 @@ const DEFAULTS = {
     },
     limits: { textPostCharacters: 500 },
 } as const;
+
+export async function readConfigText(): Promise<string> {
+    return readFile(configPath, "utf8");
+}
+
+export function validateConfigText(content: string): ServerConfig {
+    return parseConfig(content);
+}
+
+export async function saveConfigText(content: string): Promise<ServerConfig> {
+    const validated = validateConfigText(content);
+    const temporaryPath = `${configPath}.tmp`;
+    await writeFile(temporaryPath, content.trimEnd() + "\n", "utf8");
+    await rename(temporaryPath, configPath);
+    return validated;
+}
 
 export async function readConfigText(): Promise<string> {
     return readFile(configPath, "utf8");
@@ -221,6 +239,7 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
+        admin: { ...DEFAULTS.admin, ...config.admin, local: { ...DEFAULTS.admin.local, ...config.admin?.local } },
         admin: {
             ...DEFAULTS.admin,
             ...config.admin,
@@ -267,6 +286,11 @@ function isServerConfig(value: unknown): value is ServerConfig {
         typeof site.name === "string" &&
         typeof site.version === "string" &&
         (site.description === undefined || typeof site.description === "string") &&
+        (admin === undefined || (isObject(admin) && (admin.local === undefined || (isObject(admin.local) &&
+            (admin.local.enabled === undefined || typeof admin.local.enabled === "boolean") &&
+            (admin.local.host === undefined || ["127.0.0.1", "localhost", "::1"].includes(admin.local.host)) &&
+            (admin.local.port === undefined || (typeof admin.local.port === "number" && Number.isInteger(admin.local.port) && admin.local.port > 0 && admin.local.port <= 65535)) &&
+            (admin.local.port === undefined || admin.local.port !== server.port))))) &&
         (admin === undefined ||
             (isObject(admin) &&
                 (admin.local === undefined ||
