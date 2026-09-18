@@ -119,7 +119,8 @@ export class MetricsRegistry {
         series.count += 1;
         series.sum += value;
         for (let index = 0; index < HISTOGRAM_BUCKETS.length; index += 1) {
-            if (value <= HISTOGRAM_BUCKETS[index]!) series.buckets[index] += 1;
+            const bucket = HISTOGRAM_BUCKETS[index];
+            if (bucket !== undefined && value <= bucket) series.buckets[index] = (series.buckets[index] ?? 0) + 1;
         }
         if (description) this.histogramDescriptions.set(name, description);
     }
