@@ -6,12 +6,13 @@ import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { PostGrid } from "../components/PostGrid";
 import { TextList } from "../components/TextList";
+import { UserBadges } from "../components/UserBadges";
 import { LoadingState } from "../components/States";
 import { ProfileLinks } from "../components/ProfileLinks";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 
-interface Profile { id: string; name: string; handle?: string | null; bio?: string | null; avatarUrl?: string | null; profileBannerUrl?: string | null; websiteUrl?: string | null; githubUrl?: string | null; profileLinks?: Array<{ id: string; label: string; url: string }>; createdAt: string; allowSearchEngineIndex: boolean; stats: { posts: number; followers: number | null; following: number | null }; followStatus: "pending" | "approved" | null; isFollowing: boolean; canFollow: boolean; }
+interface Profile { id: string; name: string; handle?: string | null; badges?: string[]; bio?: string | null; avatarUrl?: string | null; profileBannerUrl?: string | null; websiteUrl?: string | null; githubUrl?: string | null; profileLinks?: Array<{ id: string; label: string; url: string }>; createdAt: string; allowSearchEngineIndex: boolean; stats: { posts: number; followers: number | null; following: number | null }; followStatus: "pending" | "approved" | null; isFollowing: boolean; canFollow: boolean; }
 interface RelationshipUser { id: string; name: string; handle?: string | null; image?: string | null; avatarUrl: string; }
 type ProfileTab = "posts" | "about" | "followers" | "following";
 
@@ -41,7 +42,12 @@ function ProfilePage() {
             {profile.profileBannerUrl ? <Box component="img" src={profile.profileBannerUrl} alt="" sx={{ width: "100%", height: { xs: 120, sm: 180 }, objectFit: "cover" }} /> : null}
             <CardContent><Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems={{ xs: "flex-start", sm: "center" }}>
                 <Avatar src={profile.avatarUrl ?? undefined} sx={{ width: 96, height: 96 }}>{profile.name.charAt(0).toUpperCase()}</Avatar>
-                <Stack spacing={0.75} sx={{ flexGrow: 1, minWidth: 0 }}><Typography variant="h4" component="h1">{profile.name}</Typography>{profile.handle ? <Link href={`/users/@${encodeURIComponent(profile.handle)}`} underline="hover">@{profile.handle}</Link> : null}{profile.bio ? <Typography sx={{ whiteSpace: "pre-wrap" }}>{profile.bio}</Typography> : null}</Stack>
+                <Stack spacing={0.75} sx={{ flexGrow: 1, minWidth: 0 }}><Stack spacing={0.75}>
+                            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+                                <Typography variant="h4" component="h1">{profile.name}</Typography>
+                                <UserBadges user={profile} />
+                            </Stack>
+                        </Stack>{profile.handle ? <Link href={`/users/@${encodeURIComponent(profile.handle)}`} underline="hover">@{profile.handle}</Link> : null}{profile.bio ? <Typography sx={{ whiteSpace: "pre-wrap" }}>{profile.bio}</Typography> : null}</Stack>
                 {profile.canFollow ? <Button variant={pending(profile.followStatus) ? "outlined" : "contained"} startIcon={pending(profile.followStatus) ? <HourglassEmpty /> : profile.isFollowing ? <PersonRemove /> : <PersonAdd />} onClick={() => void toggleFollow()} disabled={busy}>{pending(profile.followStatus) ? "Requested" : profile.isFollowing ? "Following" : "Follow"}</Button> : null}
             </Stack>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 2 }}><Chip label={`${profile.stats.posts.toLocaleString()} posts`} />{profile.stats.followers !== null ? <Chip label={`${profile.stats.followers.toLocaleString()} followers`} /> : null}{profile.stats.following !== null ? <Chip label={`${profile.stats.following.toLocaleString()} following`} /> : null}<Chip label={`Joined ${new Date(profile.createdAt).toLocaleDateString()}`} /></Stack>
