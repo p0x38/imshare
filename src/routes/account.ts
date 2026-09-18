@@ -52,7 +52,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 distinct: ["userId"],
                 select: { userId: true },
             }),
-            prisma.$queryRaw<Array<{ day: string; views: number | bigint }>>\`SELECT date("viewedAt") AS day, COUNT(*) AS views FROM "post_view" WHERE "viewedAt" >= \${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = \${user.id}) GROUP BY date("viewedAt") ORDER BY day ASC\`,
+            prisma.$queryRaw<Array<{ day: string; views: number | bigint }>>`SELECT date("viewedAt") AS day, COUNT(*) AS views FROM "post_view" WHERE "viewedAt" >= ${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = ${user.id}) GROUP BY date("viewedAt") ORDER BY day ASC`,
             prisma.postView.groupBy({
                 by: ["postId"],
                 where: { viewedAt: { gte: since }, post: { userId: user.id } },
