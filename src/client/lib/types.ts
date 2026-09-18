@@ -63,6 +63,7 @@ export interface User extends Author {
     profileBannerUrl?: string | null;
     accentColor?: string | null;
     role?: string;
+    badges?: string[];
     createdAt?: string;
     profileLinks?: Array<{ id: string; label: string; url: string }>;
 }
