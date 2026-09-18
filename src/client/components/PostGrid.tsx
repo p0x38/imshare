@@ -115,7 +115,6 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                                         post.authorName ||
                                         t("common.unknownAuthor")}
                                 </Typography>
-                                <UserBadges user={post.author ?? { badges: [] }} compact />
                                 <Stack
                                     direction="row"
                                     spacing={0.75}
