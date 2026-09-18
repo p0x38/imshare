@@ -33,6 +33,7 @@ interface SessionInfo {
     ipAddress?: string | null;
     userAgent?: string | null;
     current: boolean;
+    approximateLocation?: { city?: string; region?: string; country?: string } | null;
 }
 
 function asDate(value: string | Date): Date {
@@ -41,6 +42,11 @@ function asDate(value: string | Date): Date {
 
 function formatDate(value: string | Date): string {
     return asDate(value).toLocaleString();
+}
+
+function formatApproximateLocation(location: SessionInfo["approximateLocation"]): string | null {
+    if (!location) return null;
+    return [location.city, location.region, location.country].filter(Boolean).join(", ") || null;
 }
 
 function describeUserAgent(userAgent: string | null | undefined): string {
@@ -248,8 +254,13 @@ export function DevicesSecurity() {
                                                           {session.ipAddress || "IP address unavailable"}
                                                       </Typography>
                                                       <Typography variant="caption" color="text.secondary">
-                                                          Signed in {formatDate(session.createdAt)} · Expires {formatDate(session.expiresAt)}
+                                                          Since {formatDate(session.createdAt)} · Expires {formatDate(session.expiresAt)}
                                                       </Typography>
+                                                      {formatApproximateLocation(session.approximateLocation) ? (
+                                                          <Typography variant="caption" color="text.secondary">
+                                                              Approx. location: {formatApproximateLocation(session.approximateLocation)}
+                                                          </Typography>
+                                                      ) : null}
                                                   </Stack>
                                               </Stack>
                                               <Button
