@@ -13,6 +13,7 @@ export const postInclude = {
             image: true,
             role: true,
             badgesJson: true,
+            createdAt: true,
             updatedAt: true,
         },
     },
