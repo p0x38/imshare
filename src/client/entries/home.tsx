@@ -1,10 +1,11 @@
-import { Typography } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { PostGrid } from "../components/PostGrid";
+import { TextList } from "../components/TextList";
 import { ErrorState, SkeletonGrid } from "../components/States";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
@@ -12,6 +13,8 @@ import type { Post } from "../lib/types";
 function HomePage() {
     const { t } = useTranslation();
     const [posts, setPosts] = useState<Post[]>([]);
+    const imagePosts = posts.filter((post) => post.contentType !== "text");
+    const texts = posts.filter((post) => post.contentType === "text");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     useEffect(() => {
@@ -32,7 +35,20 @@ function HomePage() {
             ) : error ? (
                 <ErrorState message={error} />
             ) : (
-                <PostGrid posts={posts} />
+                <Stack spacing={{ xs: 3, sm: 4 }}>
+                    <Stack spacing={1.5}>
+                        <Typography variant="h5" component="h2">
+                            {t("home.recentPosts")}
+                        </Typography>
+                        <PostGrid posts={imagePosts} />
+                    </Stack>
+                    {texts.length ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="h5" component="h2">Texts</Typography>
+                            <TextList texts={texts} />
+                        </Stack>
+                    ) : null}
+                </Stack>
             )}
         </Page>
     );
