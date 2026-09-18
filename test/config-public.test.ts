@@ -42,6 +42,7 @@ test("public config reports token requirement for private registration", () => {
         enabled: true,
         public: false,
         tokenRequired: true,
+        approvalRequired: false,
     });
     expect(config.auth.oidcProviderId).toBeNull();
 });
