@@ -44,3 +44,4 @@ config.imshare
 coverage/
 playwright-report/
 test-results/
+cache/
