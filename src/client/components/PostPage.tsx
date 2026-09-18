@@ -38,6 +38,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import LinkIcon from "@mui/icons-material/Link";
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Page } from "./Page";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
@@ -131,6 +132,7 @@ function useReducedMotion() {
 }
 
 function PostActions({ post }: { post: Post }) {
+    const { t } = useTranslation();
     const [busy, setBusy] = useState("");
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [reportOpen, setReportOpen] = useState(false);
@@ -203,7 +205,7 @@ function PostActions({ post }: { post: Post }) {
 
     const deletePost = async () => {
         closeMenu();
-        if (!window.confirm("Delete this post? This cannot be undone.")) return;
+        if (!window.confirm(t("postUi.deleteConfirm"))) return;
         setBusy("delete");
         try {
             await api(`/v1/posts/${encodeURIComponent(post.id)}`, { method: "DELETE" });
@@ -243,9 +245,9 @@ function PostActions({ post }: { post: Post }) {
                     direction="row"
                     sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}
                 >
-                    <Tooltip title="Like">
+                    <Tooltip title={t("postUi.like")}>
                         <IconButton
-                            aria-label="Like"
+                            aria-label={t("postUi.like")}
                             disabled={busy !== "" && busy !== "like"}
                             onClick={() => void toggle("like")}
                             sx={buttonSx()}
@@ -253,9 +255,9 @@ function PostActions({ post }: { post: Post }) {
                             <ThumbUpAltOutlinedIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Favorite">
+                    <Tooltip title={t("postUi.favorite")}>
                         <IconButton
-                            aria-label="Favorite"
+                            aria-label={t("postUi.favorite")}
                             disabled={busy !== "" && busy !== "favorite"}
                             onClick={() => void toggle("favorite")}
                             sx={buttonSx(true)}
@@ -263,9 +265,9 @@ function PostActions({ post }: { post: Post }) {
                             <FavoriteBorderIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="Save">
+                    <Tooltip title={t("postUi.save")}>
                         <IconButton
-                            aria-label="Save"
+                            aria-label={t("postUi.save")}
                             disabled={busy !== "" && busy !== "save"}
                             onClick={() => void toggle("save")}
                             sx={buttonSx(true)}
@@ -273,9 +275,9 @@ function PostActions({ post }: { post: Post }) {
                             <BookmarkBorderIcon />
                         </IconButton>
                     </Tooltip>
-                    <Tooltip title="More actions">
+                    <Tooltip title={t("postUi.moreActions")}>
                         <IconButton
-                            aria-label="More actions"
+                            aria-label={t("postUi.moreActions")}
                             aria-controls={anchorEl ? "post-actions-menu" : undefined}
                             aria-haspopup="true"
                             aria-expanded={anchorEl ? "true" : undefined}
@@ -310,7 +312,7 @@ function PostActions({ post }: { post: Post }) {
                               <ListItemText>
                                   {post.uploads!.length === 1
                                       ? "Download"
-                                      : `Download image ${index + 1}`}
+                                      : t("postUi.downloadImage", { number: index + 1 })}
                               </ListItemText>
                           </MenuItem>
                       ))
@@ -319,7 +321,7 @@ function PostActions({ post }: { post: Post }) {
                     <ListItemIcon>
                         <LinkIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Copy link</ListItemText>
+                    <ListItemText>{t("postUi.copyLink")}</ListItemText>
                 </MenuItem>
                 <MenuItem
                     onClick={() => {
@@ -330,7 +332,7 @@ function PostActions({ post }: { post: Post }) {
                     <ListItemIcon>
                         <OpenInNewIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Open in new tab</ListItemText>
+                    <ListItemText>{t("postUi.openNewTab")}</ListItemText>
                 </MenuItem>
                 {post.sourceUrl ? (
                     <MenuItem
@@ -343,7 +345,7 @@ function PostActions({ post }: { post: Post }) {
                         <ListItemIcon>
                             <OpenInNewIcon fontSize="small" />
                         </ListItemIcon>
-                        <ListItemText>Open source</ListItemText>
+                        <ListItemText>{t("postUi.openSource")}</ListItemText>
                     </MenuItem>
                 ) : null}
                 <Divider />
@@ -357,7 +359,7 @@ function PostActions({ post }: { post: Post }) {
                             <ListItemIcon>
                                 <EditOutlinedIcon fontSize="small" />
                             </ListItemIcon>
-                            <ListItemText>Edit post</ListItemText>
+                            <ListItemText>{t("postUi.edit")}</ListItemText>
                         </MenuItem>
                         <MenuItem disabled={busy === "delete"} onClick={() => void deletePost()}>
                             <ListItemIcon>
@@ -373,7 +375,7 @@ function PostActions({ post }: { post: Post }) {
                     <ListItemIcon>
                         <FlagOutlinedIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Report post</ListItemText>
+                    <ListItemText>{t("postUi.report")}</ListItemText>
                 </MenuItem>
             </Menu>
 
@@ -383,11 +385,11 @@ function PostActions({ post }: { post: Post }) {
                 fullWidth
                 maxWidth="sm"
             >
-                <DialogTitle>Report post</DialogTitle>
+                <DialogTitle>{t("postUi.report")}</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ pt: 1 }}>
                         <FormControl fullWidth>
-                            <InputLabel id="report-reason-label">Reason</InputLabel>
+                            <InputLabel id="report-reason-label">{t("postUi.reason")}</InputLabel>
                             <Select
                                 labelId="report-reason-label"
                                 value={reportReason}
@@ -608,7 +610,7 @@ function Comments({ postId }: { postId: string }) {
                     ))}
                 </Stack>
             ) : (
-                <Typography color="text.secondary">No comments yet.</Typography>
+                <Typography color="text.secondary">{t("postUi.noComments")}</Typography>
             )}
             <Stack component="form" spacing={1} onSubmit={submit}>
                 <TextField
