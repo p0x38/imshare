@@ -74,7 +74,7 @@ export function Navigation() {
             .join("") || "A";
     const modeLabel = mode === "dark" ? t("nav.useLightMode") : t("nav.useDarkMode");
     const canAccessAdmin = user?.role === "admin";
-    const label = (key: string) => (key === "texts" ? "Texts" : t(`nav.${key}`));
+    const label = (key: string) => t(`nav.${key}`);
     const accountMenuOpen = Boolean(accountMenuAnchor);
 
     const closeAccountMenu = () => setAccountMenuAnchor(null);
