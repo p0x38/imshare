@@ -106,22 +106,21 @@ export async function buildApp() {
             config.admin?.local?.enabled === false
                 ? null
                 : `http://127.0.0.1:${config.admin?.local?.port ?? 5107}`;
-        if (
-            !isSameOriginRequest(
+        const mainOriginAllowed = isSameOriginRequest(
+            request.method,
+            requestOrigin,
+            request.headers.origin,
+            request.headers.referer,
+        );
+        const localOriginAllowed =
+            localAdminOrigin !== null &&
+            isSameOriginRequest(
                 request.method,
-                requestOrigin,
+                localAdminOrigin,
                 request.headers.origin,
                 request.headers.referer,
-            ) &&
-            (request.method === "GET" ||
-                !localAdminOrigin ||
-                isSameOriginRequest(
-                    request.method,
-                    localAdminOrigin,
-                    request.headers.origin,
-                    request.headers.referer,
-                ))
-        ) {
+            );
+        if (!mainOriginAllowed && !localOriginAllowed) {
             observability.recordCsrfRejection();
             return reply.code(403).send({
                 error: {
