@@ -56,7 +56,8 @@
         "notifications": "通知",
         "unreadNotifications": "未読通知 {{count}} 件",
         "account": "アカウント: {{name}}",
-        "badges": "バッジ"
+        "badges": "バッジ",
+        "texts": "テキスト"
     },
     "footer": {
         "about": "概要",
@@ -676,5 +677,40 @@
         "deleteConfirm": "この投稿を削除しますか？この操作は取り消せません。",
         "download": "ダウンロード",
         "downloadImage": "画像 {{number}} をダウンロード"
+    },
+    "adminUsers": {
+        "title": "ユーザー",
+        "description": "アカウント、モデレーション状態、ロール、バッジを管理します。",
+        "loadError": "ユーザーの読み込みに失敗しました。",
+        "actionError": "操作に失敗しました。",
+        "noHandle": "ハンドルなし",
+        "bannedUntil": "{{value}}までBAN",
+        "banned": "BAN中",
+        "reason": "理由: {{value}}",
+        "changeBadges": "バッジを変更",
+        "changeRole": "ロールを変更",
+        "kick": "キック",
+        "unban": "BAN解除",
+        "ban": "BAN",
+        "badgesTitle": "手動バッジを管理",
+        "banTitle": "ユーザーをBAN",
+        "kickTitle": "ユーザーをキック",
+        "unbanTitle": "ユーザーのBANを解除",
+        "roleTitle": "ロールを変更",
+        "target": "対象: {{name}}",
+        "badgesLabel": "手動バッジ",
+        "roleLabel": "ロール",
+        "userRole": "ユーザー",
+        "moderatorRole": "モデレーター",
+        "adminRole": "管理者",
+        "duration": "期間",
+        "oneHour": "1時間",
+        "oneDay": "24時間",
+        "sevenDays": "7日間",
+        "thirtyDays": "30日間",
+        "oneYear": "1年間",
+        "permanent": "無期限",
+        "reasonLabel": "理由",
+        "confirm": "確認"
     }
 }
