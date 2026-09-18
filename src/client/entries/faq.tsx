@@ -23,6 +23,7 @@ const sections = [
     ["troubleshooting", 4],
     ["community", 5],
     ["badges", 5],
+    ["translation", 6],
     ["federation", 5],
 ] as const;
 
