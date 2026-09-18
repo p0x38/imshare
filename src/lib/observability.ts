@@ -119,6 +119,10 @@ export interface ObservabilityRuntime {
     recordRealtimeMessage(event: string): void;
     recordRealtimeError(): void;
     recordRateLimitHit(scope: string): void;
+    recordCsrfRejection(): void;
+    recordImageTransformation(operation: string, format?: string): void;
+    recordImageProcessing(durationSeconds: number, operation: string): void;
+    recordImageProcessingError(operation: string): void;
     shutdown(): Promise<void>;
 }
 
@@ -341,6 +345,10 @@ export function createObservability(
         recordRealtimeMessage(event) { metricHandles?.realtimeMessages.add(1, { event }); },
         recordRealtimeError() { metricHandles?.realtimeErrors.add(1); },
         recordRateLimitHit(scope) { metricHandles?.rateLimitHits.add(1, { scope }); },
+        recordCsrfRejection() { metricHandles?.csrfRejections.add(1); },
+        recordImageTransformation(operation, format) { metricHandles?.imageTransformations.add(1, format ? { operation, format } : { operation }); },
+        recordImageProcessing(durationSeconds, operation) { metricHandles?.imageProcessingDuration.record(durationSeconds, { operation }); },
+        recordImageProcessingError(operation) { metricHandles?.imageProcessingErrors.add(1, { operation }); },
         register(app) {
             if (metricHandles) {
                 registerMetricHooks(app, metricHandles, requestStarted, prometheusPath);
@@ -561,6 +569,10 @@ function disabledRuntime(): ObservabilityRuntime {
         recordRealtimeMessage() {},
         recordRealtimeError() {},
         recordRateLimitHit() {},
+        recordCsrfRejection() {},
+        recordImageTransformation() {},
+        recordImageProcessing() {},
+        recordImageProcessingError() {},
         register() {},
         async shutdown() {},
     };
