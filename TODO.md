@@ -199,6 +199,17 @@
 - [ ] Profile privacy settings
 - [ ] Notification preferences
 - [ ] API tokens
+    - [ ] Personal access tokens for external API clients and scripts
+    - [ ] Token creation, listing, revocation, and expiration
+    - [ ] Scoped permissions (for example: read-only, posts, uploads, account)
+    - [ ] Store only a secure token hash and show the secret only once
+    - [ ] Authentication via `Authorization: Bearer <token>`
+    - [ ] Per-token name, creation date, last-used date, and expiration
+    - [ ] Revoke individual tokens without invalidating browser sessions
+    - [ ] Rate-limit and audit token-authenticated requests
+    - [ ] Document token authentication in OpenAPI and API documentation
+    - [ ] Add frontend token management UI
+    - [ ] Add API-token tests and security regression coverage
 - [ ] Account-synced appearance/theme preferences
 - [ ] Reset appearance/theme preferences to defaults
 - [ ] Import/export appearance/theme preferences
