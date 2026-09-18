@@ -14,7 +14,8 @@ import { federationRoutes } from "./routes/federation.js";
 import { metaRoutes } from "./routes/meta.js";
 import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
-import { registerOpenApi } from "./lib/openapi.js";\nimport { setupObservability } from "./lib/observability.js";
+import { registerOpenApi } from "./lib/openapi.js";
+import { setupObservability } from "./lib/observability.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -93,7 +94,8 @@ export async function buildApp() {
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
-    const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);\n    const observability = setupObservability(app, config.observability);
+    const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
+    const observability = setupObservability(app, config.observability);
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
