@@ -4,12 +4,21 @@ export interface ApproxLocation {
     city?: string;
     region?: string;
     country?: string;
+    privacyLabels: string[];
 }
 
 interface IpInfoResponse {
     city?: unknown;
     region?: unknown;
     country?: unknown;
+    anonymous?: {
+        is_vpn?: unknown;
+        is_proxy?: unknown;
+        is_tor?: unknown;
+        is_relay?: unknown;
+        is_res_proxy?: unknown;
+    };
+    is_hosting?: unknown;
 }
 
 const cache = new Map<string, { expiresAt: number; location: ApproxLocation | null }>();
@@ -74,12 +83,22 @@ export async function lookupApproxLocation(
         if (!response.ok) throw new Error(`IP geolocation request failed: ${response.status}`);
 
         const data = (await response.json()) as IpInfoResponse;
+        const privacyLabels = [
+            data.anonymous?.is_vpn === true ? "VPN" : null,
+            data.anonymous?.is_proxy === true ? "Proxy" : null,
+            data.anonymous?.is_tor === true ? "Tor" : null,
+            data.anonymous?.is_relay === true ? "Relay" : null,
+            data.anonymous?.is_res_proxy === true ? "Residential proxy" : null,
+            data.is_hosting === true ? "Hosting" : null,
+        ].filter((label): label is string => label !== null);
+
         const location =
-            normalize(data.city) || normalize(data.region) || normalize(data.country)
+            normalize(data.city) || normalize(data.region) || normalize(data.country) || privacyLabels.length
                 ? {
                       city: normalize(data.city),
                       region: normalize(data.region),
                       country: countryName(normalize(data.country)),
+                      privacyLabels,
                   }
                 : null;
 
