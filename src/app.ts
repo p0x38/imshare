@@ -286,6 +286,42 @@ export async function buildApp() {
     await registerOpenApi(app, config);
     await app.register(authRoutes, { prefix: "/api" });
     await app.register(apiRoutes, { prefix: "/api" });
+    app.get("/uploads/*", async (request, reply) => {
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll("\\", "/");
+        if (!rawPath || rawPath.includes(".."))
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const upload = await prisma.upload.findFirst({
+            where: { filename: rawPath },
+            select: { filename: true, mimeType: true, contentHash: true, size: true },
+        });
+        if (!upload)
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const source = path.resolve(uploadDir, upload.filename);
+        const relative = path.relative(uploadDir, source);
+        if (relative.startsWith("..") || path.isAbsolute(relative))
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
+        reply
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Length", String(upload.size));
+        if (etag) {
+            reply.header("ETag", etag);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+        }
+        try {
+            await import("node:fs/promises").then(({ access }) => access(source));
+        } catch {
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
+        }
+        reply.type(upload.mimeType);
+        return reply.send(require("node:fs").createReadStream(source));
+    });
+
+
     await app.register(metaRoutes);
     await app.register(federationRoutes);
     await app.register(pageRoutes);
