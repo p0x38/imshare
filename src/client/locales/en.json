@@ -578,5 +578,35 @@
                 "howToEarn": "Granted by an administrator."
             }
         }
+    },
+    "accountPreferences": {
+        "title": "Preferences",
+        "privacy": "Privacy",
+        "postingDefaults": "Posting defaults",
+        "security": "Security",
+        "notifications": "Notifications",
+        "profileVisibility": "Profile visibility",
+        "allowProfile": "Allow other users to see your profile",
+        "showPosts": "Show your public posts on your profile",
+        "showHandle": "Show your custom handle publicly",
+        "showEmail": "Show your email publicly",
+        "allowIndex": "Allow search engines to index your profile",
+        "socialVisibility": "Social visibility",
+        "allowFollow": "Allow people to follow you",
+        "followApproval": "Require approval for new followers",
+        "showFollowers": "Allow others to see your followers",
+        "showFollowing": "Allow others to see who you follow",
+        "defaultCategory": "Default category",
+        "defaultVisibility": "Default post visibility",
+        "allowDownloads": "Allow downloads by default",
+        "contentWarning": "Default content warning",
+        "none": "None",
+        "public": "Public",
+        "unlisted": "Unlisted",
+        "private": "Private",
+        "save": "Save preferences",
+        "saving": "Saving…",
+        "loadError": "Unable to load account preferences.",
+        "saveError": "Unable to save account preferences."
     }
 }
