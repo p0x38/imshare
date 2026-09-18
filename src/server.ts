@@ -71,6 +71,7 @@ const shutdown = async (reason: string, exitCode = 0): Promise<void> => {
     app.log.info(`shutting down (${reason})...`);
     try {
         await io.close();
+        await app.observability.shutdown();
         await app.close();
         await prisma.$disconnect();
         process.exit(exitCode);
@@ -118,6 +119,7 @@ try {
     app.log.error(error);
     restoreInput();
     await io.close();
+    await app.observability.shutdown();
     await prisma.$disconnect();
     process.exit(1);
 }
