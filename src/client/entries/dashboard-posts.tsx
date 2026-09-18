@@ -91,14 +91,29 @@ function DashboardPostsPage() {
                                             <CardActionArea component="a" href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}>
                                                 {post.uploads?.[0] ? <CardMedia component="img" image={imageUrl(post.uploads[0].url)} alt={post.uploads[0].alt || post.title || ""} loading="lazy" sx={{ aspectRatio: "1 / 1", objectFit: "cover" }} /> : null}
                                                 <CardContent>
-                                                    <Typography variant="subtitle1" noWrap>{post.title || t("common.untitled")}</Typography>
-                                                    <Typography variant="body2" color="text.secondary" noWrap>{post.status || post.visibility || t("common.post")}</Typography>
-                                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" color="text.secondary" sx={{ mt: 0.5 }}>
-                                                        <Typography component="span" variant="caption">{post.viewCount ?? 0} views</Typography>
-                                                        <Typography component="span" variant="caption">{post.reactions?.like ?? 0} likes</Typography>
-                                                        <Typography component="span" variant="caption">{post.reactions?.favorite ?? 0} favorites</Typography>
-                                                        <Typography component="span" variant="caption">{post.reactions?.save ?? 0} saves</Typography>
-                                                    </Stack>
+                                                    <Typography variant="subtitle1" noWrap>
+                                                        {post.title || t("common.untitled")}
+                                                        {" · "}
+                                                        {post.author?.name ||
+                                                            post.author?.username ||
+                                                            post.authorName ||
+                                                            t("common.unknownAuthor")}
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" noWrap>
+                                                        {post.createdAt
+                                                            ? new Date(post.createdAt).toLocaleDateString()
+                                                            : ""}
+                                                        {" · "}
+                                                        {post.viewCount ?? 0} views
+                                                        {" · "}
+                                                        {post.reactions?.like ?? 0} likes
+                                                        {" · "}
+                                                        {post.reactions?.favorite ?? 0} favs
+                                                        {" · "}
+                                                        {post.reactions?.save ?? 0} saves
+                                                        {" · "}
+                                                        ...
+                                                    </Typography>
                                                 </CardContent>
                                             </CardActionArea>
                                         </Card>
