@@ -4,9 +4,16 @@ export const MANUAL_BADGE_KEYS = [
     "early-adopter",
     "bug-hunter",
     "supporter",
+    "founder",
+    "developer",
+    "community-helper",
+    "curator",
 ] as const;
 
 export type ManualBadgeKey = (typeof MANUAL_BADGE_KEYS)[number];
+
+export const AUTOMATIC_BADGE_KEYS = ["admin", "moderator", "veteran"] as const;
+export const ALL_BADGE_KEYS = [...AUTOMATIC_BADGE_KEYS, ...MANUAL_BADGE_KEYS] as const;
 
 const MANUAL_BADGE_SET = new Set<string>(MANUAL_BADGE_KEYS);
 
@@ -15,7 +22,12 @@ function parseManualBadges(value: string | null | undefined): string[] {
     try {
         const parsed = JSON.parse(value) as unknown;
         if (!Array.isArray(parsed)) return [];
-        return [...new Set(parsed.filter((item): item is string => typeof item === "string" && MANUAL_BADGE_SET.has(item)))];
+        return [...new Set(
+            parsed.filter(
+                (item): item is string =>
+                    typeof item === "string" && MANUAL_BADGE_SET.has(item),
+            ),
+        )];
     } catch {
         return [];
     }
