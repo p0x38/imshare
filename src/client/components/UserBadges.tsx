@@ -1,0 +1,43 @@
+import { Chip, Stack, Tooltip } from "@mui/material";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
+import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
+import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
+import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
+import FavoriteOutlinedIcon from "@mui/icons-material/FavoriteOutlined";
+import type { User } from "../lib/types";
+
+const definitions: Record<string, { label: string; icon: typeof AdminPanelSettingsOutlinedIcon }> = {
+    admin: { label: "Admin", icon: AdminPanelSettingsOutlinedIcon },
+    moderator: { label: "Moderator", icon: GavelOutlinedIcon },
+    veteran: { label: "Veteran", icon: HistoryOutlinedIcon },
+    contributor: { label: "Contributor", icon: HandshakeOutlinedIcon },
+    verified: { label: "Verified", icon: VerifiedOutlinedIcon },
+    "early-adopter": { label: "Early Adopter", icon: HistoryOutlinedIcon },
+    "bug-hunter": { label: "Bug Hunter", icon: BugReportOutlinedIcon },
+    supporter: { label: "Supporter", icon: FavoriteOutlinedIcon },
+};
+
+export function UserBadges({ user, size = "small" }: { user: Pick<User, "badges">; size?: "small" | "medium" }) {
+    if (!user.badges?.length) return null;
+    return (
+        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+            {user.badges.map((badge) => {
+                const definition = definitions[badge];
+                if (!definition) return null;
+                const Icon = definition.icon;
+                return (
+                    <Tooltip key={badge} title={definition.label}>
+                        <Chip
+                            size={size}
+                            icon={<Icon />}
+                            label={definition.label}
+                            variant="outlined"
+                        />
+                    </Tooltip>
+                );
+            })}
+        </Stack>
+    );
+}
