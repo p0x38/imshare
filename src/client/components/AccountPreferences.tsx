@@ -64,7 +64,7 @@ export function AccountPreferences() {
                 {tab === 1 ? (
                     <Stack spacing={2}>
                         <FormControl fullWidth><InputLabel id="default-category-label">{t("accountUi.defaultCategory")}</InputLabel><Select labelId="default-category-label" label={t("accountUi.defaultCategory")} value={preferences.defaultCategoryId ?? ""} onChange={(e) => set("defaultCategoryId", e.target.value || null)}><MenuItem value="">{t("accountUi.none")}</MenuItem>{categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</Select></FormControl>
-                        <FormControl fullWidth><InputLabel id="default-visibility-label">Default post visibility</InputLabel><Select labelId="default-visibility-label" label="Default post visibility" value={preferences.defaultPostVisibility} onChange={(e) => set("defaultPostVisibility", e.target.value as Preferences["defaultPostVisibility"])}><MenuItem value="public">{t("accountUi.public")}</MenuItem><MenuItem value="unlisted">{t("accountUi.unlisted")}</MenuItem><MenuItem value="private">{t("accountUi.private")}</MenuItem></Select></FormControl>
+                        <FormControl fullWidth><InputLabel id="default-visibility-label">{t("accountUi.defaultVisibility")}</InputLabel><Select labelId="default-visibility-label" label={t("accountUi.defaultVisibility")} value={preferences.defaultPostVisibility} onChange={(e) => set("defaultPostVisibility", e.target.value as Preferences["defaultPostVisibility"])}><MenuItem value="public">{t("accountUi.public")}</MenuItem><MenuItem value="unlisted">{t("accountUi.unlisted")}</MenuItem><MenuItem value="private">{t("accountUi.private")}</MenuItem></Select></FormControl>
                         <FormControlLabel control={<Checkbox checked={preferences.defaultAllowDownload} onChange={(e) => set("defaultAllowDownload", e.target.checked)} />} label={t("accountUi.allowDownloads")} />
                         <TextField label={t("accountUi.contentWarning")} value={preferences.defaultContentWarning ?? ""} onChange={(e) => set("defaultContentWarning", e.target.value || null)} inputProps={{ maxLength: 500 }} />
                     </Stack>
@@ -72,7 +72,7 @@ export function AccountPreferences() {
                 {tab === 2 ? <SecuritySettings /> : null}
                 {tab === 3 ? <PushSettings /> : null}
                 {error ? <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert> : null}
-                {tab < 2 ? <Button variant="contained" onClick={() => void save()} disabled={saving} sx={{ mt: 2 }}>{saving ? "Saving…" : "Save preferences"}</Button> : null}
+                {tab < 2 ? <Button variant="contained" onClick={() => void save()} disabled={saving} sx={{ mt: 2 }}>{saving ? t("accountUi.saving") : t("accountUi.save")}</Button> : null}
             </CardContent>
         </Card>
     );
