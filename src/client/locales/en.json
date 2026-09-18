@@ -55,7 +55,8 @@
         "useDarkMode": "Use dark mode",
         "notifications": "Notifications",
         "unreadNotifications": "{{count}} unread notifications",
-        "account": "Account: {{name}}"
+        "account": "Account: {{name}}",
+        "badges": "Badges"
     },
     "footer": {
         "about": "About",
