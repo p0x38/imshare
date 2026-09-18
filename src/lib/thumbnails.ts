@@ -3,16 +3,26 @@ import path from "node:path";
 import sharp from "sharp";
 import { rgbaToThumbHash } from "thumbhash";
 import { ensureCacheDirectory } from "./cache.js";
+import { observability } from "../instrumentation.js";
 
 const SIZES = [320, 640, 1280] as const;
 
 export async function generateThumbHash(source: string): Promise<string> {
-    const { data, info } = await sharp(source)
+    const startedAt = process.hrtime.bigint();
+    try {
+        const { data, info } = await sharp(source)
         .ensureAlpha()
         .resize(100, 100, { fit: "inside", withoutEnlargement: true })
         .raw()
         .toBuffer({ resolveWithObject: true });
-    return Buffer.from(rgbaToThumbHash(info.width, info.height, data)).toString("base64");
+        const result = Buffer.from(rgbaToThumbHash(info.width, info.height, data)).toString("base64");
+        observability.recordImageProcessing(Number(process.hrtime.bigint() - startedAt) / 1_000_000_000, "thumbhash");
+        observability.recordImageTransformation("thumbhash");
+        return result;
+    } catch (error) {
+        observability.recordImageProcessingError("thumbhash");
+        throw error;
+    }
 }
 
 export async function generateThumbnails(
@@ -20,8 +30,10 @@ export async function generateThumbnails(
     uploadId: string,
 ): Promise<void> {
     const cacheDir = await ensureCacheDirectory();
-    await Promise.all(
-        SIZES.map(async (width) => {
+    const startedAt = process.hrtime.bigint();
+    try {
+        await Promise.all(
+            SIZES.map(async (width) => {
             const destination = path.join(cacheDir, `${uploadId}-${width}xauto-inside.webp`);
             try {
                 await access(destination);
@@ -34,8 +46,14 @@ export async function generateThumbnails(
             await writeFile(destination, output, { flag: "wx" }).catch((error: unknown) => {
                 if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
             });
-        }),
-    );
+            }),
+        );
+        observability.recordImageProcessing(Number(process.hrtime.bigint() - startedAt) / 1_000_000_000, "thumbnail");
+        observability.recordImageTransformation("thumbnail", "webp");
+    } catch (error) {
+        observability.recordImageProcessingError("thumbnail");
+        throw error;
+    }
 }
 
 export function queueThumbnailGeneration(source: string, uploadId: string): void {
