@@ -13,14 +13,15 @@ async function loadPosts(path: string) {
     return response.data || [];
 }
 function RecommendationSection({ title, posts }: { title: string; posts: Post[] }) {
-    if (!posts.length) return null;
+    const visiblePosts = posts.filter((post) => post.contentType !== "text");
+    if (!visiblePosts.length) return null;
     return (
         <AnimatedItem>
             <Stack spacing={1.5}>
                 <Typography variant="h5" component="h2">
                     {title}
                 </Typography>
-                <PostGrid posts={posts} />
+                <PostGrid posts={visiblePosts} />
             </Stack>
         </AnimatedItem>
     );
