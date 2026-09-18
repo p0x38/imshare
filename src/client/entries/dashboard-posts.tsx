@@ -93,6 +93,12 @@ function DashboardPostsPage() {
                                                 <CardContent>
                                                     <Typography variant="subtitle1" noWrap>{post.title || t("common.untitled")}</Typography>
                                                     <Typography variant="body2" color="text.secondary" noWrap>{post.status || post.visibility || t("common.post")}</Typography>
+                                                    <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" color="text.secondary" sx={{ mt: 0.5 }}>
+                                                        <Typography component="span" variant="caption">{post.viewCount ?? 0} views</Typography>
+                                                        <Typography component="span" variant="caption">{post.reactions?.like ?? 0} likes</Typography>
+                                                        <Typography component="span" variant="caption">{post.reactions?.favorite ?? 0} favorites</Typography>
+                                                        <Typography component="span" variant="caption">{post.reactions?.save ?? 0} saves</Typography>
+                                                    </Stack>
                                                 </CardContent>
                                             </CardActionArea>
                                         </Card>
