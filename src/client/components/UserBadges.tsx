@@ -6,6 +6,10 @@ import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
 import BugReportOutlinedIcon from "@mui/icons-material/BugReportOutlined";
 import FavoriteOutlinedIcon from "@mui/icons-material/FavoriteOutlined";
+import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
+import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
+import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import CollectionsBookmarkOutlinedIcon from "@mui/icons-material/CollectionsBookmarkOutlined";
 import type { User } from "../lib/types";
 
 const definitions: Record<string, { label: string; icon: typeof AdminPanelSettingsOutlinedIcon }> = {
@@ -17,6 +21,10 @@ const definitions: Record<string, { label: string; icon: typeof AdminPanelSettin
     "early-adopter": { label: "Early Adopter", icon: HistoryOutlinedIcon },
     "bug-hunter": { label: "Bug Hunter", icon: BugReportOutlinedIcon },
     supporter: { label: "Supporter", icon: FavoriteOutlinedIcon },
+    founder: { label: "Founder", icon: EmojiEventsOutlinedIcon },
+    developer: { label: "Developer", icon: CodeOutlinedIcon },
+    "community-helper": { label: "Community Helper", icon: GroupsOutlinedIcon },
+    curator: { label: "Curator", icon: CollectionsBookmarkOutlinedIcon },
 };
 
 export function UserBadges({
