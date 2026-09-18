@@ -3,7 +3,7 @@ import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-proto";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { resourceFromAttributes, defaultResource } from "@opentelemetry/resources";
-import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
+import { MeterProvider, PeriodicExportingMetricReader, type MetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import FastifyOtelInstrumentation from "@fastify/otel";
 import type { FastifyInstance, FastifyRequest } from "fastify";
@@ -73,9 +73,7 @@ export async function setupObservability(
           })
         : null;
 
-    const readers = prometheusExporter
-        ? [prometheusExporter]
-        : [];
+    const readers: MetricReader[] = prometheusExporter ? [prometheusExporter] : [];
 
     const otlpEndpoint =
         config.openTelemetry?.enabled === true
@@ -156,14 +154,12 @@ export async function setupObservability(
         result.observe((cpu.user + cpu.system) / 1_000_000);
     });
 
-    let activeRequestCount = 0;
     const requestStarted = new WeakMap<FastifyRequest, bigint>();
 
     app.addHook("onRequest", async (request) => {
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (pathname === prometheusPath) return;
 
-        activeRequestCount += 1;
         activeRequests.add(1);
         requestStarted.set(request, process.hrtime.bigint());
     });
@@ -172,7 +168,6 @@ export async function setupObservability(
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (pathname === prometheusPath) return;
 
-        activeRequestCount = Math.max(0, activeRequestCount - 1);
         activeRequests.add(-1);
 
         const startedAt = requestStarted.get(request);
