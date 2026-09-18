@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { PostGrid } from "../components/PostGrid";
+import { TextList } from "../components/TextList";
 import { LoadingState } from "../components/States";
 import { ProfileLinks } from "../components/ProfileLinks";
 import { api } from "../lib/api";
@@ -47,7 +48,25 @@ function ProfilePage() {
         </Card>
         {error ? <Alert severity="error">{error}</Alert> : null}
         <Card variant="outlined"><Tabs value={validTab} onChange={(_, next: ProfileTab) => setTab(next)} variant="scrollable" allowScrollButtonsMobile>{visibleTabs.map((item) => <Tab key={item.value} value={item.value} label={item.label} />)}</Tabs></Card>
-        {validTab === "posts" ? <Stack spacing={1}>{posts.length ? <PostGrid posts={posts} /> : <Card variant="outlined"><CardContent><Typography color="text.secondary">No public posts.</Typography></CardContent></Card>}</Stack> : null}
+        {validTab === "posts" ? (
+            <Stack spacing={{ xs: 3, sm: 4 }}>
+                {imagePosts.length ? (
+                    <Stack spacing={1.5}>
+                        <Typography variant="h5" component="h2">Posts</Typography>
+                        <PostGrid posts={imagePosts} />
+                    </Stack>
+                ) : null}
+                {texts.length ? (
+                    <Stack spacing={1.5}>
+                        <Typography variant="h5" component="h2">Texts</Typography>
+                        <TextList texts={texts} />
+                    </Stack>
+                ) : null}
+                {!imagePosts.length && !texts.length ? (
+                    <Card variant="outlined"><CardContent><Typography color="text.secondary">No public posts.</Typography></CardContent></Card>
+                ) : null}
+            </Stack>
+        ) : null}
         {validTab === "about" ? <Card variant="outlined"><CardContent><Stack spacing={2}>{profile.bio ? <Box><Typography variant="subtitle2">About</Typography><Typography sx={{ whiteSpace: "pre-wrap" }}>{profile.bio}</Typography></Box> : <Typography color="text.secondary">No profile description.</Typography>}{profile.websiteUrl || profile.githubUrl || profile.profileLinks?.length ? <ProfileLinks websiteUrl={profile.websiteUrl} githubUrl={profile.githubUrl} links={profile.profileLinks} /> : null}<Typography variant="body2" color="text.secondary">Joined {new Date(profile.createdAt).toLocaleDateString()}</Typography></Stack></CardContent></Card> : null}
         {validTab === "followers" && profile.stats.followers !== null ? <RelationshipList value={value} kind="followers" /> : null}
         {validTab === "following" && profile.stats.following !== null ? <RelationshipList value={value} kind="following" /> : null}
