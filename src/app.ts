@@ -119,6 +119,7 @@ export async function buildApp() {
                         message: "The request origin is not allowed.",
                     },
                 });
+        }
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (request.method === "POST" && pathname === "/api/v1/uploads") {
             const result = uploadLimiter.consume(key);
