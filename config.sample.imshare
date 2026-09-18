@@ -8,6 +8,14 @@ server {
     port = 5454
 }
 
+admin {
+    local {
+        enabled = true
+        host = "127.0.0.1"
+        port = 5107
+    }
+}
+
 storage {
     uploadDirectory = "uploads"
     maxFileSize = 25MiB
