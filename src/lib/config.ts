@@ -288,7 +288,7 @@ function isServerConfig(value: unknown): value is ServerConfig {
         (site.description === undefined || typeof site.description === "string") &&
         (admin === undefined || (isObject(admin) && (admin.local === undefined || (isObject(admin.local) &&
             (admin.local.enabled === undefined || typeof admin.local.enabled === "boolean") &&
-            (admin.local.host === undefined || ["127.0.0.1", "localhost", "::1"].includes(admin.local.host)) &&
+            (admin.local.host === undefined || admin.local.host === "127.0.0.1") &&
             (admin.local.port === undefined || (typeof admin.local.port === "number" && Number.isInteger(admin.local.port) && admin.local.port > 0 && admin.local.port <= 65535)) &&
             (admin.local.port === undefined || admin.local.port !== server.port))))) &&
         (admin === undefined ||
