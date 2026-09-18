@@ -1,5 +1,6 @@
 import { Alert, Box, Button, Card, CardContent, Checkbox, FormControl, FormControlLabel, InputLabel, MenuItem, Select, Stack, Tab, Tabs, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { PushSettings } from "./PushSettings";
 import { SecuritySettings } from "./SecuritySettings";
@@ -13,6 +14,7 @@ interface Preferences {
 interface Category { id: string; name: string }
 
 export function AccountPreferences() {
+    const { t } = useTranslation();
     const [preferences, setPreferences] = useState<Preferences | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [tab, setTab] = useState(0);
@@ -37,34 +39,34 @@ export function AccountPreferences() {
     return (
         <Card variant="outlined">
             <CardContent>
-                <Typography variant="h5" component="h2" gutterBottom>Preferences</Typography>
+                <Typography variant="h5" component="h2" gutterBottom>{t("accountUi.preferences")}</Typography>
                 <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" allowScrollButtonsMobile sx={{ mb: 2 }}>
-                    <Tab label="Privacy" />
-                    <Tab label="Posting defaults" />
-                    <Tab label="Security" />
-                    <Tab label="Notifications" />
+                    <Tab label={t("accountUi.privacy")} />
+                    <Tab label={t("accountUi.postingDefaults")} />
+                    <Tab label={t("accountUi.security")} />
+                    <Tab label={t("accountUi.notifications")} />
                 </Tabs>
                 {tab === 0 ? (
                     <Stack spacing={1.25}>
-                        <Typography variant="subtitle1">Profile visibility</Typography>
-                        <FormControlLabel control={<Checkbox checked={preferences.showProfile} onChange={(e) => set("showProfile", e.target.checked)} />} label="Allow other users to see your profile" />
-                        <FormControlLabel control={<Checkbox checked={preferences.showPosts} onChange={(e) => set("showPosts", e.target.checked)} />} label="Show your public posts on your profile" />
-                        <FormControlLabel control={<Checkbox checked={preferences.showHandle} onChange={(e) => set("showHandle", e.target.checked)} />} label="Show your custom handle publicly" />
-                        <FormControlLabel control={<Checkbox checked={preferences.showEmail} onChange={(e) => set("showEmail", e.target.checked)} />} label="Show your email publicly" />
-                        <FormControlLabel control={<Checkbox checked={preferences.allowSearchEngineIndex} onChange={(e) => set("allowSearchEngineIndex", e.target.checked)} />} label="Allow search engines to index your profile" />
-                        <Box sx={{ pt: 1 }}><Typography variant="subtitle1">Social visibility</Typography></Box>
-                        <FormControlLabel control={<Checkbox checked={preferences.isPublic} onChange={(e) => set("isPublic", e.target.checked)} />} label="Allow people to follow you" />
-                        <FormControlLabel control={<Checkbox checked={preferences.followApprovalRequired} disabled={!preferences.isPublic} onChange={(e) => set("followApprovalRequired", e.target.checked)} />} label="Require approval for new followers" />
-                        <FormControlLabel control={<Checkbox checked={preferences.showFollowers} onChange={(e) => set("showFollowers", e.target.checked)} />} label="Allow others to see your followers" />
-                        <FormControlLabel control={<Checkbox checked={preferences.showFollowings} onChange={(e) => set("showFollowings", e.target.checked)} />} label="Allow others to see who you follow" />
+                        <Typography variant="subtitle1">{t("accountUi.profileVisibility")}</Typography>
+                        <FormControlLabel control={<Checkbox checked={preferences.showProfile} onChange={(e) => set("showProfile", e.target.checked)} />} label={t("accountUi.allowProfile")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.showPosts} onChange={(e) => set("showPosts", e.target.checked)} />} label={t("accountUi.showPosts")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.showHandle} onChange={(e) => set("showHandle", e.target.checked)} />} label={t("accountUi.showHandle")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.showEmail} onChange={(e) => set("showEmail", e.target.checked)} />} label={t("accountUi.showEmail")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.allowSearchEngineIndex} onChange={(e) => set("allowSearchEngineIndex", e.target.checked)} />} label={t("accountUi.indexProfile")} />
+                        <Box sx={{ pt: 1 }}><Typography variant="subtitle1">{t("accountUi.socialVisibility")}</Typography></Box>
+                        <FormControlLabel control={<Checkbox checked={preferences.isPublic} onChange={(e) => set("isPublic", e.target.checked)} />} label={t("accountUi.allowFollow")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.followApprovalRequired} disabled={!preferences.isPublic} onChange={(e) => set("followApprovalRequired", e.target.checked)} />} label={t("accountUi.followApproval")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.showFollowers} onChange={(e) => set("showFollowers", e.target.checked)} />} label={t("accountUi.showFollowers")} />
+                        <FormControlLabel control={<Checkbox checked={preferences.showFollowings} onChange={(e) => set("showFollowings", e.target.checked)} />} label={t("accountUi.showFollowing")} />
                     </Stack>
                 ) : null}
                 {tab === 1 ? (
                     <Stack spacing={2}>
-                        <FormControl fullWidth><InputLabel id="default-category-label">Default category</InputLabel><Select labelId="default-category-label" label="Default category" value={preferences.defaultCategoryId ?? ""} onChange={(e) => set("defaultCategoryId", e.target.value || null)}><MenuItem value="">None</MenuItem>{categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</Select></FormControl>
-                        <FormControl fullWidth><InputLabel id="default-visibility-label">Default post visibility</InputLabel><Select labelId="default-visibility-label" label="Default post visibility" value={preferences.defaultPostVisibility} onChange={(e) => set("defaultPostVisibility", e.target.value as Preferences["defaultPostVisibility"])}><MenuItem value="public">Public</MenuItem><MenuItem value="unlisted">Unlisted</MenuItem><MenuItem value="private">Private</MenuItem></Select></FormControl>
-                        <FormControlLabel control={<Checkbox checked={preferences.defaultAllowDownload} onChange={(e) => set("defaultAllowDownload", e.target.checked)} />} label="Allow downloads by default" />
-                        <TextField label="Default content warning" value={preferences.defaultContentWarning ?? ""} onChange={(e) => set("defaultContentWarning", e.target.value || null)} inputProps={{ maxLength: 500 }} />
+                        <FormControl fullWidth><InputLabel id="default-category-label">{t("accountUi.defaultCategory")}</InputLabel><Select labelId="default-category-label" label={t("accountUi.defaultCategory")} value={preferences.defaultCategoryId ?? ""} onChange={(e) => set("defaultCategoryId", e.target.value || null)}><MenuItem value="">{t("accountUi.none")}</MenuItem>{categories.map((category) => <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>)}</Select></FormControl>
+                        <FormControl fullWidth><InputLabel id="default-visibility-label">Default post visibility</InputLabel><Select labelId="default-visibility-label" label="Default post visibility" value={preferences.defaultPostVisibility} onChange={(e) => set("defaultPostVisibility", e.target.value as Preferences["defaultPostVisibility"])}><MenuItem value="public">{t("accountUi.public")}</MenuItem><MenuItem value="unlisted">{t("accountUi.unlisted")}</MenuItem><MenuItem value="private">{t("accountUi.private")}</MenuItem></Select></FormControl>
+                        <FormControlLabel control={<Checkbox checked={preferences.defaultAllowDownload} onChange={(e) => set("defaultAllowDownload", e.target.checked)} />} label={t("accountUi.allowDownloads")} />
+                        <TextField label={t("accountUi.contentWarning")} value={preferences.defaultContentWarning ?? ""} onChange={(e) => set("defaultContentWarning", e.target.value || null)} inputProps={{ maxLength: 500 }} />
                     </Stack>
                 ) : null}
                 {tab === 2 ? <SecuritySettings /> : null}
