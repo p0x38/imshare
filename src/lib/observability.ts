@@ -69,10 +69,40 @@ export interface ObservabilityConfig {
 interface MetricHandles {
     requestCount: ReturnType<Meter["createCounter"]>;
     requestDuration: ReturnType<Meter["createHistogram"]>;
+    responseSize: ReturnType<Meter["createHistogram"]>;
     activeRequests: ReturnType<Meter["createUpDownCounter"]>;
     processUptime: ReturnType<Meter["createObservableGauge"]>;
     processMemory: ReturnType<Meter["createObservableGauge"]>;
     processCpu: ReturnType<Meter["createObservableCounter"]>;
+    postsCreated: ReturnType<Meter["createCounter"]>;
+    postsDeleted: ReturnType<Meter["createCounter"]>;
+    textsCreated: ReturnType<Meter["createCounter"]>;
+    postViews: ReturnType<Meter["createCounter"]>;
+    commentsCreated: ReturnType<Meter["createCounter"]>;
+    reactions: ReturnType<Meter["createCounter"]>;
+    follows: ReturnType<Meter["createCounter"]>;
+    reports: ReturnType<Meter["createCounter"]>;
+    notifications: ReturnType<Meter["createCounter"]>;
+    usersRegistered: ReturnType<Meter["createCounter"]>;
+    authAttempts: ReturnType<Meter["createCounter"]>;
+    apiErrors: ReturnType<Meter["createCounter"]>;
+    permissionDenials: ReturnType<Meter["createCounter"]>;
+    csrfRejections: ReturnType<Meter["createCounter"]>;
+    rateLimitHits: ReturnType<Meter["createCounter"]>;
+    uploadBytes: ReturnType<Meter["createCounter"]>;
+    uploads: ReturnType<Meter["createCounter"]>;
+    uploadDuration: ReturnType<Meter["createHistogram"]>;
+    imageServed: ReturnType<Meter["createCounter"]>;
+    imageTransformations: ReturnType<Meter["createCounter"]>;
+    imageProcessingDuration: ReturnType<Meter["createHistogram"]>;
+    imageProcessingErrors: ReturnType<Meter["createCounter"]>;
+    realtimeConnections: ReturnType<Meter["createUpDownCounter"]>;
+    realtimeConnectionEvents: ReturnType<Meter["createCounter"]>;
+    realtimeMessages: ReturnType<Meter["createCounter"]>;
+    realtimeErrors: ReturnType<Meter["createCounter"]>;
+    registeredUsers: ReturnType<Meter["createObservableGauge"]>;
+    publishedPosts: ReturnType<Meter["createObservableGauge"]>;
+    pendingReports: ReturnType<Meter["createObservableGauge"]>;
 }
 
 export interface ObservabilityRuntime {
@@ -81,6 +111,14 @@ export interface ObservabilityRuntime {
     readonly sdk: NodeSDK | null;
     readonly prometheusPath: string | null;
     register(app: FastifyInstance): void;
+    recordUpload(size: number, mimeType: string): void;
+    recordDatabaseQuery(durationSeconds: number, operation: string): void;
+    recordDatabaseError(operation: string): void;
+    recordRealtimeConnection(delta: 1 | -1): void;
+    recordRealtimeConnectionEvent(event: "connected" | "disconnected"): void;
+    recordRealtimeMessage(event: string): void;
+    recordRealtimeError(): void;
+    recordRateLimitHit(scope: string): void;
     shutdown(): Promise<void>;
 }
 
@@ -89,6 +127,8 @@ declare module "fastify" {
         observability: ObservabilityRuntime;
     }
 }
+
+let activeMetricHandles: MetricHandles | null = null;
 
 const DEFAULTS = {
     exportIntervalMs: 15_000,
