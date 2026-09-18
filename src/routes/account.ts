@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
+import { lookupApproxLocation } from "../lib/ip-location.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
 import { openapi, parameter, request } from "../lib/openapi-route.js";
 
@@ -145,8 +146,26 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
         const user = await requireUser(request, reply); if (!user) return;
         const q = request.query as Record<string, unknown>; const p = parsePagination(q);
         const [items, total] = await Promise.all([prisma.session.findMany({ where: { userId: user.id }, skip: p.skip, take: p.limit, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, updatedAt: true, expiresAt: true, ipAddress: true, userAgent: true } }), prisma.session.count({ where: { userId: user.id } })]);
+        const locationIps = [...new Set(items.map((session) => session.ipAddress).filter((ip): ip is string => Boolean(ip)))];
+        const locations = new Map<string, Awaited<ReturnType<typeof lookupApproxLocation>>>();
+        await Promise.all(
+            locationIps.map(async (ip) => {
+                locations.set(ip, await lookupApproxLocation(ip));
+            }),
+        );
         const current = await getSession(request);
-        return collection(items.map((session) => ({ ...session, current: session.id === current?.session.id })), p.page, p.limit, total);
+        return collection(
+            items.map((session) => ({
+                ...session,
+                current: session.id === current?.session.id,
+                approximateLocation: session.ipAddress
+                    ? locations.get(session.ipAddress) ?? null
+                    : null,
+            })),
+            p.page,
+            p.limit,
+            total,
+        );
     });
 
     fastify.delete("/v1/me/sessions/:sessionId", {
