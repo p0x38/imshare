@@ -33,7 +33,7 @@ interface SessionInfo {
     ipAddress?: string | null;
     userAgent?: string | null;
     current: boolean;
-    approximateLocation?: { city?: string; region?: string; country?: string } | null;
+    approximateLocation?: { city?: string; region?: string; country?: string; privacyLabels?: string[] } | null;
 }
 
 function asDate(value: string | Date): Date {
@@ -260,6 +260,13 @@ export function DevicesSecurity() {
                                                           <Typography variant="caption" color="text.secondary">
                                                               Approx. location: {formatApproximateLocation(session.approximateLocation)}
                                                           </Typography>
+                                                      ) : null}
+                                                      {session.approximateLocation?.privacyLabels?.length ? (
+                                                          <Stack direction="row" spacing={0.75} flexWrap="wrap">
+                                                              {session.approximateLocation.privacyLabels.map((label) => (
+                                                                  <Chip key={label} label={label} size="small" variant="outlined" />
+                                                              ))}
+                                                          </Stack>
                                                       ) : null}
                                                   </Stack>
                                               </Stack>
