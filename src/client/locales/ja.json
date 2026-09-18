@@ -55,7 +55,8 @@
         "useDarkMode": "ダークモードにする",
         "notifications": "通知",
         "unreadNotifications": "未読通知 {{count}} 件",
-        "account": "アカウント: {{name}}"
+        "account": "アカウント: {{name}}",
+        "badges": "バッジ"
     },
     "footer": {
         "about": "概要",
