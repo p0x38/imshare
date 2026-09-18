@@ -476,6 +476,35 @@
                         "answer": "Manual badges can be revoked by an administrator. Automatic role badges disappear when the corresponding role is removed, while Veteran is based on account age."
                     }
                 ]
+            },
+            "translation": {
+                "title": "Translations and localization",
+                "items": [
+                    {
+                        "question": "How can I help translate imshare?",
+                        "answer": "You can improve an existing translation or help add another language. Translation files are kept in the project's client locale directory, and translation changes can be submitted as a pull request."
+                    },
+                    {
+                        "question": "Where are the translation files?",
+                        "answer": "The frontend translation resources are stored under src/client/locales. The project currently includes English and Japanese resources."
+                    },
+                    {
+                        "question": "Can I add a new language?",
+                        "answer": "Yes. Add the new locale resource using the project's existing translation structure, update the language initialization when needed, and make sure the UI works without falling back unexpectedly."
+                    },
+                    {
+                        "question": "Should I translate every string?",
+                        "answer": "A translation should cover the user-facing strings for the relevant feature. When adding a new feature, include its translations in every supported locale or provide a sensible fallback."
+                    },
+                    {
+                        "question": "Can I use machine translation or AI to help?",
+                        "answer": "Yes, as a drafting aid. Review the result carefully for meaning, natural wording, placeholders, formatting, and technical terms before submitting it."
+                    },
+                    {
+                        "question": "How should I report a bad translation?",
+                        "answer": "Open an issue or pull request with the affected language, page or feature, the current wording, and a suggested correction. Screenshots or reproduction steps can help when the problem is context-dependent."
+                    }
+                ]
             }
         }
     },
