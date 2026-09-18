@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { access, mkdir, readFile, readdir, rename, unlink } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
@@ -61,6 +61,18 @@ function isLegacyFilename(filename: string): boolean {
     return !filename.includes("/") && !filename.includes("\\");
 }
 
+function resolveUploadPath(uploadDir: string, filename: string): string {
+    const normalized = filename.replaceAll("\\\\", "/");
+    const target = path.resolve(uploadDir, normalized);
+    const relative = path.relative(uploadDir, target);
+
+    if (relative === ".." || relative.startsWith(".." + path.sep) || path.isAbsolute(relative)) {
+        throw new Error("Path escapes upload directory: " + filename);
+    }
+
+    return target;
+}
+
 async function sha256File(filePath: string): Promise<string> {
     const bytes = await readFile(filePath);
     return createHash("sha256").update(bytes).digest("hex");
@@ -93,11 +105,12 @@ async function main(): Promise<void> {
                 if (!upload.contentHash || isLegacyFilename(upload.filename)) continue;
 
                 checked++;
-                const source = path.resolve(uploadDir, upload.filename);
-                const relative = path.relative(uploadDir, source);
-                if (relative.startsWith("..") || path.isAbsolute(relative)) {
+                let source: string;
+                try {
+                    source = resolveUploadPath(uploadDir, upload.filename);
+                } catch (error) {
                     mismatched++;
-                    console.error("UNSAFE " + upload.id + ": " + upload.filename);
+                    console.error("UNSAFE " + upload.id + ": " + String(error));
                     continue;
                 }
 
@@ -147,11 +160,12 @@ async function main(): Promise<void> {
         let conflicts = 0;
 
         for (const upload of legacy) {
-            const source = path.resolve(uploadDir, upload.filename);
-            const sourceRelative = path.relative(uploadDir, source);
-            if (sourceRelative.startsWith("..") || path.isAbsolute(sourceRelative)) {
+            let source: string;
+            try {
+                source = resolveUploadPath(uploadDir, upload.filename);
+            } catch (error) {
                 conflicts++;
-                console.error("UNSAFE " + upload.id + ": " + upload.filename);
+                console.error("UNSAFE " + upload.id + ": " + String(error));
                 continue;
             }
 
@@ -166,18 +180,7 @@ async function main(): Promise<void> {
             const actualHash = await sha256File(source);
             const extension = path.extname(upload.filename).toLowerCase();
             const destinationFilename = targetFilename(actualHash, extension);
-            const destination = path.resolve(uploadDir, destinationFilename);
-            const destinationRelative = path.relative(uploadDir, destination);
-
-            if (
-                destinationRelative.startsWith("..") ||
-                path.isAbsolute(destinationRelative) ||
-                !destinationFilename.startsWith(actualHash.slice(0, 4))
-            ) {
-                conflicts++;
-                console.error("UNSAFE " + upload.id + ": " + destinationFilename);
-                continue;
-            }
+            const destination = resolveUploadPath(uploadDir, destinationFilename);
 
             console.log(
                 (options.apply ? "MIGRATE " : "WOULD MIGRATE ") +
@@ -209,10 +212,15 @@ async function main(): Promise<void> {
                     );
                     continue;
                 }
-
-                await unlink(source);
             } else {
-                await rename(source, destination);
+                await copyFile(source, destination);
+                const copiedHash = await sha256File(destination);
+                if (copiedHash !== actualHash) {
+                    await unlink(destination).catch(() => undefined);
+                    conflicts++;
+                    console.error("CONFLICT " + upload.id + ": copied file failed verification");
+                    continue;
+                }
             }
 
             await prisma.upload.update({
@@ -223,7 +231,7 @@ async function main(): Promise<void> {
                 },
             });
 
-            if (options.deleteLegacy && !destinationExists) {
+            if (options.deleteLegacy || !destinationExists) {
                 await unlink(source).catch(() => undefined);
             }
 
