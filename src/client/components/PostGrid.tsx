@@ -1,4 +1,4 @@
-import { Box, Card, CardActionArea, CardContent, CardMedia, Stack, Typography } from "@mui/material";
+import { Box, Card, CardActionArea, CardContent, CardMedia, Typography } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
@@ -14,33 +14,6 @@ function imageUrl(url: string, width = 512) {
 function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
     return Array.isArray(value) ? value : Array.isArray(value.posts) ? value.posts : [];
 }
-
-function PostStats({ post }: { post: Post }) {
-    return (
-        <Stack
-            direction="row"
-            spacing={1}
-            useFlexGap
-            flexWrap="wrap"
-            color="text.secondary"
-            sx={{ mt: 0.5, fontSize: "0.75rem" }}
-        >
-            <Typography component="span" variant="caption">
-                {post.viewCount ?? 0} views
-            </Typography>
-            <Typography component="span" variant="caption">
-                {post.reactions?.like ?? 0} likes
-            </Typography>
-            <Typography component="span" variant="caption">
-                {post.reactions?.favorite ?? 0} favorites
-            </Typography>
-            <Typography component="span" variant="caption">
-                {post.reactions?.save ?? 0} saves
-            </Typography>
-        </Stack>
-    );
-}
-
 
 export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } }) {
     const { t } = useTranslation();
@@ -134,17 +107,37 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                                     {post.title || t("common.untitled")}
                                 </Typography>
                                 <Typography
-                                    variant="body2"
-                                    color="text.secondary"
+                                    variant="subtitle1"
                                     noWrap
-                                    sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                                    sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
                                 >
+                                    {post.title || t("common.untitled")}
+                                    {" · "}
                                     {post.author?.name ||
                                         post.author?.username ||
                                         post.authorName ||
                                         t("common.unknownAuthor")}
                                 </Typography>
-                                <PostStats post={post} />
+                                <Typography
+                                    variant="body2"
+                                    color="text.secondary"
+                                    noWrap
+                                    sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                                >
+                                    {post.createdAt
+                                        ? new Date(post.createdAt).toLocaleDateString()
+                                        : ""}
+                                    {" · "}
+                                    {post.viewCount ?? 0} views
+                                    {" · "}
+                                    {post.reactions?.like ?? 0} likes
+                                    {" · "}
+                                    {post.reactions?.favorite ?? 0} favs
+                                    {" · "}
+                                    {post.reactions?.save ?? 0} saves
+                                    {" · "}
+                                    ...
+                                </Typography>
                             </CardContent>
                         </CardActionArea>
                     </Card>
