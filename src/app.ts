@@ -2,6 +2,7 @@ import Fastify, { LogController, type FastifyReply, type FastifyRequest } from "
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import { createReadStream } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "./lib/config.js";
@@ -318,7 +319,7 @@ export async function buildApp() {
             return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
         }
         reply.type(upload.mimeType);
-        return reply.send(require("node:fs").createReadStream(source));
+        return reply.send(createReadStream(source));
     });
 
 
