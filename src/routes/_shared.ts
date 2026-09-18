@@ -1,10 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/auth.js";
 import { postPermalink } from "../lib/post-permalink.js";
+import { userBadges } from "../lib/user-badges.js";
 export { ok } from "../lib/api.js";
 
 export const postInclude = {
-    user: { select: { id: true, name: true, handle: true, image: true, updatedAt: true } },
+    user: {
+        select: {
+            id: true,
+            name: true,
+            handle: true,
+            image: true,
+            role: true,
+            badgesJson: true,
+            updatedAt: true,
+        },
+    },
     category: true,
     tags: { include: { tag: true } },
     uploads: true,
@@ -44,7 +55,12 @@ export function postView(post: any) {
         createdAt: post.createdAt,
         updatedAt: post.updatedAt,
         author: {
-            ...post.user,
+            id: post.user.id,
+            name: post.user.name,
+            handle: post.user.handle,
+            image: post.user.image,
+            role: post.user.role,
+            badges: userBadges(post.user),
             avatarUrl: `/v1/users/${encodeURIComponent(post.user.id)}/avatar?v=${encodeURIComponent(post.user.updatedAt.toISOString())}`,
         },
         authorName: post.user.name || post.user.id,
