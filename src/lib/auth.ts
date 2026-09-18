@@ -14,9 +14,15 @@ const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
 export const prisma = new PrismaClient({ adapter });
 const config = loadConfigSync();
 const baseUrl = resolveBaseUrl(config);
+const localAdminConfig = config.admin?.local;
+const localAdminOrigin =
+    localAdminConfig?.enabled === false
+        ? null
+        : `http://127.0.0.1:${localAdminConfig?.port ?? 5107}`;
 const trustedOrigins = [
     ...new Set([
         baseUrl,
+        ...(localAdminOrigin ? [localAdminOrigin] : []),
         ...(config.auth.trustedOrigins ?? []),
         `http://localhost:${config.server.port}`,
         `http://127.0.0.1:${config.server.port}`,
