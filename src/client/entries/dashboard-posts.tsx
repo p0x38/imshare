@@ -6,6 +6,7 @@ import {
     CardContent,
     CardMedia,
     Stack,
+    Tooltip,
     Typography,
 } from "@mui/material";
 import { useEffect, useState } from "react";
@@ -15,6 +16,10 @@ import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { LoadingState } from "../components/States";
 import { TextList } from "../components/TextList";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
+import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
+import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 function imageUrl(url: string, width = 512): string {
@@ -99,21 +104,54 @@ function DashboardPostsPage() {
                                                             post.authorName ||
                                                             t("common.unknownAuthor")}
                                                     </Typography>
-                                                    <Typography variant="body2" color="text.secondary" noWrap>
-                                                        {post.createdAt
-                                                            ? new Date(post.createdAt).toLocaleDateString()
-                                                            : ""}
-                                                        {" · "}
-                                                        {post.viewCount ?? 0} views
-                                                        {" · "}
-                                                        {post.reactions?.like ?? 0} likes
-                                                        {" · "}
-                                                        {post.reactions?.favorite ?? 0} favs
-                                                        {" · "}
-                                                        {post.reactions?.save ?? 0} saves
-                                                        {" · "}
-                                                        ...
-                                                    </Typography>
+                                                    <Stack
+                                                        direction="row"
+                                                        spacing={0.75}
+                                                        alignItems="center"
+                                                        color="text.secondary"
+                                                        sx={{ minWidth: 0 }}
+                                                    >
+                                                        <Typography variant="body2" noWrap>
+                                                            {post.createdAt
+                                                                ? new Date(post.createdAt).toLocaleDateString()
+                                                                : ""}
+                                                        </Typography>
+                                                        <Typography component="span" variant="body2" aria-hidden="true">
+                                                            ·
+                                                        </Typography>
+                                                        <Tooltip title="Views">
+                                                            <Stack direction="row" spacing={0.25} alignItems="center">
+                                                                <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
+                                                                <Typography component="span" variant="caption">
+                                                                    {post.viewCount ?? 0}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </Tooltip>
+                                                        <Tooltip title="Likes">
+                                                            <Stack direction="row" spacing={0.25} alignItems="center">
+                                                                <ThumbUpAltOutlinedIcon sx={{ fontSize: 15 }} />
+                                                                <Typography component="span" variant="caption">
+                                                                    {post.reactions?.like ?? 0}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </Tooltip>
+                                                        <Tooltip title="Favorites">
+                                                            <Stack direction="row" spacing={0.25} alignItems="center">
+                                                                <FavoriteBorderIcon sx={{ fontSize: 15 }} />
+                                                                <Typography component="span" variant="caption">
+                                                                    {post.reactions?.favorite ?? 0}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </Tooltip>
+                                                        <Tooltip title="Saves">
+                                                            <Stack direction="row" spacing={0.25} alignItems="center">
+                                                                <BookmarkBorderIcon sx={{ fontSize: 15 }} />
+                                                                <Typography component="span" variant="caption">
+                                                                    {post.reactions?.save ?? 0}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </Tooltip>
+                                                    </Stack>
                                                 </CardContent>
                                             </CardActionArea>
                                         </Card>
