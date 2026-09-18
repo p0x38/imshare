@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { LoadingState } from "../components/States";
+import { TextList } from "../components/TextList";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 function imageUrl(url: string, width = 512): string {
@@ -26,6 +27,8 @@ function DashboardPostsPage() {
     const { t } = useTranslation();
     const [posts, setPosts] = useState<Post[] | null>(null);
     const [error, setError] = useState("");
+    const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
+    const texts = posts?.filter((post) => post.contentType === "text") ?? [];
     useEffect(() => {
         void api<{ data?: Post[] }>("/v1/me/posts?limit=100")
             .then((response) => setPosts(response.data ?? []))
@@ -78,43 +81,31 @@ function DashboardPostsPage() {
                     </Card>
                 ) : null}
                 {posts && posts.length > 0 ? (
-                    <Stack
-                        sx={{
-                            display: "grid",
-                            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))",
-                            gap: { xs: 1, sm: 2 },
-                        }}
-                    >
-                        {posts.map((post) => (
-                            <Card
-                                key={post.id}
-                                variant="outlined"
-                                sx={{ overflow: "hidden", height: "100%" }}
-                            >
-                                <CardActionArea
-                                    component="a"
-                                    href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
-                                >
-                                    {post.uploads?.[0] ? (
-                                        <CardMedia
-                                            component="img"
-                                            image={imageUrl(post.uploads[0].url)}
-                                            alt={post.uploads[0].alt || post.title || ""}
-                                            loading="lazy"
-                                            sx={{ aspectRatio: "1 / 1", objectFit: "cover" }}
-                                        />
-                                    ) : null}
-                                    <CardContent>
-                                        <Typography variant="subtitle1" noWrap>
-                                            {post.title || t("common.untitled")}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary" noWrap>
-                                            {post.status || post.visibility || t("common.post")}
-                                        </Typography>
-                                    </CardContent>
-                                </CardActionArea>
-                            </Card>
-                        ))}
+                    <Stack spacing={{ xs: 3, sm: 4 }}>
+                        {imagePosts.length ? (
+                            <Stack spacing={1.5}>
+                                <Typography variant="h5" component="h2">Posts</Typography>
+                                <Stack sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))", gap: { xs: 1, sm: 2 } }}>
+                                    {imagePosts.map((post) => (
+                                        <Card key={post.id} variant="outlined" sx={{ overflow: "hidden", height: "100%" }}>
+                                            <CardActionArea component="a" href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}>
+                                                {post.uploads?.[0] ? <CardMedia component="img" image={imageUrl(post.uploads[0].url)} alt={post.uploads[0].alt || post.title || ""} loading="lazy" sx={{ aspectRatio: "1 / 1", objectFit: "cover" }} /> : null}
+                                                <CardContent>
+                                                    <Typography variant="subtitle1" noWrap>{post.title || t("common.untitled")}</Typography>
+                                                    <Typography variant="body2" color="text.secondary" noWrap>{post.status || post.visibility || t("common.post")}</Typography>
+                                                </CardContent>
+                                            </CardActionArea>
+                                        </Card>
+                                    ))}
+                                </Stack>
+                            </Stack>
+                        ) : null}
+                        {texts.length ? (
+                            <Stack spacing={1.5}>
+                                <Typography variant="h5" component="h2">Texts</Typography>
+                                <TextList texts={texts} hrefForText={(text) => `/dashboard/posts/${encodeURIComponent(text.id)}/`} />
+                            </Stack>
+                        ) : null}
                     </Stack>
                 ) : null}
             </Stack>
