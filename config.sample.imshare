@@ -20,13 +20,25 @@ site {
 }
 
 auth {
+    # Public base URL. Set this to the URL users will access.
     baseUrl = "http://localhost:5454"
+
+    # Additional browser origins allowed by Better Auth.
     trustedOrigins = []
+
+    # Whether password authentication is available.
     emailAndPasswordEnabled = true
+
+    # Append server.port to baseUrl when baseUrl does not already include a port.
+    appendPort = true
 
     registration {
         enabled = true
         public = false
+
+        # When true, new registrations wait for administrator approval
+        # instead of requiring a registration token.
+        manualApproval = false
     }
 }
 
@@ -51,23 +63,63 @@ limits {
 }
 
 analytics {
+    # Optional Google Analytics 4 measurement ID.
     googleAnalyticsMeasurementId = ""
+
+    # Optional Google Tag Manager container ID.
     googleTagManagerContainerId = ""
 }
 
-# Optional server observability
-# Metrics collection is disabled unless observability.enabled is true.
+# Optional OpenTelemetry / Prometheus observability.
+# Observability is completely disabled unless enabled = true.
+#
+# Metrics can be exported to Prometheus, OTLP, or both.
+# Traces and logs can independently use OTLP gRPC or HTTP/protobuf.
 observability {
     enabled = false
 
-    prometheus {
-        enabled = false
-        path = "/metrics"
+    serviceName = "imshare"
+    serviceVersion = "1.0.0"
+    environment = "development"
+    instanceId = "main"
+
+    batch {
+        exportIntervalMs = 15000
+        maxExportBatchSize = 512
+        maxQueueSize = 2048
     }
 
-    openTelemetry {
+    traces {
         enabled = false
-        endpoint = ""
-        exportIntervalMs = 10000
+        endpoint = "127.0.0.1:4317"
+        protocol = "grpc"
+        samplingRatio = 1.0
+    }
+
+    metrics {
+        enabled = false
+        exportIntervalMs = 15000
+
+        prometheus {
+            enabled = false
+            path = "/metrics"
+        }
+
+        otlp {
+            enabled = false
+            endpoint = "127.0.0.1:4319"
+            protocol = "grpc"
+        }
+    }
+
+    logs {
+        enabled = false
+        includeTraceContext = true
+
+        otlp {
+            enabled = false
+            endpoint = "http://127.0.0.1:4318/v1/logs"
+            protocol = "http/protobuf"
+        }
     }
 }
