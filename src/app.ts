@@ -109,7 +109,8 @@ export async function buildApp() {
                 request.headers.origin,
                 request.headers.referer,
             )
-        )
+        ) {
+            observability.recordCsrfRejection();
             return reply
                 .code(403)
                 .send({
@@ -124,7 +125,8 @@ export async function buildApp() {
             reply
                 .header("X-RateLimit-Limit", "30")
                 .header("X-RateLimit-Remaining", String(result.remaining));
-            if (rateLimitingEnabled && !result.allowed)
+            if (rateLimitingEnabled && !result.allowed) {
+                observability.recordRateLimitHit("upload");
                 return reply
                     .code(429)
                     .header("Retry-After", String(result.retryAfter))
@@ -134,6 +136,7 @@ export async function buildApp() {
                             message: "Upload limit exceeded. Try again later.",
                         },
                     });
+            }
             return;
         }
         if (
@@ -146,7 +149,8 @@ export async function buildApp() {
             reply
                 .header("X-RateLimit-Limit", "75")
                 .header("X-RateLimit-Remaining", String(result.remaining));
-            if (rateLimitingEnabled && !result.allowed)
+            if (rateLimitingEnabled && !result.allowed) {
+                observability.recordRateLimitHit("api_get");
                 return reply
                     .code(429)
                     .header("Retry-After", String(result.retryAfter))
@@ -156,6 +160,7 @@ export async function buildApp() {
                             message: "Too many requests. Try again later.",
                         },
                     });
+            }
         }
         viewLimiter.prune();
         uploadLimiter.prune();
