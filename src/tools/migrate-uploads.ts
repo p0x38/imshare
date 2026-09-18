@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { access, copyFile, mkdir, readFile, unlink } from "node:fs/promises";
+import { access, copyFile, mkdir, readFile, readdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
@@ -10,6 +10,7 @@ interface Options {
     apply: boolean;
     deleteLegacy: boolean;
     verifyOnly: boolean;
+    audit: boolean;
 }
 
 function parseOptions(argv: string[]): Options {
@@ -17,12 +18,14 @@ function parseOptions(argv: string[]): Options {
         apply: false,
         deleteLegacy: false,
         verifyOnly: false,
+        audit: false,
     };
 
     for (const arg of argv) {
         if (arg === "--apply") options.apply = true;
         else if (arg === "--delete-legacy") options.deleteLegacy = true;
         else if (arg === "--verify") options.verifyOnly = true;
+        else if (arg === "--audit") options.audit = true;
         else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
@@ -32,6 +35,7 @@ function parseOptions(argv: string[]): Options {
                     "--apply          Move files and update database records.",
                     "--delete-legacy  Remove old flat files after a successful migration.",
                     "--verify         Verify existing sharded upload files only.",
+                    "--audit          Scan upload files and reconcile them with the database.",
                 ].join("\n"),
             );
             return;
@@ -45,6 +49,9 @@ function parseOptions(argv: string[]): Options {
 
     if (options.verifyOnly && options.apply)
         throw new Error("--verify cannot be combined with --apply.");
+
+    if (options.audit && (options.apply || options.verifyOnly))
+        throw new Error("--audit cannot be combined with --apply or --verify.");
 
     return options;
 }
@@ -73,6 +80,21 @@ function resolveUploadPath(uploadDir: string, filename: string): string {
     return target;
 }
 
+async function collectFiles(root: string, relative = ""): Promise<string[]> {
+    const directory = path.join(root, relative);
+    const entries = await readdir(directory, { withFileTypes: true });
+    const files: string[] = [];
+
+    for (const entry of entries) {
+        if (entry.name === ".cache") continue;
+        const child = path.posix.join(relative.replaceAll("\\\\", "/"), entry.name);
+        if (entry.isDirectory()) files.push(...(await collectFiles(root, child)));
+        else if (entry.isFile()) files.push(child);
+    }
+
+    return files;
+}
+
 async function sha256File(filePath: string): Promise<string> {
     const bytes = await readFile(filePath);
     return createHash("sha256").update(bytes).digest("hex");
@@ -95,6 +117,78 @@ async function main(): Promise<void> {
             },
             orderBy: { createdAt: "asc" },
         });
+
+        if (options.audit) {
+            const files = await collectFiles(uploadDir);
+            const referenced = new Map(
+                uploads.map((upload) => [upload.filename.replaceAll("\\\\", "/"), upload]),
+            );
+            const byHash = new Map<string, typeof uploads[number][]>();
+
+            for (const upload of uploads) {
+                if (!upload.contentHash) continue;
+                const list = byHash.get(upload.contentHash) ?? [];
+                list.push(upload);
+                byHash.set(upload.contentHash, list);
+            }
+
+            let unreferenced = 0;
+            let missing = 0;
+            let mismatched = 0;
+            let pathMismatches = 0;
+
+            console.log("Auditing " + files.length + " file(s) against " + uploads.length + " DB upload(s)...");
+
+            for (const relativeFilename of files) {
+                const normalized = relativeFilename.replaceAll("\\\\", "/");
+                const hash = await sha256File(resolveUploadPath(uploadDir, normalized));
+                const upload = referenced.get(normalized);
+
+                if (upload) {
+                    if (upload.contentHash !== hash) {
+                        mismatched++;
+                        console.error(
+                            "HASH MISMATCH " + upload.id + ": " + normalized +
+                                " database=" + String(upload.contentHash) + " file=" + hash,
+                        );
+                    }
+                    const expected = targetFilename(hash, path.extname(normalized).toLowerCase());
+                    if (normalized !== expected) {
+                        pathMismatches++;
+                        console.error("PATH MISMATCH " + upload.id + ": " + normalized + " expected=" + expected);
+                    }
+                } else {
+                    const matches = byHash.get(hash) ?? [];
+                    if (matches.length) {
+                        console.log(
+                            "HASH MATCH (different path) " + normalized + " -> " +
+                                matches.map((item) => item.id).join(", "),
+                        );
+                    } else {
+                        unreferenced++;
+                        console.error("UNREFERENCED " + normalized + " sha256=" + hash);
+                    }
+                }
+            }
+
+            for (const upload of uploads) {
+                const filename = upload.filename.replaceAll("\\\\", "/");
+                if (!files.includes(filename)) {
+                    missing++;
+                    console.error("MISSING FILE " + upload.id + ": " + filename);
+                }
+            }
+
+            console.log(
+                "Audit complete: " + files.length + " files, " + uploads.length +
+                    " DB uploads; " + unreferenced + " unreferenced, " + missing +
+                    " missing, " + mismatched + " hash mismatch(es), " +
+                    pathMismatches + " path mismatch(es).",
+            );
+
+            if (unreferenced || missing || mismatched || pathMismatches) process.exitCode = 1;
+            return;
+        }
 
         if (options.verifyOnly) {
             let checked = 0;
