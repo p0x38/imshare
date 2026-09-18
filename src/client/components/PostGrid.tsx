@@ -17,7 +17,7 @@ function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
 
 export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } }) {
     const { t } = useTranslation();
-    const posts = normalizePosts(input);
+    const posts = normalizePosts(input).filter((post) => post.contentType !== "text");
 
     if (posts.length === 0) {
         return (
