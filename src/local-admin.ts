@@ -50,6 +50,9 @@ export function startLocalAdminProxy(): HttpServer | null {
         incoming.pipe(upstream);
     });
 
+    server.on("error", (error) => {
+        console.error(`local admin dashboard failed: ${error.message}`);
+    });
     server.listen(listenPort, listenHost, () => {
         console.log(`local admin dashboard listening on http://${listenHost}:${listenPort}`);
     });
