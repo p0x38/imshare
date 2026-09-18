@@ -26,6 +26,7 @@ export default defineConfig({
                     process.cwd(),
                     "src/client/entries/dashboard-post.tsx",
                 ),
+                "dashboard-analytics": path.resolve(process.cwd(), "src/client/entries/dashboard-analytics.tsx"),
                 "post-editor": path.resolve(process.cwd(), "src/client/entries/post-editor.tsx"),
                 settings: path.resolve(process.cwd(), "src/client/entries/settings.tsx"),
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
