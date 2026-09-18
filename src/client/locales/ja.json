@@ -62,7 +62,8 @@
         "faq": "FAQ",
         "github": "GitHub",
         "privacy": "プライバシー",
-        "terms": "利用規約"
+        "terms": "利用規約",
+        "badges": "バッジ"
     },
     "home": {
         "recentPosts": "最近の投稿"
@@ -449,6 +450,77 @@
                         "answer": "現在はFollow、FollowのUndo、Accept、Reject、公開Create、Deleteを処理しています。未対応のアクティビティ種別は拒否されます。"
                     }
                 ]
+            }
+        }
+    },
+    "badges": {
+        "title": "ユーザーバッジ",
+        "description": "imshare上での役割、節目、貢献などを表すバッジです。",
+        "howToEarn": "取得方法",
+        "kind": {
+            "automatic": "自動付与",
+            "manual": "管理者が付与"
+        },
+        "items": {
+            "admin": {
+                "name": "管理者",
+                "description": "管理者権限を持つアカウントを示します。",
+                "howToEarn": "管理者ロールの間、自動的に表示されます。"
+            },
+            "moderator": {
+                "name": "モデレーター",
+                "description": "モデレーション権限を持つアカウントを示します。",
+                "howToEarn": "モデレーターロールの間、自動的に表示されます。"
+            },
+            "veteran": {
+                "name": "ベテラン",
+                "description": "1年以上利用しているアカウントを示します。",
+                "howToEarn": "アカウント作成から1年経過すると自動的に付与されます。"
+            },
+            "contributor": {
+                "name": "コントリビューター",
+                "description": "プロジェクトやコミュニティへの有意義な貢献をした人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "verified": {
+                "name": "認証済み",
+                "description": "インスタンスによって確認されたアカウントを示します。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "early-adopter": {
+                "name": "アーリーアダプター",
+                "description": "インスタンスの初期段階から参加している人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "bug-hunter": {
+                "name": "バグハンター",
+                "description": "不具合の発見や報告に協力した人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "supporter": {
+                "name": "サポーター",
+                "description": "プロジェクトやコミュニティを支援した人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "founder": {
+                "name": "ファウンダー",
+                "description": "インスタンスやプロジェクトの立ち上げに関わった人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "developer": {
+                "name": "開発者",
+                "description": "コードや技術面での開発に貢献した人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "community-helper": {
+                "name": "コミュニティヘルパー",
+                "description": "他のメンバーを継続的に助けている人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
+            },
+            "curator": {
+                "name": "キュレーター",
+                "description": "コンテンツの整理、分類、キュレーションに協力した人を称えるバッジです。",
+                "howToEarn": "管理者が付与します。"
             }
         }
     }
