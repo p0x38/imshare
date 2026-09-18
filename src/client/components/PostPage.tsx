@@ -171,7 +171,7 @@ function PostActions({ post }: { post: Post }) {
     const copyLink = async () => {
         closeMenu();
         await navigator.clipboard.writeText(window.location.href);
-        setReportMessage("Link copied to clipboard.");
+        setReportMessage(t("postUi.linkCopied"));
     };
 
     const openReport = () => {
@@ -195,7 +195,7 @@ function PostActions({ post }: { post: Post }) {
             setReportOpen(false);
             setReportDetails("");
             setReportReason("other");
-            setReportMessage("Report submitted. Thank you.");
+            setReportMessage(t("postUi.reportSubmitted"));
         } catch (cause) {
             setReportMessage(cause instanceof Error ? cause.message : "Unable to submit report.");
         } finally {
