@@ -2,6 +2,7 @@ import { mkdir, access, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { rgbaToThumbHash } from "thumbhash";
+import { ensureCacheDirectory } from "./cache.js";
 
 const SIZES = [320, 640, 1280] as const;
 
@@ -16,10 +17,9 @@ export async function generateThumbHash(source: string): Promise<string> {
 
 export async function generateThumbnails(
     source: string,
-    cacheDir: string,
     uploadId: string,
 ): Promise<void> {
-    await mkdir(cacheDir, { recursive: true });
+    const cacheDir = await ensureCacheDirectory();
     await Promise.all(
         SIZES.map(async (width) => {
             const destination = path.join(cacheDir, `${uploadId}-${width}xauto-inside.webp`);
@@ -38,9 +38,9 @@ export async function generateThumbnails(
     );
 }
 
-export function queueThumbnailGeneration(source: string, cacheDir: string, uploadId: string): void {
+export function queueThumbnailGeneration(source: string, uploadId: string): void {
     setImmediate(() => {
-        void generateThumbnails(source, cacheDir, uploadId).catch((error) => {
+        void generateThumbnails(source, uploadId).catch((error) => {
             console.error(`thumbnail generation failed for ${uploadId}`, error);
         });
     });
