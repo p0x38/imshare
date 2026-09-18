@@ -136,12 +136,14 @@ async function main(): Promise<void> {
             let missing = 0;
             let mismatched = 0;
             let pathMismatches = 0;
+            const hashForAudit = new Map<string, string>();
 
             console.log("Auditing " + files.length + " file(s) against " + uploads.length + " DB upload(s)...");
 
             for (const relativeFilename of files) {
                 const normalized = relativeFilename.replaceAll("\\\\", "/");
                 const hash = await sha256File(resolveUploadPath(uploadDir, normalized));
+                hashForAudit.set(normalized, hash);
                 const upload = referenced.get(normalized);
 
                 if (upload) {
@@ -160,8 +162,15 @@ async function main(): Promise<void> {
                 } else {
                     const matches = byHash.get(hash) ?? [];
                     if (matches.length) {
+                        const expected = targetFilename(hash, path.extname(normalized).toLowerCase());
                         console.log(
-                            "HASH MATCH (different path) " + normalized + " -> " +
+                            "DUPLICATE FILE " +
+                                normalized +
+                                " sha256=" +
+                                hash +
+                                " canonical=" +
+                                expected +
+                                " upload(s)=" +
                                 matches.map((item) => item.id).join(", "),
                         );
                     } else {
