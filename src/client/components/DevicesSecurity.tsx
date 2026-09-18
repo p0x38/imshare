@@ -327,7 +327,7 @@ export function DevicesSecurity() {
                                     onChange={(event) => setConfirmPassword(event.target.value)}
                                     type="password"
                                     autoComplete="new-password"
-                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: 1px solid currentColor" }}
+                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: "1px solid currentColor" }}
                                 />
                             </label>
                             <FormControlLabel
