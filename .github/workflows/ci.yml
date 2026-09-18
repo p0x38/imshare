@@ -11,6 +11,7 @@ jobs:
         env:
             DATABASE_URL: file:./ci.db
             BETTER_AUTH_SECRET: ci-only-test-secret-change-me
+            IMSHARE_CONFIG: config.sample.imshare
         steps:
             - uses: actions/checkout@v4
             - uses: pnpm/action-setup@v4
