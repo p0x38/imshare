@@ -140,6 +140,31 @@ The API is versioned under `/v1`. The repository keeps endpoint documentation in
 
 The API includes a public version endpoint at `GET /v1/version`, which returns the configured API version and site version.
 
+## Observability
+
+Server observability is optional and disabled by default. Enable it in `config.imshare` when needed:
+
+```text
+observability {
+    enabled = true
+
+    prometheus {
+        enabled = true
+        path = "/metrics"
+    }
+
+    openTelemetry {
+        enabled = true
+        endpoint = "http://127.0.0.1:4318/v1/metrics"
+        exportIntervalMs = 10000
+    }
+}
+```
+
+When enabled, imshare exposes HTTP request counters, request duration histograms, active requests, uptime, memory, and CPU metrics. Prometheus uses the configured scrape path; OpenTelemetry exports OTLP/HTTP JSON periodically. Keep the metrics endpoint behind a trusted network boundary or reverse-proxy authentication if it should not be public.
+
+The admin **Analytics** page provides first-party aggregates from the existing database, including post views, signed-in unique viewers, new users/posts, comments, reactions, uploads, daily view trends, and most-viewed posts. Anonymous visitors are not treated as unique viewers.
+
 ## Administration
 
 Administration is role-based:
