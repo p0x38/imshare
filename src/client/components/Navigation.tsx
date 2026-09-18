@@ -37,6 +37,7 @@ const links = [
     ["tags", "/tags/"],
     ["categories", "/categories/"],
     ["search", "/search/"],
+    ["badges", "/badges/"],
 ] as const;
 
 export function Navigation() {
