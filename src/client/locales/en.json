@@ -505,6 +505,27 @@
                         "answer": "Open an issue or pull request with the affected language, page or feature, the current wording, and a suggested correction. Screenshots or reproduction steps can help when the problem is context-dependent."
                     }
                 ]
+            },
+            "general": {
+                "title": "General",
+                "items": [
+                    {
+                        "question": "What is Save?",
+                        "answer": "Save is a bookmark for finding a post again later. It is separate from likes and favorites."
+                    },
+                    {
+                        "question": "How do notifications work?",
+                        "answer": "Notifications let you see account-related events such as follows and reactions."
+                    },
+                    {
+                        "question": "Can I change profile visibility?",
+                        "answer": "Yes. Account privacy settings control the visibility of your profile, posts, and follow relationships."
+                    },
+                    {
+                        "question": "Can I publish something other than images?",
+                        "answer": "Yes. imshare supports text posts in addition to image posts."
+                    }
+                ]
             }
         }
     },
@@ -608,5 +629,52 @@
         "saving": "Saving…",
         "loadError": "Unable to load account preferences.",
         "saveError": "Unable to save account preferences."
+    },
+    "accountUi": {
+        "preferences": "Preferences",
+        "privacy": "Privacy",
+        "postingDefaults": "Posting defaults",
+        "security": "Security",
+        "notifications": "Notifications",
+        "profileVisibility": "Profile visibility",
+        "allowProfile": "Allow other users to see your profile",
+        "showPosts": "Show your public posts on your profile",
+        "showHandle": "Show your custom handle publicly",
+        "showEmail": "Show your email publicly",
+        "indexProfile": "Allow search engines to index your profile",
+        "socialVisibility": "Social visibility",
+        "allowFollow": "Allow people to follow you",
+        "followApproval": "Require approval for new followers",
+        "showFollowers": "Allow others to see your followers",
+        "showFollowing": "Allow others to see who you follow",
+        "defaultCategory": "Default category",
+        "none": "None",
+        "defaultVisibility": "Default post visibility",
+        "public": "Public",
+        "unlisted": "Unlisted",
+        "private": "Private",
+        "allowDownloads": "Allow downloads by default",
+        "contentWarning": "Default content warning",
+        "saving": "Saving…",
+        "save": "Save preferences"
+    },
+    "postUi": {
+        "like": "Like",
+        "favorite": "Favorite",
+        "save": "Save",
+        "moreActions": "More actions",
+        "copyLink": "Copy link",
+        "openNewTab": "Open in new tab",
+        "openSource": "Open source",
+        "edit": "Edit post",
+        "report": "Report post",
+        "reportTitle": "Report post",
+        "reason": "Reason",
+        "noComments": "No comments yet.",
+        "linkCopied": "Link copied to clipboard.",
+        "reportSubmitted": "Report submitted. Thank you.",
+        "deleteConfirm": "Delete this post? This cannot be undone.",
+        "download": "Download",
+        "downloadImage": "Download image {{number}}"
     }
 }
