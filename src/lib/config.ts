@@ -33,7 +33,12 @@ export interface ServerConfig {
         robots?: boolean;
     };
     limits?: { textPostCharacters?: number };
-    analytics?: { googleAnalyticsMeasurementId?: string; googleTagManagerContainerId?: string };\n    observability?: {\n        enabled?: boolean;\n        prometheus?: { enabled?: boolean; path?: string };\n        openTelemetry?: { enabled?: boolean; endpoint?: string; exportIntervalMs?: number };\n    };
+    analytics?: { googleAnalyticsMeasurementId?: string; googleTagManagerContainerId?: string };
+    observability?: {
+        enabled?: boolean;
+        prometheus?: { enabled?: boolean; path?: string };
+        openTelemetry?: { enabled?: boolean; endpoint?: string; exportIntervalMs?: number };
+    };
 }
 
 export interface PublicConfig {
@@ -180,7 +185,8 @@ function isServerConfig(value: unknown): value is ServerConfig {
         auth = config.auth,
         features = config.features,
         limits = config.limits,
-        analytics = config.analytics,\n        observability = config.observability;
+        analytics = config.analytics,
+        observability = config.observability;
     return (
         isObject(server) &&
         typeof server.host === "string" &&
