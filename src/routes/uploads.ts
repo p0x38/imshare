@@ -212,7 +212,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     const upload = await prisma.upload.create({
                         data: {
                             id: uploadId,
-                            filename,
+                            filename: relativeFilename,
                             originalName: part.filename,
                             mimeType: part.mimetype,
                             size: normalized.byteLength,
