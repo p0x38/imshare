@@ -65,7 +65,6 @@ function uploadView(upload: any) {
 export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
     const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
-    const cacheDir = path.join(uploadDir, ".cache");
     await mkdir(uploadDir, { recursive: true });
     fastify.post("/v1/uploads", async (request, reply) => {
         const user = await requireUser(request, reply);
@@ -231,7 +230,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         progress: 100,
                         url: uploadView(upload).url,
                     });
-                    queueThumbnailGeneration(destination, cacheDir, upload.id);
+                    queueThumbnailGeneration(destination, upload.id);
                 } catch (error) {
                     await unlink(destination).catch(() => undefined);
                     const duplicate = await prisma.upload.findFirst({
