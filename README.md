@@ -142,26 +142,61 @@ The API includes a public version endpoint at `GET /v1/version`, which returns t
 
 ## Observability
 
-Server observability is optional and disabled by default. Enable it in `config.imshare` when needed:
+Server observability is optional and disabled by default. Configure it entirely in `config.imshare`. The observability configuration supports separate traces, metrics, and logs signals, OTLP gRPC or HTTP/protobuf transports, trace sampling, batching, Prometheus scraping, service/environment/instance identity, and trace-context correlation for logs.
+
+For a setup similar to a local OpenTelemetry Collector plus Loki:
 
 ```text
 observability {
     enabled = true
 
-    prometheus {
-        enabled = true
-        path = "/metrics"
+    serviceName = "imshare"
+    serviceVersion = "1.0.0"
+    environment = "production"
+    instanceId = "main"
+
+    batch {
+        exportIntervalMs = 15000
+        maxExportBatchSize = 512
+        maxQueueSize = 2048
     }
 
-    openTelemetry {
+    traces {
         enabled = true
-        endpoint = "http://127.0.0.1:4318/v1/metrics"
-        exportIntervalMs = 10000
+        endpoint = "127.0.0.1:4317"
+        protocol = "grpc"
+        samplingRatio = 1.0
+    }
+
+    metrics {
+        enabled = true
+
+        prometheus {
+            enabled = true
+            path = "/metrics"
+        }
+
+        otlp {
+            enabled = true
+            endpoint = "127.0.0.1:4319"
+            protocol = "grpc"
+        }
+    }
+
+    logs {
+        enabled = true
+        includeTraceContext = true
+
+        otlp {
+            enabled = true
+            endpoint = "http://127.0.0.1:3100/otlp/v1/logs"
+            protocol = "http/protobuf"
+        }
     }
 }
 ```
 
-When enabled, imshare exposes HTTP request counters, request duration histograms, active requests, uptime, memory, and CPU metrics through the OpenTelemetry SDK. Prometheus uses the configured scrape path; OpenTelemetry exports metrics through the official OTLP/HTTP protobuf exporter. Keep the metrics endpoint behind a trusted network boundary or reverse-proxy authentication if it should not be public.
+The Prometheus endpoint is served by the existing Fastify server at the configured path. HTTP requests are traced with OpenTelemetry HTTP instrumentation, Pino logs are bridged to the OpenTelemetry Logs SDK, and logs can carry the active trace and span IDs for correlation. Loki 3.x recommends its native OTLP endpoint for OpenTelemetry logs. Keep the metrics endpoint behind a trusted network boundary or reverse-proxy authentication if it should not be public.
 
 The admin **Analytics** page provides first-party aggregates from the existing database, including post views, signed-in unique viewers, new users/posts, comments, reactions, uploads, daily view trends, and most-viewed posts. Anonymous visitors are not treated as unique viewers.
 
