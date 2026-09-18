@@ -54,4 +54,20 @@ analytics {
     googleAnalyticsMeasurementId = ""
     googleTagManagerContainerId = ""
 }
-\n# Optional server observability\n# Metrics collection is disabled unless observability.enabled is true.\nobservability {\n    enabled = false\n\n    prometheus {\n        enabled = false\n        path = "/metrics"\n    }\n\n    openTelemetry {\n        enabled = false\n        endpoint = ""\n        exportIntervalMs = 10000\n    }\n}\n
+
+# Optional server observability
+# Metrics collection is disabled unless observability.enabled is true.
+observability {
+    enabled = false
+
+    prometheus {
+        enabled = false
+        path = "/metrics"
+    }
+
+    openTelemetry {
+        enabled = false
+        endpoint = ""
+        exportIntervalMs = 10000
+    }
+}
