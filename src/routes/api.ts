@@ -38,7 +38,12 @@ export const apiRoutes: FastifyPluginAsync = async (fastify) => {
         if (!session || !request.body || typeof request.body !== "object") return;
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { defaultCategoryId: true, defaultPostVisibility: true, defaultAllowDownload: true, defaultContentWarning: true },
+            select: {
+                defaultCategoryId: true,
+                defaultPostVisibility: true,
+                defaultAllowDownload: true,
+                defaultContentWarning: true,
+            },
         });
         if (!user) return;
         const body = request.body as Record<string, unknown>;

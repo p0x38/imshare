@@ -51,13 +51,17 @@ function humanizeSegment(segment: string): string {
 function defaultSummary(method: string, url: string): string {
     const path = stripApiPrefix(url).replace(/^\/|\/$/g, "");
     const segments = path.split("/").filter(Boolean);
-    const meaningful = segments.filter((segment) => !/^v\d+$/.test(segment) && !/^[:{]/.test(segment));
+    const meaningful = segments.filter(
+        (segment) => !/^v\d+$/.test(segment) && !/^[:{]/.test(segment),
+    );
     const resource = meaningful.at(-1) ?? "resource";
     const collection = meaningful.at(-2);
 
     switch (method.toUpperCase()) {
         case "GET":
-            return collection && /^[:{]/.test(resource) ? `Get ${humanizeSegment(collection)}` : `Get ${humanizeSegment(resource)}`;
+            return collection && /^[:{]/.test(resource)
+                ? `Get ${humanizeSegment(collection)}`
+                : `Get ${humanizeSegment(resource)}`;
         case "POST":
             return `Create ${humanizeSegment(resource)}`;
         case "PUT":
@@ -98,7 +102,9 @@ function schemaObject(value: unknown): OpenApiSchema | undefined {
     }
     if (source.items) output.items = schemaObject(source.items) ?? (source.items as OpenApiSchema);
     if (source.additionalProperties && typeof source.additionalProperties === "object") {
-        output.additionalProperties = schemaObject(source.additionalProperties) ?? (source.additionalProperties as OpenApiSchema);
+        output.additionalProperties =
+            schemaObject(source.additionalProperties) ??
+            (source.additionalProperties as OpenApiSchema);
     }
     for (const key of ["allOf", "oneOf", "anyOf"] as const) {
         const valueItems = source[key];
@@ -129,7 +135,11 @@ function parametersFromObjectSchema(
 ): OpenApiParameter[] {
     const schema = asRecord(value);
     const properties = asRecord(schema.properties);
-    const required = new Set(Array.isArray(schema.required) ? schema.required.filter((item): item is string => typeof item === "string") : []);
+    const required = new Set(
+        Array.isArray(schema.required)
+            ? schema.required.filter((item): item is string => typeof item === "string")
+            : [],
+    );
 
     return Object.entries(properties).map(([name, property]) =>
         schemaParameter(name, location, schemaObject(property), required.has(name)),
@@ -148,7 +158,11 @@ function fallbackQueryParameters(url: string): OpenApiParameter[] {
     const path = stripApiPrefix(url);
     const parameters: OpenApiParameter[] = [];
 
-    const add = (name: string, schema: OpenApiSchema, options: Omit<OpenApiParameter, "name" | "in" | "schema"> = {}) => {
+    const add = (
+        name: string,
+        schema: OpenApiSchema,
+        options: Omit<OpenApiParameter, "name" | "in" | "schema"> = {},
+    ) => {
         parameters.push({ name, in: "query", schema, ...options });
     };
 
@@ -162,9 +176,21 @@ function fallbackQueryParameters(url: string): OpenApiParameter[] {
         path.includes("/sessions") ||
         path.includes("/recommendations")
     ) {
-        add("page", { type: "integer", minimum: 1, default: 1 }, { description: "1-based page number." });
-        add("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }, { description: "Maximum number of items to return." });
-        add("order", { type: "string", enum: ["asc", "desc"], default: "desc" }, { description: "Sort direction." });
+        add(
+            "page",
+            { type: "integer", minimum: 1, default: 1 },
+            { description: "1-based page number." },
+        );
+        add(
+            "limit",
+            { type: "integer", minimum: 1, maximum: 100, default: 20 },
+            { description: "Maximum number of items to return." },
+        );
+        add(
+            "order",
+            { type: "string", enum: ["asc", "desc"], default: "desc" },
+            { description: "Sort direction." },
+        );
     }
 
     if (path === "/posts" || path === "/search") {
@@ -176,21 +202,65 @@ function fallbackQueryParameters(url: string): OpenApiParameter[] {
         add("category", { type: "string" }, { description: "Filter posts by category ID." });
     }
     if (path === "/search") {
-        add("q", { type: "string", minLength: 1 }, { required: true, description: "Search query." });
-        add("type", { type: "string", enum: ["all", "posts", "users", "tags", "categories"], default: "all" }, { description: "Search target type." });
+        add(
+            "q",
+            { type: "string", minLength: 1 },
+            { required: true, description: "Search query." },
+        );
+        add(
+            "type",
+            {
+                type: "string",
+                enum: ["all", "posts", "users", "tags", "categories"],
+                default: "all",
+            },
+            { description: "Search target type." },
+        );
         add("user", { type: "string" }, { description: "Filter search results by user ID." });
         add("tag", { type: "string" }, { description: "Filter search results by tag slug." });
-        add("category", { type: "string" }, { description: "Filter search results by category ID." });
+        add(
+            "category",
+            { type: "string" },
+            { description: "Filter search results by category ID." },
+        );
     }
     if (path.startsWith("/posts/image/") && !path.endsWith("/placeholder")) {
-        add("width", { type: "integer", minimum: 16, maximum: 4096 }, { description: "Requested output width." });
-        add("height", { type: "integer", minimum: 16, maximum: 4096 }, { description: "Requested output height." });
-        add("fit", { type: "string", enum: ["cover", "contain", "fill", "inside", "outside"], default: "inside" }, { description: "Resize fit mode." });
-        add("format", { type: "string", enum: ["webp", "jpeg", "jpg", "png", "avif"] }, { description: "Optional output image format." });
-        add("download", { type: "boolean", default: false }, { description: "Request download disposition." });
+        add(
+            "width",
+            { type: "integer", minimum: 16, maximum: 4096 },
+            { description: "Requested output width." },
+        );
+        add(
+            "height",
+            { type: "integer", minimum: 16, maximum: 4096 },
+            { description: "Requested output height." },
+        );
+        add(
+            "fit",
+            {
+                type: "string",
+                enum: ["cover", "contain", "fill", "inside", "outside"],
+                default: "inside",
+            },
+            { description: "Resize fit mode." },
+        );
+        add(
+            "format",
+            { type: "string", enum: ["webp", "jpeg", "jpg", "png", "avif"] },
+            { description: "Optional output image format." },
+        );
+        add(
+            "download",
+            { type: "boolean", default: false },
+            { description: "Request download disposition." },
+        );
     }
     if (path === "/uploads") {
-        add("multiple", { type: "boolean", default: false }, { description: "Upload up to 20 files instead of one." });
+        add(
+            "multiple",
+            { type: "boolean", default: false },
+            { description: "Upload up to 20 files instead of one." },
+        );
     }
     if (path === "/admin/users") {
         add("search", { type: "string" }, { description: "Search by user fields." });
@@ -198,7 +268,11 @@ function fallbackQueryParameters(url: string): OpenApiParameter[] {
         add("banned", { type: "boolean" }, { description: "Filter by banned status." });
     }
     if (path === "/admin/reports") {
-        add("status", { type: "string", enum: ["open", "resolved", "dismissed"], default: "open" }, { description: "Filter moderation reports by status." });
+        add(
+            "status",
+            { type: "string", enum: ["open", "resolved", "dismissed"], default: "open" },
+            { description: "Filter moderation reports by status." },
+        );
     }
 
     return parameters;
@@ -213,7 +287,10 @@ function inferredParameters(url: string, schema: FastifySchema): OpenApiParamete
     parameters.push(...explicit);
 
     const pathNames = pathParameterNames(url);
-    const pathSchema = parametersFromObjectSchema("path", (schema as Record<string, unknown>).params);
+    const pathSchema = parametersFromObjectSchema(
+        "path",
+        (schema as Record<string, unknown>).params,
+    );
     for (const name of pathNames) {
         if (!parameters.some((parameter) => parameter.name === name && parameter.in === "path")) {
             const defined = pathSchema.find((parameter) => parameter.name === name);
@@ -221,19 +298,41 @@ function inferredParameters(url: string, schema: FastifySchema): OpenApiParamete
         }
     }
 
-    const querySchema = parametersFromObjectSchema("query", (schema as Record<string, unknown>).querystring);
-    const headerSchema = parametersFromObjectSchema("header", (schema as Record<string, unknown>).headers);
-    const cookieSchema = parametersFromObjectSchema("cookie", (schema as Record<string, unknown>).cookies);
+    const querySchema = parametersFromObjectSchema(
+        "query",
+        (schema as Record<string, unknown>).querystring,
+    );
+    const headerSchema = parametersFromObjectSchema(
+        "header",
+        (schema as Record<string, unknown>).headers,
+    );
+    const cookieSchema = parametersFromObjectSchema(
+        "cookie",
+        (schema as Record<string, unknown>).cookies,
+    );
 
-    for (const candidate of [...querySchema, ...headerSchema, ...cookieSchema, ...fallbackQueryParameters(url)]) {
-        if (!parameters.some((parameter) => parameter.name === candidate.name && parameter.in === candidate.in))
+    for (const candidate of [
+        ...querySchema,
+        ...headerSchema,
+        ...cookieSchema,
+        ...fallbackQueryParameters(url),
+    ]) {
+        if (
+            !parameters.some(
+                (parameter) => parameter.name === candidate.name && parameter.in === candidate.in,
+            )
+        )
             parameters.push(candidate);
     }
 
     return parameters;
 }
 
-function inferredRequestBody(method: string, url: string, schema: FastifySchema): OpenApiRequestBody | undefined {
+function inferredRequestBody(
+    method: string,
+    url: string,
+    schema: FastifySchema,
+): OpenApiRequestBody | undefined {
     if (!["POST", "PUT", "PATCH", "DELETE"].includes(method.toUpperCase())) return undefined;
     const current = (schema as Record<string, unknown>).requestBody;
     if (current && typeof current === "object") return current as OpenApiRequestBody;
@@ -267,9 +366,16 @@ function inferredRequestBody(method: string, url: string, schema: FastifySchema)
                             showFollowings: { type: "boolean" },
                             allowSearchEngineIndex: { type: "boolean" },
                             defaultCategoryId: { type: "string", nullable: true },
-                            defaultPostVisibility: { type: "string", enum: ["public", "unlisted", "private"] },
+                            defaultPostVisibility: {
+                                type: "string",
+                                enum: ["public", "unlisted", "private"],
+                            },
                             defaultAllowDownload: { type: "boolean" },
-                            defaultContentWarning: { type: "string", maxLength: 500, nullable: true },
+                            defaultContentWarning: {
+                                type: "string",
+                                maxLength: 500,
+                                nullable: true,
+                            },
                         },
                     },
                 },
@@ -304,7 +410,8 @@ function publicOperation(path: string): boolean {
 function inferredSecurity(method: string, url: string): OpenApiSecurityRequirement[] | undefined {
     const path = stripApiPrefix(url);
     if (path.startsWith("/auth/")) return undefined;
-    if (path === "/posts/{postId}/reactions" || path.match(/^\/posts\/[^/]+\/reactions$/)) return [{}, { cookieAuth: [] }];
+    if (path === "/posts/{postId}/reactions" || path.match(/^\/posts\/[^/]+\/reactions$/))
+        return [{}, { cookieAuth: [] }];
     if (publicOperation(path) && method.toUpperCase() === "GET") return [];
     return [{ cookieAuth: [] }];
 }
@@ -329,7 +436,8 @@ export function installOpenApiRouteDefaults(fastify: FastifyInstance): void {
     fastify.addHook("onRoute", (route) => {
         if (!isApiRoute(route.url)) return;
 
-        const schema = { ...((route.schema ?? {}) as FastifySchema) } as FastifySchema & Record<string, unknown>;
+        const schema = { ...((route.schema ?? {}) as FastifySchema) } as FastifySchema &
+            Record<string, unknown>;
         const method = typeof route.method === "string" ? route.method.toUpperCase() : "GET";
         const path = stripApiPrefix(route.url);
 
@@ -348,12 +456,18 @@ export function installOpenApiRouteDefaults(fastify: FastifyInstance): void {
         if (security !== undefined && schema.security === undefined) schema.security = security;
 
         const currentResponses = asRecord(schema.responses) as Record<string, unknown>;
-        if (Object.keys(currentResponses).length === 0 && method !== "HEAD" && method !== "OPTIONS") {
+        if (
+            Object.keys(currentResponses).length === 0 &&
+            method !== "HEAD" &&
+            method !== "OPTIONS"
+        ) {
             schema.responses = {
                 "400": { $ref: "#/components/responses/BadRequest" },
                 "401": { $ref: "#/components/responses/Unauthorized" },
                 "403": { $ref: "#/components/responses/Forbidden" },
-                ...(path.includes("{") || path.includes(":") ? { "404": { $ref: "#/components/responses/NotFound" } } : {}),
+                ...(path.includes("{") || path.includes(":")
+                    ? { "404": { $ref: "#/components/responses/NotFound" } }
+                    : {}),
                 ...(method !== "GET" ? { "409": { $ref: "#/components/responses/Conflict" } } : {}),
                 "429": { $ref: "#/components/responses/TooManyRequests" },
                 "500": { $ref: "#/components/responses/InternalServerError" },

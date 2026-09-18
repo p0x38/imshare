@@ -27,7 +27,10 @@ export default defineConfig({
                     process.cwd(),
                     "src/client/entries/dashboard-post.tsx",
                 ),
-                "dashboard-analytics": path.resolve(process.cwd(), "src/client/entries/dashboard-analytics.tsx"),
+                "dashboard-analytics": path.resolve(
+                    process.cwd(),
+                    "src/client/entries/dashboard-analytics.tsx",
+                ),
                 "post-editor": path.resolve(process.cwd(), "src/client/entries/post-editor.tsx"),
                 settings: path.resolve(process.cwd(), "src/client/entries/settings.tsx"),
                 taxonomy: path.resolve(process.cwd(), "src/client/entries/taxonomy.tsx"),
@@ -46,7 +49,10 @@ export default defineConfig({
                     process.cwd(),
                     "src/client/entries/admin-settings.tsx",
                 ),
-                "admin-analytics": path.resolve(process.cwd(), "src/client/entries/admin-analytics.tsx"),
+                "admin-analytics": path.resolve(
+                    process.cwd(),
+                    "src/client/entries/admin-analytics.tsx",
+                ),
                 faq: path.resolve(process.cwd(), "src/client/entries/faq.tsx"),
                 badges: path.resolve(process.cwd(), "src/client/entries/badges.tsx"),
                 "static-pages": path.resolve(process.cwd(), "src/client/entries/static-pages.tsx"),

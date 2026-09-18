@@ -9,9 +9,7 @@ import { OTLPTraceExporter as OTLPTraceProtoExporter } from "@opentelemetry/expo
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { defaultResource, resourceFromAttributes } from "@opentelemetry/resources";
-import {
-    BatchLogRecordProcessor,
-} from "@opentelemetry/sdk-logs";
+import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
 import {
     MeterProvider,
     PeriodicExportingMetricReader,
@@ -151,8 +149,7 @@ export function createObservability(
     }
 
     const serviceName = config.serviceName?.trim() || fallbackServiceName || "imshare";
-    const serviceVersion =
-        config.serviceVersion?.trim() || fallbackServiceVersion || undefined;
+    const serviceVersion = config.serviceVersion?.trim() || fallbackServiceVersion || undefined;
     const resource = defaultResource().merge(
         resourceFromAttributes({
             "service.name": serviceName,
@@ -175,15 +172,11 @@ export function createObservability(
             1,
             config.batch?.maxExportBatchSize ?? DEFAULTS.maxExportBatchSize,
         ),
-        maxQueueSize: Math.max(
-            1,
-            config.batch?.maxQueueSize ?? DEFAULTS.maxQueueSize,
-        ),
+        maxQueueSize: Math.max(1, config.batch?.maxQueueSize ?? DEFAULTS.maxQueueSize),
     };
 
     const metricsEnabled = config.metrics?.enabled === true;
-    const prometheusEnabled =
-        metricsEnabled && config.metrics?.prometheus?.enabled === true;
+    const prometheusEnabled = metricsEnabled && config.metrics?.prometheus?.enabled === true;
     const prometheusPath = prometheusEnabled
         ? normalizeMetricsPath(config.metrics?.prometheus?.path)
         : null;
@@ -220,9 +213,7 @@ export function createObservability(
     if (meterProvider) metrics.setGlobalMeterProvider(meterProvider);
 
     const metricHandles = meterProvider
-        ? createMetricHandles(
-              meterProvider.getMeter("imshare", serviceVersion),
-          )
+        ? createMetricHandles(meterProvider.getMeter("imshare", serviceVersion))
         : null;
     activeMetricHandles = metricHandles;
 
@@ -231,9 +222,7 @@ export function createObservability(
     const logsEnabled = config.logs?.enabled === true;
     const logsExporterConfig = logsEnabled ? config.logs?.otlp : undefined;
     const logsEndpoint =
-        logsExporterConfig?.enabled === true
-            ? logsExporterConfig.endpoint?.trim()
-            : undefined;
+        logsExporterConfig?.enabled === true ? logsExporterConfig.endpoint?.trim() : undefined;
 
     let sdk: NodeSDK | null = null;
 
@@ -247,10 +236,7 @@ export function createObservability(
             );
             spanProcessors.push(
                 new BatchSpanProcessor(
-                    createTraceExporter(
-                        config.traces?.protocol ?? "http/protobuf",
-                        traceEndpoint,
-                    ),
+                    createTraceExporter(config.traces?.protocol ?? "http/protobuf", traceEndpoint),
                     {
                         maxExportBatchSize: batch.maxExportBatchSize,
                         maxQueueSize: batch.maxQueueSize,
@@ -264,8 +250,7 @@ export function createObservability(
                 ...(logsEndpoint
                     ? [
                           new PinoInstrumentation({
-                              disableLogCorrelation:
-                                  config.logs?.includeTraceContext === false,
+                              disableLogCorrelation: config.logs?.includeTraceContext === false,
                           }),
                       ]
                     : []),
@@ -310,8 +295,7 @@ export function createObservability(
                     ...(logsEndpoint
                         ? [
                               new PinoInstrumentation({
-                                  disableLogCorrelation:
-                                      config.logs?.includeTraceContext === false,
+                                  disableLogCorrelation: config.logs?.includeTraceContext === false,
                               }),
                           ]
                         : []),
@@ -334,21 +318,50 @@ export function createObservability(
             metricHandles?.uploads.add(1, { mime_type: mimeType });
         },
         recordDatabaseQuery(durationSeconds, operation) {
-            const histogram = meterProvider?.getMeter("imshare", serviceVersion).createHistogram("imshare_db_query_duration_seconds", { description: "Database query duration in seconds.", unit: "s" });
+            const histogram = meterProvider
+                ?.getMeter("imshare", serviceVersion)
+                .createHistogram("imshare_db_query_duration_seconds", {
+                    description: "Database query duration in seconds.",
+                    unit: "s",
+                });
             histogram?.record(durationSeconds, { operation });
         },
         recordDatabaseError(operation) {
-            meterProvider?.getMeter("imshare", serviceVersion).createCounter("imshare_db_errors_total", { description: "Total database errors." }).add(1, { operation });
+            meterProvider
+                ?.getMeter("imshare", serviceVersion)
+                .createCounter("imshare_db_errors_total", { description: "Total database errors." })
+                .add(1, { operation });
         },
-        recordRealtimeConnection(delta) { metricHandles?.realtimeConnections.add(delta); },
-        recordRealtimeConnectionEvent(event) { metricHandles?.realtimeConnectionEvents.add(1, { event }); },
-        recordRealtimeMessage(event) { metricHandles?.realtimeMessages.add(1, { event }); },
-        recordRealtimeError() { metricHandles?.realtimeErrors.add(1); },
-        recordRateLimitHit(scope) { metricHandles?.rateLimitHits.add(1, { scope }); },
-        recordCsrfRejection() { metricHandles?.csrfRejections.add(1); },
-        recordImageTransformation(operation, format) { metricHandles?.imageTransformations.add(1, format ? { operation, format } : { operation }); },
-        recordImageProcessing(durationSeconds, operation) { metricHandles?.imageProcessingDuration.record(durationSeconds, { operation }); },
-        recordImageProcessingError(operation) { metricHandles?.imageProcessingErrors.add(1, { operation }); },
+        recordRealtimeConnection(delta) {
+            metricHandles?.realtimeConnections.add(delta);
+        },
+        recordRealtimeConnectionEvent(event) {
+            metricHandles?.realtimeConnectionEvents.add(1, { event });
+        },
+        recordRealtimeMessage(event) {
+            metricHandles?.realtimeMessages.add(1, { event });
+        },
+        recordRealtimeError() {
+            metricHandles?.realtimeErrors.add(1);
+        },
+        recordRateLimitHit(scope) {
+            metricHandles?.rateLimitHits.add(1, { scope });
+        },
+        recordCsrfRejection() {
+            metricHandles?.csrfRejections.add(1);
+        },
+        recordImageTransformation(operation, format) {
+            metricHandles?.imageTransformations.add(
+                1,
+                format ? { operation, format } : { operation },
+            );
+        },
+        recordImageProcessing(durationSeconds, operation) {
+            metricHandles?.imageProcessingDuration.record(durationSeconds, { operation });
+        },
+        recordImageProcessingError(operation) {
+            metricHandles?.imageProcessingErrors.add(1, { operation });
+        },
         register(app) {
             if (metricHandles) {
                 registerMetricHooks(app, metricHandles, requestStarted, prometheusPath);
@@ -357,10 +370,7 @@ export function createObservability(
             if (prometheusExporter && prometheusPath) {
                 app.get(prometheusPath, async (request, reply) => {
                     reply.hijack();
-                    prometheusExporter.getMetricsRequestHandler(
-                        request.raw,
-                        reply.raw,
-                    );
+                    prometheusExporter.getMetricsRequestHandler(request.raw, reply.raw);
                 });
             }
         },
@@ -394,20 +404,42 @@ function createMetricHandles(meter: Meter): MetricHandles {
     const histogram = (name: string, description: string, unit: string) =>
         meter.createHistogram(name, { description, unit });
 
-    const requestCount = counter("imshare_http_requests_total", "Total number of completed HTTP requests.");
-    const requestDuration = histogram("imshare_http_request_duration_seconds", "HTTP request duration in seconds.", "s");
-    const responseSize = histogram("imshare_http_response_size_bytes", "HTTP response body size in bytes.", "By");
-    const activeRequests = meter.createUpDownCounter("imshare_http_active_requests", { description: "Number of HTTP requests currently being processed." });
-    const processUptime = meter.createObservableGauge("imshare_process_uptime_seconds", { description: "Process uptime in seconds.", unit: "s" });
+    const requestCount = counter(
+        "imshare_http_requests_total",
+        "Total number of completed HTTP requests.",
+    );
+    const requestDuration = histogram(
+        "imshare_http_request_duration_seconds",
+        "HTTP request duration in seconds.",
+        "s",
+    );
+    const responseSize = histogram(
+        "imshare_http_response_size_bytes",
+        "HTTP response body size in bytes.",
+        "By",
+    );
+    const activeRequests = meter.createUpDownCounter("imshare_http_active_requests", {
+        description: "Number of HTTP requests currently being processed.",
+    });
+    const processUptime = meter.createObservableGauge("imshare_process_uptime_seconds", {
+        description: "Process uptime in seconds.",
+        unit: "s",
+    });
     processUptime.addCallback((result) => result.observe(process.uptime()));
-    const processMemory = meter.createObservableGauge("imshare_process_memory_bytes", { description: "Process resident and heap memory in bytes.", unit: "By" });
+    const processMemory = meter.createObservableGauge("imshare_process_memory_bytes", {
+        description: "Process resident and heap memory in bytes.",
+        unit: "By",
+    });
     processMemory.addCallback((result) => {
         const memory = process.memoryUsage();
         result.observe(memory.rss, { area: "rss" });
         result.observe(memory.heapUsed, { area: "heap_used" });
         result.observe(memory.heapTotal, { area: "heap_total" });
     });
-    const processCpu = meter.createObservableCounter("imshare_process_cpu_seconds_total", { description: "Process CPU time in seconds.", unit: "s" });
+    const processCpu = meter.createObservableCounter("imshare_process_cpu_seconds_total", {
+        description: "Process CPU time in seconds.",
+        unit: "s",
+    });
     processCpu.addCallback((result) => {
         const cpu = process.cpuUsage();
         result.observe((cpu.user + cpu.system) / 1_000_000);
@@ -425,31 +457,89 @@ function createMetricHandles(meter: Meter): MetricHandles {
     const usersRegistered = counter("imshare_users_registered_total", "Total users registered.");
     const authAttempts = counter("imshare_auth_attempts_total", "Total authentication attempts.");
     const apiErrors = counter("imshare_api_errors_total", "Total API errors.");
-    const permissionDenials = counter("imshare_permission_denials_total", "Total permission denials.");
+    const permissionDenials = counter(
+        "imshare_permission_denials_total",
+        "Total permission denials.",
+    );
     const csrfRejections = counter("imshare_csrf_rejections_total", "Total CSRF rejections.");
     const rateLimitHits = counter("imshare_rate_limit_hits_total", "Total rate limit rejections.");
     const uploadBytes = counter("imshare_upload_bytes_total", "Total uploaded bytes.", "By");
     const uploads = counter("imshare_uploads_total", "Total uploads accepted.");
-    const uploadDuration = histogram("imshare_upload_duration_seconds", "Upload processing duration in seconds.", "s");
+    const uploadDuration = histogram(
+        "imshare_upload_duration_seconds",
+        "Upload processing duration in seconds.",
+        "s",
+    );
     const imageServed = counter("imshare_images_served_total", "Total image responses served.");
-    const imageTransformations = counter("imshare_image_transformations_total", "Total image transformations.");
-    const imageProcessingDuration = histogram("imshare_image_processing_duration_seconds", "Image processing duration in seconds.", "s");
-    const imageProcessingErrors = counter("imshare_image_processing_errors_total", "Total image processing errors.");
-    const realtimeConnections = meter.createUpDownCounter("imshare_realtime_connections", { description: "Number of active realtime connections." });
-    const realtimeConnectionEvents = counter("imshare_realtime_connection_events_total", "Total realtime connection events.");
+    const imageTransformations = counter(
+        "imshare_image_transformations_total",
+        "Total image transformations.",
+    );
+    const imageProcessingDuration = histogram(
+        "imshare_image_processing_duration_seconds",
+        "Image processing duration in seconds.",
+        "s",
+    );
+    const imageProcessingErrors = counter(
+        "imshare_image_processing_errors_total",
+        "Total image processing errors.",
+    );
+    const realtimeConnections = meter.createUpDownCounter("imshare_realtime_connections", {
+        description: "Number of active realtime connections.",
+    });
+    const realtimeConnectionEvents = counter(
+        "imshare_realtime_connection_events_total",
+        "Total realtime connection events.",
+    );
     const realtimeMessages = counter("imshare_realtime_messages_total", "Total realtime messages.");
     const realtimeErrors = counter("imshare_realtime_errors_total", "Total realtime errors.");
-    const registeredUsers = meter.createObservableGauge("imshare_registered_users", { description: "Current number of registered users." });
-    const publishedPosts = meter.createObservableGauge("imshare_published_posts", { description: "Current number of published posts." });
-    const pendingReports = meter.createObservableGauge("imshare_pending_reports", { description: "Current number of pending reports." });
+    const registeredUsers = meter.createObservableGauge("imshare_registered_users", {
+        description: "Current number of registered users.",
+    });
+    const publishedPosts = meter.createObservableGauge("imshare_published_posts", {
+        description: "Current number of published posts.",
+    });
+    const pendingReports = meter.createObservableGauge("imshare_pending_reports", {
+        description: "Current number of pending reports.",
+    });
 
     return {
-        requestCount, requestDuration, responseSize, activeRequests, processUptime, processMemory, processCpu,
-        postsCreated, postsDeleted, textsCreated, postViews, commentsCreated, reactions, follows, reports,
-        notifications, usersRegistered, authAttempts, apiErrors, permissionDenials, csrfRejections, rateLimitHits,
-        uploadBytes, uploads, uploadDuration, imageServed, imageTransformations, imageProcessingDuration,
-        imageProcessingErrors, realtimeConnections, realtimeConnectionEvents, realtimeMessages, realtimeErrors,
-        registeredUsers, publishedPosts, pendingReports,
+        requestCount,
+        requestDuration,
+        responseSize,
+        activeRequests,
+        processUptime,
+        processMemory,
+        processCpu,
+        postsCreated,
+        postsDeleted,
+        textsCreated,
+        postViews,
+        commentsCreated,
+        reactions,
+        follows,
+        reports,
+        notifications,
+        usersRegistered,
+        authAttempts,
+        apiErrors,
+        permissionDenials,
+        csrfRejections,
+        rateLimitHits,
+        uploadBytes,
+        uploads,
+        uploadDuration,
+        imageServed,
+        imageTransformations,
+        imageProcessingDuration,
+        imageProcessingErrors,
+        realtimeConnections,
+        realtimeConnectionEvents,
+        realtimeMessages,
+        realtimeErrors,
+        registeredUsers,
+        publishedPosts,
+        pendingReports,
     };
 }
 
@@ -481,12 +571,16 @@ function registerMetricHooks(
         metricsSet.requestCount.add(1, labels);
         metricsSet.requestDuration.record(durationSeconds, labels);
         const responseLength = Number(reply.getHeader("content-length") ?? 0);
-        if (Number.isFinite(responseLength) && responseLength > 0) metricsSet.responseSize.record(responseLength, labels);
+        if (Number.isFinite(responseLength) && responseLength > 0)
+            metricsSet.responseSize.record(responseLength, labels);
 
         if (pathname.startsWith("/api/") && reply.statusCode >= 400)
             metricsSet.apiErrors.add(1, { route: labels.route, status_code: labels.status_code });
         if (reply.statusCode === 401 || reply.statusCode === 403)
-            metricsSet.permissionDenials.add(1, { route: labels.route, status_code: labels.status_code });
+            metricsSet.permissionDenials.add(1, {
+                route: labels.route,
+                status_code: labels.status_code,
+            });
 
         if (request.method === "POST" && reply.statusCode >= 200 && reply.statusCode < 300) {
             if (pathname === "/api/v1/posts") metricsSet.postsCreated.add(1);
@@ -498,15 +592,25 @@ function registerMetricHooks(
             if (pathname === "/api/v1/uploads") metricsSet.uploads.add(1);
             if (pathname === "/api/v1/reports") metricsSet.reports.add(1);
         }
-        if (pathname.match(/^\/api\/v1\/posts\/[^/]+$/) && request.method === "DELETE" && reply.statusCode >= 200 && reply.statusCode < 300)
+        if (
+            pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
+            request.method === "DELETE" &&
+            reply.statusCode >= 200 &&
+            reply.statusCode < 300
+        )
             metricsSet.postsDeleted.add(1);
-        if (pathname.match(/^\/api\/v1\/posts\/[^/]+$/) && request.method === "GET" && reply.statusCode === 200)
+        if (
+            pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
+            request.method === "GET" &&
+            reply.statusCode === 200
+        )
             metricsSet.postViews.add(1);
         if (pathname.startsWith("/uploads/") && reply.statusCode >= 200 && reply.statusCode < 400)
             metricsSet.imageServed.add(1);
         if (request.method === "POST" && reply.statusCode >= 200 && reply.statusCode < 300) {
             if (pathname.includes("/reactions")) metricsSet.reactions.add(1);
-            if (pathname.endsWith("/follow") || pathname.includes("/follows")) metricsSet.follows.add(1);
+            if (pathname.endsWith("/follow") || pathname.includes("/follows"))
+                metricsSet.follows.add(1);
             if (pathname.includes("/notifications")) metricsSet.notifications.add(1);
             if (pathname.includes("/reports")) metricsSet.reports.add(1);
             if (pathname.includes("/auth/")) metricsSet.authAttempts.add(1, { result: "success" });
@@ -516,28 +620,19 @@ function registerMetricHooks(
     });
 }
 
-function createTraceExporter(
-    protocol: OtlpProtocol,
-    endpoint: string,
-) {
+function createTraceExporter(protocol: OtlpProtocol, endpoint: string) {
     return protocol === "grpc"
         ? new OTLPTraceGrpcExporter({ url: normalizeGrpcEndpoint(endpoint) })
         : new OTLPTraceProtoExporter({ url: normalizeHttpEndpoint(endpoint) });
 }
 
-function createMetricExporter(
-    protocol: OtlpProtocol,
-    endpoint: string,
-) {
+function createMetricExporter(protocol: OtlpProtocol, endpoint: string) {
     return protocol === "grpc"
         ? new OTLPMetricGrpcExporter({ url: normalizeGrpcEndpoint(endpoint) })
         : new OTLPMetricProtoExporter({ url: normalizeHttpEndpoint(endpoint) });
 }
 
-function createLogExporter(
-    protocol: OtlpProtocol,
-    endpoint: string,
-) {
+function createLogExporter(protocol: OtlpProtocol, endpoint: string) {
     return protocol === "grpc"
         ? new OTLPLogGrpcExporter({ url: normalizeGrpcEndpoint(endpoint) })
         : new OTLPLogProtoExporter({ url: normalizeHttpEndpoint(endpoint) });

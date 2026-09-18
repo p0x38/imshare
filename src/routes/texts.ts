@@ -205,11 +205,9 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(400)
                     .send({ error: { code: "INVALID_TEXT", message: "title cannot be empty." } });
             if (body.textContent !== undefined && !body.textContent?.trim())
-                return reply
-                    .code(400)
-                    .send({
-                        error: { code: "INVALID_TEXT", message: "textContent cannot be empty." },
-                    });
+                return reply.code(400).send({
+                    error: { code: "INVALID_TEXT", message: "textContent cannot be empty." },
+                });
             const tags = body.tags ? await findTags(body.tags) : [];
             const lifecycle =
                 body.status !== undefined ||

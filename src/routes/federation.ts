@@ -161,14 +161,12 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
         const query = request.query as { resource?: string; rel?: string | string[] };
         const resource = query.resource?.trim();
         if (!resource)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "WEBFINGER_RESOURCE_REQUIRED",
-                        message: "The resource query parameter is required.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "WEBFINGER_RESOURCE_REQUIRED",
+                    message: "The resource query parameter is required.",
+                },
+            });
         let handle: string | null = null;
         if (resource.toLowerCase().startsWith("acct:")) {
             const account = resource.slice(5);
@@ -184,38 +182,32 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
                 if (url.origin === baseUrl)
                     handle = url.pathname.match(/^\/users\/@([^/]+)\/?$/)?.[1] ?? null;
             } catch {
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "WEBFINGER_INVALID_RESOURCE",
-                            message: "The resource must be an acct URI or an absolute URI.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "WEBFINGER_INVALID_RESOURCE",
+                        message: "The resource must be an acct URI or an absolute URI.",
+                    },
+                });
             }
         }
         if (!handle)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "WEBFINGER_NOT_FOUND",
-                        message: "The requested resource was not found.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "WEBFINGER_NOT_FOUND",
+                    message: "The requested resource was not found.",
+                },
+            });
         const user = await prisma.user.findFirst({
             where: { handle, isPublic: true, showProfile: true },
             select: { handle: true },
         });
         if (!user?.handle)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "WEBFINGER_NOT_FOUND",
-                        message: "The requested resource was not found.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "WEBFINGER_NOT_FOUND",
+                    message: "The requested resource was not found.",
+                },
+            });
         const actor = actorUrl(baseUrl, user.handle);
         const subject = `acct:${user.handle}@${new URL(baseUrl).host}`;
         const rels = Array.isArray(query.rel) ? query.rel : query.rel ? [query.rel] : [];
@@ -252,35 +244,31 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
             prisma.post.count({ where: { status: "published", visibility: "public" } }),
             prisma.comment.count(),
         ]);
-        return reply
-            .type("application/json")
-            .send({
-                version: "2.1",
-                software: {
-                    name: "imshare",
-                    version: config.site.version,
-                    repository: "https://github.com/p0x38/imshare",
-                },
-                protocols: ["activitypub"],
-                services: { inbound: ["atom"], outbound: ["atom"] },
-                usage: { users: { total: users, activeMonth }, localPosts, localComments },
-                openRegistrations: config.auth.registration?.public === true,
-                metadata: { siteName: config.site.name },
-            });
+        return reply.type("application/json").send({
+            version: "2.1",
+            software: {
+                name: "imshare",
+                version: config.site.version,
+                repository: "https://github.com/p0x38/imshare",
+            },
+            protocols: ["activitypub"],
+            services: { inbound: ["atom"], outbound: ["atom"] },
+            usage: { users: { total: users, activeMonth }, localPosts, localComments },
+            openRegistrations: config.auth.registration?.public === true,
+            metadata: { siteName: config.site.name },
+        });
     });
 
     fastify.get("/federation/actors/:handle", async (request, reply) => {
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "ACTOR_NOT_FOUND",
-                        message: "The requested actor was not found.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "ACTOR_NOT_FOUND",
+                    message: "The requested actor was not found.",
+                },
+            });
         return reply.type(ACTIVITY_JSON).send(asActor(baseUrl, local.user, local.key.publicKeyPem));
     });
 
@@ -288,14 +276,12 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "ACTOR_NOT_FOUND",
-                        message: "The requested actor was not found.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "ACTOR_NOT_FOUND",
+                    message: "The requested actor was not found.",
+                },
+            });
         const posts = await prisma.post.findMany({
             where: { userId: local.user.id, status: "published", visibility: "public" },
             orderBy: { publishedAt: "desc" },
@@ -309,29 +295,25 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
             },
         });
         const items = posts.map((post) => postActivity(baseUrl, local.actor, post));
-        return reply
-            .type(ACTIVITY_JSON)
-            .send({
-                "@context": ACTIVITY_STREAMS,
-                id: `${local.actor}/outbox`,
-                type: "OrderedCollection",
-                totalItems: items.length,
-                orderedItems: items,
-            });
+        return reply.type(ACTIVITY_JSON).send({
+            "@context": ACTIVITY_STREAMS,
+            id: `${local.actor}/outbox`,
+            type: "OrderedCollection",
+            totalItems: items.length,
+            orderedItems: items,
+        });
     });
 
     fastify.post("/federation/actors/:handle/inbox", async (request, reply) => {
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "ACTOR_NOT_FOUND",
-                        message: "The requested actor was not found.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "ACTOR_NOT_FOUND",
+                    message: "The requested actor was not found.",
+                },
+            });
 
         const rawBody =
             typeof request.body === "string" ? request.body : JSON.stringify(request.body ?? {});
@@ -377,15 +359,13 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
             return reply.code(202).send({ data: { accepted: true } });
         } catch (error) {
             request.log.warn({ err: error }, "Rejected federation activity");
-            return reply
-                .code(401)
-                .send({
-                    error: {
-                        code: "FEDERATION_REQUEST_REJECTED",
-                        message:
-                            error instanceof Error ? error.message : "Federation request rejected.",
-                    },
-                });
+            return reply.code(401).send({
+                error: {
+                    code: "FEDERATION_REQUEST_REJECTED",
+                    message:
+                        error instanceof Error ? error.message : "Federation request rejected.",
+                },
+            });
         }
     });
 
@@ -399,21 +379,17 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
                 .send({ error: { code: "UNAUTHORIZED", message: "Authentication is required." } });
         const body = request.body as { handle?: string; inbox?: string; activity?: unknown };
         if (!body?.handle || !body.inbox || body.activity === undefined)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_DELIVERY",
-                        message: "handle, inbox and activity are required.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_DELIVERY",
+                    message: "handle, inbox and activity are required.",
+                },
+            });
         const local = await localActor(baseUrl, body.handle);
         if (!local || local.user.id !== session.user.id)
-            return reply
-                .code(403)
-                .send({
-                    error: { code: "FORBIDDEN", message: "You may only deliver as yourself." },
-                });
+            return reply.code(403).send({
+                error: { code: "FORBIDDEN", message: "You may only deliver as yourself." },
+            });
         const result = await deliverActivity({
             inbox: body.inbox,
             actorUrl: local.actor,
@@ -422,14 +398,12 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
         });
         return result.ok
             ? { data: result }
-            : reply
-                  .code(502)
-                  .send({
-                      error: {
-                          code: "FEDERATION_DELIVERY_FAILED",
-                          message: `Remote server returned HTTP ${result.status}.`,
-                      },
-                      data: result,
-                  });
+            : reply.code(502).send({
+                  error: {
+                      code: "FEDERATION_DELIVERY_FAILED",
+                      message: `Remote server returned HTTP ${result.status}.`,
+                  },
+                  data: result,
+              });
     });
 };

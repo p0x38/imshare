@@ -1,10 +1,4 @@
-import {
-    GitHub,
-    Instagram,
-    Language,
-    Twitter,
-    YouTube,
-} from "@mui/icons-material";
+import { GitHub, Instagram, Language, Twitter, YouTube } from "@mui/icons-material";
 import { Box, Link, Stack, Typography } from "@mui/material";
 
 interface ProfileLink {

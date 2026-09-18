@@ -1,9 +1,4 @@
-import {
-    Avatar,
-    IconButton,
-    Stack,
-    Typography,
-} from "@mui/material";
+import { Avatar, IconButton, Stack, Typography } from "@mui/material";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
@@ -11,13 +6,7 @@ import { useEffect, useState } from "react";
 import type { Post } from "../lib/types";
 import { api } from "../lib/api";
 
-function TextCard({
-    text,
-    hrefForText,
-}: {
-    text: Post;
-    hrefForText: (text: Post) => string;
-}) {
+function TextCard({ text, hrefForText }: { text: Post; hrefForText: (text: Post) => string }) {
     const author = text.author?.name || text.authorName || "Unknown user";
     const handle = text.author?.handle ? `@${text.author.handle}` : "";
     const [liked, setLiked] = useState(false);

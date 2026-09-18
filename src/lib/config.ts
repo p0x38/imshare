@@ -152,7 +152,8 @@ export function getPublicConfig(config: ServerConfig): PublicConfig {
             registration: {
                 enabled: registration.enabled!,
                 public: registration.public!,
-                tokenRequired: registration.enabled! && !registration.public! && !registration.manualApproval!,
+                tokenRequired:
+                    registration.enabled! && !registration.public! && !registration.manualApproval!,
                 approvalRequired: registration.enabled! && registration.manualApproval!,
             },
             oidcProviderId: getOpenIdProviderId(),
@@ -272,52 +273,72 @@ function isServerConfig(value: unknown): value is ServerConfig {
                     typeof analytics.googleTagManagerContainerId === "string"))) &&
         (observability === undefined ||
             (isObject(observability) &&
-                (observability.enabled === undefined || typeof observability.enabled === "boolean") &&
-                (observability.serviceName === undefined || typeof observability.serviceName === "string") &&
-                (observability.serviceVersion === undefined || typeof observability.serviceVersion === "string") &&
-                (observability.environment === undefined || typeof observability.environment === "string") &&
-                (observability.instanceId === undefined || typeof observability.instanceId === "string") &&
-                (observability.batch === undefined || (
-                    isObject(observability.batch) &&
-                    (observability.batch.exportIntervalMs === undefined || typeof observability.batch.exportIntervalMs === "number") &&
-                    (observability.batch.maxExportBatchSize === undefined || typeof observability.batch.maxExportBatchSize === "number") &&
-                    (observability.batch.maxQueueSize === undefined || typeof observability.batch.maxQueueSize === "number")
-                )) &&
-                (observability.traces === undefined || (
-                    isObject(observability.traces) &&
-                    (observability.traces.enabled === undefined || typeof observability.traces.enabled === "boolean") &&
-                    (observability.traces.endpoint === undefined || typeof observability.traces.endpoint === "string") &&
-                    (observability.traces.protocol === undefined || observability.traces.protocol === "grpc" || observability.traces.protocol === "http/protobuf") &&
-                    (observability.traces.samplingRatio === undefined || typeof observability.traces.samplingRatio === "number")
-                )) &&
-                (observability.metrics === undefined || (
-                    isObject(observability.metrics) &&
-                    (observability.metrics.enabled === undefined || typeof observability.metrics.enabled === "boolean") &&
-                    (observability.metrics.exportIntervalMs === undefined || typeof observability.metrics.exportIntervalMs === "number") &&
-                    (observability.metrics.prometheus === undefined || (
-                        isObject(observability.metrics.prometheus) &&
-                        (observability.metrics.prometheus.enabled === undefined || typeof observability.metrics.prometheus.enabled === "boolean") &&
-                        (observability.metrics.prometheus.path === undefined || typeof observability.metrics.prometheus.path === "string")
-                    )) &&
-                    (observability.metrics.otlp === undefined || (
-                        isObject(observability.metrics.otlp) &&
-                        (observability.metrics.otlp.enabled === undefined || typeof observability.metrics.otlp.enabled === "boolean") &&
-                        (observability.metrics.otlp.endpoint === undefined || typeof observability.metrics.otlp.endpoint === "string") &&
-                        (observability.metrics.otlp.protocol === undefined || observability.metrics.otlp.protocol === "grpc" || observability.metrics.otlp.protocol === "http/protobuf")
-                    ))
-                )) &&
-                (observability.logs === undefined || (
-                    isObject(observability.logs) &&
-                    (observability.logs.enabled === undefined || typeof observability.logs.enabled === "boolean") &&
-                    (observability.logs.includeTraceContext === undefined || typeof observability.logs.includeTraceContext === "boolean") &&
-                    (observability.logs.otlp === undefined || (
-                        isObject(observability.logs.otlp) &&
-                        (observability.logs.otlp.enabled === undefined || typeof observability.logs.otlp.enabled === "boolean") &&
-                        (observability.logs.otlp.endpoint === undefined || typeof observability.logs.otlp.endpoint === "string") &&
-                        (observability.logs.otlp.protocol === undefined || observability.logs.otlp.protocol === "grpc" || observability.logs.otlp.protocol === "http/protobuf")
-                    ))
-                ))
-            ))
+                (observability.enabled === undefined ||
+                    typeof observability.enabled === "boolean") &&
+                (observability.serviceName === undefined ||
+                    typeof observability.serviceName === "string") &&
+                (observability.serviceVersion === undefined ||
+                    typeof observability.serviceVersion === "string") &&
+                (observability.environment === undefined ||
+                    typeof observability.environment === "string") &&
+                (observability.instanceId === undefined ||
+                    typeof observability.instanceId === "string") &&
+                (observability.batch === undefined ||
+                    (isObject(observability.batch) &&
+                        (observability.batch.exportIntervalMs === undefined ||
+                            typeof observability.batch.exportIntervalMs === "number") &&
+                        (observability.batch.maxExportBatchSize === undefined ||
+                            typeof observability.batch.maxExportBatchSize === "number") &&
+                        (observability.batch.maxQueueSize === undefined ||
+                            typeof observability.batch.maxQueueSize === "number"))) &&
+                (observability.traces === undefined ||
+                    (isObject(observability.traces) &&
+                        (observability.traces.enabled === undefined ||
+                            typeof observability.traces.enabled === "boolean") &&
+                        (observability.traces.endpoint === undefined ||
+                            typeof observability.traces.endpoint === "string") &&
+                        (observability.traces.protocol === undefined ||
+                            observability.traces.protocol === "grpc" ||
+                            observability.traces.protocol === "http/protobuf") &&
+                        (observability.traces.samplingRatio === undefined ||
+                            typeof observability.traces.samplingRatio === "number"))) &&
+                (observability.metrics === undefined ||
+                    (isObject(observability.metrics) &&
+                        (observability.metrics.enabled === undefined ||
+                            typeof observability.metrics.enabled === "boolean") &&
+                        (observability.metrics.exportIntervalMs === undefined ||
+                            typeof observability.metrics.exportIntervalMs === "number") &&
+                        (observability.metrics.prometheus === undefined ||
+                            (isObject(observability.metrics.prometheus) &&
+                                (observability.metrics.prometheus.enabled === undefined ||
+                                    typeof observability.metrics.prometheus.enabled ===
+                                        "boolean") &&
+                                (observability.metrics.prometheus.path === undefined ||
+                                    typeof observability.metrics.prometheus.path === "string"))) &&
+                        (observability.metrics.otlp === undefined ||
+                            (isObject(observability.metrics.otlp) &&
+                                (observability.metrics.otlp.enabled === undefined ||
+                                    typeof observability.metrics.otlp.enabled === "boolean") &&
+                                (observability.metrics.otlp.endpoint === undefined ||
+                                    typeof observability.metrics.otlp.endpoint === "string") &&
+                                (observability.metrics.otlp.protocol === undefined ||
+                                    observability.metrics.otlp.protocol === "grpc" ||
+                                    observability.metrics.otlp.protocol === "http/protobuf"))))) &&
+                (observability.logs === undefined ||
+                    (isObject(observability.logs) &&
+                        (observability.logs.enabled === undefined ||
+                            typeof observability.logs.enabled === "boolean") &&
+                        (observability.logs.includeTraceContext === undefined ||
+                            typeof observability.logs.includeTraceContext === "boolean") &&
+                        (observability.logs.otlp === undefined ||
+                            (isObject(observability.logs.otlp) &&
+                                (observability.logs.otlp.enabled === undefined ||
+                                    typeof observability.logs.otlp.enabled === "boolean") &&
+                                (observability.logs.otlp.endpoint === undefined ||
+                                    typeof observability.logs.otlp.endpoint === "string") &&
+                                (observability.logs.otlp.protocol === undefined ||
+                                    observability.logs.otlp.protocol === "grpc" ||
+                                    observability.logs.otlp.protocol === "http/protobuf")))))))
     );
 }
 

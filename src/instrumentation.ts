@@ -1,8 +1,5 @@
 import { loadConfigSync } from "./lib/config.js";
-import {
-    createObservability,
-    type ObservabilityRuntime,
-} from "./lib/observability.js";
+import { createObservability, type ObservabilityRuntime } from "./lib/observability.js";
 
 const config = loadConfigSync();
 

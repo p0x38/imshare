@@ -23,7 +23,10 @@ export function TimeSeriesGraph({ data, series, height = 280 }: Props) {
     const padding = { top: 18, right: 20, bottom: 42, left: 48 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
-    const maxValue = Math.max(1, ...data.flatMap((point) => series.map(({ key }) => point.values[key] ?? 0)));
+    const maxValue = Math.max(
+        1,
+        ...data.flatMap((point) => series.map(({ key }) => point.values[key] ?? 0)),
+    );
     const colors = [
         theme.palette.primary.main,
         theme.palette.secondary.main,
@@ -34,9 +37,10 @@ export function TimeSeriesGraph({ data, series, height = 280 }: Props) {
     ];
     const x = (index: number) =>
         padding.left + (data.length <= 1 ? plotWidth / 2 : (index / (data.length - 1)) * plotWidth);
-    const y = (value: number) =>
-        padding.top + plotHeight - (value / maxValue) * plotHeight;
-    const labelIndexes = [...new Set([0, Math.floor((data.length - 1) / 2), Math.max(0, data.length - 1)])];
+    const y = (value: number) => padding.top + plotHeight - (value / maxValue) * plotHeight;
+    const labelIndexes = [
+        ...new Set([0, Math.floor((data.length - 1) / 2), Math.max(0, data.length - 1)]),
+    ];
 
     return (
         <Stack spacing={1.5}>
@@ -106,7 +110,9 @@ export function TimeSeriesGraph({ data, series, height = 280 }: Props) {
                             key={`label-${index}`}
                             x={x(index)}
                             y={height - 12}
-                            textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"}
+                            textAnchor={
+                                index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"
+                            }
                             fontSize="11"
                             fill={theme.palette.text.secondary}
                         >

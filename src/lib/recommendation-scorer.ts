@@ -44,7 +44,11 @@ function normalizeText(value: string | null | undefined, maxLength = 1200): stri
 }
 
 function tokens(value: string | null | undefined): Set<string> {
-    return new Set(normalizeText(value).split(/\s+/).filter((token) => token.length >= 2));
+    return new Set(
+        normalizeText(value)
+            .split(/\s+/)
+            .filter((token) => token.length >= 2),
+    );
 }
 
 function levenshtein(a: string, b: string): number {
@@ -132,7 +136,9 @@ export function scoreRecommendation(
     const captionSimilarity = tokenSimilarity(source.caption, candidate.caption);
 
     const authorValue = [source.user.name, source.user.handle].filter(Boolean).join(" ");
-    const candidateAuthorValue = [candidate.user.name, candidate.user.handle].filter(Boolean).join(" ");
+    const candidateAuthorValue = [candidate.user.name, candidate.user.handle]
+        .filter(Boolean)
+        .join(" ");
     const authorEdit = stringSimilarity(authorValue, candidateAuthorValue);
     const authorExact =
         source.user.handle && candidate.user.handle

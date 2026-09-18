@@ -24,7 +24,8 @@ function restoreOidcEnvironment(): void {
         "OIDC_CLIENT_ID",
         "OIDC_DISCOVERY_URL",
         "OIDC_CLIENT_SECRET",
-    ]) delete process.env[key];
+    ])
+        delete process.env[key];
     if (originalProviderId !== undefined) process.env.OIDC_PROVIDER_ID = originalProviderId;
     if (originalClientId !== undefined) process.env.OIDC_CLIENT_ID = originalClientId;
     if (originalDiscoveryUrl !== undefined) process.env.OIDC_DISCOVERY_URL = originalDiscoveryUrl;
@@ -76,18 +77,30 @@ test("public config exposes only the OIDC provider id", () => {
 
 test("resolveBaseUrl uses the configured explicit port", () => {
     expect(
-        resolveBaseUrl({ ...baseConfig, server: { host: "127.0.0.1", port: 5454 }, auth: { ...baseConfig.auth, baseUrl: "https://example.com:8443/" } }),
+        resolveBaseUrl({
+            ...baseConfig,
+            server: { host: "127.0.0.1", port: 5454 },
+            auth: { ...baseConfig.auth, baseUrl: "https://example.com:8443/" },
+        }),
     ).toBe("https://example.com:8443");
 });
 
 test("resolveBaseUrl adds the configured server port when absent", () => {
     expect(
-        resolveBaseUrl({ ...baseConfig, server: { host: "127.0.0.1", port: 5454 }, auth: { ...baseConfig.auth, baseUrl: "https://example.com" } }),
+        resolveBaseUrl({
+            ...baseConfig,
+            server: { host: "127.0.0.1", port: 5454 },
+            auth: { ...baseConfig.auth, baseUrl: "https://example.com" },
+        }),
     ).toBe("https://example.com:5454");
 });
 
 test("resolveBaseUrl derives a URL when no base URL is configured", () => {
     expect(
-        resolveBaseUrl({ ...baseConfig, server: { host: "127.0.0.1", port: 5454 }, auth: { ...baseConfig.auth, baseUrl: undefined } }),
+        resolveBaseUrl({
+            ...baseConfig,
+            server: { host: "127.0.0.1", port: 5454 },
+            auth: { ...baseConfig.auth, baseUrl: undefined },
+        }),
     ).toBe("http://127.0.0.1:5454");
 });

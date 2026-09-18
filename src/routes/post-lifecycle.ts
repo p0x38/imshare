@@ -57,11 +57,9 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(400)
                     .send({ error: { code: "INVALID_STATUS", message: "Invalid post status." } });
             if (body.visibility !== undefined && !visibilities.has(body.visibility))
-                return reply
-                    .code(400)
-                    .send({
-                        error: { code: "INVALID_VISIBILITY", message: "Invalid post visibility." },
-                    });
+                return reply.code(400).send({
+                    error: { code: "INVALID_VISIBILITY", message: "Invalid post visibility." },
+                });
             const scheduledAt =
                 body.scheduledAt === undefined
                     ? post.scheduledAt
@@ -69,14 +67,12 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                       ? new Date(body.scheduledAt)
                       : null;
             if (scheduledAt && Number.isNaN(scheduledAt.getTime()))
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_SCHEDULE",
-                            message: "scheduledAt must be a valid ISO date.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_SCHEDULE",
+                        message: "scheduledAt must be a valid ISO date.",
+                    },
+                });
             const status = body.status ?? post.status;
             const publishedAt =
                 status === "published" && !scheduledAt
@@ -178,11 +174,9 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                 .code(404)
                 .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
         if (post.userId !== user.id && !(await canModerate(user.id)))
-            return reply
-                .code(403)
-                .send({
-                    error: { code: "FORBIDDEN", message: "You cannot view these revisions." },
-                });
+            return reply.code(403).send({
+                error: { code: "FORBIDDEN", message: "You cannot view these revisions." },
+            });
         return ok(
             await prisma.postRevision.findMany({
                 where: { postId },

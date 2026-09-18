@@ -44,7 +44,8 @@ export const pushRoutes: FastifyPluginAsync = async (fastify) => {
             schema: openapi({
                 tags: "Notifications",
                 summary: "Send a Web Push test notification",
-                description: "Sends a test notification to the authenticated user's registered push subscriptions.",
+                description:
+                    "Sends a test notification to the authenticated user's registered push subscriptions.",
                 operationId: "sendPushTestNotification",
                 security: [{ cookieAuth: [] }],
                 responses: { "200": { description: "Test notification queued." } },
@@ -53,7 +54,9 @@ export const pushRoutes: FastifyPluginAsync = async (fastify) => {
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
-            const subscriptionCount = await prisma.pushSubscription.count({ where: { userId: user.id } });
+            const subscriptionCount = await prisma.pushSubscription.count({
+                where: { userId: user.id },
+            });
             if (subscriptionCount === 0) {
                 return reply.code(400).send({
                     error: {

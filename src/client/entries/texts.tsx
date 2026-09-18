@@ -135,7 +135,11 @@ function TextCard({ text }: { text: Post }) {
         const url = new URL(`/texts/${encodeURIComponent(text.id)}/`, window.location.origin).href;
         try {
             if (navigator.share) {
-                await navigator.share({ title: text.title || "imshare text", text: text.textContent || "", url });
+                await navigator.share({
+                    title: text.title || "imshare text",
+                    text: text.textContent || "",
+                    url,
+                });
             } else if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(url);
             } else {
@@ -203,7 +207,11 @@ function TextCard({ text }: { text: Post }) {
                             {text.textContent}
                         </Typography>
                         {error ? (
-                            <Typography variant="caption" color="error" sx={{ display: "block", mt: 1 }}>
+                            <Typography
+                                variant="caption"
+                                color="error"
+                                sx={{ display: "block", mt: 1 }}
+                            >
                                 {error}
                             </Typography>
                         ) : null}
@@ -233,7 +241,14 @@ function TextCard({ text }: { text: Post }) {
                                 color={liked ? "error" : "default"}
                             >
                                 <FavoriteBorderIcon fontSize="small" />
-                                {likeCount > 0 ? <Typography component="span" sx={{ ml: 0.5, fontSize: "0.75rem" }}>{likeCount}</Typography> : null}
+                                {likeCount > 0 ? (
+                                    <Typography
+                                        component="span"
+                                        sx={{ ml: 0.5, fontSize: "0.75rem" }}
+                                    >
+                                        {likeCount}
+                                    </Typography>
+                                ) : null}
                             </IconButton>
                         </Stack>
                     </Box>

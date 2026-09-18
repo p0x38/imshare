@@ -111,14 +111,12 @@ export async function buildApp() {
             )
         ) {
             observability.recordCsrfRejection();
-            return reply
-                .code(403)
-                .send({
-                    error: {
-                        code: "CSRF_ORIGIN_REJECTED",
-                        message: "The request origin is not allowed.",
-                    },
-                });
+            return reply.code(403).send({
+                error: {
+                    code: "CSRF_ORIGIN_REJECTED",
+                    message: "The request origin is not allowed.",
+                },
+            });
         }
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (request.method === "POST" && pathname === "/api/v1/uploads") {
@@ -294,21 +292,30 @@ export async function buildApp() {
     await app.register(authRoutes, { prefix: "/api" });
     await app.register(apiRoutes, { prefix: "/api" });
     app.get("/uploads/*", async (request, reply) => {
-        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll("\\", "/");
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(
+            "\\",
+            "/",
+        );
         if (!rawPath || rawPath.includes(".."))
-            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
         const upload = await prisma.upload.findFirst({
             where: { filename: rawPath },
             select: { filename: true, mimeType: true, contentHash: true, size: true },
         });
         if (!upload)
-            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
         const source = path.resolve(uploadDir, upload.filename);
         const relative = path.relative(uploadDir, source);
         if (relative.startsWith("..") || path.isAbsolute(relative))
-            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
         const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
         reply
@@ -322,12 +329,13 @@ export async function buildApp() {
         try {
             await import("node:fs/promises").then(({ access }) => access(source));
         } catch {
-            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
         }
         reply.type(upload.mimeType);
         return reply.send(createReadStream(source));
     });
-
 
     await app.register(metaRoutes);
     await app.register(federationRoutes);

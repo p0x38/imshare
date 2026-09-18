@@ -13,20 +13,21 @@ import CollectionsBookmarkOutlinedIcon from "@mui/icons-material/CollectionsBook
 import { useTranslation } from "react-i18next";
 import type { User } from "../lib/types";
 
-const definitions: Record<string, { label: string; icon: typeof AdminPanelSettingsOutlinedIcon }> = {
-    admin: { label: "Admin", icon: AdminPanelSettingsOutlinedIcon },
-    moderator: { label: "Moderator", icon: GavelOutlinedIcon },
-    veteran: { label: "Veteran", icon: HistoryOutlinedIcon },
-    contributor: { label: "Contributor", icon: HandshakeOutlinedIcon },
-    verified: { label: "Verified", icon: VerifiedOutlinedIcon },
-    "early-adopter": { label: "Early Adopter", icon: HistoryOutlinedIcon },
-    "bug-hunter": { label: "Bug Hunter", icon: BugReportOutlinedIcon },
-    supporter: { label: "Supporter", icon: FavoriteOutlinedIcon },
-    founder: { label: "Founder", icon: EmojiEventsOutlinedIcon },
-    developer: { label: "Developer", icon: CodeOutlinedIcon },
-    "community-helper": { label: "Community Helper", icon: GroupsOutlinedIcon },
-    curator: { label: "Curator", icon: CollectionsBookmarkOutlinedIcon },
-};
+const definitions: Record<string, { label: string; icon: typeof AdminPanelSettingsOutlinedIcon }> =
+    {
+        admin: { label: "Admin", icon: AdminPanelSettingsOutlinedIcon },
+        moderator: { label: "Moderator", icon: GavelOutlinedIcon },
+        veteran: { label: "Veteran", icon: HistoryOutlinedIcon },
+        contributor: { label: "Contributor", icon: HandshakeOutlinedIcon },
+        verified: { label: "Verified", icon: VerifiedOutlinedIcon },
+        "early-adopter": { label: "Early Adopter", icon: HistoryOutlinedIcon },
+        "bug-hunter": { label: "Bug Hunter", icon: BugReportOutlinedIcon },
+        supporter: { label: "Supporter", icon: FavoriteOutlinedIcon },
+        founder: { label: "Founder", icon: EmojiEventsOutlinedIcon },
+        developer: { label: "Developer", icon: CodeOutlinedIcon },
+        "community-helper": { label: "Community Helper", icon: GroupsOutlinedIcon },
+        curator: { label: "Curator", icon: CollectionsBookmarkOutlinedIcon },
+    };
 
 export function UserBadges({
     user,

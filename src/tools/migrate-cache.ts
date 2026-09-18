@@ -39,7 +39,8 @@ async function main(): Promise<void> {
     } catch {}
 
     console.log("Moved " + moved + " cache entr" + (moved === 1 ? "y" : "ies") + ".");
-    if (skipped) console.log("Skipped " + skipped + " existing entr" + (skipped === 1 ? "y." : "ies."));
+    if (skipped)
+        console.log("Skipped " + skipped + " existing entr" + (skipped === 1 ? "y." : "ies."));
 }
 
 await main();

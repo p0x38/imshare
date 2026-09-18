@@ -30,8 +30,10 @@ export function Page({
     }, [title]);
 
     const isAccountAuthPage =
-        location.pathname === "/account/login" || location.pathname === "/account/register" ||
-        location.pathname === "/account/login/" || location.pathname === "/account/register/";
+        location.pathname === "/account/login" ||
+        location.pathname === "/account/register" ||
+        location.pathname === "/account/login/" ||
+        location.pathname === "/account/register/";
 
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>

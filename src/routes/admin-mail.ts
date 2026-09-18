@@ -9,21 +9,24 @@ export async function registerAdminMailRoutes(fastify: FastifyInstance): Promise
         const actor = await requireRole(request, reply, "admin");
         if (!actor) return;
 
-        const mail = createMailService(env.smtp.host && env.smtp.port && env.smtp.user && env.smtp.password && env.smtp.from
-            ? {
-                  host: env.smtp.host,
-                  port: env.smtp.port,
-                  secure: env.smtp.secure,
-                  user: env.smtp.user,
-                  password: env.smtp.password,
-                  from: env.smtp.from,
-              }
-            : null);
+        const mail = createMailService(
+            env.smtp.host && env.smtp.port && env.smtp.user && env.smtp.password && env.smtp.from
+                ? {
+                      host: env.smtp.host,
+                      port: env.smtp.port,
+                      secure: env.smtp.secure,
+                      user: env.smtp.user,
+                      password: env.smtp.password,
+                      from: env.smtp.from,
+                  }
+                : null,
+        );
         if (!mail) {
             return reply.code(503).send({
                 error: {
                     code: "SMTP_NOT_CONFIGURED",
-                    message: "SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM.",
+                    message:
+                        "SMTP is not configured. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM.",
                 },
             });
         }
@@ -32,7 +35,10 @@ export async function registerAdminMailRoutes(fastify: FastifyInstance): Promise
         const recipient = typeof body?.recipient === "string" ? body.recipient.trim() : "";
         if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
             return reply.code(400).send({
-                error: { code: "INVALID_RECIPIENT", message: "A valid recipient email address is required." },
+                error: {
+                    code: "INVALID_RECIPIENT",
+                    message: "A valid recipient email address is required.",
+                },
             });
         }
 

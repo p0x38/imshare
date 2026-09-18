@@ -77,10 +77,9 @@ export async function lookupApproxLocation(
     if (cached && cached.expiresAt > Date.now()) return cached.location;
 
     try {
-        const response = await fetch(
-            `https://ipinfo.io/${encodeURIComponent(normalizedIp)}/json`,
-            { signal: AbortSignal.timeout(2500) },
-        );
+        const response = await fetch(`https://ipinfo.io/${encodeURIComponent(normalizedIp)}/json`, {
+            signal: AbortSignal.timeout(2500),
+        });
         if (!response.ok) throw new Error(`IP geolocation request failed: ${response.status}`);
 
         const data = (await response.json()) as IpInfoResponse;
@@ -94,7 +93,10 @@ export async function lookupApproxLocation(
         ].filter((label): label is string => label !== null);
 
         const location =
-            normalize(data.city) || normalize(data.region) || normalize(data.country) || privacyLabels.length
+            normalize(data.city) ||
+            normalize(data.region) ||
+            normalize(data.country) ||
+            privacyLabels.length
                 ? {
                       city: normalize(data.city),
                       region: normalize(data.region),

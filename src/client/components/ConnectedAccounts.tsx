@@ -66,7 +66,9 @@ export function ConnectedAccounts() {
                 callbackURL: "/account/?tab=security",
             });
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to connect the OpenID account.");
+            setError(
+                cause instanceof Error ? cause.message : "Unable to connect the OpenID account.",
+            );
             setLinking(false);
         }
     }
@@ -82,7 +84,9 @@ export function ConnectedAccounts() {
             setAccounts((current) => current.filter((account) => account.id !== oidcAccount.id));
             setNotice("OpenID Connect account disconnected.");
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to disconnect the OpenID account.");
+            setError(
+                cause instanceof Error ? cause.message : "Unable to disconnect the OpenID account.",
+            );
         } finally {
             setUnlinking(false);
         }
@@ -97,7 +101,8 @@ export function ConnectedAccounts() {
                 <Stack spacing={2}>
                     <Typography variant="h6">Connected accounts</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Connect an OpenID Connect identity so it can be used to sign in to this account.
+                        Connect an OpenID Connect identity so it can be used to sign in to this
+                        account.
                     </Typography>
                     <Divider />
                     <Stack spacing={1}>
@@ -118,7 +123,11 @@ export function ConnectedAccounts() {
                                 </Button>
                             </Stack>
                         ) : (
-                            <Button variant="contained" onClick={() => void connect()} disabled={linking}>
+                            <Button
+                                variant="contained"
+                                onClick={() => void connect()}
+                                disabled={linking}
+                            >
                                 {linking ? "Redirecting…" : "Connect OpenID Connect"}
                             </Button>
                         )}

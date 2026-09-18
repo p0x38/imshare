@@ -22,12 +22,14 @@ function parseManualBadges(value: string | null | undefined): string[] {
     try {
         const parsed = JSON.parse(value) as unknown;
         if (!Array.isArray(parsed)) return [];
-        return [...new Set(
-            parsed.filter(
-                (item): item is string =>
-                    typeof item === "string" && MANUAL_BADGE_SET.has(item),
+        return [
+            ...new Set(
+                parsed.filter(
+                    (item): item is string =>
+                        typeof item === "string" && MANUAL_BADGE_SET.has(item),
+                ),
             ),
-        )];
+        ];
     } catch {
         return [];
     }
@@ -54,10 +56,12 @@ export function userBadges(user: {
 
 export function sanitizeManualBadges(values: unknown): ManualBadgeKey[] {
     if (!Array.isArray(values)) return [];
-    return [...new Set(
-        values.filter(
-            (value): value is ManualBadgeKey =>
-                typeof value === "string" && MANUAL_BADGE_SET.has(value),
+    return [
+        ...new Set(
+            values.filter(
+                (value): value is ManualBadgeKey =>
+                    typeof value === "string" && MANUAL_BADGE_SET.has(value),
+            ),
         ),
-    )];
+    ];
 }

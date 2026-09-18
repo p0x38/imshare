@@ -9,7 +9,10 @@ export interface DailyAnalyticsRow {
     value: number | bigint;
 }
 
-export function buildDailyAnalytics(days: number, rows: DailyAnalyticsRow[]): DailyAnalyticsPoint[] {
+export function buildDailyAnalytics(
+    days: number,
+    rows: DailyAnalyticsRow[],
+): DailyAnalyticsPoint[] {
     const byDay = new Map<string, Record<string, number>>();
     const today = new Date();
     for (let offset = days - 1; offset >= 0; offset -= 1) {

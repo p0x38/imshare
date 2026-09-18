@@ -89,12 +89,41 @@ function DashboardPostsPage() {
                     <Stack spacing={{ xs: 3, sm: 4 }}>
                         {imagePosts.length ? (
                             <Stack spacing={1.5}>
-                                <Typography variant="h5" component="h2">Posts</Typography>
-                                <Stack sx={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))", gap: { xs: 1, sm: 2 } }}>
+                                <Typography variant="h5" component="h2">
+                                    Posts
+                                </Typography>
+                                <Stack
+                                    sx={{
+                                        display: "grid",
+                                        gridTemplateColumns:
+                                            "repeat(auto-fill, minmax(min(100%, 256px), 1fr))",
+                                        gap: { xs: 1, sm: 2 },
+                                    }}
+                                >
                                     {imagePosts.map((post) => (
-                                        <Card key={post.id} variant="outlined" sx={{ overflow: "hidden", height: "100%" }}>
-                                            <CardActionArea component="a" href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}>
-                                                {post.uploads?.[0] ? <CardMedia component="img" image={imageUrl(post.uploads[0].url)} alt={post.uploads[0].alt || post.title || ""} loading="lazy" sx={{ aspectRatio: "1 / 1", objectFit: "cover" }} /> : null}
+                                        <Card
+                                            key={post.id}
+                                            variant="outlined"
+                                            sx={{ overflow: "hidden", height: "100%" }}
+                                        >
+                                            <CardActionArea
+                                                component="a"
+                                                href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
+                                            >
+                                                {post.uploads?.[0] ? (
+                                                    <CardMedia
+                                                        component="img"
+                                                        image={imageUrl(post.uploads[0].url)}
+                                                        alt={
+                                                            post.uploads[0].alt || post.title || ""
+                                                        }
+                                                        loading="lazy"
+                                                        sx={{
+                                                            aspectRatio: "1 / 1",
+                                                            objectFit: "cover",
+                                                        }}
+                                                    />
+                                                ) : null}
                                                 <CardContent>
                                                     <Typography variant="subtitle1" noWrap>
                                                         {post.title || t("common.untitled")}
@@ -113,40 +142,82 @@ function DashboardPostsPage() {
                                                     >
                                                         <Typography variant="body2" noWrap>
                                                             {post.createdAt
-                                                                ? new Date(post.createdAt).toLocaleDateString()
+                                                                ? new Date(
+                                                                      post.createdAt,
+                                                                  ).toLocaleDateString()
                                                                 : ""}
                                                         </Typography>
-                                                        <Typography component="span" variant="body2" aria-hidden="true">
+                                                        <Typography
+                                                            component="span"
+                                                            variant="body2"
+                                                            aria-hidden="true"
+                                                        >
                                                             ·
                                                         </Typography>
                                                         <Tooltip title="Views">
-                                                            <Stack direction="row" spacing={0.25} alignItems="center">
-                                                                <VisibilityOutlinedIcon sx={{ fontSize: 15 }} />
-                                                                <Typography component="span" variant="caption">
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={0.25}
+                                                                alignItems="center"
+                                                            >
+                                                                <VisibilityOutlinedIcon
+                                                                    sx={{ fontSize: 15 }}
+                                                                />
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="caption"
+                                                                >
                                                                     {post.viewCount ?? 0}
                                                                 </Typography>
                                                             </Stack>
                                                         </Tooltip>
                                                         <Tooltip title="Likes">
-                                                            <Stack direction="row" spacing={0.25} alignItems="center">
-                                                                <ThumbUpAltOutlinedIcon sx={{ fontSize: 15 }} />
-                                                                <Typography component="span" variant="caption">
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={0.25}
+                                                                alignItems="center"
+                                                            >
+                                                                <ThumbUpAltOutlinedIcon
+                                                                    sx={{ fontSize: 15 }}
+                                                                />
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="caption"
+                                                                >
                                                                     {post.reactions?.like ?? 0}
                                                                 </Typography>
                                                             </Stack>
                                                         </Tooltip>
                                                         <Tooltip title="Favorites">
-                                                            <Stack direction="row" spacing={0.25} alignItems="center">
-                                                                <FavoriteBorderIcon sx={{ fontSize: 15 }} />
-                                                                <Typography component="span" variant="caption">
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={0.25}
+                                                                alignItems="center"
+                                                            >
+                                                                <FavoriteBorderIcon
+                                                                    sx={{ fontSize: 15 }}
+                                                                />
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="caption"
+                                                                >
                                                                     {post.reactions?.favorite ?? 0}
                                                                 </Typography>
                                                             </Stack>
                                                         </Tooltip>
                                                         <Tooltip title="Saves">
-                                                            <Stack direction="row" spacing={0.25} alignItems="center">
-                                                                <BookmarkBorderIcon sx={{ fontSize: 15 }} />
-                                                                <Typography component="span" variant="caption">
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={0.25}
+                                                                alignItems="center"
+                                                            >
+                                                                <BookmarkBorderIcon
+                                                                    sx={{ fontSize: 15 }}
+                                                                />
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="caption"
+                                                                >
                                                                     {post.reactions?.save ?? 0}
                                                                 </Typography>
                                                             </Stack>
@@ -161,8 +232,15 @@ function DashboardPostsPage() {
                         ) : null}
                         {texts.length ? (
                             <Stack spacing={1.5}>
-                                <Typography variant="h5" component="h2">Texts</Typography>
-                                <TextList texts={texts} hrefForText={(text) => `/dashboard/posts/${encodeURIComponent(text.id)}/`} />
+                                <Typography variant="h5" component="h2">
+                                    Texts
+                                </Typography>
+                                <TextList
+                                    texts={texts}
+                                    hrefForText={(text) =>
+                                        `/dashboard/posts/${encodeURIComponent(text.id)}/`
+                                    }
+                                />
                             </Stack>
                         ) : null}
                     </Stack>

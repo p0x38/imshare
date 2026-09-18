@@ -15,7 +15,10 @@ function configured(): boolean {
 }
 
 function configure(): void {
-    if (!configured()) throw new Error("Web Push is not configured: set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT.");
+    if (!configured())
+        throw new Error(
+            "Web Push is not configured: set VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, and VAPID_SUBJECT.",
+        );
     webpush.setVapidDetails(env.push.subject!, env.push.publicKey!, env.push.privateKey!);
 }
 
@@ -39,9 +42,10 @@ export async function sendWebPushNotification(userId: string, payload: PushPaylo
                     body,
                 );
             } catch (error) {
-                const statusCode = typeof error === "object" && error !== null && "statusCode" in error
-                    ? Number((error as { statusCode?: unknown }).statusCode)
-                    : 0;
+                const statusCode =
+                    typeof error === "object" && error !== null && "statusCode" in error
+                        ? Number((error as { statusCode?: unknown }).statusCode)
+                        : 0;
                 if (statusCode === 404 || statusCode === 410) {
                     await prisma.pushSubscription.delete({ where: { id: subscription.id } });
                     return;

@@ -284,7 +284,10 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         return ok(uploadView(upload));
     });
     fastify.get("/uploads/*", async (request, reply) => {
-        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll("\\", "/");
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(
+            "\\",
+            "/",
+        );
         if (!rawPath || rawPath.includes(".."))
             return reply.code(404).send({
                 error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },

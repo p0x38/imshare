@@ -1,4 +1,13 @@
-import { Box, Card, CardActionArea, CardContent, CardMedia, Stack, Tooltip, Typography } from "@mui/material";
+import {
+    Box,
+    Card,
+    CardActionArea,
+    CardContent,
+    CardMedia,
+    Stack,
+    Tooltip,
+    Typography,
+} from "@mui/material";
 import { useTranslation } from "react-i18next";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";

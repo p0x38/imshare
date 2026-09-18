@@ -1,12 +1,4 @@
-import {
-    Computer,
-    Key,
-    Lock,
-    Logout,
-    Security,
-    Shield,
-    Smartphone,
-} from "@mui/icons-material";
+import { Computer, Key, Lock, Logout, Security, Shield, Smartphone } from "@mui/icons-material";
 import {
     Alert,
     Button,
@@ -33,7 +25,12 @@ interface SessionInfo {
     ipAddress?: string | null;
     userAgent?: string | null;
     current: boolean;
-    approximateLocation?: { city?: string; region?: string; country?: string; privacyLabels?: string[] } | null;
+    approximateLocation?: {
+        city?: string;
+        region?: string;
+        country?: string;
+        privacyLabels?: string[];
+    } | null;
 }
 
 function asDate(value: string | Date): Date {
@@ -203,9 +200,12 @@ export function DevicesSecurity() {
                         <Stack direction="row" spacing={1.5} alignItems="center">
                             <Shield color="primary" />
                             <Stack>
-                                <Typography variant="h5" component="h2">Devices & security</Typography>
+                                <Typography variant="h5" component="h2">
+                                    Devices & security
+                                </Typography>
                                 <Typography variant="body2" color="text.secondary">
-                                    Review where your account is signed in and manage your authentication settings.
+                                    Review where your account is signed in and manage your
+                                    authentication settings.
                                 </Typography>
                             </Stack>
                         </Stack>
@@ -220,12 +220,16 @@ export function DevicesSecurity() {
                     <Stack spacing={2}>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Security />
-                            <Typography variant="h6" component="h2">Active devices</Typography>
+                            <Typography variant="h6" component="h2">
+                                Active devices
+                            </Typography>
                         </Stack>
                         <Typography variant="body2" color="text.secondary">
                             These are the active sessions currently associated with your account.
                         </Typography>
-                        {loading ? <Typography color="text.secondary">Loading sessions…</Typography> : null}
+                        {loading ? (
+                            <Typography color="text.secondary">Loading sessions…</Typography>
+                        ) : null}
                         {!loading && !activeSessions.length ? (
                             <Alert severity="info">No active sessions were found.</Alert>
                         ) : null}
@@ -241,31 +245,78 @@ export function DevicesSecurity() {
                                               alignItems={{ xs: "flex-start", sm: "center" }}
                                               justifyContent="space-between"
                                           >
-                                              <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                                              <Stack
+                                                  direction="row"
+                                                  spacing={1.5}
+                                                  alignItems="center"
+                                                  sx={{ minWidth: 0 }}
+                                              >
                                                   <DeviceIcon userAgent={session.userAgent} />
                                                   <Stack sx={{ minWidth: 0 }}>
-                                                      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-                                                          <Typography variant="subtitle1" sx={{ overflowWrap: "anywhere" }}>
+                                                      <Stack
+                                                          direction="row"
+                                                          spacing={1}
+                                                          alignItems="center"
+                                                          flexWrap="wrap"
+                                                      >
+                                                          <Typography
+                                                              variant="subtitle1"
+                                                              sx={{ overflowWrap: "anywhere" }}
+                                                          >
                                                               {describeUserAgent(session.userAgent)}
                                                           </Typography>
-                                                          {isCurrent ? <Chip label="This device" size="small" color="primary" /> : null}
+                                                          {isCurrent ? (
+                                                              <Chip
+                                                                  label="This device"
+                                                                  size="small"
+                                                                  color="primary"
+                                                              />
+                                                          ) : null}
                                                       </Stack>
-                                                      <Typography variant="body2" color="text.secondary">
-                                                          {session.ipAddress || "IP address unavailable"}
+                                                      <Typography
+                                                          variant="body2"
+                                                          color="text.secondary"
+                                                      >
+                                                          {session.ipAddress ||
+                                                              "IP address unavailable"}
                                                       </Typography>
-                                                      <Typography variant="caption" color="text.secondary">
-                                                          Since {formatDate(session.createdAt)} · Expires {formatDate(session.expiresAt)}
+                                                      <Typography
+                                                          variant="caption"
+                                                          color="text.secondary"
+                                                      >
+                                                          Since {formatDate(session.createdAt)} ·
+                                                          Expires {formatDate(session.expiresAt)}
                                                       </Typography>
-                                                      {formatApproximateLocation(session.approximateLocation) ? (
-                                                          <Typography variant="caption" color="text.secondary">
-                                                              Approx. location: {formatApproximateLocation(session.approximateLocation)}
+                                                      {formatApproximateLocation(
+                                                          session.approximateLocation,
+                                                      ) ? (
+                                                          <Typography
+                                                              variant="caption"
+                                                              color="text.secondary"
+                                                          >
+                                                              Approx. location:{" "}
+                                                              {formatApproximateLocation(
+                                                                  session.approximateLocation,
+                                                              )}
                                                           </Typography>
                                                       ) : null}
-                                                      {session.approximateLocation?.privacyLabels?.length ? (
-                                                          <Stack direction="row" spacing={0.75} flexWrap="wrap">
-                                                              {session.approximateLocation.privacyLabels.map((label) => (
-                                                                  <Chip key={label} label={label} size="small" variant="outlined" />
-                                                              ))}
+                                                      {session.approximateLocation?.privacyLabels
+                                                          ?.length ? (
+                                                          <Stack
+                                                              direction="row"
+                                                              spacing={0.75}
+                                                              flexWrap="wrap"
+                                                          >
+                                                              {session.approximateLocation.privacyLabels.map(
+                                                                  (label) => (
+                                                                      <Chip
+                                                                          key={label}
+                                                                          label={label}
+                                                                          size="small"
+                                                                          variant="outlined"
+                                                                      />
+                                                                  ),
+                                                              )}
                                                           </Stack>
                                                       ) : null}
                                                   </Stack>
@@ -274,7 +325,9 @@ export function DevicesSecurity() {
                                                   variant={isCurrent ? "text" : "outlined"}
                                                   color={isCurrent ? "error" : "inherit"}
                                                   startIcon={<Logout />}
-                                                  onClick={() => void revokeSession(session.id, isCurrent)}
+                                                  onClick={() =>
+                                                      void revokeSession(session.id, isCurrent)
+                                                  }
                                                   disabled={revoking === session.id}
                                               >
                                                   {revoking === session.id
@@ -293,9 +346,14 @@ export function DevicesSecurity() {
                             variant="outlined"
                             startIcon={<Logout />}
                             onClick={() => void revokeOtherSessions()}
-                            disabled={revokingOthers || activeSessions.filter((session) => !session.current).length === 0}
+                            disabled={
+                                revokingOthers ||
+                                activeSessions.filter((session) => !session.current).length === 0
+                            }
                         >
-                            {revokingOthers ? "Signing out other devices…" : "Sign out all other devices"}
+                            {revokingOthers
+                                ? "Signing out other devices…"
+                                : "Sign out all other devices"}
                         </Button>
                     </Stack>
                 </CardContent>
@@ -306,7 +364,9 @@ export function DevicesSecurity() {
                     <Stack spacing={2}>
                         <Stack direction="row" spacing={1} alignItems="center">
                             <Key />
-                            <Typography variant="h6" component="h2">Password</Typography>
+                            <Typography variant="h6" component="h2">
+                                Password
+                            </Typography>
                         </Stack>
                         <Typography variant="body2" color="text.secondary">
                             Change the password used for email and password sign-in.
@@ -320,40 +380,69 @@ export function DevicesSecurity() {
                         />
                         <Stack spacing={2}>
                             <label>
-                                <Typography variant="body2" sx={{ mb: 0.5 }}>Current password</Typography>
+                                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    Current password
+                                </Typography>
                                 <input
                                     value={password}
                                     onChange={(event) => setPassword(event.target.value)}
                                     type="password"
                                     autoComplete="current-password"
-                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: "1px solid currentColor" }}
+                                    style={{
+                                        width: "100%",
+                                        boxSizing: "border-box",
+                                        padding: "12px 14px",
+                                        font: "inherit",
+                                        borderRadius: 8,
+                                        border: "1px solid currentColor",
+                                    }}
                                 />
                             </label>
                             <label>
-                                <Typography variant="body2" sx={{ mb: 0.5 }}>New password</Typography>
+                                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    New password
+                                </Typography>
                                 <input
                                     value={newPassword}
                                     onChange={(event) => setNewPassword(event.target.value)}
                                     type="password"
                                     autoComplete="new-password"
-                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: "1px solid currentColor" }}
+                                    style={{
+                                        width: "100%",
+                                        boxSizing: "border-box",
+                                        padding: "12px 14px",
+                                        font: "inherit",
+                                        borderRadius: 8,
+                                        border: "1px solid currentColor",
+                                    }}
                                 />
                             </label>
                             <label>
-                                <Typography variant="body2" sx={{ mb: 0.5 }}>Confirm new password</Typography>
+                                <Typography variant="body2" sx={{ mb: 0.5 }}>
+                                    Confirm new password
+                                </Typography>
                                 <input
                                     value={confirmPassword}
                                     onChange={(event) => setConfirmPassword(event.target.value)}
                                     type="password"
                                     autoComplete="new-password"
-                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: "1px solid currentColor" }}
+                                    style={{
+                                        width: "100%",
+                                        boxSizing: "border-box",
+                                        padding: "12px 14px",
+                                        font: "inherit",
+                                        borderRadius: 8,
+                                        border: "1px solid currentColor",
+                                    }}
                                 />
                             </label>
                             <FormControlLabel
                                 control={
                                     <Switch
                                         checked={revokeOnPasswordChange}
-                                        onChange={(event) => setRevokeOnPasswordChange(event.target.checked)}
+                                        onChange={(event) =>
+                                            setRevokeOnPasswordChange(event.target.checked)
+                                        }
                                     />
                                 }
                                 label="Sign out other devices when the password changes"
@@ -362,7 +451,12 @@ export function DevicesSecurity() {
                                 variant="contained"
                                 startIcon={<Lock />}
                                 onClick={() => void changePassword()}
-                                disabled={changingPassword || !password || !newPassword || !confirmPassword}
+                                disabled={
+                                    changingPassword ||
+                                    !password ||
+                                    !newPassword ||
+                                    !confirmPassword
+                                }
                             >
                                 {changingPassword ? "Changing password…" : "Change password"}
                             </Button>

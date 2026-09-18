@@ -17,18 +17,19 @@ test("apiUrl preserves non-v1 and absolute URLs", () => {
 test("api normalizes API resource URLs recursively", async () => {
     vi.stubGlobal(
         "fetch",
-        vi.fn(async () =>
-            new Response(
-                JSON.stringify({
-                    data: {
-                        url: "/v1/posts/image/one",
-                        avatarUrl: "/v1/users/avatar/one",
-                        nested: [{ url: "/v1/posts/image/two" }],
-                        unrelated: "/v1/not-a-url-field",
-                    },
-                }),
-                { status: 200, headers: { "content-type": "application/json" } },
-            ),
+        vi.fn(
+            async () =>
+                new Response(
+                    JSON.stringify({
+                        data: {
+                            url: "/v1/posts/image/one",
+                            avatarUrl: "/v1/users/avatar/one",
+                            nested: [{ url: "/v1/posts/image/two" }],
+                            unrelated: "/v1/not-a-url-field",
+                        },
+                    }),
+                    { status: 200, headers: { "content-type": "application/json" } },
+                ),
         ),
     );
 
@@ -55,7 +56,9 @@ test("api sends JSON headers for a request body", async () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(api("/v1/posts", { method: "POST", body: JSON.stringify({ title: "test" }) })).resolves.toEqual({
+    await expect(
+        api("/v1/posts", { method: "POST", body: JSON.stringify({ title: "test" }) }),
+    ).resolves.toEqual({
         data: true,
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -82,13 +85,14 @@ test("api preserves an explicit content type header", async () => {
 test("api exposes structured server errors with status and payload", async () => {
     vi.stubGlobal(
         "fetch",
-        vi.fn(async () =>
-            new Response(
-                JSON.stringify({
-                    error: { code: "POST_NOT_FOUND", message: "Post not found." },
-                }),
-                { status: 404, headers: { "content-type": "application/json" } },
-            ),
+        vi.fn(
+            async () =>
+                new Response(
+                    JSON.stringify({
+                        error: { code: "POST_NOT_FOUND", message: "Post not found." },
+                    }),
+                    { status: 404, headers: { "content-type": "application/json" } },
+                ),
         ),
     );
 
@@ -107,7 +111,13 @@ test("api exposes structured server errors with status and payload", async () =>
 test("api uses text responses when the server does not return JSON", async () => {
     vi.stubGlobal(
         "fetch",
-        vi.fn(async () => new Response("upstream failure", { status: 502, headers: { "content-type": "text/plain" } })),
+        vi.fn(
+            async () =>
+                new Response("upstream failure", {
+                    status: 502,
+                    headers: { "content-type": "text/plain" },
+                }),
+        ),
     );
 
     await expect(api("/v1/example")).rejects.toThrow("upstream failure");

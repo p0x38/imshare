@@ -149,14 +149,9 @@ export const postUpdateInput = z
             .meta({ description: "Replacement source URL, or null to clear it." }),
         ...originalPostProperties,
         ...permalinkProperties,
-        categoryId: z
-            .string()
-            .min(1)
-            .nullable()
-            .optional()
-            .meta({
-                description: "Replacement category identifier, or null to remove the category.",
-            }),
+        categoryId: z.string().min(1).nullable().optional().meta({
+            description: "Replacement category identifier, or null to remove the category.",
+        }),
         ...lifecycleProperties,
         tags: z
             .array(z.string().min(1).max(100))

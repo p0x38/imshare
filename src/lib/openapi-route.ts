@@ -1,14 +1,7 @@
 import type { FastifySchema } from "fastify";
 
 export type OpenApiHttpMethod =
-    | "GET"
-    | "POST"
-    | "PUT"
-    | "PATCH"
-    | "DELETE"
-    | "HEAD"
-    | "OPTIONS"
-    | "TRACE";
+    "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS" | "TRACE";
 
 export type OpenApiParameterLocation = "query" | "path" | "header" | "cookie";
 export type OpenApiScalarType = "string" | "number" | "integer" | "boolean";
@@ -216,10 +209,7 @@ function asRecord(value: unknown): Record<string, unknown> {
     return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
-function mergeContentExample(
-    content: OpenApiContent,
-    example: unknown,
-): OpenApiContent {
+function mergeContentExample(content: OpenApiContent, example: unknown): OpenApiContent {
     const media = content["application/json"];
     const current = media && !("$ref" in media) ? media : {};
     return {
@@ -290,8 +280,16 @@ export function openapi(
         ...(metadata.summary ? { summary: metadata.summary } : {}),
         ...(metadata.description ? { description: metadata.description } : {}),
         ...(metadata.operationId ? { operationId: metadata.operationId } : {}),
-        params: parameterSchema(parameters, "path", schema.params as Record<string, unknown> | undefined),
-        querystring: parameterSchema(parameters, "query", schema.querystring as Record<string, unknown> | undefined),
+        params: parameterSchema(
+            parameters,
+            "path",
+            schema.params as Record<string, unknown> | undefined,
+        ),
+        querystring: parameterSchema(
+            parameters,
+            "query",
+            schema.querystring as Record<string, unknown> | undefined,
+        ),
         "x-imshare-openapi": metadata,
     };
 }
@@ -416,10 +414,7 @@ function normalizeRequestBodyOptions(options: RequestBodyOptionsOrRequired): Req
 }
 
 export const request = {
-    json(
-        schema: OpenApiSchema,
-        options: RequestBodyOptionsOrRequired = {},
-    ): OpenApiRequestBody {
+    json(schema: OpenApiSchema, options: RequestBodyOptionsOrRequired = {}): OpenApiRequestBody {
         return {
             ...normalizeRequestBodyOptions(options),
             content: { "application/json": { schema } },
@@ -436,10 +431,7 @@ export const request = {
         };
     },
 
-    form(
-        schema: OpenApiSchema,
-        options: RequestBodyOptionsOrRequired = {},
-    ): OpenApiRequestBody {
+    form(schema: OpenApiSchema, options: RequestBodyOptionsOrRequired = {}): OpenApiRequestBody {
         return {
             ...normalizeRequestBodyOptions(options),
             content: { "application/x-www-form-urlencoded": { schema } },

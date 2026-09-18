@@ -140,17 +140,15 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             try {
                 permalink = permalinkData(body);
             } catch (error) {
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_PERMALINK",
-                            message:
-                                error instanceof Error
-                                    ? error.message
-                                    : "Invalid permalink configuration.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PERMALINK",
+                        message:
+                            error instanceof Error
+                                ? error.message
+                                : "Invalid permalink configuration.",
+                    },
+                });
             }
             const post = await prisma.post.create({
                 data: {
@@ -284,17 +282,15 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                 : existing.customPostId,
                     });
                 } catch (error) {
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_PERMALINK",
-                                message:
-                                    error instanceof Error
-                                        ? error.message
-                                        : "Invalid permalink configuration.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_PERMALINK",
+                            message:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Invalid permalink configuration.",
+                        },
+                    });
                 }
             }
             const post = await prisma.$transaction(async (tx) => {
@@ -471,11 +467,9 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     where: { id: body.categoryId },
                 });
                 if (!category)
-                    return reply
-                        .code(404)
-                        .send({
-                            error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
-                        });
+                    return reply.code(404).send({
+                        error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
+                    });
             }
             const updated = await prisma.post.update({
                 where: { id: postId },

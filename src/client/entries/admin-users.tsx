@@ -144,7 +144,10 @@ function AdminUsersPage() {
                                     <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                         <Chip size="small" label={user.role} />
                                         {user.manualBadges.length ? (
-                                            <UserBadges user={{ badges: user.manualBadges }} compact />
+                                            <UserBadges
+                                                user={{ badges: user.manualBadges }}
+                                                compact
+                                            />
                                         ) : null}
                                         {user.isBanned ? (
                                             <Chip
@@ -153,7 +156,9 @@ function AdminUsersPage() {
                                                 label={
                                                     user.bannedUntil
                                                         ? t("adminUsers.bannedUntil", {
-                                                              value: new Date(user.bannedUntil).toLocaleString(),
+                                                              value: new Date(
+                                                                  user.bannedUntil,
+                                                              ).toLocaleString(),
                                                           })
                                                         : t("adminUsers.banned")
                                                 }
@@ -167,21 +172,43 @@ function AdminUsersPage() {
                                     ) : null}
                                 </Stack>
                                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                    <Button size="small" variant="outlined" onClick={() => openAction(user, "badges")}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => openAction(user, "badges")}
+                                    >
                                         {t("adminUsers.changeBadges")}
                                     </Button>
-                                    <Button size="small" variant="outlined" onClick={() => openAction(user, "role")}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        onClick={() => openAction(user, "role")}
+                                    >
                                         {t("adminUsers.changeRole")}
                                     </Button>
-                                    <Button size="small" variant="outlined" disabled={user.isBanned} onClick={() => openAction(user, "kick")}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        disabled={user.isBanned}
+                                        onClick={() => openAction(user, "kick")}
+                                    >
                                         {t("adminUsers.kick")}
                                     </Button>
                                     {user.isBanned ? (
-                                        <Button size="small" variant="outlined" onClick={() => openAction(user, "unban")}>
+                                        <Button
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={() => openAction(user, "unban")}
+                                        >
                                             {t("adminUsers.unban")}
                                         </Button>
                                     ) : (
-                                        <Button size="small" color="error" variant="outlined" onClick={() => openAction(user, "ban")}>
+                                        <Button
+                                            size="small"
+                                            color="error"
+                                            variant="outlined"
+                                            onClick={() => openAction(user, "ban")}
+                                        >
                                             {t("adminUsers.ban")}
                                         </Button>
                                     )}
@@ -210,10 +237,14 @@ function AdminUsersPage() {
                 </DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ pt: 1 }}>
-                        <Typography>{t("adminUsers.target", { name: target?.name ?? "" })}</Typography>
+                        <Typography>
+                            {t("adminUsers.target", { name: target?.name ?? "" })}
+                        </Typography>
                         {action === "badges" ? (
                             <FormControl fullWidth>
-                                <InputLabel id="manual-badges-label">{t("adminUsers.badgesLabel")}</InputLabel>
+                                <InputLabel id="manual-badges-label">
+                                    {t("adminUsers.badgesLabel")}
+                                </InputLabel>
                                 <Select
                                     labelId="manual-badges-label"
                                     multiple
@@ -227,7 +258,12 @@ function AdminUsersPage() {
                                         )
                                     }
                                     renderValue={(selected) => (
-                                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                                        <Stack
+                                            direction="row"
+                                            spacing={0.5}
+                                            flexWrap="wrap"
+                                            useFlexGap
+                                        >
                                             {(selected as string[]).map((badge) => (
                                                 <Chip
                                                     key={badge}
@@ -255,7 +291,9 @@ function AdminUsersPage() {
                                 fullWidth
                             >
                                 <MenuItem value="user">{t("adminUsers.userRole")}</MenuItem>
-                                <MenuItem value="moderator">{t("adminUsers.moderatorRole")}</MenuItem>
+                                <MenuItem value="moderator">
+                                    {t("adminUsers.moderatorRole")}
+                                </MenuItem>
                                 <MenuItem value="admin">{t("adminUsers.adminRole")}</MenuItem>
                             </TextField>
                         ) : null}
@@ -311,4 +349,9 @@ function AdminUsersPage() {
 }
 
 const root = document.querySelector("#admin-users-page");
-if (root) createRoot(root).render(<App><AdminUsersPage /></App>);
+if (root)
+    createRoot(root).render(
+        <App>
+            <AdminUsersPage />
+        </App>,
+    );

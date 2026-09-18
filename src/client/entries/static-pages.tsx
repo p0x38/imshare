@@ -123,9 +123,7 @@ function AboutPage({ ja }: { ja: boolean }) {
                                 <ActionLink href={REPOSITORY_URL} variant="contained">
                                     {ja ? "GitHubリポジトリを開く" : "Open GitHub repository"}
                                 </ActionLink>
-                                <ActionLink href={README_URL}>
-                                    README
-                                </ActionLink>
+                                <ActionLink href={README_URL}>README</ActionLink>
                                 <ActionLink href={CONTRIBUTING_URL}>
                                     {ja ? "コントリビュート" : "Contributing"}
                                 </ActionLink>
@@ -149,7 +147,10 @@ function AboutPage({ ja }: { ja: boolean }) {
                                 : "The current stack uses Node.js, pnpm, and SQLite, with a native config.imshare configuration format so operators can manage storage and instance behavior themselves."}
                         </Typography>
                     </SectionCard>
-                    <SectionCard icon={Security} title={ja ? "アカウントとモデレーション" : "Accounts and moderation"}>
+                    <SectionCard
+                        icon={Security}
+                        title={ja ? "アカウントとモデレーション" : "Accounts and moderation"}
+                    >
                         <Typography variant="body2" color="text.secondary">
                             {ja
                                 ? "Better Authによる認証、ユーザープロフィール、モデレーター・管理者向けの権限分離、レポートやモデレーション機能があります。"
@@ -163,7 +164,10 @@ function AboutPage({ ja }: { ja: boolean }) {
                                 : "The server includes ActivityPub-oriented federation functionality including WebFinger, actors, inbox/outbox handling, follows, and federated public posts."}
                         </Typography>
                     </SectionCard>
-                    <SectionCard icon={ApiIcon} title={ja ? "APIと公開エンドポイント" : "API and public endpoints"}>
+                    <SectionCard
+                        icon={ApiIcon}
+                        title={ja ? "APIと公開エンドポイント" : "API and public endpoints"}
+                    >
                         <Typography variant="body2" color="text.secondary">
                             {ja
                                 ? "APIはバージョン付きの/v1配下で提供され、公開ページとは分離されたAPIドキュメントも用意されています。"
@@ -263,16 +267,41 @@ function GitHubPage({ ja }: { ja: boolean }) {
                         </Stack>
                     </CardContent>
                 </Card>
-                <SectionCard icon={Article} title={ja ? "プロジェクトドキュメント" : "Project documentation"}>
+                <SectionCard
+                    icon={Article}
+                    title={ja ? "プロジェクトドキュメント" : "Project documentation"}
+                >
                     <List disablePadding>
                         {[
-                            [README_URL, "README.md", ja ? "セットアップ、機能、構成、開発情報" : "Setup, features, architecture, and development"],
-                            [CONTRIBUTING_URL, "CONTRIBUTING.md", ja ? "開発・テスト・Pull Requestのガイド" : "Development, testing, and pull request guidance"],
-                            [ENDPOINTS_URL, "endpoints.md", ja ? "APIエンドポイントのリファレンス" : "Complete API endpoint reference"],
+                            [
+                                README_URL,
+                                "README.md",
+                                ja
+                                    ? "セットアップ、機能、構成、開発情報"
+                                    : "Setup, features, architecture, and development",
+                            ],
+                            [
+                                CONTRIBUTING_URL,
+                                "CONTRIBUTING.md",
+                                ja
+                                    ? "開発・テスト・Pull Requestのガイド"
+                                    : "Development, testing, and pull request guidance",
+                            ],
+                            [
+                                ENDPOINTS_URL,
+                                "endpoints.md",
+                                ja
+                                    ? "APIエンドポイントのリファレンス"
+                                    : "Complete API endpoint reference",
+                            ],
                         ].map(([href, label, description]) => (
                             <ListItem key={label} disableGutters>
                                 <ListItemText
-                                    primary={<Link href={href} target="_blank" rel="noopener noreferrer">{label}</Link>}
+                                    primary={
+                                        <Link href={href} target="_blank" rel="noopener noreferrer">
+                                            {label}
+                                        </Link>
+                                    }
                                     secondary={description}
                                 />
                             </ListItem>
@@ -308,14 +337,20 @@ function PrivacyPage({ ja }: { ja: boolean }) {
                         ? "実際のデータ保存期間、管理者のアクセス範囲、ログ、バックアップ、外部サービスの利用状況は、インスタンス運営者の設定とポリシーによって異なる場合があります。"
                         : "Actual retention periods, administrator access, logging, backups, and third-party services can vary according to the operator's configuration and policies."}
                 </Alert>
-                <SectionCard icon={Info} title={ja ? "保存される可能性がある情報" : "Information that may be stored"}>
+                <SectionCard
+                    icon={Info}
+                    title={ja ? "保存される可能性がある情報" : "Information that may be stored"}
+                >
                     <Typography variant="body2" color="text.secondary">
                         {ja
                             ? "アカウント情報、プロフィール情報、投稿とアップロード、コメント・リアクション・通知・レポートなど、サービス提供に必要なデータが保存される場合があります。"
                             : "Depending on enabled features, the service may store account and profile information, posts and uploads, comments, reactions, notifications, reports, and other data required to provide the service."}
                     </Typography>
                 </SectionCard>
-                <SectionCard icon={Security} title={ja ? "認証とアクセス" : "Authentication and access"}>
+                <SectionCard
+                    icon={Security}
+                    title={ja ? "認証とアクセス" : "Authentication and access"}
+                >
                     <Typography variant="body2" color="text.secondary">
                         {ja
                             ? "認証された機能はサーバー側で権限が確認されます。公開ページと管理ページではアクセスできる情報が異なります。"
@@ -329,7 +364,10 @@ function PrivacyPage({ ja }: { ja: boolean }) {
                             : "When federation is enabled, public activities and content may be sent to and stored by other servers. Public content can therefore be subject to the retention and privacy practices of remote instances."}
                     </Typography>
                 </SectionCard>
-                <SectionCard icon={Code} title={ja ? "解析・外部サービス" : "Analytics and third-party services"}>
+                <SectionCard
+                    icon={Code}
+                    title={ja ? "解析・外部サービス" : "Analytics and third-party services"}
+                >
                     <Typography variant="body2" color="text.secondary">
                         {ja
                             ? "管理者はGoogle Analytics 4やGoogle Tag Managerを設定できます。これらが有効かどうかはインスタンスの設定によります。"
@@ -388,7 +426,10 @@ function TermsPage({ ja }: { ja: boolean }) {
                             : "Keep your authentication credentials secure and do not share them with third parties. Report suspicious account activity to the instance operator."}
                     </Typography>
                 </SectionCard>
-                <SectionCard icon={GitHub} title={ja ? "ソフトウェアとライセンス" : "Software and licensing"}>
+                <SectionCard
+                    icon={GitHub}
+                    title={ja ? "ソフトウェアとライセンス" : "Software and licensing"}
+                >
                     <Typography variant="body2" color="text.secondary">
                         {ja
                             ? "imshareのソースコードとライセンス情報はGitHubリポジトリで確認できます。インスタンス上の投稿コンテンツや設定は、ソフトウェア本体とは別に扱われます。"

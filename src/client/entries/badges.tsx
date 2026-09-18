@@ -26,7 +26,12 @@ function BadgeCard({ badge, kind }: { badge: string; kind: "automatic" | "manual
         <Card variant="outlined">
             <CardContent>
                 <Stack spacing={1.25}>
-                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                    <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        justifyContent="space-between"
+                    >
                         <UserBadges user={{ badges: [badge] }} size="medium" />
                         <Chip size="small" variant="outlined" label={t(`badges.kind.${kind}`)} />
                     </Stack>
@@ -51,7 +56,9 @@ function BadgesPage() {
         <Page maxWidth="md" title={t("badges.title")}>
             <Stack spacing={2}>
                 <Stack spacing={0.5}>
-                    <Typography variant="h4" component="h1">{t("badges.title")}</Typography>
+                    <Typography variant="h4" component="h1">
+                        {t("badges.title")}
+                    </Typography>
                     <Typography color="text.secondary">{t("badges.description")}</Typography>
                 </Stack>
                 <Stack spacing={1.5}>
@@ -65,4 +72,9 @@ function BadgesPage() {
 }
 
 const root = document.querySelector("#badges-page");
-if (root) createRoot(root).render(<App><BadgesPage /></App>);
+if (root)
+    createRoot(root).render(
+        <App>
+            <BadgesPage />
+        </App>,
+    );

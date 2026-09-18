@@ -72,8 +72,13 @@ function parseOptions(argv: string[]): Options {
     if (options.audit && (options.apply || options.verifyOnly))
         throw new Error("--audit cannot be combined with --apply or --verify.");
 
-    if (options.importOrphanHash && (!options.importOrphanUserId || options.audit || options.verifyOnly))
-        throw new Error("--import-orphan requires --user and cannot be combined with --audit or --verify.");
+    if (
+        options.importOrphanHash &&
+        (!options.importOrphanUserId || options.audit || options.verifyOnly)
+    )
+        throw new Error(
+            "--import-orphan requires --user and cannot be combined with --audit or --verify.",
+        );
 
     if (options.importOrphanUserId && !options.importOrphanHash)
         throw new Error("--user can only be used with --import-orphan.");
@@ -130,7 +135,7 @@ async function findFileByHash(uploadDir: string, contentHash: string): Promise<s
 
     for (const relativeFilename of files) {
         const source = resolveUploadPath(uploadDir, relativeFilename);
-        if (await sha256File(source) === contentHash) return relativeFilename;
+        if ((await sha256File(source)) === contentHash) return relativeFilename;
     }
 
     return undefined;
@@ -182,7 +187,9 @@ async function main(): Promise<void> {
 
             const relativeSource = await findFileByHash(uploadDir, contentHash);
             if (!relativeSource) {
-                throw new Error("No file with SHA-256 " + contentHash + " was found under " + uploadDir);
+                throw new Error(
+                    "No file with SHA-256 " + contentHash + " was found under " + uploadDir,
+                );
             }
 
             const source = resolveUploadPath(uploadDir, relativeSource);
@@ -275,8 +282,7 @@ async function main(): Promise<void> {
                 throw error;
             }
 
-            if (relativeSource !== destinationFilename)
-                await unlink(source).catch(() => undefined);
+            if (relativeSource !== destinationFilename) await unlink(source).catch(() => undefined);
 
             console.log("IMPORTED " + uploadId + ": " + destinationFilename);
             return;
@@ -287,7 +293,7 @@ async function main(): Promise<void> {
             const referenced = new Map(
                 uploads.map((upload) => [upload.filename.replaceAll("\\\\", "/"), upload]),
             );
-            const byHash = new Map<string, typeof uploads[number][]>();
+            const byHash = new Map<string, (typeof uploads)[number][]>();
 
             for (const upload of uploads) {
                 if (!upload.contentHash) continue;
@@ -302,7 +308,13 @@ async function main(): Promise<void> {
             let pathMismatches = 0;
             const hashForAudit = new Map<string, string>();
 
-            console.log("Auditing " + files.length + " file(s) against " + uploads.length + " DB upload(s)...");
+            console.log(
+                "Auditing " +
+                    files.length +
+                    " file(s) against " +
+                    uploads.length +
+                    " DB upload(s)...",
+            );
 
             for (const relativeFilename of files) {
                 const normalized = relativeFilename.replaceAll("\\\\", "/");
@@ -314,19 +326,35 @@ async function main(): Promise<void> {
                     if (upload.contentHash !== hash) {
                         mismatched++;
                         console.error(
-                            "HASH MISMATCH " + upload.id + ": " + normalized +
-                                " database=" + String(upload.contentHash) + " file=" + hash,
+                            "HASH MISMATCH " +
+                                upload.id +
+                                ": " +
+                                normalized +
+                                " database=" +
+                                String(upload.contentHash) +
+                                " file=" +
+                                hash,
                         );
                     }
                     const expected = targetFilename(hash, path.extname(normalized).toLowerCase());
                     if (normalized !== expected) {
                         pathMismatches++;
-                        console.error("PATH MISMATCH " + upload.id + ": " + normalized + " expected=" + expected);
+                        console.error(
+                            "PATH MISMATCH " +
+                                upload.id +
+                                ": " +
+                                normalized +
+                                " expected=" +
+                                expected,
+                        );
                     }
                 } else {
                     const matches = byHash.get(hash) ?? [];
                     if (matches.length) {
-                        const expected = targetFilename(hash, path.extname(normalized).toLowerCase());
+                        const expected = targetFilename(
+                            hash,
+                            path.extname(normalized).toLowerCase(),
+                        );
                         console.log(
                             "DUPLICATE FILE " +
                                 normalized +
@@ -353,10 +381,19 @@ async function main(): Promise<void> {
             }
 
             console.log(
-                "Audit complete: " + files.length + " files, " + uploads.length +
-                    " DB uploads; " + unreferenced + " unreferenced, " + missing +
-                    " missing, " + mismatched + " hash mismatch(es), " +
-                    pathMismatches + " path mismatch(es).",
+                "Audit complete: " +
+                    files.length +
+                    " files, " +
+                    uploads.length +
+                    " DB uploads; " +
+                    unreferenced +
+                    " unreferenced, " +
+                    missing +
+                    " missing, " +
+                    mismatched +
+                    " hash mismatch(es), " +
+                    pathMismatches +
+                    " path mismatch(es).",
             );
 
             if (unreferenced || missing || mismatched || pathMismatches) process.exitCode = 1;

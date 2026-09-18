@@ -212,12 +212,10 @@ export function SearchAutocomplete({
                         ...(data?.tags ?? [])
                             .slice(0, 2)
                             .map((tag) => ({ label: tag.name, type: "tag" as const })),
-                        ...(data?.categories ?? [])
-                            .slice(0, 2)
-                            .map((category) => ({
-                                label: category.name,
-                                type: "category" as const,
-                            })),
+                        ...(data?.categories ?? []).slice(0, 2).map((category) => ({
+                            label: category.name,
+                            type: "category" as const,
+                        })),
                     ];
                     setOptions(
                         suggestions

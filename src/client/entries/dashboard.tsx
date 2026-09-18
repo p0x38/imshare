@@ -61,7 +61,9 @@ function DashboardPage() {
                     <Button variant="contained" component="a" href="/posts/new/">
                         {t("dashboardPage.newPost")}
                     </Button>
-                    <Button variant="outlined" component="a" href="/dashboard/analytics/">Analytics</Button>
+                    <Button variant="outlined" component="a" href="/dashboard/analytics/">
+                        Analytics
+                    </Button>
                     <Button variant="outlined" component="a" href="/dashboard/posts/">
                         {t("dashboardPage.managePosts")}
                     </Button>

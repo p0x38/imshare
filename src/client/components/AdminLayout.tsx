@@ -1,4 +1,15 @@
-import { Box, Card, CardContent, Divider, List, ListItemButton, ListItemIcon, ListItemText, Stack, Typography } from "@mui/material";
+import {
+    Box,
+    Card,
+    CardContent,
+    Divider,
+    List,
+    ListItemButton,
+    ListItemIcon,
+    ListItemText,
+    Stack,
+    Typography,
+} from "@mui/material";
 import Dashboard from "@mui/icons-material/Dashboard";
 import Group from "@mui/icons-material/Group";
 import Article from "@mui/icons-material/Article";
@@ -36,26 +47,47 @@ const sections: AdminNavSection[] = [
     },
     {
         label: "Instance",
-        items: [{ label: "Analytics", href: "/admin/analytics/", icon: <Insights /> },
-            { label: "Settings", href: "/admin/settings/", icon: <Settings /> }],
+        items: [
+            { label: "Analytics", href: "/admin/analytics/", icon: <Insights /> },
+            { label: "Settings", href: "/admin/settings/", icon: <Settings /> },
+        ],
     },
 ];
 
-export function AdminLayout({ title, description, activeHref, children }: PropsWithChildren<{
+export function AdminLayout({
+    title,
+    description,
+    activeHref,
+    children,
+}: PropsWithChildren<{
     title: string;
     description?: string;
     activeHref: string;
 }>) {
     return (
         <Page maxWidth="xl">
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "250px minmax(0, 1fr)" }, gap: { xs: 2, lg: 3 }, alignItems: "start" }}>
-                <Card variant="outlined" sx={{ position: { xs: "static", lg: "sticky" }, top: { lg: 88 } }}>
+            <Box
+                sx={{
+                    display: "grid",
+                    gridTemplateColumns: { xs: "1fr", lg: "250px minmax(0, 1fr)" },
+                    gap: { xs: 2, lg: 3 },
+                    alignItems: "start",
+                }}
+            >
+                <Card
+                    variant="outlined"
+                    sx={{ position: { xs: "static", lg: "sticky" }, top: { lg: 88 } }}
+                >
                     <CardContent sx={{ p: 1 }}>
                         <Stack spacing={1}>
                             {sections.map((section, index) => (
                                 <Box key={section.label}>
                                     {index > 0 ? <Divider sx={{ my: 1 }} /> : null}
-                                    <Typography variant="overline" color="text.secondary" sx={{ px: 1.5 }}>
+                                    <Typography
+                                        variant="overline"
+                                        color="text.secondary"
+                                        sx={{ px: 1.5 }}
+                                    >
                                         {section.label}
                                     </Typography>
                                     <List disablePadding>
@@ -67,7 +99,11 @@ export function AdminLayout({ title, description, activeHref, children }: PropsW
                                                 selected={activeHref === item.href}
                                                 sx={{ borderRadius: 1 }}
                                             >
-                                                {item.icon ? <ListItemIcon sx={{ minWidth: 38 }}>{item.icon}</ListItemIcon> : null}
+                                                {item.icon ? (
+                                                    <ListItemIcon sx={{ minWidth: 38 }}>
+                                                        {item.icon}
+                                                    </ListItemIcon>
+                                                ) : null}
                                                 <ListItemText primary={item.label} />
                                             </ListItemButton>
                                         ))}
@@ -80,8 +116,12 @@ export function AdminLayout({ title, description, activeHref, children }: PropsW
 
                 <Stack spacing={3} sx={{ minWidth: 0 }}>
                     <Stack spacing={0.5}>
-                        <Typography variant="h4" component="h1">{title}</Typography>
-                        {description ? <Typography color="text.secondary">{description}</Typography> : null}
+                        <Typography variant="h4" component="h1">
+                            {title}
+                        </Typography>
+                        {description ? (
+                            <Typography color="text.secondary">{description}</Typography>
+                        ) : null}
                     </Stack>
                     {children}
                 </Stack>

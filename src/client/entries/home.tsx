@@ -44,7 +44,9 @@ function HomePage() {
                     </Stack>
                     {texts.length ? (
                         <Stack spacing={1.5}>
-                            <Typography variant="h5" component="h2">Texts</Typography>
+                            <Typography variant="h5" component="h2">
+                                Texts
+                            </Typography>
                             <TextList texts={texts} />
                         </Stack>
                     ) : null}

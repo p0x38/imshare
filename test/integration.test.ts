@@ -120,7 +120,10 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         });
         expect(attachCategory.statusCode).toBe(200);
 
-        const search = await request({ method: "GET", url: "/api/v1/search?q=Integration&type=all" });
+        const search = await request({
+            method: "GET",
+            url: "/api/v1/search?q=Integration&type=all",
+        });
         expect(search.statusCode).toBe(200);
         expect(search.json().data.posts).toHaveLength(1);
 
@@ -188,7 +191,11 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         });
         expect(logout.statusCode).toBe(200);
 
-        const afterLogout = await request({ method: "GET", url: "/api/v1/me", headers: { cookie } });
+        const afterLogout = await request({
+            method: "GET",
+            url: "/api/v1/me",
+            headers: { cookie },
+        });
         expect(afterLogout.statusCode).toBe(401);
     } finally {
         await app.close();

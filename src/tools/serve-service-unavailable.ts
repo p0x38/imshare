@@ -6,8 +6,7 @@ const host = process.env.SERVICE_UNAVAILABLE_HOST?.trim() || "127.0.0.1";
 const port = Number(process.env.SERVICE_UNAVAILABLE_PORT ?? 5455);
 const statusCode = Number(process.env.SERVICE_UNAVAILABLE_STATUS ?? 503);
 const reason =
-    process.env.SERVICE_UNAVAILABLE_REASON?.trim() ||
-    "The service is temporarily unavailable.";
+    process.env.SERVICE_UNAVAILABLE_REASON?.trim() || "The service is temporarily unavailable.";
 const message =
     process.env.SERVICE_UNAVAILABLE_MESSAGE?.trim() ||
     "The upstream application is currently offline or undergoing maintenance.";
@@ -56,9 +55,8 @@ function escapeHtml(value: string): string {
     return value.replace(
         /[&<>"']/g,
         (character) =>
-            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-                character
-            ] ?? character,
+            ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character] ??
+            character,
     );
 }
 
