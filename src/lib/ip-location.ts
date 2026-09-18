@@ -29,7 +29,8 @@ function isPrivateOrReservedIp(ip: string): boolean {
     const version = isIP(ip);
     if (version === 4) {
         const parts = ip.split(".").map(Number);
-        const [a, b] = parts;
+        const a = parts[0] ?? 0;
+        const b = parts[1] ?? 0;
         return (
             a === 10 ||
             a === 127 ||
