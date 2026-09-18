@@ -22,6 +22,7 @@ model User {
   profileBannerUrl String?
   accentColor String?
   role String @default("user")
+  badgesJson String @default("[]")
   registrationStatus String @default("approved")
   isPublic Boolean @default(true)
   followApprovalRequired Boolean @default(false)
