@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 
 import { getSession } from "./lib/api.js";
 import { setRealtimeServer, setUserOnline, setUserOffline } from "./lib/realtime.js";
+import { observability } from "./instrumentation.js";
 
 export function attachRealtime(server: HttpServer): Server {
     const io = new Server(server, {
@@ -25,11 +26,15 @@ export function attachRealtime(server: HttpServer): Server {
     });
 
     io.on("connection", (socket) => {
+        observability.recordRealtimeConnection(1);
+        observability.recordRealtimeConnectionEvent("connected");
         const userId = socket.data.userId as string | undefined;
         if (userId) {
             void socket.join(`user:${userId}`);
             setUserOnline(userId);
         }
+
+        socket.onAny((event) => observability.recordRealtimeMessage(event));
 
         socket.on("post:subscribe", (postId: unknown) => {
             if (typeof postId !== "string" || postId.length > 128) return;
@@ -42,6 +47,8 @@ export function attachRealtime(server: HttpServer): Server {
         });
 
         socket.on("disconnect", () => {
+            observability.recordRealtimeConnection(-1);
+            observability.recordRealtimeConnectionEvent("disconnected");
             if (userId) setUserOffline(userId);
         });
     });
