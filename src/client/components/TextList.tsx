@@ -117,7 +117,6 @@ function TextCard({
                 <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
                     <Typography fontWeight={700}>{author}</Typography>
                     {handle ? <Typography color="text.secondary">{handle}</Typography> : null}
-                    <UserBadges user={text.author ?? { badges: [] }} compact />
                     <Typography color="text.secondary" variant="body2">
                         · {text.createdAt ? new Date(text.createdAt).toLocaleString() : ""}
                     </Typography>
