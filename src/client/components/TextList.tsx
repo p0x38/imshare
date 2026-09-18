@@ -10,6 +10,7 @@ import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import { useEffect, useState } from "react";
 import type { Post } from "../lib/types";
 import { api } from "../lib/api";
+import { UserBadges } from "./UserBadges";
 
 function TextCard({
     text,
@@ -117,6 +118,7 @@ function TextCard({
                 <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
                     <Typography fontWeight={700}>{author}</Typography>
                     {handle ? <Typography color="text.secondary">{handle}</Typography> : null}
+                    <UserBadges user={text.author ?? { badges: [] }} compact />
                     <Typography color="text.secondary" variant="body2">
                         · {text.createdAt ? new Date(text.createdAt).toLocaleString() : ""}
                     </Typography>
