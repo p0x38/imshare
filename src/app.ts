@@ -15,7 +15,7 @@ import { metaRoutes } from "./routes/meta.js";
 import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
 import { registerOpenApi } from "./lib/openapi.js";
-import { setupObservability } from "./lib/observability.js";
+import { observability } from "./instrumentation.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -95,12 +95,8 @@ export async function buildApp() {
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
     const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
-    const observability = await setupObservability(app, {
-        ...config.observability,
-        serviceName: config.site.name,
-        serviceVersion: config.site.version,
-    });
     app.decorate("observability", observability);
+    observability.register(app);
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
