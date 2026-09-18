@@ -578,5 +578,35 @@
                 "howToEarn": "管理者が付与します。"
             }
         }
+    },
+    "accountPreferences": {
+        "title": "設定",
+        "privacy": "プライバシー",
+        "postingDefaults": "投稿の既定値",
+        "security": "セキュリティ",
+        "notifications": "通知",
+        "profileVisibility": "プロフィールの公開範囲",
+        "allowProfile": "他のユーザーにプロフィールを表示する",
+        "showPosts": "公開投稿をプロフィールに表示する",
+        "showHandle": "カスタムハンドルを公開する",
+        "showEmail": "メールアドレスを公開する",
+        "allowIndex": "検索エンジンによるプロフィールのインデックス登録を許可する",
+        "socialVisibility": "ソーシャル公開設定",
+        "allowFollow": "他のユーザーからフォローできるようにする",
+        "followApproval": "新しいフォロワーの承認を必要とする",
+        "showFollowers": "フォロワー一覧を他のユーザーに表示する",
+        "showFollowing": "フォロー中のユーザーを他のユーザーに表示する",
+        "defaultCategory": "既定のカテゴリ",
+        "defaultVisibility": "既定の投稿公開範囲",
+        "allowDownloads": "デフォルトでダウンロードを許可する",
+        "contentWarning": "既定のコンテンツ警告",
+        "none": "なし",
+        "public": "公開",
+        "unlisted": "限定公開",
+        "private": "非公開",
+        "save": "設定を保存",
+        "saving": "保存中…",
+        "loadError": "アカウント設定を読み込めませんでした。",
+        "saveError": "アカウント設定を保存できませんでした。"
     }
 }
