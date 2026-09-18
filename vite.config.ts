@@ -45,9 +45,6 @@ export default defineConfig({
                     process.cwd(),
                     "src/client/entries/admin-settings.tsx",
                 ),
-                "admin-settings": path.resolve(
-                    process.cwd(), "src/client/entries/admin-settings.tsx",
-                ),
                 "admin-analytics": path.resolve(process.cwd(), "src/client/entries/admin-analytics.tsx"),
                 faq: path.resolve(process.cwd(), "src/client/entries/faq.tsx"),
                 "static-pages": path.resolve(process.cwd(), "src/client/entries/static-pages.tsx"),
