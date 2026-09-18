@@ -13,7 +13,7 @@ import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 
 interface Profile { id: string; name: string; handle?: string | null; badges?: string[]; bio?: string | null; avatarUrl?: string | null; profileBannerUrl?: string | null; websiteUrl?: string | null; githubUrl?: string | null; profileLinks?: Array<{ id: string; label: string; url: string }>; createdAt: string; allowSearchEngineIndex: boolean; stats: { posts: number; followers: number | null; following: number | null }; followStatus: "pending" | "approved" | null; isFollowing: boolean; canFollow: boolean; }
-interface RelationshipUser { id: string; name: string; handle?: string | null; image?: string | null; avatarUrl: string; }
+interface RelationshipUser { id: string; name: string; handle?: string | null; image?: string | null; avatarUrl: string; badges?: string[]; }
 type ProfileTab = "posts" | "about" | "followers" | "following";
 
 function RelationshipList({ value, kind }: { value: string; kind: "followers" | "following" }) {
@@ -22,7 +22,10 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
     if (loading) return <LoadingState label={`Loading ${kind}…`} />;
     if (error) return <Alert severity="error">{error}</Alert>;
     if (!items.length) return <Card variant="outlined"><CardContent><Typography color="text.secondary">No {kind} to show.</Typography></CardContent></Card>;
-    return <Card variant="outlined"><List>{items.map((item, index) => <Box key={item.id}><ListItem component="a" href={item.handle ? `/users/@${encodeURIComponent(item.handle)}` : `/users/${encodeURIComponent(item.id)}`} sx={{ textDecoration: "none", color: "inherit" }}><ListItemAvatar><Avatar src={item.avatarUrl}>{item.name.charAt(0).toUpperCase()}</Avatar></ListItemAvatar><ListItemText primary={item.name} secondary={item.handle ? `@${item.handle}` : undefined} /></ListItem>{index < items.length - 1 ? <Divider component="li" /> : null}</Box>)}</List></Card>;
+    return <Card variant="outlined"><List>{items.map((item, index) => <Box key={item.id}><ListItem component="a" href={item.handle ? `/users/@${encodeURIComponent(item.handle)}` : `/users/${encodeURIComponent(item.id)}`} sx={{ textDecoration: "none", color: "inherit" }}><ListItemAvatar><Avatar src={item.avatarUrl}>{item.name.charAt(0).toUpperCase()}</Avatar></ListItemAvatar><ListItemText
+                            primary={<Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap><Typography>{item.name}</Typography><UserBadges user={item} compact /></Stack>}
+                            secondary={item.handle ? `@${item.handle}` : undefined}
+                        /></ListItem>{index < items.length - 1 ? <Divider component="li" /> : null}</Box>)}</List></Card>;
 }
 
 function ProfilePage() {
