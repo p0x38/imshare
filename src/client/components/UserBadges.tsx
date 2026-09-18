@@ -19,7 +19,15 @@ const definitions: Record<string, { label: string; icon: typeof AdminPanelSettin
     supporter: { label: "Supporter", icon: FavoriteOutlinedIcon },
 };
 
-export function UserBadges({ user, size = "small" }: { user: Pick<User, "badges">; size?: "small" | "medium" }) {
+export function UserBadges({
+    user,
+    size = "small",
+    compact = false,
+}: {
+    user: Pick<User, "badges">;
+    size?: "small" | "medium";
+    compact?: boolean;
+}) {
     if (!user.badges?.length) return null;
     return (
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -32,8 +40,19 @@ export function UserBadges({ user, size = "small" }: { user: Pick<User, "badges"
                         <Chip
                             size={size}
                             icon={<Icon />}
-                            label={definition.label}
+                            label={compact ? undefined : definition.label}
                             variant="outlined"
+                            aria-label={definition.label}
+                            sx={
+                                compact
+                                    ? {
+                                          width: size === "medium" ? 34 : 28,
+                                          height: size === "medium" ? 34 : 28,
+                                          "& .MuiChip-icon": { margin: 0 },
+                                          "& .MuiChip-label": { display: "none" },
+                                      }
+                                    : undefined
+                            }
                         />
                     </Tooltip>
                 );
