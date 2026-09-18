@@ -1,3 +1,4 @@
+// src/lib/api.ts
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { auth, prisma } from "./auth.js";
 import { hasRole, type UserRole } from "./permissions.js";
@@ -5,9 +6,16 @@ import { hasRole, type UserRole } from "./permissions.js";
 export type SessionUser = typeof auth.$Infer.Session.user;
 
 export async function getSession(request: FastifyRequest) {
-    const session = await auth.api.getSession({
-        headers: request.headers as HeadersInit,
-    });
+    let session;
+
+    try {
+        session = await auth.api.getSession({
+            headers: request.headers as HeadersInit,
+        });
+    } catch (error) {
+        console.error("[auth] getSession failed:", error);
+        throw error;
+    }
 
     if (!session) return null;
 
@@ -17,7 +25,9 @@ export async function getSession(request: FastifyRequest) {
     });
 
     if (!user) return null;
-    if (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date())) return null;
+    if (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date())) {
+        return null;
+    }
 
     return session;
 }
@@ -53,6 +63,7 @@ export async function requireRole(
         where: { id: user.id },
         select: { role: true },
     });
+
     if (!roleRecord || !hasRole(roleRecord.role, requiredRole)) {
         await reply.code(403).send({
             error: {
@@ -85,7 +96,12 @@ export function collection<T>(data: T[], page: number, limit: number, total: num
 export function parsePagination(query: Record<string, unknown>) {
     const page = Math.max(1, Number(query.page ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit ?? 24) || 24));
-    return { page, limit, skip: (page - 1) * limit };
+
+    return {
+        page,
+        limit,
+        skip: (page - 1) * limit,
+    };
 }
 
 export function parseOrder(value: unknown): "asc" | "desc" {
