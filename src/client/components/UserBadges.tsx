@@ -10,6 +10,7 @@ import EmojiEventsOutlinedIcon from "@mui/icons-material/EmojiEventsOutlined";
 import CodeOutlinedIcon from "@mui/icons-material/CodeOutlined";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import CollectionsBookmarkOutlinedIcon from "@mui/icons-material/CollectionsBookmarkOutlined";
+import { useTranslation } from "react-i18next";
 import type { User } from "../lib/types";
 
 const definitions: Record<string, { label: string; icon: typeof AdminPanelSettingsOutlinedIcon }> = {
@@ -36,6 +37,7 @@ export function UserBadges({
     size?: "small" | "medium";
     compact?: boolean;
 }) {
+    const { t } = useTranslation();
     if (!user.badges?.length) return null;
     return (
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
@@ -44,13 +46,13 @@ export function UserBadges({
                 if (!definition) return null;
                 const Icon = definition.icon;
                 return (
-                    <Tooltip key={badge} title={definition.label}>
+                    <Tooltip key={badge} title={t(`badges.items.${badge}.name`)}>
                         <Chip
                             size={size}
                             icon={<Icon />}
-                            label={compact ? undefined : definition.label}
+                            label={compact ? undefined : t(`badges.items.${badge}.name`)}
                             variant="outlined"
-                            aria-label={definition.label}
+                            aria-label={t(`badges.items.${badge}.name`)}
                             sx={
                                 compact
                                     ? {
