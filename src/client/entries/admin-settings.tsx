@@ -41,17 +41,22 @@ function AdminSettingsPage() {
     const [mailLoading, setMailLoading] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
+    const [rawConfig, setRawConfig] = useState("");
+    const [configLoading, setConfigLoading] = useState(false);
+    const [configSaving, setConfigSaving] = useState(false);
     useEffect(() => {
         void (async () => {
             try {
-                const [settings, token] = await Promise.all([
+                const [settings, token, configFile] = await Promise.all([
                     api<{ data: Config }>("/v1/admin/settings"),
                     api<{ data: RegistrationToken }>("/v1/admin/registration-token"),
+                    api<{ data: { content: string } }>("/v1/admin/config"),
                 ]);
                 setConfig(settings.data);
                 setGa(settings.data.analytics?.googleAnalyticsMeasurementId ?? "");
                 setGtm(settings.data.analytics?.googleTagManagerContainerId ?? "");
                 setRegistrationToken(token.data);
+                setRawConfig(configFile.data.content);
             } catch (e) {
                 setError(e instanceof Error ? e.message : "Failed to load settings.");
             }
@@ -123,6 +128,26 @@ function AdminSettingsPage() {
             setError(e instanceof Error ? e.message : "Failed to send test email.");
         } finally {
             setMailLoading(false);
+        }
+    }
+    async function saveRawConfig() {
+        setConfigSaving(true);
+        setError("");
+        setNotice("");
+        try {
+            const result = await api<{ data: { restartRequired: boolean } }>("/v1/admin/config", {
+                method: "PUT",
+                body: JSON.stringify({ content: rawConfig }),
+            });
+            setNotice(
+                result.data.restartRequired
+                    ? "Configuration saved. Restart imshare for server-wide changes to take effect."
+                    : "Configuration saved.",
+            );
+        } catch (e) {
+            setError(e instanceof Error ? e.message : "Failed to save configuration.");
+        } finally {
+            setConfigSaving(false);
         }
     }
     async function saveFeatures() {
