@@ -161,7 +161,7 @@ observability {
 }
 ```
 
-When enabled, imshare exposes HTTP request counters, request duration histograms, active requests, uptime, memory, and CPU metrics. Prometheus uses the configured scrape path; OpenTelemetry exports OTLP/HTTP JSON periodically. Keep the metrics endpoint behind a trusted network boundary or reverse-proxy authentication if it should not be public.
+When enabled, imshare exposes HTTP request counters, request duration histograms, active requests, uptime, memory, and CPU metrics through the OpenTelemetry SDK. Prometheus uses the configured scrape path; OpenTelemetry exports metrics through the official OTLP/HTTP protobuf exporter. Keep the metrics endpoint behind a trusted network boundary or reverse-proxy authentication if it should not be public.
 
 The admin **Analytics** page provides first-party aggregates from the existing database, including post views, signed-in unique viewers, new users/posts, comments, reactions, uploads, daily view trends, and most-viewed posts. Anonymous visitors are not treated as unique viewers.
 
