@@ -7,6 +7,7 @@ export interface Upload {
     mimeType?: string;
     size?: number;
     createdAt?: string;
+    updatedAt?: string;
     thumbhash?: string | null;
 }
 
@@ -17,6 +18,8 @@ export interface Author {
     handle?: string | null;
     avatarUrl?: string | null;
     image?: string | null;
+    role?: string;
+    badges?: string[];
 }
 
 export interface Post {
