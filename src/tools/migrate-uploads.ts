@@ -29,7 +29,7 @@ function parseOptions(argv: string[]): Options {
         else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
-                    "Usage: pnpm migrate:uploads [--apply] [--delete-legacy] [--verify]",
+                    "Usage: pnpm migrate:uploads [--apply] [--delete-legacy] [--verify] [--audit]",
                     "",
                     "Without --apply, the migration is a dry run.",
                     "--apply          Move files and update database records.",
@@ -38,7 +38,7 @@ function parseOptions(argv: string[]): Options {
                     "--audit          Scan upload files and reconcile them with the database.",
                 ].join("\n"),
             );
-            return;
+            process.exit(0);
         } else {
             throw new Error("Unknown option: " + arg);
         }
