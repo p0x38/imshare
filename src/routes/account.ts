@@ -20,6 +20,80 @@ const preferenceSchema = {
 };
 
 export const accountRoutes: FastifyPluginAsync = async (fastify) => {
+    fastify.get("/v1/me/analytics", {
+        schema: openapi({
+            tags: "Account",
+            summary: "Get creator analytics",
+            description: "Returns analytics for posts owned by the authenticated user.",
+            operationId: "getMyAnalytics",
+            parameters: [
+                parameter.query("days", { type: "integer", minimum: 7, maximum: 90, default: 30 }, { description: "Recent period in days." }),
+            ],
+            responses: {
+                "200": { description: "Creator analytics for the authenticated user's posts." },
+                "401": { $ref: "#/components/responses/Unauthorized" },
+            },
+        }),
+    }, async (request, reply) => {
+        const user = await requireUser(request, reply); if (!user) return;
+        const days = Math.min(Math.max(Number((request.query as { days?: unknown }).days) || 30, 7), 90);
+        const since = new Date(Date.now() - days * 86_400_000);
+        const [postTotals, recentViews, recentComments, recentReactions, recentUploads, recentUniqueViewers, recentViewTrend, topPosts] = await Promise.all([
+            prisma.post.aggregate({
+                where: { userId: user.id },
+                _count: { _all: true },
+            }),
+            prisma.postView.count({ where: { viewedAt: { gte: since }, post: { userId: user.id } } }),
+            prisma.comment.count({ where: { createdAt: { gte: since }, post: { userId: user.id } } }),
+            prisma.postReaction.count({ where: { createdAt: { gte: since }, post: { userId: user.id } } }),
+            prisma.upload.count({ where: { createdAt: { gte: since }, userId: user.id } }),
+            prisma.postView.findMany({
+                where: { viewedAt: { gte: since }, userId: { not: null }, post: { userId: user.id } },
+                distinct: ["userId"],
+                select: { userId: true },
+            }),
+            prisma.$queryRaw<Array<{ day: string; views: number | bigint }>>\`SELECT date("viewedAt") AS day, COUNT(*) AS views FROM "post_view" WHERE "viewedAt" >= \${since} AND "postId" IN (SELECT "id" FROM "post" WHERE "userId" = \${user.id}) GROUP BY date("viewedAt") ORDER BY day ASC\`,
+            prisma.postView.groupBy({
+                by: ["postId"],
+                where: { viewedAt: { gte: since }, post: { userId: user.id } },
+                _count: { _all: true },
+                orderBy: { _count: { postId: "desc" } },
+                take: 10,
+            }),
+        ]);
+        const allTime = await Promise.all([
+            prisma.postView.count({ where: { post: { userId: user.id } } }),
+            prisma.comment.count({ where: { post: { userId: user.id } } }),
+            prisma.postReaction.count({ where: { post: { userId: user.id } } }),
+            prisma.upload.count({ where: { userId: user.id } }),
+            prisma.follow.count({ where: { followingId: user.id, status: "approved" } }),
+        ]);
+        const topIds = topPosts.map((row) => row.postId);
+        const titles = topIds.length
+            ? new Map((await prisma.post.findMany({ where: { id: { in: topIds } }, select: { id: true, title: true } })).map((post) => [post.id, post.title]))
+            : new Map<string, string>();
+        return ok({
+            periodDays: days,
+            totals: {
+                posts: postTotals._count._all,
+                views: allTime[0],
+                comments: allTime[1],
+                reactions: allTime[2],
+                uploads: allTime[3],
+                followers: allTime[4],
+            },
+            recent: {
+                views: recentViews,
+                comments: recentComments,
+                reactions: recentReactions,
+                uploads: recentUploads,
+                uniqueViewers: recentUniqueViewers.length,
+            },
+            viewsByDay: recentViewTrend.map((row) => ({ day: row.day, views: Number(row.views) })),
+            topPosts: topPosts.map((row) => ({ postId: row.postId, title: titles.get(row.postId) ?? "Untitled", views: row._count._all })),
+        });
+    });
+
     fastify.get("/v1/me/preferences", {
         schema: openapi({
             tags: "Account", summary: "Get account preferences", description: "Returns privacy and default-post preferences for the authenticated user.", operationId: "getMyPreferences",
