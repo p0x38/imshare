@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { createHash, randomUUID } from "node:crypto";
-import { createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream } from "node:fs";
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -56,7 +56,10 @@ function hasImageSignature(buffer: Buffer, extension: string): boolean {
     }
 }
 function uploadView(upload: any) {
-    return { ...upload, url: `/v1/posts/image/${encodeURIComponent(upload.id)}` };
+    return {
+        ...upload,
+        url: `/uploads/${String(upload.filename).replaceAll("\\", "/")}`,
+    };
 }
 
 export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
@@ -192,7 +195,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 await unlink(temporaryPath).catch(() => undefined);
                 const filename = `${contentHash}${ext}`;
-                const destination = path.join(uploadDir, filename);
+                const relativeFilename = path.posix.join(
+                    contentHash.slice(0, 2),
+                    contentHash.slice(0, 4),
+                    filename,
+                );
+                const destination = path.join(uploadDir, relativeFilename);
+                await mkdir(path.dirname(destination), { recursive: true });
                 await writeFile(destination, normalized, { flag: "wx" }).catch(
                     (error: NodeJS.ErrnoException) => {
                         if (error.code !== "EEXIST") throw error;
@@ -275,6 +284,48 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 .send({ error: { code: "FORBIDDEN", message: "You do not own this upload." } });
         return ok(uploadView(upload));
     });
+    fastify.get("/uploads/*", async (request, reply) => {
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll("\\", "/");
+        if (!rawPath || rawPath.includes(".."))
+            return reply.code(404).send({
+                error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },
+            });
+
+        const upload = await prisma.upload.findFirst({
+            where: { filename: rawPath },
+            select: { filename: true, mimeType: true, contentHash: true, size: true },
+        });
+        if (!upload)
+            return reply.code(404).send({
+                error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },
+            });
+
+        const source = path.resolve(uploadDir, upload.filename);
+        const relative = path.relative(uploadDir, source);
+        if (relative.startsWith("..") || path.isAbsolute(relative))
+            return reply.code(404).send({
+                error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },
+            });
+
+        try {
+            const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
+            reply
+                .header("Cache-Control", "public, max-age=31536000, immutable")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Length", String(upload.size));
+            if (etag) {
+                reply.header("ETag", etag);
+                if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+            }
+            reply.type(upload.mimeType);
+            return reply.send(createReadStream(source));
+        } catch {
+            return reply.code(404).send({
+                error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." },
+            });
+        }
+    });
+
     fastify.delete("/v1/uploads/:uploadId", async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
