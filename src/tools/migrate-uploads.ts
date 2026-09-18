@@ -1,16 +1,20 @@
-import { createHash } from "node:crypto";
-import { access, copyFile, mkdir, readFile, readdir, unlink } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { access, copyFile, mkdir, readFile, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
 import { env } from "../lib/env.js";
 import { loadConfig } from "../lib/config.js";
+import { generateThumbHash } from "../lib/thumbnails.js";
+import sharp from "sharp";
 
 interface Options {
     apply: boolean;
     deleteLegacy: boolean;
     verifyOnly: boolean;
     audit: boolean;
+    importOrphanHash?: string;
+    importOrphanUserId?: string;
 }
 
 function parseOptions(argv: string[]): Options {
@@ -21,21 +25,36 @@ function parseOptions(argv: string[]): Options {
         audit: false,
     };
 
-    for (const arg of argv) {
+    for (let index = 0; index < argv.length; index++) {
+        const arg = argv[index];
+
         if (arg === "--apply") options.apply = true;
         else if (arg === "--delete-legacy") options.deleteLegacy = true;
         else if (arg === "--verify") options.verifyOnly = true;
         else if (arg === "--audit") options.audit = true;
-        else if (arg === "--help" || arg === "-h") {
+        else if (arg === "--import-orphan") {
+            const value = argv[++index];
+            if (!value) throw new Error("--import-orphan requires a SHA-256 hash.");
+            if (!/^[a-f0-9]{64}$/i.test(value))
+                throw new Error("--import-orphan requires a 64-character SHA-256 hash.");
+            options.importOrphanHash = value.toLowerCase();
+        } else if (arg === "--user") {
+            const value = argv[++index];
+            if (!value) throw new Error("--user requires a user ID.");
+            options.importOrphanUserId = value;
+        } else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
-                    "Usage: pnpm migrate:uploads [--apply] [--delete-legacy] [--verify] [--audit]",
+                    "Usage: pnpm migrate:uploads [options]",
                     "",
-                    "Without --apply, the migration is a dry run.",
-                    "--apply          Move files and update database records.",
-                    "--delete-legacy  Remove old flat files after a successful migration.",
-                    "--verify         Verify existing sharded upload files only.",
-                    "--audit          Scan upload files and reconcile them with the database.",
+                    "Without --apply, migrations and imports are dry runs.",
+                    "--apply                         Apply filesystem and database changes.",
+                    "--delete-legacy                Remove old flat files after a successful migration.",
+                    "--verify                       Verify existing sharded upload files only.",
+                    "--audit                        Scan upload files and reconcile them with the database.",
+                    "--import-orphan <sha256> --user <id>",
+                    "                                Adopt an unreferenced image into the database.",
+                    "--help                         Show this help.",
                 ].join("\n"),
             );
             process.exit(0);
@@ -52,6 +71,12 @@ function parseOptions(argv: string[]): Options {
 
     if (options.audit && (options.apply || options.verifyOnly))
         throw new Error("--audit cannot be combined with --apply or --verify.");
+
+    if (options.importOrphanHash && (!options.importOrphanUserId || options.audit || options.verifyOnly))
+        throw new Error("--import-orphan requires --user and cannot be combined with --audit or --verify.");
+
+    if (options.importOrphanUserId && !options.importOrphanHash)
+        throw new Error("--user can only be used with --import-orphan.");
 
     return options;
 }
@@ -100,6 +125,17 @@ async function sha256File(filePath: string): Promise<string> {
     return createHash("sha256").update(bytes).digest("hex");
 }
 
+async function findFileByHash(uploadDir: string, contentHash: string): Promise<string | undefined> {
+    const files = await collectFiles(uploadDir);
+
+    for (const relativeFilename of files) {
+        const source = resolveUploadPath(uploadDir, relativeFilename);
+        if (await sha256File(source) === contentHash) return relativeFilename;
+    }
+
+    return undefined;
+}
+
 async function main(): Promise<void> {
     const options = parseOptions(process.argv.slice(2));
     const config = await loadConfig();
@@ -117,6 +153,134 @@ async function main(): Promise<void> {
             },
             orderBy: { createdAt: "asc" },
         });
+
+        if (options.importOrphanHash) {
+            const contentHash = options.importOrphanHash;
+            const userId = options.importOrphanUserId!;
+
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true },
+            });
+            if (!user) throw new Error("User not found: " + userId);
+
+            const existing = await prisma.upload.findUnique({
+                where: { userId_contentHash: { userId, contentHash } },
+                select: { id: true, filename: true },
+            });
+            if (existing) {
+                console.log(
+                    "ALREADY REGISTERED " +
+                        contentHash +
+                        ": upload " +
+                        existing.id +
+                        " -> " +
+                        existing.filename,
+                );
+                return;
+            }
+
+            const relativeSource = await findFileByHash(uploadDir, contentHash);
+            if (!relativeSource) {
+                throw new Error("No file with SHA-256 " + contentHash + " was found under " + uploadDir);
+            }
+
+            const source = resolveUploadPath(uploadDir, relativeSource);
+            const sourceStats = await stat(source);
+            const extension = path.extname(relativeSource).toLowerCase();
+            const mimeTypes: Record<string, string> = {
+                ".jpg": "image/jpeg",
+                ".jpeg": "image/jpeg",
+                ".png": "image/png",
+                ".gif": "image/gif",
+                ".webp": "image/webp",
+                ".bmp": "image/bmp",
+                ".avif": "image/avif",
+            };
+            const mimeType = mimeTypes[extension];
+            if (!mimeType) throw new Error("Unsupported image extension: " + extension);
+
+            const metadata = await sharp(source, { animated: true }).metadata();
+            if (!metadata.width || !metadata.height)
+                throw new Error("Unable to read image dimensions: " + relativeSource);
+
+            const thumbhash = await generateThumbHash(source);
+            const metadataJson = JSON.stringify({
+                format: metadata.format,
+                width: metadata.width,
+                height: metadata.height,
+                channels: metadata.channels,
+                depth: metadata.depth,
+                space: metadata.space,
+                density: metadata.density,
+                orientation: metadata.orientation,
+                hadExif: Boolean(metadata.exif),
+                hadIccProfile: Boolean(metadata.icc),
+                isProgressive: metadata.isProgressive,
+                pages: metadata.pages,
+                pageHeight: metadata.pageHeight,
+                loop: metadata.loop,
+            });
+
+            const destinationFilename = targetFilename(contentHash, extension);
+            const destination = resolveUploadPath(uploadDir, destinationFilename);
+            const canonicalPath = path.resolve(uploadDir, destinationFilename);
+
+            console.log(
+                (options.apply ? "IMPORT " : "WOULD IMPORT ") +
+                    relativeSource +
+                    " -> " +
+                    destinationFilename +
+                    " as user " +
+                    userId,
+            );
+
+            if (!options.apply) return;
+
+            let destinationExists = true;
+            try {
+                await access(destination);
+            } catch {
+                destinationExists = false;
+            }
+
+            if (!destinationExists) {
+                await mkdir(path.dirname(destination), { recursive: true });
+                await copyFile(source, destination);
+                if ((await sha256File(destination)) !== contentHash) {
+                    await unlink(destination).catch(() => undefined);
+                    throw new Error("Copied orphan failed SHA-256 verification.");
+                }
+            }
+
+            const uploadId = randomUUID();
+            try {
+                await prisma.upload.create({
+                    data: {
+                        id: uploadId,
+                        filename: destinationFilename,
+                        originalName: path.basename(relativeSource),
+                        mimeType,
+                        size: Number(sourceStats.size),
+                        width: metadata.width,
+                        height: metadata.height,
+                        contentHash,
+                        thumbhash,
+                        metadataJson,
+                        userId,
+                    },
+                });
+            } catch (error) {
+                if (!destinationExists) await unlink(canonicalPath).catch(() => undefined);
+                throw error;
+            }
+
+            if (relativeSource !== destinationFilename)
+                await unlink(source).catch(() => undefined);
+
+            console.log("IMPORTED " + uploadId + ": " + destinationFilename);
+            return;
+        }
 
         if (options.audit) {
             const files = await collectFiles(uploadDir);
