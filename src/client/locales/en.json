@@ -450,6 +450,31 @@
                         "answer": "The current implementation handles Follow, Undo of Follow, Accept, Reject, public Create activities, and Delete activities. Unsupported activity types are rejected."
                     }
                 ]
+            },
+            "badges": {
+                "title": "Badges",
+                "items": [
+                    {
+                        "question": "What are user badges?",
+                        "answer": "Badges identify roles, milestones, and contributions associated with an account. Hover over a badge icon to see its name."
+                    },
+                    {
+                        "question": "Which badges are automatic?",
+                        "answer": "Admin and Moderator badges follow account roles. Veteran is automatically shown after an account has existed for one year."
+                    },
+                    {
+                        "question": "Can users assign badges to themselves?",
+                        "answer": "No. Manual badges are controlled by instance administrators."
+                    },
+                    {
+                        "question": "Where can I see all available badges?",
+                        "answer": "The Badges page lists every badge, what it means, and how it is earned."
+                    },
+                    {
+                        "question": "Can a badge be removed?",
+                        "answer": "Manual badges can be revoked by an administrator. Automatic role badges disappear when the corresponding role is removed, while Veteran is based on account age."
+                    }
+                ]
             }
         }
     },
