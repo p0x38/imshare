@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseConfigDsl, stringifyConfigDsl } from "./config-dsl.js";
 import { getOpenIdProviderId } from "./openid.js";
@@ -10,6 +10,13 @@ export interface ServerConfig {
     server: { host: string; port: number };
     storage: { uploadDirectory: string; maxFileSize: number };
     site: { name: string; version: string; description?: string };
+    admin?: {
+        local?: {
+            enabled?: boolean;
+            host?: string;
+            port?: number;
+        };
+    };
     auth: {
         baseUrl?: string;
         appendPort?: boolean;
@@ -93,6 +100,7 @@ const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
 const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     site: { description: "Self-hosted image archive and sharing server" },
+    admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
     auth: {
         emailAndPasswordEnabled: true,
         appendPort: true,
@@ -115,6 +123,22 @@ const DEFAULTS = {
     },
     limits: { textPostCharacters: 500 },
 } as const;
+
+export async function readConfigText(): Promise<string> {
+    return readFile(configPath, "utf8");
+}
+
+export function validateConfigText(content: string): ServerConfig {
+    return parseConfig(content);
+}
+
+export async function saveConfigText(content: string): Promise<ServerConfig> {
+    const validated = validateConfigText(content);
+    const temporaryPath = `${configPath}.tmp`;
+    await writeFile(temporaryPath, content.trimEnd() + "\n", "utf8");
+    await rename(temporaryPath, configPath);
+    return validated;
+}
 
 export async function loadConfig(): Promise<ServerConfig> {
     return parseConfig(await readFile(configPath, "utf8"));
@@ -197,6 +221,11 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
+        admin: {
+            ...DEFAULTS.admin,
+            ...config.admin,
+            local: { ...DEFAULTS.admin.local, ...config.admin?.local },
+        },
         auth: {
             ...config.auth,
             emailAndPasswordEnabled:
@@ -215,6 +244,7 @@ function isServerConfig(value: unknown): value is ServerConfig {
     const server = config.server,
         storage = config.storage,
         site = config.site,
+        admin = config.admin,
         auth = config.auth,
         features = config.features,
         limits = config.limits,
@@ -237,6 +267,21 @@ function isServerConfig(value: unknown): value is ServerConfig {
         typeof site.name === "string" &&
         typeof site.version === "string" &&
         (site.description === undefined || typeof site.description === "string") &&
+        (admin === undefined ||
+            (isObject(admin) &&
+                (admin.local === undefined ||
+                    (isObject(admin.local) &&
+                        (admin.local.enabled === undefined || typeof admin.local.enabled === "boolean") &&
+                        (admin.local.host === undefined ||
+                            admin.local.host === "127.0.0.1" ||
+                            admin.local.host === "localhost" ||
+                            admin.local.host === "::1") &&
+                        (admin.local.port === undefined ||
+                            (typeof admin.local.port === "number" &&
+                                Number.isInteger(admin.local.port) &&
+                                admin.local.port > 0 &&
+                                admin.local.port <= 65535)) &&
+                        (admin.local.port === undefined || admin.local.port !== server.port))))) &&
         isObject(auth) &&
         (auth.baseUrl === undefined ||
             (typeof auth.baseUrl === "string" && auth.baseUrl.length > 0)) &&
