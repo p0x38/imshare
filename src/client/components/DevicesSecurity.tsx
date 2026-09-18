@@ -23,16 +23,15 @@ import { useEffect, useMemo, useState } from "react";
 
 import { SecuritySettings } from "./SecuritySettings";
 import { api } from "../lib/api";
-import { authClient } from "../lib/auth-client";
 
 interface SessionInfo {
     id: string;
-    token: string;
     expiresAt: string | Date;
     createdAt: string | Date;
     updatedAt: string | Date;
     ipAddress?: string | null;
     userAgent?: string | null;
+    current: boolean;
 }
 
 function asDate(value: string | Date): Date {
@@ -77,7 +76,6 @@ function DeviceIcon({ userAgent }: { userAgent?: string | null }) {
 
 export function DevicesSecurity() {
     const [sessions, setSessions] = useState<SessionInfo[]>([]);
-    const [currentToken, setCurrentToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [revoking, setRevoking] = useState<string | null>(null);
     const [revokingOthers, setRevokingOthers] = useState(false);
@@ -93,15 +91,8 @@ export function DevicesSecurity() {
         setLoading(true);
         setError("");
         try {
-            const [sessionResult, sessionsResult] = await Promise.all([
-                authClient.getSession(),
-                authClient.listSessions(),
-            ]);
-            if (sessionResult.error) throw new Error(sessionResult.error.message);
-            if (sessionsResult.error) throw new Error(sessionsResult.error.message);
-
-            setCurrentToken(sessionResult.data?.session?.token ?? null);
-            setSessions((sessionsResult.data ?? []) as SessionInfo[]);
+            const result = await api<{ data: SessionInfo[] }>("/v1/me/sessions?limit=100");
+            setSessions(result.data ?? []);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to load active sessions.");
         } finally {
@@ -118,18 +109,20 @@ export function DevicesSecurity() {
         [sessions],
     );
 
-    async function revokeSession(token: string, isCurrent: boolean) {
-        setRevoking(token);
+    async function revokeSession(sessionId: string, isCurrent: boolean) {
+        setRevoking(sessionId);
         setError("");
         setNotice("");
         try {
-            const result = await authClient.revokeSession({ token });
-            if (result.error) throw new Error(result.error.message);
+            await api<{ data: { revoked: boolean } }>(
+                `/v1/me/sessions/${encodeURIComponent(sessionId)}`,
+                { method: "DELETE" },
+            );
             if (isCurrent) {
                 window.location.assign("/account/login/");
                 return;
             }
-            setSessions((current) => current.filter((session) => session.token !== token));
+            setSessions((current) => current.filter((session) => session.id !== sessionId));
             setNotice("The selected session has been signed out.");
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to revoke the session.");
@@ -139,12 +132,21 @@ export function DevicesSecurity() {
     }
 
     async function revokeOtherSessions() {
+        const otherSessions = activeSessions.filter((session) => !session.current);
+        if (!otherSessions.length) return;
+
         setRevokingOthers(true);
         setError("");
         setNotice("");
         try {
-            const result = await authClient.revokeOtherSessions();
-            if (result.error) throw new Error(result.error.message);
+            await Promise.all(
+                otherSessions.map((session) =>
+                    api<{ data: { revoked: boolean } }>(
+                        `/v1/me/sessions/${encodeURIComponent(session.id)}`,
+                        { method: "DELETE" },
+                    ),
+                ),
+            );
             await loadSessions();
             setNotice("All other sessions have been signed out.");
         } catch (cause) {
@@ -222,9 +224,9 @@ export function DevicesSecurity() {
                         ) : null}
                         {!loading
                             ? activeSessions.map((session, index) => {
-                                  const isCurrent = session.token === currentToken;
+                                  const isCurrent = session.current;
                                   return (
-                                      <Stack key={session.id || session.token} spacing={1.25}>
+                                      <Stack key={session.id} spacing={1.25}>
                                           {index > 0 ? <Divider /> : null}
                                           <Stack
                                               direction={{ xs: "column", sm: "row" }}
@@ -253,10 +255,10 @@ export function DevicesSecurity() {
                                                   variant={isCurrent ? "text" : "outlined"}
                                                   color={isCurrent ? "error" : "inherit"}
                                                   startIcon={<Logout />}
-                                                  onClick={() => void revokeSession(session.token, isCurrent)}
-                                                  disabled={revoking === session.token}
+                                                  onClick={() => void revokeSession(session.id, isCurrent)}
+                                                  disabled={revoking === session.id}
                                               >
-                                                  {revoking === session.token
+                                                  {revoking === session.id
                                                       ? "Signing out…"
                                                       : isCurrent
                                                         ? "Sign out"
@@ -272,7 +274,7 @@ export function DevicesSecurity() {
                             variant="outlined"
                             startIcon={<Logout />}
                             onClick={() => void revokeOtherSessions()}
-                            disabled={revokingOthers || activeSessions.filter((session) => session.token !== currentToken).length === 0}
+                            disabled={revokingOthers || activeSessions.filter((session) => !session.current).length === 0}
                         >
                             {revokingOthers ? "Signing out other devices…" : "Sign out all other devices"}
                         </Button>
@@ -325,7 +327,7 @@ export function DevicesSecurity() {
                                     onChange={(event) => setConfirmPassword(event.target.value)}
                                     type="password"
                                     autoComplete="new-password"
-                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: "1px solid currentColor" }}
+                                    style={{ width: "100%", boxSizing: "border-box", padding: "12px 14px", font: "inherit", borderRadius: 8, border: 1px solid currentColor" }}
                                 />
                             </label>
                             <FormControlLabel
