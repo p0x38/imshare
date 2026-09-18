@@ -56,7 +56,8 @@
         "notifications": "Notifications",
         "unreadNotifications": "{{count}} unread notifications",
         "account": "Account: {{name}}",
-        "badges": "Badges"
+        "badges": "Badges",
+        "texts": "Texts"
     },
     "footer": {
         "about": "About",
@@ -676,5 +677,40 @@
         "deleteConfirm": "Delete this post? This cannot be undone.",
         "download": "Download",
         "downloadImage": "Download image {{number}}"
+    },
+    "adminUsers": {
+        "title": "Users",
+        "description": "Manage accounts, moderation status, roles, and badges.",
+        "loadError": "Failed to load users.",
+        "actionError": "Action failed.",
+        "noHandle": "No handle",
+        "bannedUntil": "Banned until {{value}}",
+        "banned": "Banned",
+        "reason": "Reason: {{value}}",
+        "changeBadges": "Change badges",
+        "changeRole": "Change role",
+        "kick": "Kick",
+        "unban": "Unban",
+        "ban": "Ban",
+        "badgesTitle": "Manage manual badges",
+        "banTitle": "Ban user",
+        "kickTitle": "Kick user",
+        "unbanTitle": "Unban user",
+        "roleTitle": "Change role",
+        "target": "Target: {{name}}",
+        "badgesLabel": "Manual badges",
+        "roleLabel": "Role",
+        "userRole": "User",
+        "moderatorRole": "Moderator",
+        "adminRole": "Administrator",
+        "duration": "Duration",
+        "oneHour": "1 hour",
+        "oneDay": "24 hours",
+        "sevenDays": "7 days",
+        "thirtyDays": "30 days",
+        "oneYear": "1 year",
+        "permanent": "Permanent",
+        "reasonLabel": "Reason",
+        "confirm": "Confirm"
     }
 }
