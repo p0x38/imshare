@@ -1,0 +1,146 @@
+{
+    "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+    "name": "imshare Configuration",
+    "scopeName": "source.imshare-config",
+    "patterns": [
+        {
+            "include": "#comments"
+        },
+        {
+            "include": "#strings"
+        },
+        {
+            "include": "#numbers"
+        },
+        {
+            "include": "#booleans-and-null"
+        },
+        {
+            "include": "#assignment"
+        },
+        {
+            "include": "#blocks"
+        },
+        {
+            "include": "#symbols"
+        },
+        {
+            "include": "#identifiers"
+        }
+    ],
+    "repository": {
+        "comments": {
+            "patterns": [
+                {
+                    "name": "comment.line.number-sign.imshare-config",
+                    "match": "#.*$"
+                },
+                {
+                    "name": "comment.line.double-slash.imshare-config",
+                    "match": "//.*$"
+                }
+            ]
+        },
+        "strings": {
+            "patterns": [
+                {
+                    "name": "string.quoted.double.imshare-config",
+                    "begin": """,
+                    "end": """,
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.imshare-config",
+                            "match": "\\\\(?:[nrt\\"'])"
+                        }
+                    ]
+                },
+                {
+                    "name": "string.quoted.single.imshare-config",
+                    "begin": "'",
+                    "end": "'",
+                    "patterns": [
+                        {
+                            "name": "constant.character.escape.imshare-config",
+                            "match": "\\\\(?:[nrt\\"'])"
+                        }
+                    ]
+                }
+            ]
+        },
+        "numbers": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.unit.imshare-config",
+                    "match": "(?<![A-Za-z0-9_-])-?(?:\\d+(?:\\.\\d+)?)(?:B|KB|MB|GB|KiB|MiB|GiB|ms|s|m|h|d)\\b"
+                },
+                {
+                    "name": "constant.numeric.imshare-config",
+                    "match": "(?<![A-Za-z0-9_-])-?(?:\\d+(?:\\.\\d+)?)\\b"
+                }
+            ]
+        },
+        "booleans-and-null": {
+            "patterns": [
+                {
+                    "name": "constant.language.boolean.imshare-config",
+                    "match": "\\b(?:true|false)\\b"
+                },
+                {
+                    "name": "constant.language.null.imshare-config",
+                    "match": "\\bnull\\b"
+                }
+            ]
+        },
+        "assignment": {
+            "patterns": [
+                {
+                    "match": "\\b([A-Za-z_][A-Za-z0-9_-]*)(\\s*)(=)",
+                    "captures": {
+                        "1": {
+                            "name": "variable.other.property.imshare-config"
+                        },
+                        "3": {
+                            "name": "keyword.operator.assignment.imshare-config"
+                        }
+                    }
+                }
+            ]
+        },
+        "blocks": {
+            "patterns": [
+                {
+                    "match": "\\b([A-Za-z_][A-Za-z0-9_-]*)(\\s*)(?=\\{)",
+                    "captures": {
+                        "1": {
+                            "name": "entity.name.section.imshare-config"
+                        }
+                    }
+                }
+            ]
+        },
+        "symbols": {
+            "patterns": [
+                {
+                    "name": "punctuation.bracket.imshare-config",
+                    "match": "[\\{\\}\\[\\]]"
+                },
+                {
+                    "name": "punctuation.separator.comma.imshare-config",
+                    "match": ","
+                },
+                {
+                    "name": "punctuation.accessor.imshare-config",
+                    "match": "\\."
+                }
+            ]
+        },
+        "identifiers": {
+            "patterns": [
+                {
+                    "name": "variable.other.property.imshare-config",
+                    "match": "\\b[A-Za-z_][A-Za-z0-9_-]*\\b"
+                }
+            ]
+        }
+    }
+}
