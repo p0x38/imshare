@@ -55,6 +55,23 @@ export async function getSession(request: FastifyRequest) {
     };
 }
 
+export async function requireSessionUser(
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<SessionUser | undefined> {
+    const session = await getSession(request);
+    if (!session || session.session.id.startsWith("api-token:")) {
+        await reply.code(401).send({
+            error: {
+                code: "SESSION_REQUIRED",
+                message: "A web session is required for API token management.",
+            },
+        });
+        return undefined;
+    }
+    return session.user;
+}
+
 export async function requireUser(
     request: FastifyRequest,
     reply: FastifyReply,
