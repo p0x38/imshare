@@ -78,6 +78,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
             for await (const part of parts) {
                 if (part.type !== "file") continue;
                 const uploadId = randomUUID();
+                const uploadStartedAt = process.hrtime.bigint();
                 const ext = path.extname(part.filename).toLowerCase();
                 const mime = IMAGE_TYPES.get(ext);
                 if (!mime || part.mimetype !== mime) {
@@ -87,6 +88,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Unsupported image type.",
                     });
+                    observability.recordUploadError("invalid_type");
                     return reply.code(400).send({
                         error: { code: "INVALID_FILE", message: "Unsupported image type." },
                     });
@@ -112,6 +114,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     throw error;
                 }
                 if (part.file.truncated) {
+                    observability.recordUploadError("file_too_large");
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
                         uploadId,
@@ -134,6 +137,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Invalid image content.",
                     });
+                    observability.recordUploadError("invalid_content");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_FILE",
@@ -149,6 +153,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         status: "failed",
                         error: "Unable to read image dimensions.",
                     });
+                    observability.recordUploadError("invalid_dimensions");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_IMAGE",
@@ -224,6 +229,11 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
                     uploads.push(upload);
+                    observability.recordUpload(
+                        normalized.byteLength,
+                        part.mimetype,
+                        Number(process.hrtime.bigint() - uploadStartedAt) / 1_000_000_000,
+                    );
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "ready",
@@ -245,6 +255,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             url: uploadView(duplicate).url,
                         });
                     } else {
+                        observability.recordUploadError("persist");
                         broadcastUploadStatus(user.id, {
                             uploadId,
                             status: "failed",
