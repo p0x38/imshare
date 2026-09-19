@@ -189,6 +189,20 @@ export async function buildApp() {
         if (!(await authorizeApiTokenRequest(request, reply))) return reply;
     });
 
+    app.addHook("onResponse", async (request, reply) => {
+        if (reply.statusCode < 200 || reply.statusCode >= 300) return;
+        if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
+        const route = request.routeOptions.url ?? request.url;
+        const match = route.match(/^\/v1\/([^/]+)/);
+        if (!match) return;
+        const resource = match[1]!.replace(/^me$/, "users");
+        const operation =
+            request.method === "POST" ? "create" :
+            request.method === "DELETE" ? "delete" :
+            "update";
+        observability.recordResourceOperation(resource, operation);
+    });
+
     app.addHook("onSend", async (request, reply, payload) => {
         if (request.url === "/docs" || request.url.startsWith("/docs/")) return payload;
         reply.header("X-Content-Type-Options", "nosniff");
