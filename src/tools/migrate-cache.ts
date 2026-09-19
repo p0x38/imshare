@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { access, mkdir, readdir, rename, rmdir } from "node:fs/promises";
 import path from "node:path";
+import { loadConfig } from "../lib/config.js";
+import { getCacheSettings, resolveCacheDirectory, resolveCachePath } from "../lib/cache.js";
 
 function hashKey(key: string): string {
     return createHash("sha256").update(key, "utf8").digest("hex");
@@ -30,7 +32,7 @@ async function migrateDirectory(
         if (!entry.isFile()) continue;
 
         const from = path.join(source, entry.name);
-        const to = hashedDestination(destination, entry.name);
+        const to = resolveCachePath(destination, entry.name, useHashedDirectory);
         await mkdir(path.dirname(to), { recursive: true });
 
         try {
@@ -48,8 +50,10 @@ async function migrateDirectory(
 }
 
 async function main(): Promise<void> {
+    const config = await loadConfig();
+    const settings = getCacheSettings(config);
     const legacySource = path.resolve(process.cwd(), "uploads", ".cache");
-    const cacheDirectory = path.resolve(process.cwd(), "cache");
+    const cacheDirectory = resolveCacheDirectory(config);
 
     await mkdir(cacheDirectory, { recursive: true });
 
@@ -66,7 +70,7 @@ async function main(): Promise<void> {
             continue;
         }
 
-        const result = await migrateDirectory(source, cacheDirectory);
+        const result = await migrateDirectory(source, cacheDirectory, settings.useHashedDirectory);
         moved += result.moved;
         skipped += result.skipped;
 
