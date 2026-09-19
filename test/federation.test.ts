@@ -15,7 +15,7 @@ function createKeyPair() {
 }
 
 test("sha256Base64 returns the SHA-256 digest used by federation signatures", () => {
-    expect(sha256Base64("hello")).toBe("LPJNul+wow4m6Dsqxbning2lLQ1Y2Nw9kC5BfWJwzYw=");
+    expect(sha256Base64("hello")).toBe("LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ=");
 });
 
 test("signFederationRequest signs GET metadata requests", () => {
