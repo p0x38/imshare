@@ -10,6 +10,7 @@ import {
     requireUser,
 } from "../lib/api.js";
 import { findTags, postInclude, postView } from "./_shared.js";
+import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
 import {
     postCategorySchema,
     postCreateSchema,
@@ -150,27 +151,40 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                 });
             }
-            const post = await prisma.post.create({
-                data: {
-                    title: body.title.trim(),
-                    description: body.description,
-                    caption: body.caption,
-                    sourceUrl: body.sourceUrl,
-                    originalCreator: body.originalCreator?.trim() || null,
-                    originalCreatedAt: body.originalCreatedAt
-                        ? new Date(body.originalCreatedAt)
-                        : null,
-                    ...permalink,
-                    allowDownload: body.allowDownload ?? true,
-                    ...lifecycle,
-                    categoryId: body.categoryId,
-                    userId: user.id,
-                    tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
-                    uploads: uploadIds.length
-                        ? { connect: uploadIds.map((id) => ({ id })) }
-                        : undefined,
-                },
-                include: postInclude,
+            const post = await prisma.$transaction(async (tx) => {
+                const created = await tx.post.create({
+                    data: {
+                        title: body.title.trim(),
+                        description: body.description,
+                        caption: body.caption,
+                        sourceUrl: body.sourceUrl,
+                        originalCreator: body.originalCreator?.trim() || null,
+                        originalCreatedAt: body.originalCreatedAt
+                            ? new Date(body.originalCreatedAt)
+                            : null,
+                        ...permalink,
+                        allowDownload: body.allowDownload ?? true,
+                        ...lifecycle,
+                        categoryId: body.categoryId,
+                        userId: user.id,
+                        tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
+                        uploads: uploadIds.length
+                            ? { connect: uploadIds.map((id) => ({ id })) }
+                            : undefined,
+                    },
+                    include: postInclude,
+                });
+
+                return tx.post.update({
+                    where: { id: created.id },
+                    data: {
+                        permalinkKey: permalinkBase(
+                            created,
+                            permalink.permalinkIdType as PermalinkIdType,
+                        ),
+                    },
+                    include: postInclude,
+                });
             });
             return reply.code(201).send(ok(postView(post)));
         },
