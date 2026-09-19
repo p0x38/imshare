@@ -86,8 +86,11 @@ async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyRe
     const post = await prisma.post.findFirst({
         where: {
             permalinkPattern: "user",
-            permalinkKey: key,
             user: { OR: [{ handle }, { id: handle }] },
+            OR: [
+                { permalinkKey: key },
+                { permalinkIdType: "internalId", id: key },
+            ],
         },
         select: {
             id: true, title: true, createdAt: true, customPostId: true,
