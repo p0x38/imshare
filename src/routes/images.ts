@@ -264,8 +264,10 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 reply.type(format ? FORMATS[format].mime : upload.mimeType);
+                observability.recordImageServed();
                 return reply.send(output);
             } catch {}
+            const processingStartedAt = process.hrtime.bigint();
             try {
                 if (
                     width !== undefined &&
@@ -290,14 +292,24 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 } else reply.type(upload.mimeType);
                 const output = await pipeline.toBuffer();
                 await mkdir(path.dirname(cached), { recursive: true });
-                await writeFile(cached, output, { flag: "wx" }).catch(async (error) => {
+                await writeFile(cached, output, { flag: "wx" }).then(() => {
+                    observability.recordCacheWrite("image", output.byteLength);
+                }).catch(async (error) => {
                     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
+                    observability.recordCacheError("image");
                     throw error;
                 });
+                observability.recordImageProcessing(
+                    Number(process.hrtime.bigint() - processingStartedAt) / 1_000_000_000,
+                    "transform",
+                );
+                observability.recordImageTransformation("transform", format);
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+                observability.recordImageServed();
                 return reply.send(output);
             } catch (error) {
+                observability.recordImageProcessingError("transform");
                 request.log.error(error);
                 return reply
                     .code(415)
