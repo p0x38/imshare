@@ -8,7 +8,12 @@ export type RegistrationMode = "disabled" | "open" | "token" | "approval";
 
 export interface ServerConfig {
     server: { host: string; port: number };
-    storage: { uploadDirectory: string; maxFileSize: number };
+    storage: {
+        dataDirectory?: string;
+        uploadDirectory: string;
+        maxFileSize: number;
+        cache?: { ttl?: number; useHashedDirectory?: boolean };
+    };
     site: { name: string; version: string; description?: string };
     admin?: {
         local?: {
@@ -116,6 +121,10 @@ export interface PublicConfig {
 const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
 const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
+    storage: {
+        dataDirectory: "data",
+        cache: { ttl: 30 * 86_400_000, useHashedDirectory: true },
+    },
     site: { description: "Self-hosted image archive and sharing server" },
     admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
     auth: {
@@ -253,6 +262,11 @@ function parseConfig(content: string): ServerConfig {
 function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
+        storage: {
+            ...config.storage,
+            dataDirectory: config.storage.dataDirectory ?? DEFAULTS.storage.dataDirectory,
+            cache: { ...DEFAULTS.storage.cache, ...config.storage.cache },
+        },
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
         admin: {
             ...DEFAULTS.admin,
@@ -295,8 +309,18 @@ function isServerConfig(value: unknown): value is ServerConfig {
         server.port > 0 &&
         server.port <= 65535 &&
         isObject(storage) &&
+        (storage.dataDirectory === undefined ||
+            (typeof storage.dataDirectory === "string" && storage.dataDirectory.length > 0)) &&
         typeof storage.uploadDirectory === "string" &&
         storage.uploadDirectory.length > 0 &&
+        (storage.cache === undefined ||
+            (isObject(storage.cache) &&
+                (storage.cache.ttl === undefined ||
+                    (typeof storage.cache.ttl === "number" &&
+                        Number.isInteger(storage.cache.ttl) &&
+                        storage.cache.ttl > 0)) &&
+                (storage.cache.useHashedDirectory === undefined ||
+                    typeof storage.cache.useHashedDirectory === "boolean"))) &&
         typeof storage.maxFileSize === "number" &&
         Number.isInteger(storage.maxFileSize) &&
         storage.maxFileSize > 0 &&
