@@ -83,6 +83,27 @@ analytics {
 #
 # Metrics can be exported to Prometheus, OTLP, or both.
 # Traces and logs can independently use OTLP gRPC or HTTP/protobuf.
+federation {
+    enabled = true
+    incomingEnabled = true
+    outgoingEnabled = true
+    publicDiscovery = true
+    sharedInboxEnabled = true
+    deliveryTimeoutMs = 10000
+    remoteFetchTimeoutMs = 10000
+}
+
+# P2P transport is reserved for a future peer-to-peer implementation.
+# It is disabled by default.
+p2p {
+    enabled = false
+    incomingEnabled = false
+    outgoingEnabled = false
+    discovery = "manual"
+    signalingUrl = ""
+    iceServers = []
+}
+
 observability {
     enabled = false
 
