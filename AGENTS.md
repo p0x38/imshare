@@ -12,7 +12,7 @@ Current package metadata:
 
 - Node.js: `>=24`
 - pnpm: `11.25.0`
-- TypeScript: `7.x`
+- TypeScript: `6.x`
 - Fastify: `5.x`
 - Prisma: `7.10.0`
 - Better Auth: `1.7.x`
@@ -24,10 +24,7 @@ The current application version is `1.0.0` in `package.json` and `config.json`.
 
 ```text
 .
-├── public/                 # Static frontend pages and browser-side scripts
-│   ├── components.js       # Shared header/footer injection
-│   ├── admin/              # Administrative UI
-│   └── dashboard/          # Authenticated user dashboard
+├── public/                 # Static assets and service-worker resources
 ├── src/
 │   ├── lib/                # Auth, API helpers, config, permissions, shared logic
 │   └── routes/             # Fastify API route modules
@@ -81,18 +78,24 @@ When adding a UI link to a protected feature:
 
 ## Frontend conventions
 
-Most pages are static HTML under `public/` and load shared browser behavior from `/components.js`.
+The frontend is implemented in React with Material UI and built with Vite.
 
-`public/components.js` currently replaces existing `<header>`/`<footer>` elements with the shared site header/footer. Keep shared navigation changes there rather than editing the same navigation markup on every page.
+- Page entry points live under `src/client/entries/`.
+- Shared UI components live under `src/client/components/`.
+- Shared browser-side API/types/utilities live under `src/client/lib/`.
+- Vite outputs browser bundles under `dist/client/`.
+- `src/routes/pages.ts` selects the React entry for each page route.
 
-Be aware that `components.js` runs in the browser. It can fetch `/v1/me` and `/v1/version`, but it cannot use server-only imports or Prisma directly.
+When changing shared navigation or layout, reuse the existing React/MUI components rather than duplicating page-specific markup.
 
-When changing shared navigation:
+The browser can call the public API through `src/client/lib/api.ts`, but server-only modules such as Prisma and authentication internals must not be imported into client code.
 
-- Preserve the existing dashboard/non-dashboard distinction.
-- Keep links accessible to unauthenticated users unless the destination itself requires authentication.
-- Use the current user's role for administrative navigation.
-- Keep the footer useful on every page.
+When changing the frontend:
+
+1. Use `pnpm dev:client` for rapid Vite development.
+2. Use `pnpm build:client` to validate the client build independently.
+3. Use `pnpm test:browser` for end-to-end browser coverage.
+4. Use `pnpm build` when the server and client need to be validated together.
 
 ## Versioning
 
@@ -154,44 +157,105 @@ Do not expose private user information through public API selects or metadata.
 
 Prisma schema changes belong under `prisma/` and should be accompanied by an appropriate migration when the database structure changes.
 
-After schema changes, regenerate the Prisma client before type checking/building.
+After schema changes, regenerate Prisma Client before type checking, testing, or building.
 
-Useful commands:
+Recommended development commands:
 
 ```sh
-pnpm prisma generate
-pnpm prisma validate
-pnpm prisma migrate dev
+pnpm db:generate
+pnpm db:validate
+pnpm db:migrate
 ```
 
-Do not hand-edit generated Prisma client output.
+For production/deployed databases, apply committed migrations with:
+
+```sh
+pnpm prisma migrate deploy
+```
+
+Do not use `migrate dev` against a production database.
+
+Do not hand-edit generated Prisma Client output.
 
 ## Commands
+
+Use the package scripts as the canonical developer interface.
 
 Development:
 
 ```sh
+pnpm install
 pnpm dev
+pnpm dev:client
 ```
 
-Production build/start:
+Client build only:
+
+```sh
+pnpm build:client
+```
+
+Full production build/start:
 
 ```sh
 pnpm build
 pnpm start
 ```
 
-Checks:
+Formatting:
+
+```sh
+pnpm format
+pnpm format:check
+```
+
+Static checks:
 
 ```sh
 pnpm typecheck
 pnpm lint
+```
+
+Vitest:
+
+```sh
 pnpm test
+pnpm test:watch
+pnpm test:coverage
+```
+
+Integration tests:
+
+```sh
 pnpm test:integration
+```
+
+Playwright:
+
+```sh
+pnpm test:browser
+pnpm test:browser:headed
+pnpm test:browser:ui
+```
+
+Other repository tasks:
+
+```sh
+pnpm openapi:export
+pnpm migrate:uploads
+pnpm migrate:cache
+pnpm serve:unavailable
+```
+
+Full validation:
+
+```sh
 pnpm check
 ```
 
-`pnpm check` is the preferred full validation command before submitting a non-trivial change.
+`pnpm check` is the preferred full validation command before submitting a non-trivial change. It runs type checking, linting, Vitest tests, integration tests, Playwright browser tests, and the production build.
+
+The same commands are available as VS Code tasks in `.vscode/tasks.json`, using the `imshare:` prefix. Test and coverage VS Code tasks regenerate Prisma Client before running.
 
 ## Testing expectations
 
