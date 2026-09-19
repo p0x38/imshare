@@ -17,6 +17,7 @@ import { pageRoutes } from "./routes/pages.js";
 import { prisma } from "./lib/auth.js";
 import { registerOpenApi } from "./lib/openapi.js";
 import { observability } from "./instrumentation.js";
+import { authorizeApiTokenRequest } from "./lib/api-tokens.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -174,6 +175,10 @@ export async function buildApp() {
         }
         viewLimiter.prune();
         uploadLimiter.prune();
+    });
+
+    app.addHook("onRequest", async (request, reply) => {
+        if (!(await authorizeApiTokenRequest(request, reply))) return reply;
     });
 
     app.addHook("onSend", async (request, reply, payload) => {

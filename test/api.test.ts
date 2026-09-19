@@ -248,3 +248,62 @@ test("dedicated HTML error pages are served", async () => {
         await app.close();
     }
 });
+
+
+test("Bearer API tokens authenticate external API requests and enforce permissions", async () => {
+    const app = await buildApp();
+    const { generateApiToken } = await import("../src/lib/api-tokens.js");
+    const userId = "api-token-test-user";
+    await prisma.user.deleteMany({ where: { id: userId } });
+    const user = await prisma.user.create({
+        data: { id: userId, name: "API Token Test", email: "api-token-test@example.com" },
+    });
+    const generated = generateApiToken();
+    await prisma.apiToken.create({
+        data: {
+            name: "test client",
+            tokenPrefix: generated.prefix,
+            tokenHash: generated.hash,
+            permissionsJson: JSON.stringify({ me: ["read"] }),
+            userId: user.id,
+        },
+    });
+
+    try {
+        const authenticated = await app.inject({
+            method: "GET",
+            url: "/api/v1/me",
+            headers: { authorization: `Bearer ${generated.token}` },
+        });
+        expect(authenticated.statusCode).toBe(200);
+        expect(authenticated.json()).toMatchObject({ data: { id: userId } });
+
+        const denied = await app.inject({
+            method: "POST",
+            url: "/api/v1/me/preferences",
+            headers: {
+                authorization: `Bearer ${generated.token}`,
+                "content-type": "application/json",
+            },
+            payload: {},
+        });
+        expect(denied.statusCode).toBe(403);
+        expect(denied.json()).toMatchObject({
+            error: { code: "API_TOKEN_PERMISSION_DENIED" },
+        });
+
+        const invalid = await app.inject({
+            method: "GET",
+            url: "/api/v1/me",
+            headers: { authorization: "Bearer ims_invalid-token" },
+        });
+        expect(invalid.statusCode).toBe(401);
+        expect(invalid.json()).toMatchObject({
+            error: { code: "INVALID_API_TOKEN" },
+        });
+    } finally {
+        await prisma.apiToken.deleteMany({ where: { userId } });
+        await prisma.user.delete({ where: { id: userId } });
+        await app.close();
+    }
+});

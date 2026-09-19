@@ -2,6 +2,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { auth, prisma } from "./auth.js";
 import { hasRole, type UserRole } from "./permissions.js";
+import { getApiToken } from "./api-tokens.js";
 
 export type SessionUser = typeof auth.$Infer.Session.user;
 
@@ -17,19 +18,58 @@ export async function getSession(request: FastifyRequest) {
         throw error;
     }
 
-    if (!session) return null;
+    if (session) {
+        const user = await prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { isBanned: true, bannedUntil: true },
+        });
+
+        if (!user) return null;
+        if (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date())) {
+            return null;
+        }
+
+        return session;
+    }
+
+    const apiToken = await getApiToken(request);
+    if (!apiToken) return null;
 
     const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { isBanned: true, bannedUntil: true },
+        where: { id: apiToken.userId },
     });
-
-    if (!user) return null;
-    if (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date())) {
+    if (!user || (user.isBanned && (!user.bannedUntil || user.bannedUntil > new Date()))) {
         return null;
     }
 
-    return session;
+    return {
+        user: user as SessionUser,
+        session: {
+            id: `api-token:${apiToken.id}`,
+            token: "",
+            userId: user.id,
+            expiresAt: apiToken.expiresAt ?? new Date("9999-12-31T23:59:59.999Z"),
+            createdAt: apiToken.createdAt ?? new Date(),
+            updatedAt: apiToken.createdAt ?? new Date(),
+        },
+    };
+}
+
+export async function requireSessionUser(
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<SessionUser | undefined> {
+    const session = await getSession(request);
+    if (!session || session.session.id.startsWith("api-token:")) {
+        await reply.code(401).send({
+            error: {
+                code: "SESSION_REQUIRED",
+                message: "A web session is required for API token management.",
+            },
+        });
+        return undefined;
+    }
+    return session.user;
 }
 
 export async function requireUser(

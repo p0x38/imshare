@@ -63,6 +63,7 @@ model User {
   followers Follow[] @relation("followFollowing")
   twoFactor twoFactor?
   pushSubscriptions PushSubscription[]
+  apiTokens ApiToken[]
   defaultCategory Category? @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
   @@index([defaultCategoryId])
   @@index([registrationStatus, createdAt])
@@ -124,6 +125,24 @@ model twoFactor {
   lockedUntil DateTime?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@map("two_factor")
+}
+
+model ApiToken {
+  id String @id @default(cuid())
+  name String
+  tokenPrefix String
+  tokenHash String @unique
+  permissionsJson String @default("{}")
+  enabled Boolean @default(true)
+  expiresAt DateTime?
+  lastUsedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+  @@index([userId, enabled])
+  @@map("api_token")
 }
 
 model PushSubscription {
