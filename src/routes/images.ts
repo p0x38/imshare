@@ -8,7 +8,7 @@ import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
-import { ensureCacheDirectory, resolveCachePath } from "../lib/cache.js";
+import { cacheMaxAgeSeconds, ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
 
 const MAX_DIMENSION = 4096;
@@ -49,9 +49,9 @@ function cacheKey(
 ) {
     return `${uploadId}-${width ?? "auto"}x${height ?? "auto"}-${fit ?? "inside"}.${format ?? "source"}`;
 }
-function setCacheHeaders(reply: any, output: Buffer) {
+function setCacheHeaders(reply: any, output: Buffer, ttl: number) {
     const etag = `"${createHash("sha256").update(output).digest("hex")}"`;
-    reply.header("Cache-Control", "public, max-age=31536000, immutable");
+    reply.header("Cache-Control", `public, max-age=${cacheMaxAgeSeconds(ttl)}, immutable`);
     reply.header("ETag", etag);
     reply.header("X-Content-Type-Options", "nosniff");
     return etag;
@@ -60,7 +60,8 @@ function setCacheHeaders(reply: any, output: Buffer) {
 export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
     const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
-    const cacheDir = await ensureCacheDirectory();
+    const cacheSettings = getCacheSettings(config);
+    const cacheDir = await ensureCacheDirectory(config);
     const uploadId = parameter.path("uploadId", { type: "string" }, { description: "Upload ID." });
     const transformParameters = [
         uploadId,
@@ -133,10 +134,11 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
             try {
-                const cachePath = resolveCachePath(cacheDir, `${uploadId}-thumbhash.png`);
+                const cachePath = resolveCachePath(cacheDir, `${uploadId}-thumbhash.png`, cacheSettings.useHashedDirectory);
                 try {
-                    const cached = await readFile(cachePath);
-                    const etag = setCacheHeaders(reply, cached);
+                    const cached = await readCacheFile(cachePath, cacheSettings.ttl);
+                    if (!cached) throw new Error("CACHE_MISS");
+                    const etag = setCacheHeaders(reply, cached, cacheSettings.ttl);
                     if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                     return reply.type("image/png").send(cached);
                 } catch {}
@@ -148,8 +150,9 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 })
                     .png()
                     .toBuffer();
+                await mkdir(path.dirname(cachePath), { recursive: true });
                 await writeFile(cachePath, output, { flag: "wx" }).catch(() => undefined);
-                const etag = setCacheHeaders(reply, output);
+                const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 return reply.type("image/png").send(output);
             } catch {
@@ -246,10 +249,11 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.send(output);
             }
             const key = cacheKey(upload.id, width, height, fit, format);
-            const cached = resolveCachePath(cacheDir, key);
+            const cached = resolveCachePath(cacheDir, key, cacheSettings.useHashedDirectory);
             try {
-                const output = await readFile(cached);
-                const etag = setCacheHeaders(reply, output);
+                const output = await readCacheFile(cached, cacheSettings.ttl);
+                if (!output) throw new Error("CACHE_MISS");
+                const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 reply.type(format ? FORMATS[format].mime : upload.mimeType);
                 return reply.send(output);
