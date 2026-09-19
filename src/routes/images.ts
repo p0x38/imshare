@@ -8,7 +8,7 @@ import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
-import { ensureCacheDirectory } from "../lib/cache.js";
+import { ensureCacheDirectory, resolveCachePath } from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
 
 const MAX_DIMENSION = 4096;
@@ -133,7 +133,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
             try {
-                const cachePath = path.join(cacheDir, `${uploadId}-thumbhash.png`);
+                const cachePath = resolveCachePath(cacheDir, `${uploadId}-thumbhash.png`);
                 try {
                     const cached = await readFile(cachePath);
                     const etag = setCacheHeaders(reply, cached);
@@ -246,7 +246,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.send(output);
             }
             const key = cacheKey(upload.id, width, height, fit, format);
-            const cached = path.join(cacheDir, key);
+            const cached = resolveCachePath(cacheDir, key);
             try {
                 const output = await readFile(cached);
                 const etag = setCacheHeaders(reply, output);
@@ -277,6 +277,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     reply.type(FORMATS[format].mime);
                 } else reply.type(upload.mimeType);
                 const output = await pipeline.toBuffer();
+                await mkdir(path.dirname(cached), { recursive: true });
                 await writeFile(cached, output, { flag: "wx" }).catch(async (error) => {
                     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
                     throw error;
