@@ -142,7 +142,7 @@ function resourceForPath(pathname: string): string | null {
         case "version":
             return null;
         default:
-            return match[1];
+            return match[1] ?? null;
     }
 }
 
