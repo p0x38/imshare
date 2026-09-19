@@ -1,4 +1,4 @@
-import { Alert, Button, Card, CardContent, Chip, Divider, Stack, Typography } from "@mui/material";
+import { Alert, Button, Card, CardContent, Chip, Divider, Stack, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
@@ -25,6 +25,21 @@ function TextPage() {
                 setError(cause instanceof Error ? cause.message : "Unable to load text."),
             );
     }, [textId]);
+    if (error)
+        return (
+            <Page maxWidth="md">
+                <Alert severity="error">{error}</Alert>
+                <Button component="a" href="/texts/" sx={{ mt: 2 }}>
+                    Back to texts
+                </Button>
+            </Page>
+        );
+    if (!text)
+        return (
+            <Page maxWidth="md">
+                <Typography color="text.secondary">Loading text…</Typography>
+            </Page>
+        );
     const share = async () => {
         const url = new URL(text.permalink || `/texts/${encodeURIComponent(text.id)}/`, window.location.origin).href;
         try {
@@ -55,21 +70,6 @@ function TextPage() {
         }
     };
 
-    if (error)
-        return (
-            <Page maxWidth="md">
-                <Alert severity="error">{error}</Alert>
-                <Button component="a" href="/texts/" sx={{ mt: 2 }}>
-                    Back to texts
-                </Button>
-            </Page>
-        );
-    if (!text)
-        return (
-            <Page maxWidth="md">
-                <Typography color="text.secondary">Loading text…</Typography>
-            </Page>
-        );
     return (
         <Page maxWidth="md">
             <Stack spacing={2}>
