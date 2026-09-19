@@ -1,3 +1,4 @@
+import { observability } from "../instrumentation.js";
 import type { FastifyPluginAsync, FastifyReply } from "fastify";
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
