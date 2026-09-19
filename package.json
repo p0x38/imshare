@@ -13,6 +13,7 @@
         "db:generate": "pnpm prisma generate",
         "db:migrate": "pnpm prisma migrate dev",
         "db:validate": "pnpm prisma validate",
+        "db:deploy": "pnpm prisma migrate deploy",
         "typecheck": "pnpm prisma generate && tsc --noEmit && tsc -p tsconfig.client.json",
         "lint": "eslint .",
         "test": "vitest run",
