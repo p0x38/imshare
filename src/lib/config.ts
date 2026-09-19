@@ -153,7 +153,7 @@ const DEFAULTS = {
         incomingEnabled: false,
         outgoingEnabled: false,
         discovery: "manual",
-        iceServers: [],
+        iceServers: [] as string[],
     },
 } as const;
 
