@@ -542,7 +542,7 @@ function Comments({ postId }: { postId: string }) {
             `/v1/posts/${encodeURIComponent(postId)}/comments?limit=100`,
         );
         setComments(response.data || []);
-    }, [postId]);
+    }, [identifier, endpoint]);
     useEffect(() => {
         let active = true;
         void Promise.all([
@@ -633,14 +633,28 @@ function Comments({ postId }: { postId: string }) {
     );
 }
 
-export function PostPage({ postId }: { postId: string }) {
+export function PostPage({
+    postId,
+    permalinkKey,
+}: {
+    postId?: string;
+    permalinkKey?: string;
+}) {
+    const identifier = postId ?? permalinkKey;
+    const endpoint = postId
+        ? `/v1/posts/${encodeURIComponent(postId)}`
+        : `/v1/posts/permalink/${encodeURIComponent(permalinkKey ?? "")}`;
     const [post, setPost] = useState<Post | null>(null);
     const [error, setError] = useState("");
     const reducedMotion = useReducedMotion();
 
     useEffect(() => {
         let active = true;
-        void api<{ data: Post }>(`/v1/posts/${encodeURIComponent(postId)}`)
+        if (!identifier) {
+            if (active) setError("Unable to determine post.");
+            return;
+        }
+        void api<{ data: Post }>(endpoint)
             .then((response) => {
                 if (!active) return;
                 setPost(response.data);
