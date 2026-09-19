@@ -53,7 +53,11 @@
             "label": "imshare: test",
             "type": "shell",
             "command": "pnpm test",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: db generate"
+            ]
         },
         {
             "label": "imshare: test watch",
@@ -65,19 +69,31 @@
                 "reveal": "always",
                 "panel": "dedicated",
                 "group": "imshare"
-            }
+            },
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: db generate"
+            ]
         },
         {
             "label": "imshare: test coverage",
             "type": "shell",
             "command": "pnpm test:coverage",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: db generate"
+            ]
         },
         {
             "label": "imshare: test integration",
             "type": "shell",
             "command": "pnpm test:integration",
-            "problemMatcher": []
+            "problemMatcher": [],
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "imshare: db generate"
+            ]
         },
         {
             "label": "imshare: test browser",
