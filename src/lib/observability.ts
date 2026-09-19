@@ -1,4 +1,4 @@
-import { metrics, trace, type Meter } from "@opentelemetry/api";
+import { metrics, type Meter } from "@opentelemetry/api";
 import { OTLPLogExporter as OTLPLogGrpcExporter } from "@opentelemetry/exporter-logs-otlp-grpc";
 import { OTLPLogExporter as OTLPLogProtoExporter } from "@opentelemetry/exporter-logs-otlp-proto";
 import { OTLPMetricExporter as OTLPMetricGrpcExporter } from "@opentelemetry/exporter-metrics-otlp-grpc";
