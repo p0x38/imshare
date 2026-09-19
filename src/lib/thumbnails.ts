@@ -2,7 +2,7 @@ import { mkdir, access, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { rgbaToThumbHash } from "thumbhash";
-import { ensureCacheDirectory } from "./cache.js";
+import { ensureCacheDirectory, resolveCachePath } from "./cache.js";
 import { observability } from "../instrumentation.js";
 
 const SIZES = [320, 640, 1280] as const;
@@ -36,11 +36,13 @@ export async function generateThumbnails(source: string, uploadId: string): Prom
     try {
         await Promise.all(
             SIZES.map(async (width) => {
-                const destination = path.join(cacheDir, `${uploadId}-${width}xauto-inside.webp`);
+                const key = `${uploadId}-${width}xauto-inside.webp`;
+                const destination = resolveCachePath(cacheDir, key);
                 try {
                     await access(destination);
                     return;
                 } catch {}
+                await mkdir(path.dirname(destination), { recursive: true });
                 const output = await sharp(source)
                     .resize({ width, fit: "inside", withoutEnlargement: true })
                     .webp()
