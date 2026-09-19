@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { generateApiToken, parsePermissions, serializePermissions, validateTokenName } from "../lib/api-tokens.js";
 import { prisma } from "../lib/auth.js";
 import { requireSessionUser, collection, ok } from "../lib/api.js";
-import { openapi, request, parameter } from "../lib/openapi-route.js";
+import { openapi, request, parameter, type OpenApiSchema } from "../lib/openapi-route.js";
 
 function parseExpiry(value: unknown): Date | null | undefined {
     if (value === undefined) return undefined;
@@ -25,9 +25,12 @@ function publicToken(token: {
 }
 
 const tokenId = parameter.path("tokenId", { type: "string" });
-const permissionsSchema = {
+const permissionsSchema: OpenApiSchema = {
     type: "object",
-    additionalProperties: { type: "array", items: { type: "string", enum: ["read", "write", "delete"] } },
+    additionalProperties: {
+        type: "array",
+        items: { type: "string", enum: ["read", "write", "delete"] },
+    },
 };
 
 export const apiTokenRoutes: FastifyPluginAsync = async (fastify) => {
