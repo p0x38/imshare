@@ -667,7 +667,7 @@ export function PostPage({
         return () => {
             active = false;
         };
-    }, [postId]);
+    }, [endpoint, identifier]);
 
     if (error)
         return (
@@ -948,7 +948,7 @@ export function PostPage({
                             <div>
                                 <Card variant="outlined" sx={cardSx}>
                                     <CardContent>
-                                        <Comments postId={postId} />
+                                        <Comments postId={post.id} />
                                     </CardContent>
                                 </Card>
                             </div>
@@ -962,7 +962,7 @@ export function PostPage({
                             top: { lg: 88 },
                         }}
                     >
-                        <RecommendationSections postId={postId} />
+                        <RecommendationSections postId={post.id} />
                     </Stack>
                 </Stack>
             </Stack>
