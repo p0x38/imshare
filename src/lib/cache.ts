@@ -3,6 +3,7 @@ import { mkdir, readFile, readdir, stat, unlink, rmdir } from "node:fs/promises"
 import path from "node:path";
 import type { ServerConfig } from "./config.js";
 import { loadConfigSync } from "./config.js";
+import { observability } from "../instrumentation.js";
 
 const DEFAULT_TTL = 30 * 86_400_000;
 
@@ -55,10 +56,15 @@ export async function readCacheFile(
         const information = await stat(filePath);
         if (now - information.mtimeMs > ttl) {
             await unlink(filePath);
+            observability.recordCacheStale("file");
+            observability.recordCacheMiss("file");
             return undefined;
         }
-        return await readFile(filePath);
+        const data = await readFile(filePath);
+        observability.recordCacheHit("file");
+        return data;
     } catch {
+        observability.recordCacheMiss("file");
         return undefined;
     }
 }
@@ -95,5 +101,6 @@ export async function pruneCacheDirectory(
             }
         } catch {}
     }
+    if (removed > 0) observability.recordCachePruned(removed);
     return removed;
 }
