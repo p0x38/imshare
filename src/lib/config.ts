@@ -41,6 +41,23 @@ export interface ServerConfig {
     };
     limits?: { textPostCharacters?: number };
     analytics?: { googleAnalyticsMeasurementId?: string; googleTagManagerContainerId?: string };
+    federation?: {
+        enabled?: boolean;
+        incomingEnabled?: boolean;
+        outgoingEnabled?: boolean;
+        publicDiscovery?: boolean;
+        sharedInboxEnabled?: boolean;
+        deliveryTimeoutMs?: number;
+        remoteFetchTimeoutMs?: number;
+    };
+    p2p?: {
+        enabled?: boolean;
+        incomingEnabled?: boolean;
+        outgoingEnabled?: boolean;
+        signalingUrl?: string;
+        discovery?: "manual" | "signaling";
+        iceServers?: string[];
+    };
     observability?: {
         enabled?: boolean;
         serviceName?: string;
@@ -122,6 +139,22 @@ const DEFAULTS = {
         robots: true,
     },
     limits: { textPostCharacters: 500 },
+    federation: {
+        enabled: true,
+        incomingEnabled: true,
+        outgoingEnabled: true,
+        publicDiscovery: true,
+        sharedInboxEnabled: true,
+        deliveryTimeoutMs: 10_000,
+        remoteFetchTimeoutMs: 10_000,
+    },
+    p2p: {
+        enabled: false,
+        incomingEnabled: false,
+        outgoingEnabled: false,
+        discovery: "manual",
+        iceServers: [],
+    },
 } as const;
 
 export async function readConfigText(): Promise<string> {
@@ -235,6 +268,8 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
         },
         features: { ...DEFAULTS.features, ...config.features },
         limits: { ...DEFAULTS.limits, ...config.limits },
+        federation: { ...DEFAULTS.federation, ...config.federation },
+        p2p: { ...DEFAULTS.p2p, ...config.p2p },
     };
 }
 
@@ -249,6 +284,8 @@ function isServerConfig(value: unknown): value is ServerConfig {
         features = config.features,
         limits = config.limits,
         analytics = config.analytics,
+        federation = config.federation,
+        p2p = config.p2p,
         observability = config.observability;
     return (
         isObject(server) &&
@@ -321,6 +358,23 @@ function isServerConfig(value: unknown): value is ServerConfig {
                     typeof analytics.googleAnalyticsMeasurementId === "string") &&
                 (analytics.googleTagManagerContainerId === undefined ||
                     typeof analytics.googleTagManagerContainerId === "string"))) &&
+        (federation === undefined ||
+            (isObject(federation) &&
+                (federation.enabled === undefined || typeof federation.enabled === "boolean") &&
+                (federation.incomingEnabled === undefined || typeof federation.incomingEnabled === "boolean") &&
+                (federation.outgoingEnabled === undefined || typeof federation.outgoingEnabled === "boolean") &&
+                (federation.publicDiscovery === undefined || typeof federation.publicDiscovery === "boolean") &&
+                (federation.sharedInboxEnabled === undefined || typeof federation.sharedInboxEnabled === "boolean") &&
+                (federation.deliveryTimeoutMs === undefined || (typeof federation.deliveryTimeoutMs === "number" && Number.isFinite(federation.deliveryTimeoutMs) && federation.deliveryTimeoutMs > 0)) &&
+                (federation.remoteFetchTimeoutMs === undefined || (typeof federation.remoteFetchTimeoutMs === "number" && Number.isFinite(federation.remoteFetchTimeoutMs) && federation.remoteFetchTimeoutMs > 0)))) &&
+        (p2p === undefined ||
+            (isObject(p2p) &&
+                (p2p.enabled === undefined || typeof p2p.enabled === "boolean") &&
+                (p2p.incomingEnabled === undefined || typeof p2p.incomingEnabled === "boolean") &&
+                (p2p.outgoingEnabled === undefined || typeof p2p.outgoingEnabled === "boolean") &&
+                (p2p.signalingUrl === undefined || typeof p2p.signalingUrl === "string") &&
+                (p2p.discovery === undefined || p2p.discovery === "manual" || p2p.discovery === "signaling") &&
+                (p2p.iceServers === undefined || (Array.isArray(p2p.iceServers) && p2p.iceServers.every((server) => typeof server === "string" && server.length > 0))))) &&
         (observability === undefined ||
             (isObject(observability) &&
                 (observability.enabled === undefined ||
