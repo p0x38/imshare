@@ -2,6 +2,8 @@ import type { FastifyPluginAsync, FastifyReply, FastifyRequest } from "fastify";
 import { getSession } from "../lib/api.js";
 import { loadConfigSync, resolveBaseUrl } from "../lib/config.js";
 import { hasRole } from "../lib/permissions.js";
+import { prisma } from "../lib/auth.js";
+import { postPermalink } from "../lib/post-permalink.js";
 
 const reactPage = (entry: string, rootId: string, attributes = "") =>
     `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#1976d2" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>imshare</title><style>html,body{margin:0;min-height:100%}body{background:#fff;color:#111}@media(prefers-color-scheme:dark){body{background:#121212;color:#fff}}#app-loading{min-height:100vh;display:grid;place-items:center;box-sizing:border-box;padding:24px;font:400 14px/1.5 system-ui,sans-serif}#app-loading-content{display:flex;align-items:center;gap:12px;opacity:.72}#app-loading-spinner{width:20px;height:20px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:app-loading-spin 700ms linear infinite}@keyframes app-loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#app-loading-spinner{animation-duration:1400ms}}</style></head><body ${attributes}><div id="app-loading" role="status" aria-live="polite"><div id="app-loading-content"><span id="app-loading-spinner" aria-hidden="true"></span><span>Loading…</span></div></div><div id="${rootId}"></div><script type="module" src="/client/${entry}.js"></script></body></html>`;
@@ -22,6 +24,77 @@ function isMaintenanceMode(request: FastifyRequest): boolean {
     return isLocalhost(baseUrlHostname) && !isLocalhost(request.hostname);
 }
 
+async function canViewPost(request: FastifyRequest, post: {
+    userId: string;
+    status: string;
+    visibility: string;
+    hiddenAt: Date | null;
+    scheduledAt: Date | null;
+}): Promise<boolean> {
+    const session = await getSession(request);
+    if (post.userId === session?.user.id) return true;
+    return (
+        post.status === "published" &&
+        (post.visibility === "public" || post.visibility === "unlisted") &&
+        !post.hiddenAt &&
+        (!post.scheduledAt || post.scheduledAt <= new Date())
+    );
+}
+
+async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply) {
+    if (isMaintenanceMode(request)) return maintenancePage(reply);
+    const rawPostId = String((request.params as Record<string, unknown>).postId ?? "");
+    const id = decodeURIComponent(rawPostId);
+    const post = await prisma.post.findUnique({
+        where: { id },
+        select: {
+            id: true, title: true, createdAt: true, customPostId: true,
+            permalinkPattern: true, permalinkIdType: true, permalinkKey: true,
+            userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true,
+            user: { select: { id: true, handle: true } },
+        },
+    });
+    if (post && (await canViewPost(request, post))) {
+        const permalink = postPermalink(post, post.user);
+        const currentPath = request.url.split("?", 1)[0] ?? "/";
+        if (currentPath !== permalink) return reply.redirect(permalink, 302);
+    }
+    if (!post) {
+        const permalinkPost = await prisma.post.findFirst({
+            where: { permalinkPattern: "posts", permalinkKey: id },
+            select: { userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true },
+        });
+        if (permalinkPost && (await canViewPost(request, permalinkPost)))
+            return reply.redirect("/posts/" + encodeURIComponent(id) + "/", 302);
+    }
+    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+}
+
+async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyReply) {
+    if (isMaintenanceMode(request)) return maintenancePage(reply);
+    const params = request.params as { handle: string; key: string };
+    const handle = decodeURIComponent(params.handle);
+    const key = decodeURIComponent(params.key);
+    const post = await prisma.post.findFirst({
+        where: {
+            permalinkPattern: "user",
+            permalinkKey: key,
+            user: { OR: [{ handle }, { id: handle }] },
+        },
+        select: {
+            id: true, title: true, createdAt: true, customPostId: true,
+            permalinkPattern: true, permalinkIdType: true, permalinkKey: true,
+            userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true,
+            user: { select: { id: true, handle: true } },
+        },
+    });
+    if (!post || !(await canViewPost(request, post)))
+        return reply.code(404).type("text/plain; charset=utf-8").send("Not found");
+    const permalink = postPermalink(post, post.user);
+    const currentPath = request.url.split("?", 1)[0] ?? "/";
+    if (currentPath !== permalink) return reply.redirect(permalink, 302);
+    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+}
 const maintenancePage = (reply: FastifyReply) =>
     reply
         .code(503)
@@ -116,8 +189,8 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     fastify.get("/account/profile/", render("legacy", "legacy-page"));
     fastify.get("/posts/", render("posts", "posts-page"));
     fastify.get("/posts/new/", render("post-editor", "post-editor-page"));
-    fastify.get("/posts/:postId", render("post", "post"));
-    fastify.get("/posts/:postId/", render("post", "post"));
+    fastify.get("/posts/:postId", renderPostOrRedirect);
+    fastify.get("/posts/:postId/", renderPostOrRedirect);
     fastify.get("/texts/", render("texts", "texts-page"));
     fastify.get("/texts/new/", render("text-editor", "text-editor-page"));
     fastify.get("/texts/:textId", render("text", "text-page"));
@@ -134,6 +207,8 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         render("taxonomy", "taxonomy-page", 'data-taxonomy="categories"'),
     );
     fastify.get("/dashboard/settings/", render("settings", "settings-page"));
+    fastify.get("/:handle/:key", renderUserPostPermalink);
+    fastify.get("/:handle/:key/", renderUserPostPermalink);
     fastify.get("/users/", render("legacy", "legacy-page"));
     fastify.get("/users/@:handle", render("profile", "profile-page"));
     fastify.get("/users/@:handle/", render("profile", "profile-page"));
