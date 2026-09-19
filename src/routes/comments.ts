@@ -1,4 +1,3 @@
-import { observability } from "../instrumentation.js";
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, ok, parsePagination, requireUser } from "../lib/api.js";
