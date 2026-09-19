@@ -229,8 +229,8 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.get("/.well-known/nodeinfo", async (_request, reply) => {
-        if (!(await requireFederation(reply))) return
-        reply
+        if (!(await requireFederation(reply))) return;
+        return reply
             .type(JRD_JSON)
             .header("Access-Control-Allow-Origin", "*")
             .send({
@@ -240,8 +240,8 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
                         href: `${baseUrl}/nodeinfo/2.1`,
                     },
                 ],
-            }),
-    );
+            });
+    });
 
     fastify.get("/nodeinfo/2.1", async (_request, reply) => {
         if (!(await requireFederation(reply))) return;
