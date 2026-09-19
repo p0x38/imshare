@@ -12,10 +12,10 @@
     "eslint.useFlatConfig": true,
     "files.exclude": {
         "**/.history": true,
-        "**/dist": true,
+        "**/dist": false,
         "**/node_modules": true,
-        "**/uploads": true,
-        "**/.env": true
+        "**/uploads": false,
+        "**/.env": false
     },
     "search.exclude": {
         "**/dist": true,
