@@ -416,8 +416,31 @@ const documentation: Record<string, OperationDocumentation> = {
     },
 };
 
+    "GET /v1/me/api-tokens": {
+        summary: "List API tokens",
+        description: "Lists API credentials owned by the current account. Secrets are never returned.",
+    },
+    "POST /v1/me/api-tokens": {
+        summary: "Create API token",
+        description: "Creates an API credential for external clients. The secret is returned only once.",
+        requestExample: { name: "My CLI", permissions: { posts: ["read", "write"] } },
+    },
+    "GET /v1/me/api-tokens/{tokenId}": {
+        summary: "Get API token",
+        description: "Returns API token metadata without the secret.",
+    },
+    "PATCH /v1/me/api-tokens/{tokenId}": {
+        summary: "Update API token",
+        description: "Updates API token metadata, permissions, expiration, or enabled state.",
+    },
+    "DELETE /v1/me/api-tokens/{tokenId}": {
+        summary: "Revoke API token",
+        description: "Permanently revokes an API credential.",
+    },
+
 const tags: OpenApiTag[] = [
     { name: "System", description: "Health, readiness, version, and public system information." },
+    { name: "Account", description: "Authenticated account, session, and API credential management." },
     {
         name: "Authentication",
         description: "Authentication, registration, and account session operations.",
@@ -491,6 +514,12 @@ export async function registerOpenApi(
                         in: "cookie",
                         name: "better-auth.session_token",
                         description: "Better Auth session cookie used by the web application.",
+                    },
+                    bearerAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "API token",
+                        description: "API token credential for external clients. Send it as Authorization: Bearer <token>.",
                     },
                 },
                 schemas: {
