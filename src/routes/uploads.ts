@@ -10,6 +10,7 @@ import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
 import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
+import { observability } from "../instrumentation.js";
 
 const IMAGE_TYPES = new Map([
     [".jpg", "image/jpeg"],
