@@ -22,6 +22,78 @@ auth {
 }
 `;
 
+test("validateConfigText applies storage and cache defaults", () => {
+    const config = validateConfigText(requiredConfig);
+
+    expect(config.storage.dataDirectory).toBe("data");
+    expect(config.storage.cache).toEqual({
+        ttl: 30 * 86_400_000,
+        useHashedDirectory: true,
+    });
+});
+
+test("validateConfigText accepts explicit cache settings", () => {
+    const config = validateConfigText(`
+server {
+    host = "127.0.0.1"
+    port = 5454
+}
+
+storage {
+    dataDirectory = "contents"
+    uploadDirectory = "contents/uploads"
+    maxFileSize = 25MiB
+    cache {
+        ttl = 7d
+        useHashedDirectory = false
+    }
+}
+
+site {
+    name = "imshare-test"
+    version = "1.0.0"
+}
+
+auth {
+    baseUrl = "https://example.com"
+}
+`);
+
+    expect(config.storage.dataDirectory).toBe("contents");
+    expect(config.storage.cache).toEqual({
+        ttl: 7 * 86_400_000,
+        useHashedDirectory: false,
+    });
+});
+
+test("validateConfigText rejects invalid cache TTL", () => {
+    expect(() =>
+        validateConfigText(`
+server {
+    host = "127.0.0.1"
+    port = 5454
+}
+
+storage {
+    uploadDirectory = "uploads"
+    maxFileSize = 25MiB
+    cache {
+        ttl = 0
+    }
+}
+
+site {
+    name = "imshare-test"
+    version = "1.0.0"
+}
+
+auth {
+    baseUrl = "https://example.com"
+}
+`),
+    ).toThrow(/Invalid server configuration/);
+});
+
 test("validateConfigText applies federation and p2p defaults", () => {
     const config = validateConfigText(requiredConfig);
 
