@@ -542,7 +542,7 @@ function Comments({ postId }: { postId: string }) {
             `/v1/posts/${encodeURIComponent(postId)}/comments?limit=100`,
         );
         setComments(response.data || []);
-    }, [identifier, endpoint]);
+    }, [postId]);
     useEffect(() => {
         let active = true;
         void Promise.all([
