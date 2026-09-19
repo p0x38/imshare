@@ -156,8 +156,15 @@ async function handleActivity(
 export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
     const baseUrl = resolveBaseUrl(config).replace(/\/$/, "");
+    const federation = config.federation;
+    const requireFederation = async (reply: any) => {
+        if (federation?.enabled !== false) return true;
+        reply.code(404).send({ error: { code: "FEDERATION_DISABLED", message: "Federation is disabled." } });
+        return false;
+    };
 
     fastify.get("/.well-known/webfinger", async (request, reply) => {
+        if (!(await requireFederation(reply))) return;
         const query = request.query as { resource?: string; rel?: string | string[] };
         const resource = query.resource?.trim();
         if (!resource)
@@ -221,7 +228,8 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
             .send({ subject, aliases: [profileUrl(baseUrl, user.handle)], links });
     });
 
-    fastify.get("/.well-known/nodeinfo", async (_request, reply) =>
+    fastify.get("/.well-known/nodeinfo", async (_request, reply) => {
+        if (!(await requireFederation(reply))) return
         reply
             .type(JRD_JSON)
             .header("Access-Control-Allow-Origin", "*")
@@ -236,6 +244,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     );
 
     fastify.get("/nodeinfo/2.1", async (_request, reply) => {
+        if (!(await requireFederation(reply))) return;
         const since = new Date();
         since.setMonth(since.getMonth() - 1);
         const [users, activeMonth, localPosts, localComments] = await Promise.all([
@@ -260,6 +269,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.get("/federation/actors/:handle", async (request, reply) => {
+        if (!(await requireFederation(reply))) return;
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
@@ -273,6 +283,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.get("/federation/actors/:handle/outbox", async (request, reply) => {
+        if (!(await requireFederation(reply))) return;
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
@@ -305,6 +316,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.post("/federation/actors/:handle/inbox", async (request, reply) => {
+        if (federation?.incomingEnabled === false) return reply.code(404).send({ error: { code: "FEDERATION_INCOMING_DISABLED", message: "Incoming federation is disabled." } });
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
@@ -370,6 +382,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.post("/federation/deliver", async (request, reply) => {
+        if (federation?.outgoingEnabled === false) return reply.code(404).send({ error: { code: "FEDERATION_OUTGOING_DISABLED", message: "Outgoing federation is disabled." } });
         const session = await import("../lib/api.js").then(({ getSession }) =>
             getSession(request as FastifyRequest),
         );
