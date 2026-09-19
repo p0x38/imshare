@@ -101,6 +101,8 @@ interface MetricHandles {
     registeredUsers: ReturnType<Meter["createObservableGauge"]>;
     publishedPosts: ReturnType<Meter["createObservableGauge"]>;
     pendingReports: ReturnType<Meter["createObservableGauge"]>;
+    databaseQueryDuration: ReturnType<Meter["createHistogram"]>;
+    databaseErrors: ReturnType<Meter["createCounter"]>;
 }
 
 export interface ObservabilityRuntime {
@@ -112,6 +114,13 @@ export interface ObservabilityRuntime {
     recordUpload(size: number, mimeType: string): void;
     recordDatabaseQuery(durationSeconds: number, operation: string): void;
     recordDatabaseError(operation: string): void;
+    setGaugeReader(
+        reader: () => Promise<{
+            registeredUsers: number;
+            publishedPosts: number;
+            pendingReports: number;
+        }>,
+    ): void;
     recordRealtimeConnection(delta: 1 | -1): void;
     recordRealtimeConnectionEvent(event: "connected" | "disconnected"): void;
     recordRealtimeMessage(event: string): void;
@@ -131,6 +140,14 @@ declare module "fastify" {
 }
 
 let activeMetricHandles: MetricHandles | null = null;
+
+export function recordDatabaseQuery(durationSeconds: number, operation: string): void {
+    activeMetricHandles?.databaseQueryDuration.record(durationSeconds, { operation });
+}
+
+export function recordDatabaseError(operation: string): void {
+    activeMetricHandles?.databaseErrors.add(1, { operation });
+}
 
 const DEFAULTS = {
     exportIntervalMs: 15_000,
@@ -213,7 +230,7 @@ export function createObservability(
     if (meterProvider) metrics.setGlobalMeterProvider(meterProvider);
 
     const metricHandles = meterProvider
-        ? createMetricHandles(meterProvider.getMeter("imshare", serviceVersion))
+        ? createMetricHandles(meterProvider.getMeter("imshare", serviceVersion), gaugeValues)
         : null;
     activeMetricHandles = metricHandles;
 
@@ -225,6 +242,31 @@ export function createObservability(
         logsExporterConfig?.enabled === true ? logsExporterConfig.endpoint?.trim() : undefined;
 
     let sdk: NodeSDK | null = null;
+    let gaugeReader:
+        | (() => Promise<{
+              registeredUsers: number;
+              publishedPosts: number;
+              pendingReports: number;
+          }>)
+        | null = null;
+    const gaugeValues = {
+        registeredUsers: 0,
+        publishedPosts: 0,
+        pendingReports: 0,
+    };
+    let gaugeTimer: ReturnType<typeof setInterval> | null = null;
+
+    const refreshGauges = async (): Promise<void> => {
+        if (!gaugeReader) return;
+        try {
+            const values = await gaugeReader();
+            gaugeValues.registeredUsers = values.registeredUsers;
+            gaugeValues.publishedPosts = values.publishedPosts;
+            gaugeValues.pendingReports = values.pendingReports;
+        } catch {
+            // Preserve the last successful values when the backing store is unavailable.
+        }
+    };
 
     if (tracesEnabled || logsEndpoint) {
         const spanProcessors = [];
@@ -318,19 +360,19 @@ export function createObservability(
             metricHandles?.uploads.add(1, { mime_type: mimeType });
         },
         recordDatabaseQuery(durationSeconds, operation) {
-            const histogram = meterProvider
-                ?.getMeter("imshare", serviceVersion)
-                .createHistogram("imshare_db_query_duration_seconds", {
-                    description: "Database query duration in seconds.",
-                    unit: "s",
-                });
-            histogram?.record(durationSeconds, { operation });
+            recordDatabaseQuery(durationSeconds, operation);
         },
         recordDatabaseError(operation) {
-            meterProvider
-                ?.getMeter("imshare", serviceVersion)
-                .createCounter("imshare_db_errors_total", { description: "Total database errors." })
-                .add(1, { operation });
+            recordDatabaseError(operation);
+        },
+        setGaugeReader(reader) {
+            gaugeReader = reader;
+            void refreshGauges();
+            if (!gaugeTimer) {
+                gaugeTimer = setInterval(() => {
+                    void refreshGauges();
+                }, batch.exportIntervalMs);
+            }
         },
         recordRealtimeConnection(delta) {
             metricHandles?.realtimeConnections.add(delta);
@@ -375,6 +417,11 @@ export function createObservability(
             }
         },
         async shutdown() {
+            if (gaugeTimer) {
+                clearInterval(gaugeTimer);
+                gaugeTimer = null;
+            }
+
             const errors: unknown[] = [];
 
             if (sdk) {
@@ -398,7 +445,10 @@ export function createObservability(
     };
 }
 
-function createMetricHandles(meter: Meter): MetricHandles {
+function createMetricHandles(
+    meter: Meter,
+    gauges: { registeredUsers: number; publishedPosts: number; pendingReports: number },
+): MetricHandles {
     const counter = (name: string, description: string, unit?: string) =>
         meter.createCounter(name, { description, ...(unit ? { unit } : {}) });
     const histogram = (name: string, description: string, unit: string) =>
@@ -502,6 +552,19 @@ function createMetricHandles(meter: Meter): MetricHandles {
     const pendingReports = meter.createObservableGauge("imshare_pending_reports", {
         description: "Current number of pending reports.",
     });
+    registeredUsers.addCallback((result) => result.observe(gauges.registeredUsers));
+    publishedPosts.addCallback((result) => result.observe(gauges.publishedPosts));
+    pendingReports.addCallback((result) => result.observe(gauges.pendingReports));
+
+    const databaseQueryDuration = histogram(
+        "imshare_db_query_duration_seconds",
+        "Database query duration in seconds.",
+        "s",
+    );
+    const databaseErrors = counter(
+        "imshare_db_errors_total",
+        "Total database query errors.",
+    );
 
     return {
         requestCount,
@@ -540,6 +603,8 @@ function createMetricHandles(meter: Meter): MetricHandles {
         registeredUsers,
         publishedPosts,
         pendingReports,
+        databaseQueryDuration,
+        databaseErrors,
     };
 }
 
