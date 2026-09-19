@@ -110,6 +110,7 @@ interface MetricHandles {
     registeredUsers: ReturnType<Meter["createObservableGauge"]>;
     publishedPosts: ReturnType<Meter["createObservableGauge"]>;
     pendingReports: ReturnType<Meter["createObservableGauge"]>;
+    resourceOperations: ReturnType<Meter["createCounter"]>;
     databaseQueryDuration: ReturnType<Meter["createHistogram"]>;
     databaseErrors: ReturnType<Meter["createCounter"]>;
 }
@@ -122,6 +123,7 @@ export interface ObservabilityRuntime {
     register(app: FastifyInstance): void;
     recordUpload(size: number, mimeType: string, durationSeconds: number): void;
     recordUploadError(operation: string): void;
+    recordResourceOperation(resource: string, operation: string): void;
     recordDatabaseQuery(durationSeconds: number, operation: string): void;
     recordDatabaseError(operation: string): void;
     setGaugeReader(
@@ -381,6 +383,9 @@ export function createObservability(
         recordUploadError(operation) {
             metricHandles?.uploadErrors.add(1, { operation });
         },
+        recordResourceOperation(resource, operation) {
+            metricHandles?.resourceOperations.add(1, { resource, operation });
+        },
         recordDatabaseQuery(durationSeconds, operation) {
             recordDatabaseQuery(durationSeconds, operation);
         },
@@ -615,6 +620,10 @@ function createMetricHandles(
     publishedPosts.addCallback((result) => result.observe(gauges.publishedPosts));
     pendingReports.addCallback((result) => result.observe(gauges.pendingReports));
 
+    const resourceOperations = counter(
+        "imshare_resource_operations_total",
+        "Total successful resource operations.",
+    );
     const databaseQueryDuration = histogram(
         "imshare_db_query_duration_seconds",
         "Database query duration in seconds.",
@@ -670,6 +679,7 @@ function createMetricHandles(
         registeredUsers,
         publishedPosts,
         pendingReports,
+        resourceOperations,
         databaseQueryDuration,
         databaseErrors,
     };
