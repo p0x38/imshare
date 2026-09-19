@@ -17,8 +17,18 @@ admin {
 }
 
 storage {
-    uploadDirectory = "uploads"
+    # Persistent application data root.
+    dataDirectory = "data"
+    uploadDirectory = "data/uploads"
     maxFileSize = 25MiB
+
+    cache {
+        # Generated cache lifetime. Expired entries are regenerated on access.
+        ttl = 30d
+
+        # Spread cache files across SHA-256-derived directory levels.
+        useHashedDirectory = true
+    }
 }
 
 site {
