@@ -1,40 +1,99 @@
 import { createHash } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat, unlink, rmdir } from "node:fs/promises";
 import path from "node:path";
+import type { ServerConfig } from "./config.js";
+import { loadConfigSync } from "./config.js";
 
-export function resolveCacheDirectory(): string {
-    return path.resolve(process.cwd(), "cache");
+const DEFAULT_TTL = 30 * 86_400_000;
+
+export interface CacheSettings {
+    ttl: number;
+    useHashedDirectory: boolean;
 }
 
-export async function ensureCacheDirectory(): Promise<string> {
-    const directory = resolveCacheDirectory();
+export function getCacheSettings(config?: ServerConfig): CacheSettings {
+    const settings = config?.storage.cache ?? loadConfigSync().storage.cache;
+    return {
+        ttl: settings?.ttl ?? DEFAULT_TTL,
+        useHashedDirectory: settings?.useHashedDirectory ?? true,
+    };
+}
+
+export function resolveCacheDirectory(config?: ServerConfig): string {
+    const storage = config?.storage ?? loadConfigSync().storage;
+    const dataDirectory = path.resolve(process.cwd(), storage.dataDirectory ?? "data");
+    return path.join(dataDirectory, "cache");
+}
+
+export async function ensureCacheDirectory(config?: ServerConfig): Promise<string> {
+    const directory = resolveCacheDirectory(config);
     await mkdir(directory, { recursive: true });
     return directory;
 }
 
-/**
- * Resolve a cache key to the same two-level hash layout used by upload storage.
- *
- * The hash is derived from the logical cache key, not from the generated file
- * contents, so the same transformation request always maps to the same path.
- */
 export function hashCacheKey(key: string): string {
     return createHash("sha256").update(key, "utf8").digest("hex");
 }
 
-export function resolveCachePath(cacheDirectory: string, key: string): string {
+export function resolveCachePath(
+    cacheDirectory: string,
+    key: string,
+    useHashedDirectory = true,
+): string {
+    if (!useHashedDirectory) return path.join(cacheDirectory, key);
     const hash = hashCacheKey(key);
     const extension = path.extname(key);
-    return path.join(
-        cacheDirectory,
-        hash.slice(0, 2),
-        hash.slice(0, 4),
-        `${hash}${extension}`,
-    );
+    return path.join(cacheDirectory, hash.slice(0, 2), hash.slice(0, 4), `${hash}${extension}`);
 }
 
-export function resolveCacheRelativePath(key: string): string {
-    const hash = hashCacheKey(key);
-    const extension = path.extname(key);
-    return path.posix.join(hash.slice(0, 2), hash.slice(0, 4), `${hash}${extension}`);
+export async function readCacheFile(
+    filePath: string,
+    ttl: number,
+    now = Date.now(),
+): Promise<Buffer | undefined> {
+    try {
+        const information = await stat(filePath);
+        if (now - information.mtimeMs > ttl) {
+            await unlink(filePath);
+            return undefined;
+        }
+        return await readFile(filePath);
+    } catch {
+        return undefined;
+    }
+}
+
+export function cacheMaxAgeSeconds(ttl: number): number {
+    return Math.max(0, Math.floor(ttl / 1000));
+}
+
+export async function pruneCacheDirectory(
+    cacheDirectory: string,
+    ttl: number,
+    now = Date.now(),
+): Promise<number> {
+    let removed = 0;
+    let entries;
+    try {
+        entries = await readdir(cacheDirectory, { withFileTypes: true });
+    } catch {
+        return 0;
+    }
+    for (const entry of entries) {
+        const entryPath = path.join(cacheDirectory, entry.name);
+        if (entry.isDirectory()) {
+            removed += await pruneCacheDirectory(entryPath, ttl, now);
+            try { await rmdir(entryPath); } catch {}
+            continue;
+        }
+        if (!entry.isFile()) continue;
+        try {
+            const information = await stat(entryPath);
+            if (now - information.mtimeMs > ttl) {
+                await unlink(entryPath);
+                removed++;
+            }
+        } catch {}
+    }
+    return removed;
 }
