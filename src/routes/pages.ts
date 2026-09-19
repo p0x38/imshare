@@ -55,9 +55,17 @@ async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply
         },
     });
     if (post && (await canViewPost(request, post))) {
-        const permalink = postPermalink(post, post.user);
         const currentPath = request.url.split("?", 1)[0] ?? "/";
-        if (currentPath !== permalink) return reply.redirect(permalink, 302);
+        const usesInternalPostPath =
+            post.permalinkPattern === "posts" &&
+            post.permalinkIdType === "internalId" &&
+            (currentPath === `/posts/${encodeURIComponent(post.id)}` ||
+                currentPath === `/posts/${encodeURIComponent(post.id)}/`);
+
+        if (!usesInternalPostPath) {
+            const permalink = postPermalink(post, post.user);
+            if (currentPath !== permalink) return reply.redirect(permalink, 302);
+        }
     }
     if (!post) {
         const permalinkPost = await prisma.post.findFirst({
