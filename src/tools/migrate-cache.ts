@@ -1,22 +1,12 @@
-import { createHash } from "node:crypto";
 import { access, mkdir, readdir, rename, rmdir } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "../lib/config.js";
 import { getCacheSettings, resolveCacheDirectory, resolveCachePath } from "../lib/cache.js";
 
-function hashKey(key: string): string {
-    return createHash("sha256").update(key, "utf8").digest("hex");
-}
-
-function hashedDestination(root: string, key: string): string {
-    const hash = hashKey(key);
-    const extension = path.extname(key);
-    return path.join(root, hash.slice(0, 2), hash.slice(0, 4), `${hash}${extension}`);
-}
-
 async function migrateDirectory(
     source: string,
     destination: string,
+    useHashedDirectory: boolean,
 ): Promise<{ moved: number; skipped: number }> {
     let entries;
     try {
@@ -57,34 +47,24 @@ async function main(): Promise<void> {
 
     await mkdir(cacheDirectory, { recursive: true });
 
-    const sources = [legacySource, cacheDirectory];
-    let moved = 0;
-    let skipped = 0;
+    for (const source of [legacySource, path.resolve(process.cwd(), "cache")]) {
+        if (path.resolve(source) === path.resolve(cacheDirectory)) continue;
 
-    for (const source of sources) {
         try {
             await access(source);
         } catch {
-            if (source === legacySource)
-                console.log("No legacy uploads/.cache directory found.");
             continue;
         }
 
         const result = await migrateDirectory(source, cacheDirectory, settings.useHashedDirectory);
-        moved += result.moved;
-        skipped += result.skipped;
+        console.log(`Migrated ${result.moved} cache entr${result.moved === 1 ? "y" : "ies"} from ${source}`);
+        if (result.skipped)
+            console.log(`Skipped ${result.skipped} existing entr${result.skipped === 1 ? "y" : "ies"}`);
 
-        if (source === legacySource) {
-            try {
-                const remaining = await readdir(source);
-                if (!remaining.length) await rmdir(source);
-            } catch {}
-        }
+        try {
+            if (!(await readdir(source)).length) await rmdir(source);
+        } catch {}
     }
-
-    console.log("Migrated " + moved + " cache entr" + (moved === 1 ? "y." : "ies."));
-    if (skipped)
-        console.log("Skipped " + skipped + " existing entr" + (skipped === 1 ? "y." : "ies."));
 }
 
 await main();
