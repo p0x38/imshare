@@ -45,12 +45,12 @@
             "patterns": [
                 {
                     "name": "string.quoted.double.imshare-config",
-                    "begin": """,
-                    "end": """,
+                    "begin": "\"",
+                    "end": "\"",
                     "patterns": [
                         {
                             "name": "constant.character.escape.imshare-config",
-                            "match": "\\\\(?:[nrt\\"'])"
+                            "match": "\\\\(?:[nrt\\\"'])"
                         }
                     ]
                 },
@@ -61,7 +61,7 @@
                     "patterns": [
                         {
                             "name": "constant.character.escape.imshare-config",
-                            "match": "\\\\(?:[nrt\\"'])"
+                            "match": "\\\\(?:[nrt\\\"'])"
                         }
                     ]
                 }

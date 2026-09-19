@@ -130,8 +130,7 @@
     <body>
         <main>
             <span class="status">
-                {{placeholder "http.vars.unavailable.status_code"}} {{placeholder
-                "http.vars.unavailable.status_text"}}
+                {{placeholder "http.error.status_code"}} {{placeholder "http.error.status_text"}}
             </span>
 
             <h1>Service unavailable</h1>
@@ -145,12 +144,12 @@
                 <dl>
                     <dt>Status</dt>
                     <dd>
-                        {{placeholder "http.vars.unavailable.status_code"}} {{placeholder
-                        "http.vars.unavailable.status_text"}}
+                        {{placeholder "http.error.status_code"}} {{placeholder
+                        "http.error.status_text"}}
                     </dd>
 
                     <dt>Reason</dt>
-                    <dd>{{placeholder "http.vars.unavailable.reason"}}</dd>
+                    <dd>{{placeholder "http.error.message"}}</dd>
 
                     <dt>Requested</dt>
                     <dd>
@@ -170,12 +169,6 @@
 
             <section>
                 <h2>For the operator</h2>
-                <details open>
-                    <summary>Diagnostic details</summary>
-                    <pre>
-{{placeholder "http.vars.unavailable.message"}}
-{{placeholder "http.vars.unavailable.trace"}}</pre>
-                </details>
                 <p class="muted">
                     Check the Caddy logs and the upstream application's logs using the status, error
                     ID, timestamp, and diagnostic message above.
