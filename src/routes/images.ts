@@ -10,6 +10,7 @@ import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { cacheMaxAgeSeconds, ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
+import { observability } from "../instrumentation.js";
 
 const MAX_DIMENSION = 4096;
 const MIN_DIMENSION = 16;
@@ -140,6 +141,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     if (!cached) throw new Error("CACHE_MISS");
                     const etag = setCacheHeaders(reply, cached, cacheSettings.ttl);
                     if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+                    observability.recordImageServed();
                     return reply.type("image/png").send(cached);
                 } catch {}
                 const image = thumbHashToRGBA(
@@ -151,9 +153,14 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     .png()
                     .toBuffer();
                 await mkdir(path.dirname(cachePath), { recursive: true });
-                await writeFile(cachePath, output, { flag: "wx" }).catch(() => undefined);
+                await writeFile(cachePath, output, { flag: "wx" }).then(() => {
+                    observability.recordCacheWrite("placeholder", output.byteLength);
+                }).catch(() => {
+                    observability.recordCacheError("placeholder");
+                });
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+                observability.recordImageServed();
                 return reply.type("image/png").send(output);
             } catch {
                 return reply
@@ -246,6 +253,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                         "Content-Disposition",
                         `attachment; filename*=UTF-8''${encodeURIComponent(upload.originalName)}`,
                     );
+                observability.recordImageServed();
                 return reply.send(output);
             }
             const key = cacheKey(upload.id, width, height, fit, format);
