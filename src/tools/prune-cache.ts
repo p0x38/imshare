@@ -6,6 +6,6 @@ const config = await loadConfig();
 const settings = getCacheSettings(config);
 const cacheDirectory = resolveCacheDirectory(config);
 const removed = await pruneCacheDirectory(cacheDirectory, settings.ttl);
-  observability.recordCachePruned(removed);
+observability.recordCachePruned(removed);
 
 console.log(`Removed ${removed} expired cache entr${removed === 1 ? "y" : "ies"} from ${cacheDirectory}`);
