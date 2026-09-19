@@ -20,6 +20,7 @@ import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { AccountPreferences } from "../components/AccountPreferences";
+import { ApiTokens } from "../components/ApiTokens";
 import { DevicesSecurity } from "../components/DevicesSecurity";
 import { OidcLoginButton } from "../components/OidcLoginButton";
 import { Page } from "../components/Page";
@@ -205,6 +206,7 @@ function AccountPage() {
                         <Tab label="Profile" />
                         <Tab label="Settings" />
                         <Tab label="Devices & Security" />
+                        <Tab label="API Tokens" />
                     </Tabs>
                 </Card>
                 {tab === 0 ? (
@@ -424,8 +426,10 @@ function AccountPage() {
                     </Stack>
                 ) : tab === 1 ? (
                     <AccountPreferences />
-                ) : (
+                ) : tab === 2 ? (
                     <DevicesSecurity />
+                ) : (
+                    <ApiTokens />
                 )}
                 <Stack direction="row" spacing={1}>
                     <Button variant="outlined" component="a" href="/dashboard/">
