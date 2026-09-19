@@ -45,8 +45,13 @@ export async function generateThumbnails(source: string, uploadId: string): Prom
                     .resize({ width, fit: "inside", withoutEnlargement: true })
                     .webp()
                     .toBuffer();
-                await writeFile(destination, output, { flag: "wx" }).catch((error: unknown) => {
-                    if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+                await writeFile(destination, output, { flag: "wx" }).then(() => {
+                    observability.recordCacheWrite("thumbnail", output.byteLength);
+                }).catch((error: unknown) => {
+                    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+                        observability.recordCacheError("thumbnail");
+                        throw error;
+                    }
                 });
             }),
         );
