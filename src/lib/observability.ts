@@ -90,10 +90,19 @@ interface MetricHandles {
     uploadBytes: ReturnType<Meter["createCounter"]>;
     uploads: ReturnType<Meter["createCounter"]>;
     uploadDuration: ReturnType<Meter["createHistogram"]>;
+    uploadErrors: ReturnType<Meter["createCounter"]>;
     imageServed: ReturnType<Meter["createCounter"]>;
+
     imageTransformations: ReturnType<Meter["createCounter"]>;
     imageProcessingDuration: ReturnType<Meter["createHistogram"]>;
     imageProcessingErrors: ReturnType<Meter["createCounter"]>;
+    cacheHits: ReturnType<Meter["createCounter"]>;
+    cacheMisses: ReturnType<Meter["createCounter"]>;
+    cacheStale: ReturnType<Meter["createCounter"]>;
+    cacheWrites: ReturnType<Meter["createCounter"]>;
+    cacheWriteBytes: ReturnType<Meter["createCounter"]>;
+    cacheErrors: ReturnType<Meter["createCounter"]>;
+    cachePruned: ReturnType<Meter["createCounter"]>;
     realtimeConnections: ReturnType<Meter["createUpDownCounter"]>;
     realtimeConnectionEvents: ReturnType<Meter["createCounter"]>;
     realtimeMessages: ReturnType<Meter["createCounter"]>;
@@ -111,7 +120,8 @@ export interface ObservabilityRuntime {
     readonly sdk: NodeSDK | null;
     readonly prometheusPath: string | null;
     register(app: FastifyInstance): void;
-    recordUpload(size: number, mimeType: string): void;
+    recordUpload(size: number, mimeType: string, durationSeconds: number): void;
+    recordUploadError(operation: string): void;
     recordDatabaseQuery(durationSeconds: number, operation: string): void;
     recordDatabaseError(operation: string): void;
     setGaugeReader(
@@ -130,6 +140,13 @@ export interface ObservabilityRuntime {
     recordImageTransformation(operation: string, format?: string): void;
     recordImageProcessing(durationSeconds: number, operation: string): void;
     recordImageProcessingError(operation: string): void;
+    recordImageServed(): void;
+    recordCacheHit(kind: string): void;
+    recordCacheMiss(kind: string): void;
+    recordCacheStale(kind: string): void;
+    recordCacheWrite(kind: string, bytes: number): void;
+    recordCacheError(kind: string): void;
+    recordCachePruned(count: number): void;
     shutdown(): Promise<void>;
 }
 
@@ -229,6 +246,11 @@ export function createObservability(
             : null;
     if (meterProvider) metrics.setGlobalMeterProvider(meterProvider);
 
+    const gaugeValues = {
+        registeredUsers: 0,
+        publishedPosts: 0,
+        pendingReports: 0,
+    };
     const metricHandles = meterProvider
         ? createMetricHandles(meterProvider.getMeter("imshare", serviceVersion), gaugeValues)
         : null;
@@ -249,11 +271,6 @@ export function createObservability(
               pendingReports: number;
           }>)
         | null = null;
-    const gaugeValues = {
-        registeredUsers: 0,
-        publishedPosts: 0,
-        pendingReports: 0,
-    };
     let gaugeTimer: ReturnType<typeof setInterval> | null = null;
 
     const refreshGauges = async (): Promise<void> => {
@@ -355,9 +372,14 @@ export function createObservability(
         meterProvider,
         sdk,
         prometheusPath,
-        recordUpload(size, mimeType) {
-            metricHandles?.uploadBytes.add(size, { mime_type: mimeType });
-            metricHandles?.uploads.add(1, { mime_type: mimeType });
+        recordUpload(size, mimeType, durationSeconds) {
+            const attributes = { mime_type: mimeType };
+            metricHandles?.uploadBytes.add(size, attributes);
+            metricHandles?.uploads.add(1, attributes);
+            metricHandles?.uploadDuration.record(durationSeconds, { operation: "accepted" });
+        },
+        recordUploadError(operation) {
+            metricHandles?.uploadErrors.add(1, { operation });
         },
         recordDatabaseQuery(durationSeconds, operation) {
             recordDatabaseQuery(durationSeconds, operation);
@@ -403,6 +425,28 @@ export function createObservability(
         },
         recordImageProcessingError(operation) {
             metricHandles?.imageProcessingErrors.add(1, { operation });
+        },
+        recordImageServed() {
+            metricHandles?.imageServed.add(1);
+        },
+        recordCacheHit(kind) {
+            metricHandles?.cacheHits.add(1, { kind });
+        },
+        recordCacheMiss(kind) {
+            metricHandles?.cacheMisses.add(1, { kind });
+        },
+        recordCacheStale(kind) {
+            metricHandles?.cacheStale.add(1, { kind });
+        },
+        recordCacheWrite(kind, bytes) {
+            metricHandles?.cacheWrites.add(1, { kind });
+            metricHandles?.cacheWriteBytes.add(bytes, { kind });
+        },
+        recordCacheError(kind) {
+            metricHandles?.cacheErrors.add(1, { kind });
+        },
+        recordCachePruned(count) {
+            if (count > 0) metricHandles?.cachePruned.add(count);
         },
         register(app) {
             if (metricHandles) {
@@ -520,6 +564,10 @@ function createMetricHandles(
         "Upload processing duration in seconds.",
         "s",
     );
+    const uploadErrors = counter(
+        "imshare_upload_errors_total",
+        "Total failed upload operations.",
+    );
     const imageServed = counter("imshare_images_served_total", "Total image responses served.");
     const imageTransformations = counter(
         "imshare_image_transformations_total",
@@ -534,6 +582,17 @@ function createMetricHandles(
         "imshare_image_processing_errors_total",
         "Total image processing errors.",
     );
+    const cacheHits = counter("imshare_cache_hits_total", "Total cache hits.");
+    const cacheMisses = counter("imshare_cache_misses_total", "Total cache misses.");
+    const cacheStale = counter("imshare_cache_stale_total", "Total stale cache entries encountered.");
+    const cacheWrites = counter("imshare_cache_writes_total", "Total cache entries written.");
+    const cacheWriteBytes = counter(
+        "imshare_cache_write_bytes_total",
+        "Total bytes written to cache.",
+        "By",
+    );
+    const cacheErrors = counter("imshare_cache_errors_total", "Total cache read/write errors.");
+    const cachePruned = counter("imshare_cache_pruned_total", "Total expired cache entries removed.");
     const realtimeConnections = meter.createUpDownCounter("imshare_realtime_connections", {
         description: "Number of active realtime connections.",
     });
@@ -592,10 +651,18 @@ function createMetricHandles(
         uploadBytes,
         uploads,
         uploadDuration,
+        uploadErrors,
         imageServed,
         imageTransformations,
         imageProcessingDuration,
         imageProcessingErrors,
+        cacheHits,
+        cacheMisses,
+        cacheStale,
+        cacheWrites,
+        cacheWriteBytes,
+        cacheErrors,
+        cachePruned,
         realtimeConnections,
         realtimeConnectionEvents,
         realtimeMessages,
@@ -744,6 +811,13 @@ function disabledRuntime(): ObservabilityRuntime {
         recordImageTransformation() {},
         recordImageProcessing() {},
         recordImageProcessingError() {},
+        recordImageServed() {},
+        recordCacheHit() {},
+        recordCacheMiss() {},
+        recordCacheStale() {},
+        recordCacheWrite() {},
+        recordCacheError() {},
+        recordCachePruned() {},
         register() {},
         async shutdown() {},
     };
