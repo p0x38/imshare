@@ -11,6 +11,7 @@ export interface ApiTokenAuth {
     userId: string;
     permissions: ApiTokenPermissions;
     expiresAt: Date | null;
+    createdAt: Date;
 }
 
 const TOKEN_PREFIX = "ims_";
@@ -174,6 +175,7 @@ export async function getApiToken(request: FastifyRequest): Promise<ApiTokenAuth
             permissionsJson: true,
             enabled: true,
             expiresAt: true,
+            createdAt: true,
         },
     });
 
@@ -187,6 +189,7 @@ export async function getApiToken(request: FastifyRequest): Promise<ApiTokenAuth
         userId: record.userId,
         permissions: deserializePermissions(record.permissionsJson),
         expiresAt: record.expiresAt,
+        createdAt: record.createdAt,
     };
     tokenContexts.set(request, auth);
     void prisma.apiToken
