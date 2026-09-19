@@ -7,7 +7,11 @@
             "command": "pnpm dev",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
         },
         {
             "label": "imshare: dev client",
@@ -15,13 +19,29 @@
             "command": "pnpm dev:client",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
+        },
+        {
+            "label": "imshare: start",
+            "type": "shell",
+            "command": "pnpm start",
+            "problemMatcher": []
         },
         {
             "label": "imshare: typecheck",
             "type": "shell",
             "command": "pnpm typecheck",
-            "problemMatcher": ["$tsc"]
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         },
         {
             "label": "imshare: lint",
@@ -33,6 +53,24 @@
             "label": "imshare: test",
             "type": "shell",
             "command": "pnpm test",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: test watch",
+            "type": "shell",
+            "command": "pnpm test:watch",
+            "isBackground": true,
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
+        },
+        {
+            "label": "imshare: test coverage",
+            "type": "shell",
+            "command": "pnpm test:coverage",
             "problemMatcher": []
         },
         {
@@ -59,7 +97,11 @@
             "command": "pnpm test:browser:ui",
             "isBackground": true,
             "problemMatcher": [],
-            "presentation": { "reveal": "always", "panel": "dedicated", "group": "imshare" }
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "group": "imshare"
+            }
         },
         {
             "label": "imshare: format",
@@ -74,29 +116,77 @@
             "problemMatcher": []
         },
         {
-            "label": "imshare: check",
-            "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: typecheck",
-                "imshare: lint",
-                "imshare: test",
-                "imshare: test integration",
-                "imshare: test browser"
-            ],
+            "label": "imshare: db generate",
+            "type": "shell",
+            "command": "pnpm db:generate",
             "problemMatcher": []
+        },
+        {
+            "label": "imshare: db migrate",
+            "type": "shell",
+            "command": "pnpm db:migrate",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: db validate",
+            "type": "shell",
+            "command": "pnpm db:validate",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: OpenAPI export",
+            "type": "shell",
+            "command": "pnpm openapi:export",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: migrate uploads",
+            "type": "shell",
+            "command": "pnpm migrate:uploads",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: migrate cache",
+            "type": "shell",
+            "command": "pnpm migrate:cache",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: serve unavailable",
+            "type": "shell",
+            "command": "pnpm serve:unavailable",
+            "problemMatcher": []
+        },
+        {
+            "label": "imshare: check",
+            "type": "shell",
+            "command": "pnpm check",
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": false
+            }
         },
         {
             "label": "imshare: build",
             "type": "shell",
             "command": "pnpm build",
-            "problemMatcher": ["$tsc"],
-            "group": { "kind": "build", "isDefault": true }
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "imshare: build client",
             "type": "shell",
             "command": "pnpm build:client",
-            "problemMatcher": ["$tsc"]
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "group": "build"
         },
         {
             "label": "imshare: install packages",
