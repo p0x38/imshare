@@ -101,6 +101,5 @@ export async function pruneCacheDirectory(
             }
         } catch {}
     }
-    if (removed > 0) observability.recordCachePruned(removed);
     return removed;
 }
