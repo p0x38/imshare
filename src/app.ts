@@ -99,6 +99,14 @@ export async function buildApp() {
     const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
     app.decorate("observability", observability);
     observability.register(app);
+    observability.setGaugeReader(async () => {
+        const [registeredUsers, publishedPosts, pendingReports] = await Promise.all([
+            prisma.user.count(),
+            prisma.post.count({ where: { status: "published" } }),
+            prisma.report.count({ where: { status: "open" } }),
+        ]);
+        return { registeredUsers, publishedPosts, pendingReports };
+    });
 
     app.addHook("onRequest", async (request, reply) => {
         const key = request.ip || "unknown";
