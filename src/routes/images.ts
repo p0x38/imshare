@@ -238,7 +238,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     });
             if (!transformed) {
                 const output = await readFile(source);
-                const etag = setCacheHeaders(reply, output);
+                const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 reply.type(upload.mimeType);
                 if (query.download === "true")
@@ -286,7 +286,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
                     throw error;
                 });
-                const etag = setCacheHeaders(reply, output);
+                const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 return reply.send(output);
             } catch (error) {
