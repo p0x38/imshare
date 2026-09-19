@@ -313,7 +313,7 @@ export async function deliverActivity(options: {
         headers,
         body,
         redirect: "error",
-        signal: AbortSignal.timeout(federationTimeoutMs()),
+        signal: AbortSignal.timeout(deliveryTimeoutMs()),
     });
     return { ok: response.ok, status: response.status };
 }
