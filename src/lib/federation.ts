@@ -1,12 +1,21 @@
 import { createHash, createSign, createVerify, generateKeyPairSync } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { loadConfigSync } from "./config.js";
 
 const DATA_DIR = path.resolve(process.cwd(), "data", "federation");
 const KEYS_FILE = path.join(DATA_DIR, "keys.json");
 const FOLLOWERS_FILE = path.join(DATA_DIR, "followers.json");
 const INBOX_DIR = path.join(DATA_DIR, "inbox");
 const MAX_CLOCK_SKEW_MS = 10 * 60 * 1000;
+
+function federationTimeoutMs(): number {
+    return loadConfigSync().federation?.remoteFetchTimeoutMs ?? 10_000;
+}
+
+function deliveryTimeoutMs(): number {
+    return loadConfigSync().federation?.deliveryTimeoutMs ?? 10_000;
+}
 
 interface ActorKey {
     actorUrl: string;
@@ -201,7 +210,7 @@ async function fetchRemoteActor(actorUrl: string): Promise<RemoteActor> {
     const response = await fetch(parsed, {
         headers: { accept: "application/activity+json, application/ld+json" },
         redirect: "error",
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(federationTimeoutMs()),
     });
     if (!response.ok) throw new Error(`Remote actor returned HTTP ${response.status}.`);
     const actor = (await response.json()) as RemoteActor;
@@ -304,7 +313,7 @@ export async function deliverActivity(options: {
         headers,
         body,
         redirect: "error",
-        signal: AbortSignal.timeout(10_000),
+        signal: AbortSignal.timeout(federationTimeoutMs()),
     });
     return { ok: response.ok, status: response.status };
 }
