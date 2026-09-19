@@ -209,6 +209,12 @@
             "type": "shell",
             "command": "pnpm install",
             "problemMatcher": []
+        },
+        {
+            "label": "imshare: cache prune",
+            "type": "shell",
+            "command": "pnpm cache:prune",
+            "problemMatcher": []
         }
     ]
 }
