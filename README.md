@@ -93,49 +93,139 @@ Existing JSON/YAML/TOML configuration files are no longer the runtime configurat
 
 ## Development
 
+The repository provides separate commands for the server, frontend client, checks, tests, database work, and maintenance tasks.
+
 Start the development server with file watching:
 
 ```sh
 pnpm dev
 ```
 
-Build the application:
+Start the Vite client development server separately:
+
+```sh
+pnpm dev:client
+```
+
+Build only the browser client:
+
+```sh
+pnpm build:client
+```
+
+Use this when changing React/MUI client code and you do not need the server TypeScript build.
+
+Build the complete production application:
 
 ```sh
 pnpm build
 ```
 
-Start the compiled server:
+This generates Prisma Client, builds the client with `pnpm build:client`, and compiles the server.
+
+Start the compiled production server:
 
 ```sh
 pnpm start
 ```
 
+### Development commands
+
+Use the repository scripts instead of invoking the underlying tools directly:
+
+| Task | Command | Purpose |
+| --- | --- | --- |
+| Install dependencies | `pnpm install` | Install the locked dependency set |
+| Start server | `pnpm dev` | Run the Fastify server with file watching |
+| Start client | `pnpm dev:client` | Run the Vite client development server |
+| Generate Prisma Client | `pnpm db:generate` | Regenerate Prisma Client after schema changes |
+| Apply development migrations | `pnpm db:migrate` | Create/apply Prisma development migrations |
+| Validate Prisma schema | `pnpm db:validate` | Validate the Prisma schema and configuration |
+| Build client | `pnpm build:client` | Type-check and bundle the React/Vite client |
+| Build application | `pnpm build` | Generate Prisma Client, build client, and compile server |
+| Start production build | `pnpm start` | Start the compiled server |
+| Export OpenAPI | `pnpm openapi:export` | Generate the OpenAPI specification |
+| Migrate uploads | `pnpm migrate:uploads` | Run the upload migration utility |
+| Migrate cache | `pnpm migrate:cache` | Run the cache migration utility |
+| Service unavailable page | `pnpm serve:unavailable` | Serve the maintenance/unavailable response |
+
+For a deployed database, apply committed migrations with:
+
+```sh
+pnpm prisma migrate deploy
+```
+
+Do not use `pnpm db:migrate` for production database deployment.
+
 ## Checks and tests
 
-Run type checking:
+Run formatting:
+
+```sh
+pnpm format
+```
+
+Check formatting without changing files:
+
+```sh
+pnpm format:check
+```
+
+Run TypeScript checks:
 
 ```sh
 pnpm typecheck
 ```
 
-Run linting:
+Run ESLint:
 
 ```sh
 pnpm lint
 ```
 
-Run the automated tests:
+Run the Vitest suite:
 
 ```sh
 pnpm test
 ```
 
-Run the integration tests:
+Run Vitest in watch mode:
+
+```sh
+pnpm test:watch
+```
+
+Run Vitest with V8 coverage:
+
+```sh
+pnpm test:coverage
+```
+
+Run the application integration tests:
 
 ```sh
 pnpm test:integration
 ```
+
+Run Playwright browser tests:
+
+```sh
+pnpm test:browser
+```
+
+Run Playwright browser tests with a visible browser:
+
+```sh
+pnpm test:browser:headed
+```
+
+Open the Playwright UI runner:
+
+```sh
+pnpm test:browser:ui
+```
+
+The Playwright commands build the client before starting the browser tests.
 
 Run the complete project check before submitting changes:
 
@@ -143,7 +233,9 @@ Run the complete project check before submitting changes:
 pnpm check
 ```
 
-`pnpm check` runs type checking, linting, unit/API tests, integration tests, and a production build.
+`pnpm check` runs type checking, linting, Vitest tests, integration tests, Playwright browser tests, and the production build.
+
+VS Code exposes the same repository commands through `.vscode/tasks.json`, with tasks prefixed by `imshare:`. The test and coverage Tasks regenerate Prisma Client before running.
 
 ## API
 
@@ -228,12 +320,13 @@ The backend enforces these permissions on admin endpoints. The frontend can expo
 
 ```text
 src/
-  lib/        shared configuration, auth, API, and permission helpers
-  routes/     API route modules
-public/       static frontend pages and shared components
+  client/     React/MUI frontend entries and shared components
+  lib/        shared configuration, auth, API, permission helpers, and utilities
+  routes/     Fastify API and page route modules
+public/       static assets and service-worker resources
 prisma/       Prisma schema and migrations
-test/         automated and integration tests
-docs/        additional project documentation
+test/         Vitest and Playwright tests
+docs/         additional project documentation
 ```
 
 ## Contributing
