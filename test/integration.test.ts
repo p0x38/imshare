@@ -143,6 +143,49 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         });
         expect(updateUser.statusCode).toBe(200);
 
+        const batchEditPost = await request({
+            method: "POST",
+            url: "/api/v1/posts",
+            headers: { cookie },
+            payload: { title: "Batch Edit Post", content: "Batch edit content" },
+        });
+        expect(batchEditPost.statusCode).toBe(201);
+        const batchEditPostId = batchEditPost.json().data.id as string;
+
+        const batchUpdate = await request({
+            method: "PATCH",
+            url: "/api/v1/posts/batch",
+            headers: { cookie },
+            payload: {
+                postIds: [postId, batchEditPostId],
+                status: "published",
+                visibility: "unlisted",
+                allowDownload: false,
+                contentWarning: "Integration warning",
+                categoryId,
+                tags: ["Integration Batch Tag"],
+            },
+        });
+        expect(batchUpdate.statusCode).toBe(200);
+        expect(batchUpdate.json().data).toMatchObject({
+            updatedCount: 2,
+            postIds: [postId, batchEditPostId],
+        });
+
+        for (const id of [postId, batchEditPostId]) {
+            const batchEdited = await request({
+                method: "GET",
+                url: "/api/v1/posts/" + id,
+                headers: { cookie },
+            });
+            expect(batchEdited.statusCode).toBe(200);
+            expect(batchEdited.json().data).toMatchObject({
+                status: "published",
+                visibility: "unlisted",
+                allowDownload: false,
+                contentWarning: "Integration warning",
+            });
+        }
         const batchPost = await request({
             method: "POST",
             url: "/api/v1/posts",
