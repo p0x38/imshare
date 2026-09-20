@@ -18,6 +18,7 @@ import { prisma } from "./lib/auth.js";
 import { registerOpenApi } from "./lib/openapi.js";
 import { observability } from "./instrumentation.js";
 import { authorizeApiTokenRequest } from "./lib/api-tokens.js";
+import { postPermalink } from "./lib/post-permalink.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -286,14 +287,16 @@ export async function buildApp() {
         const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
         const description = `${config.site.name} — self-hosted image archive and sharing server`;
         const origin = `${request.protocol}://${request.hostname}`;
-        const canonical = `${origin}${request.url.split("?", 1)[0]}`;
+        let canonical = `${origin}${request.url.split("?", 1)[0]}`;
+        const currentPath = request.url.split("?", 1)[0] ?? "/";
         let metaTitle = title;
         let metaDescription = description;
         let metaAuthor = "";
         let metaKeywords = "";
         let metaImage = "";
         let metaType = "website";
-        const postMatch = request.url.split("?", 1)[0]?.match(/^\/posts\/([^/]+)\/?$/);
+        const postMatch = currentPath.match(/^\/posts\/([^/]+)\/?$/);
+        const userPermalinkMatch = currentPath.match(/^\/[^/]+\/[^/]+\/?$/);
         if (postMatch) {
             try {
                 const post = await prisma.post.findUnique({
@@ -301,12 +304,19 @@ export async function buildApp() {
                     select: {
                         title: true,
                         description: true,
-                        user: { select: { name: true } },
+                        id: true,
+                        createdAt: true,
+                        customPostId: true,
+                        permalinkPattern: true,
+                        permalinkIdType: true,
+                        permalinkKey: true,
+                        user: { select: { id: true, handle: true, name: true } },
                         tags: { select: { tag: { select: { name: true } } } },
                         uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
                     },
                 });
                 if (post) {
+                    canonical = `${origin}${postPermalink(post, post.user)}`;
                     metaTitle = `${post.title} · ${config.site.name}`;
                     metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
                     metaAuthor = post.user.name;
@@ -318,6 +328,8 @@ export async function buildApp() {
             } catch {
                 // Keep the generic site metadata when the post cannot be loaded.
             }
+        } else if (userPermalinkMatch) {
+            canonical = `${origin}${currentPath}`;
         }
         const tags = [
             `<meta name="description" content="${escapeMeta(metaDescription)}">`,
