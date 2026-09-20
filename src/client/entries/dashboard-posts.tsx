@@ -19,6 +19,7 @@ import {
     Menu,
     MenuItem,
     Pagination,
+    TextField,
 } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -32,6 +33,12 @@ import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
+import DownloadOutlinedIcon from "@mui/icons-material/DownloadOutlined";
+import ContentCopyOutlinedIcon from "@mui/icons-material/ContentCopyOutlined";
+import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 function imageUrl(url: string, width = 512): string {
@@ -39,6 +46,27 @@ function imageUrl(url: string, width = 512): string {
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
     return image.href;
+}
+interface PostRevision {
+    id: string;
+    title: string;
+    description?: string | null;
+    createdAt: string;
+}
+
+function postPublicUrl(post: Post): string {
+    return new URL(
+        post.permalink ?? "/posts/" + encodeURIComponent(post.id) + "/",
+        window.location.origin,
+    ).href;
+}
+
+function postOriginalUrl(post: Post): string | null {
+    const upload = post.uploads?.[0];
+    if (!upload) return null;
+    const url = new URL(upload.url, window.location.origin);
+    url.searchParams.set("download", "true");
+    return url.href;
 }
 function DashboardPostsPage() {
     const { t } = useTranslation();
@@ -57,6 +85,18 @@ function DashboardPostsPage() {
     });
     const [total, setTotal] = useState(0);
     const [convertSelection, setConvertSelection] = useState<string[]>([]);
+    const [actionsAnchor, setActionsAnchor] = useState<HTMLElement | null>(null);
+    const [batchEditOpen, setBatchEditOpen] = useState(false);
+    const [batchEditing, setBatchEditing] = useState(false);
+    const [batchVisibility, setBatchVisibility] = useState("");
+    const [batchStatus, setBatchStatus] = useState("");
+    const [batchAllowDownload, setBatchAllowDownload] = useState("");
+    const [batchContentWarning, setBatchContentWarning] = useState("");
+    const [batchClearContentWarning, setBatchClearContentWarning] = useState(false);
+    const [batchTags, setBatchTags] = useState("");
+    const [revisionsOpen, setRevisionsOpen] = useState(false);
+    const [revisions, setRevisions] = useState<PostRevision[]>([]);
+    const [revisionsLoading, setRevisionsLoading] = useState(false);
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
     const drafts = imagePosts.filter((post) => post.status === "draft");
@@ -78,7 +118,10 @@ function DashboardPostsPage() {
                 }>(`/v1/me/posts?limit=100&page=${targetPage}`);
                 const resolvedPage = response.pagination?.page ?? targetPage;
                 setPosts(response.data ?? []);
-                setTotal(response.pagination?.total ?? 0);
+                const resolvedTotal = response.pagination?.total ?? 0;
+                const resolvedTotalPages =
+                    response.pagination?.totalPages ?? Math.ceil(resolvedTotal / 100);
+                setTotal(resolvedTotal);
                 setPage(resolvedPage);
                 const historyParams = new URLSearchParams();
                 if (resolvedPage > 1) historyParams.set("page", String(resolvedPage));
@@ -87,6 +130,11 @@ function DashboardPostsPage() {
                     "",
                     historyParams.toString() ? `?${historyParams}` : location.pathname,
                 );
+                return {
+                    page: resolvedPage,
+                    total: resolvedTotal,
+                    totalPages: resolvedTotalPages,
+                };
             } catch (cause) {
                 const status = (cause as Error & { status?: number }).status;
                 if (status === 401) {
@@ -115,6 +163,96 @@ function DashboardPostsPage() {
 
     function toggleAllPosts() {
         setSelectedPostIds(allSelected ? [] : allPostIds);
+    }
+
+    function closeActionsMenu() {
+        setActionsAnchor(null);
+    }
+
+    function openBatchEdit() {
+        closeActionsMenu();
+        setBatchVisibility("");
+        setBatchStatus("");
+        setBatchAllowDownload("");
+        setBatchContentWarning("");
+        setBatchClearContentWarning(false);
+        setBatchTags("");
+        setBatchEditOpen(true);
+    }
+
+    async function applyBatchEdit() {
+        if (!selectedPostIds.length) return;
+        const payload: Record<string, unknown> = { postIds: selectedPostIds };
+        if (batchVisibility) payload.visibility = batchVisibility;
+        if (batchStatus) payload.status = batchStatus;
+        if (batchAllowDownload) payload.allowDownload = batchAllowDownload === "true";
+        if (batchClearContentWarning) payload.contentWarning = null;
+        else if (batchContentWarning.trim()) payload.contentWarning = batchContentWarning.trim();
+        if (batchTags.trim())
+            payload.tags = batchTags.split(",").map((value) => value.trim()).filter(Boolean);
+
+        if (Object.keys(payload).length === 1) {
+            setError("Choose at least one field to change.");
+            return;
+        }
+
+        setBatchEditing(true);
+        setError("");
+        try {
+            await api("/v1/posts/batch", {
+                method: "PATCH",
+                body: JSON.stringify(payload),
+            });
+            setSelectedPostIds([]);
+            setBatchEditOpen(false);
+            await loadPosts(page);
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to batch edit selected posts.");
+        } finally {
+            setBatchEditing(false);
+        }
+    }
+
+    async function deletePost(post: Post) {
+        if (!window.confirm("Delete \"" + (post.title || post.id) + "\" permanently? This cannot be undone."))
+            return;
+        setError("");
+        try {
+            await api("/v1/posts/" + encodeURIComponent(post.id), { method: "DELETE" });
+            setSelectedPostIds((current) => current.filter((id) => id !== post.id));
+            const refreshed = await loadPosts(page);
+            if (refreshed && page > 1 && refreshed.page > refreshed.totalPages)
+                await loadPosts(Math.max(1, refreshed.totalPages));
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to delete post.");
+        }
+    }
+
+    async function copyPostUrl(post: Post) {
+        try {
+            await navigator.clipboard.writeText(postPublicUrl(post));
+        } catch {
+            setError("Unable to copy the post URL.");
+        }
+        closePostMenu();
+    }
+
+    async function openRevisions(post: Post) {
+        closePostMenu();
+        setRevisionsOpen(true);
+        setRevisionsLoading(true);
+        setRevisions([]);
+        try {
+            const response = await api<{ data: PostRevision[] }>(
+                "/v1/posts/" + encodeURIComponent(post.id) + "/revisions",
+            );
+            setRevisions(response.data ?? []);
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to load post versions.");
+            setRevisionsOpen(false);
+        } finally {
+            setRevisionsLoading(false);
+        }
     }
 
     async function combineSelected() {
@@ -280,25 +418,16 @@ function DashboardPostsPage() {
                             }
                             label={selectedPostIds.length ? `${selectedPostIds.length} selected` : "Select all posts"}
                         />
-                        {selectedPostIds.length ? (
-                            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
-                                <Button
-                                    color="error"
-                                    variant="outlined"
-                                    disabled={deleting}
-                                    onClick={() => void deleteSelected()}
-                                >
-                                    {deleting ? "Deleting…" : `Delete selected (${selectedPostIds.length})`}
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    disabled={!canCombineSelected || merging}
-                                    onClick={() => void combineSelected()}
-                                >
-                                    {merging ? "Combining…" : `Combine selected (${selectedDraftIds.length})`}
-                                </Button>
-                            </Stack>
-                        ) : null}
+                        <Button
+                            variant="outlined"
+                            endIcon={<ArrowDropDownIcon />}
+                            onClick={(event) => setActionsAnchor(event.currentTarget)}
+                            disabled={!selectedPostIds.length}
+                            aria-haspopup="menu"
+                            aria-expanded={Boolean(actionsAnchor) ? "true" : undefined}
+                        >
+                            Actions{selectedPostIds.length ? " (" + selectedPostIds.length + ")" : ""}
+                        </Button>
                     </Stack>
                 ) : null}
 
@@ -330,15 +459,6 @@ function DashboardPostsPage() {
                                     <Typography variant="h5" component="h2">
                                         Posts
                                     </Typography>
-                                    {drafts.length > 1 ? (
-                                        <Button
-                                            variant="outlined"
-                                            disabled={!canCombineSelected || merging}
-                                            onClick={() => void combineSelected()}
-                                        >
-                                            {merging ? "Combining…" : `Combine selected (${selectedDraftIds.length})`}
-                                        </Button>
-                                    ) : null}
                                 </Stack>
                                 <Stack
                                     sx={{
@@ -540,6 +660,53 @@ function DashboardPostsPage() {
                 ) : null}
             </Stack>
         <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closePostMenu}>
+            <MenuItem
+                onClick={() => {
+                    if (menuPost) void deletePost(menuPost);
+                    closePostMenu();
+                }}
+            >
+                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                Delete
+            </MenuItem>
+            <MenuItem
+                onClick={() => {
+                    if (menuPost)
+                        window.location.href =
+                            "/dashboard/posts/" + encodeURIComponent(menuPost.id) + "/edit/";
+                    closePostMenu();
+                }}
+            >
+                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Edit
+            </MenuItem>
+            <MenuItem
+                onClick={() => {
+                    if (menuPost) window.location.href = postPublicUrl(menuPost);
+                    closePostMenu();
+                }}
+            >
+                <VisibilityOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                View
+            </MenuItem>
+            {menuPost?.uploads?.[0] ? (
+                <MenuItem
+                    component="a"
+                    href={postOriginalUrl(menuPost) ?? undefined}
+                    onClick={closePostMenu}
+                >
+                    <DownloadOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Download Original
+                </MenuItem>
+            ) : null}
+            <MenuItem onClick={() => { if (menuPost) void copyPostUrl(menuPost); }}>
+                <ContentCopyOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Copy URL
+            </MenuItem>
+            <MenuItem onClick={() => { if (menuPost) void openRevisions(menuPost); }}>
+                <HistoryOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Version History
+            </MenuItem>
             {menuPost?.status === "draft" ? (
                 <MenuItem onClick={openConvertDialog} disabled={drafts.length < 2}>
                     Convert to multi-post
@@ -550,16 +717,157 @@ function DashboardPostsPage() {
                     {splitBusy ? "Splitting…" : "Split to single posts"}
                 </MenuItem>
             ) : null}
+        </Menu>
+        <Menu
+            anchorEl={actionsAnchor}
+            open={Boolean(actionsAnchor)}
+            onClose={closeActionsMenu}
+        >
             <MenuItem
+                disabled={!selectedPostIds.length || deleting}
                 onClick={() => {
-                    if (menuPost)
-                        window.location.href = `/dashboard/posts/${encodeURIComponent(menuPost.id)}/`;
-                    closePostMenu();
+                    closeActionsMenu();
+                    void deleteSelected();
                 }}
             >
-                Open
+                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                Batch Delete
+            </MenuItem>
+            <MenuItem disabled={!selectedPostIds.length || batchEditing} onClick={openBatchEdit}>
+                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Batch Edit
+            </MenuItem>
+            <MenuItem
+                disabled={!canCombineSelected || merging}
+                onClick={() => {
+                    closeActionsMenu();
+                    void combineSelected();
+                }}
+            >
+                Combine selected
             </MenuItem>
         </Menu>
+        <Dialog
+            open={batchEditOpen}
+            onClose={() => (batchEditing ? null : setBatchEditOpen(false))}
+            fullWidth
+            maxWidth="sm"
+        >
+            <DialogTitle>Batch Edit</DialogTitle>
+            <DialogContent>
+                <Stack spacing={2} sx={{ pt: 1 }}>
+                    <Typography variant="body2" color="text.secondary">
+                        Changes apply to {selectedPostIds.length} selected posts. Leave fields unchanged to keep their current values.
+                    </Typography>
+                    <TextField
+                        select
+                        label="Visibility"
+                        value={batchVisibility}
+                        onChange={(event) => setBatchVisibility(event.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">No change</MenuItem>
+                        <MenuItem value="public">Public</MenuItem>
+                        <MenuItem value="unlisted">Unlisted</MenuItem>
+                        <MenuItem value="private">Private</MenuItem>
+                    </TextField>
+                    <TextField
+                        select
+                        label="Status"
+                        value={batchStatus}
+                        onChange={(event) => setBatchStatus(event.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">No change</MenuItem>
+                        <MenuItem value="draft">Draft</MenuItem>
+                        <MenuItem value="published">Published</MenuItem>
+                    </TextField>
+                    <TextField
+                        select
+                        label="Downloads"
+                        value={batchAllowDownload}
+                        onChange={(event) => setBatchAllowDownload(event.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">No change</MenuItem>
+                        <MenuItem value="true">Allow downloads</MenuItem>
+                        <MenuItem value="false">Disable downloads</MenuItem>
+                    </TextField>
+                    <TextField
+                        label="Content warning"
+                        value={batchContentWarning}
+                        onChange={(event) => setBatchContentWarning(event.target.value)}
+                        placeholder="Leave blank to keep the current warning"
+                        fullWidth
+                    />
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={batchClearContentWarning}
+                                onChange={(event) =>
+                                    setBatchClearContentWarning(event.target.checked)
+                                }
+                            />
+                        }
+                        label="Clear content warnings"
+                    />
+                    <TextField
+                        label="Tags"
+                        value={batchTags}
+                        onChange={(event) => setBatchTags(event.target.value)}
+                        helperText="Comma-separated replacement tag list. Leave blank to keep current tags."
+                        fullWidth
+                    />
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setBatchEditOpen(false)} disabled={batchEditing}>
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void applyBatchEdit()}
+                    disabled={batchEditing || !selectedPostIds.length}
+                >
+                    {batchEditing ? "Applying…" : "Apply changes"}
+                </Button>
+            </DialogActions>
+        </Dialog>
+        <Dialog open={revisionsOpen} onClose={() => setRevisionsOpen(false)} fullWidth maxWidth="md">
+            <DialogTitle>Version History</DialogTitle>
+            <DialogContent>
+                {revisionsLoading ? (
+                    <LoadingState label="Loading versions…" />
+                ) : revisions.length ? (
+                    <Stack spacing={1.5} sx={{ pt: 1 }}>
+                        {revisions.map((revision, index) => (
+                            <Card key={revision.id} variant="outlined">
+                                <CardContent>
+                                    <Stack spacing={0.5}>
+                                        <Typography variant="subtitle1">
+                                            Version {revisions.length - index}: {revision.title || "Untitled"}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            {new Date(revision.createdAt).toLocaleString()}
+                                        </Typography>
+                                        {revision.description ? (
+                                            <Typography variant="body2">{revision.description}</Typography>
+                                        ) : null}
+                                    </Stack>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </Stack>
+                ) : (
+                    <Typography color="text.secondary" sx={{ py: 2 }}>
+                        No saved versions yet.
+                    </Typography>
+                )}
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setRevisionsOpen(false)}>Close</Button>
+            </DialogActions>
+        </Dialog>
         <Dialog open={convertOpen} onClose={() => setConvertOpen(false)} fullWidth maxWidth="sm">
             <DialogTitle>Convert to multi-post</DialogTitle>
             <DialogContent>
