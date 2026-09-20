@@ -161,10 +161,22 @@ export const postUpdateInput = z
     })
     .meta({ description: "One or more post fields to update. At least one field is required." });
 
+export const postMergeInput = z
+    .object({
+        postIds: z
+            .array(z.string().min(1))
+            .min(2)
+            .max(50)
+            .meta({ description: "Draft post identifiers to combine into one draft." }),
+    })
+    .meta({ description: "Combines multiple owned image drafts into one draft post." });
+
 export type PostCreateInput = z.infer<typeof postCreateInput>;
+export type PostMergeInput = z.infer<typeof postMergeInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
 const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, unknown> =>
     createSchema(schema).schema as Record<string, unknown>;
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
+export const postMergeBodyJsonSchema = jsonSchema(postMergeInput);
 export const postUpdateBodyJsonSchema = { ...jsonSchema(postUpdateInput), minProperties: 1 };
