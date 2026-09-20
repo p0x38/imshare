@@ -1,4 +1,4 @@
-import { Alert, Card, CardContent, Stack, Typography } from "@mui/material";
+import { Alert, Card, CardContent, Pagination, Stack, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
@@ -16,15 +16,21 @@ interface Log {
 function AdminLogsPage() {
     const [logs, setLogs] = useState<Log[]>([]);
     const [error, setError] = useState("");
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
     useEffect(() => {
         void (async () => {
             try {
-                setLogs((await api<{ data: Log[] }>("/v1/admin/logs?limit=200")).data);
+                const response = await api<{ data: { logs: Log[]; total: number } }>(
+                    `/v1/admin/logs?limit=100&offset=${(page - 1) * 100}`,
+                );
+                setLogs(response.data.logs);
+                setTotal(response.data.total);
             } catch (e) {
                 setError(e instanceof Error ? e.message : "Failed to load moderation log.");
             }
         })();
-    }, []);
+    }, [page]);
     return (
         <AdminLayout
             title="Moderation log"
@@ -56,6 +62,7 @@ function AdminLogsPage() {
                     </Card>
                 ))}
             </Stack>
+            {total > 100 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={Math.ceil(total / 100)} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
         </AdminLayout>
     );
 }
