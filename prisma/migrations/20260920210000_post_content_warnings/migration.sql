@@ -1,0 +1,4 @@
+ALTER TABLE "post" ADD COLUMN "isNSFW" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "post" ADD COLUMN "contentWarningType" TEXT;
+ALTER TABLE "post_revision" ADD COLUMN "isNSFW" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "post_revision" ADD COLUMN "contentWarningType" TEXT;
