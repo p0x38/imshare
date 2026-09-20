@@ -8,6 +8,7 @@ import {
     Select,
     Stack,
     Typography,
+    Pagination,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -30,19 +31,22 @@ function AdminReportsPage() {
     const [reports, setReports] = useState<Report[]>([]);
     const [status, setStatus] = useState("open");
     const [error, setError] = useState("");
-    async function load() {
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    async function load(targetPage = page) {
         try {
-            setReports(
-                (await api<{ data: Report[] }>(`/v1/admin/reports?status=${status}&limit=100`))
-                    .data,
+            const response = await api<{ data: { reports: Report[]; total: number } }>(
+                `/v1/admin/reports?status=${status}&limit=100&offset=${(targetPage - 1) * 100}`,
             );
+            setReports(response.data.reports);
+            setTotal(response.data.total);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to load reports.");
         }
     }
     useEffect(() => {
         void load();
-    }, [status]);
+    }, [status, page]);
     async function resolve(id: string, next: "resolved" | "dismissed") {
         try {
             await api(`/v1/admin/reports/${encodeURIComponent(id)}`, {
@@ -62,7 +66,7 @@ function AdminReportsPage() {
         >
             <Stack direction="row" spacing={2} alignItems="center">
                 <Typography>Filter</Typography>
-                <Select size="small" value={status} onChange={(e) => setStatus(e.target.value)}>
+                <Select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
                     <MenuItem value="open">Open</MenuItem>
                     <MenuItem value="resolved">Resolved</MenuItem>
                     <MenuItem value="dismissed">Dismissed</MenuItem>
@@ -113,6 +117,7 @@ function AdminReportsPage() {
                     </Card>
                 ))}
             </Stack>
+            {total > 100 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={Math.ceil(total / 100)} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
         </AdminLayout>
     );
 }
