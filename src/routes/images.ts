@@ -64,6 +64,114 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     const cacheSettings = getCacheSettings(config);
     const cacheDir = await ensureCacheDirectory(config);
     const uploadId = parameter.path("uploadId", { type: "string" }, { description: "Upload ID." });
+    fastify.post(
+        "/v1/images/thumbnails/batch",
+        {
+            schema: openapi({
+                tags: "Images",
+                summary: "Get image thumbnails in a batch",
+                description:
+                    "Returns bounded WebP thumbnails for up to 100 upload IDs in one request.",
+                operationId: "getImageThumbnailsBatch",
+                requestBody: {
+                    required: true,
+                    content: {
+                        "application/json": {
+                            schema: {
+                                type: "object",
+                                required: ["uploadIds"],
+                                properties: {
+                                    uploadIds: {
+                                        type: "array",
+                                        minItems: 1,
+                                        maxItems: 100,
+                                        items: { type: "string" },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                security: [{}],
+                responses: {
+                    "200": { description: "Batch of WebP thumbnails." },
+                    "400": { $ref: "#/components/responses/BadRequest" },
+                },
+            }),
+        },
+        async (request, reply) => {
+            const body = request.body as { uploadIds?: unknown };
+            if (
+                !Array.isArray(body.uploadIds) ||
+                body.uploadIds.length < 1 ||
+                body.uploadIds.length > 100 ||
+                body.uploadIds.some((id) => typeof id !== "string" || !id.trim())
+            )
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_UPLOAD_IDS",
+                        message: "uploadIds must contain 1–100 upload IDs.",
+                    },
+                });
+
+            const uploadIds = [...new Set(body.uploadIds.map((id) => id.trim()))];
+            const uploads = await prisma.upload.findMany({
+                where: { id: { in: uploadIds } },
+                select: { id: true, filename: true },
+            });
+            const byId = new Map(uploads.map((upload) => [upload.id, upload]));
+            const items: Array<{ uploadId: string; mimeType: string; data: string }> = [];
+            const missingUploadIds: string[] = [];
+
+            for (const id of uploadIds) {
+                const upload = byId.get(id);
+                if (!upload) {
+                    missingUploadIds.push(id);
+                    continue;
+                }
+
+                const source = path.resolve(uploadDir, upload.filename);
+                const relative = path.relative(uploadDir, source);
+                if (relative.startsWith("..") || path.isAbsolute(relative)) {
+                    missingUploadIds.push(id);
+                    continue;
+                }
+
+                try {
+                    const cachePath = resolveCachePath(
+                        cacheDir,
+                        cacheKey(upload.id, 512, undefined, "inside", "webp"),
+                        cacheSettings.useHashedDirectory,
+                    );
+                    let output = await readCacheFile(cachePath, cacheSettings.ttl);
+                    if (!output) {
+                        output = await sharp(source, { animated: false })
+                            .resize({
+                                width: 512,
+                                fit: "inside",
+                                withoutEnlargement: true,
+                            })
+                            .webp()
+                            .toBuffer();
+                        await mkdir(path.dirname(cachePath), { recursive: true });
+                        await writeFile(cachePath, output, { flag: "wx" }).catch((error) => {
+                            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+                        });
+                    }
+                    items.push({
+                        uploadId: id,
+                        mimeType: "image/webp",
+                        data: output.toString("base64"),
+                    });
+                } catch (error) {
+                    request.log.warn({ err: error, uploadId: id }, "Failed to generate thumbnail");
+                    missingUploadIds.push(id);
+                }
+            }
+
+            return ok({ items, missingUploadIds });
+        },
+    );
     const transformParameters = [
         uploadId,
         parameter.query(
