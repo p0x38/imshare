@@ -730,7 +730,8 @@ function registerMetricHooks(
                 metricsSet.textsCreated.add(1);
                 metricsSet.postsCreated.add(1);
             }
-            if (pathname === "/api/v1/comments") metricsSet.commentsCreated.add(1);
+            if (/^\/api\/v1\/posts\/[^/]+\/comments$/.test(pathname))
+                metricsSet.commentsCreated.add(1);
         }
         if (
             pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
