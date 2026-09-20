@@ -18,8 +18,9 @@ import {
     IconButton,
     Menu,
     MenuItem,
+    Pagination,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
@@ -50,6 +51,11 @@ function DashboardPostsPage() {
     const [menuPost, setMenuPost] = useState<Post | null>(null);
     const [splitBusy, setSplitBusy] = useState(false);
     const [convertOpen, setConvertOpen] = useState(false);
+    const [page, setPage] = useState(() => {
+        const value = Number(new URLSearchParams(location.search).get("page"));
+        return Number.isInteger(value) && value > 0 ? value : 1;
+    });
+    const [total, setTotal] = useState(0);
     const [convertSelection, setConvertSelection] = useState<string[]>([]);
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
@@ -62,18 +68,42 @@ function DashboardPostsPage() {
     const allSelected = allPostIds.length > 0 && selectedPostIds.length === allPostIds.length;
     const partiallySelected = selectedPostIds.length > 0 && !allSelected;
     const canCombineSelected = selectedDraftIds.length >= 2 && selectedDraftIds.length === selectedPosts.length;
-    useEffect(() => {
-        void api<{ data?: Post[] }>("/v1/me/posts?limit=100")
-            .then((response) => setPosts(response.data ?? []))
-            .catch((cause) => {
+    const loadPosts = useCallback(
+        async (targetPage: number) => {
+            setError("");
+            try {
+                const response = await api<{
+                    data?: Post[];
+                    pagination?: { page?: number; total?: number; totalPages?: number };
+                }>(`/v1/me/posts?limit=100&page=${targetPage}`);
+                const resolvedPage = response.pagination?.page ?? targetPage;
+                setPosts(response.data ?? []);
+                setTotal(response.pagination?.total ?? 0);
+                setPage(resolvedPage);
+                const historyParams = new URLSearchParams();
+                if (resolvedPage > 1) historyParams.set("page", String(resolvedPage));
+                history.replaceState(
+                    null,
+                    "",
+                    historyParams.toString() ? `?${historyParams}` : location.pathname,
+                );
+            } catch (cause) {
                 const status = (cause as Error & { status?: number }).status;
                 if (status === 401) {
                     window.location.href = "/account/login/";
                     return;
                 }
                 setError(cause instanceof Error ? cause.message : t("dashboardPosts.loadError"));
-            });
-    }, [t]);
+                setPosts(null);
+            }
+        },
+        [t],
+    );
+
+    useEffect(() => {
+        setSelectedPostIds([]);
+        void loadPosts(page);
+    }, [loadPosts, page]);
 
     function togglePost(postId: string) {
         setSelectedPostIds((current) =>
