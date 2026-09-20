@@ -1,4 +1,4 @@
-import { Avatar, IconButton, Stack, Typography } from "@mui/material";
+import { Avatar, Checkbox, IconButton, Stack, Typography } from "@mui/material";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
@@ -6,7 +6,19 @@ import { useEffect, useState } from "react";
 import type { Post } from "../lib/types";
 import { api } from "../lib/api";
 
-function TextCard({ text, hrefForText }: { text: Post; hrefForText: (text: Post) => string }) {
+function TextCard({
+    text,
+    hrefForText,
+    selectable = false,
+    selected = false,
+    onToggle,
+}: {
+    text: Post;
+    hrefForText: (text: Post) => string;
+    selectable?: boolean;
+    selected?: boolean;
+    onToggle?: (postId: string) => void;
+}) {
     const author = text.author?.name || text.authorName || "Unknown user";
     const handle = text.author?.handle ? `@${text.author.handle}` : "";
     const [liked, setLiked] = useState(false);
@@ -94,6 +106,14 @@ function TextCard({ text, hrefForText }: { text: Post; hrefForText: (text: Post)
             alignItems="flex-start"
             sx={{ p: { xs: 1.25, sm: 1.5 }, border: 1, borderColor: "divider", borderRadius: 1 }}
         >
+            {selectable ? (
+                <Checkbox
+                    checked={selected}
+                    onChange={() => onToggle?.(text.id)}
+                    inputProps={{ "aria-label": `Select post ${text.title || text.id}` }}
+                    sx={{ mt: 0.25 }}
+                />
+            ) : null}
             <Avatar
                 component={authorHref ? "a" : "div"}
                 href={authorHref}
@@ -169,16 +189,29 @@ function TextCard({ text, hrefForText }: { text: Post; hrefForText: (text: Post)
 export function TextList({
     texts,
     hrefForText = (text) => `/texts/${encodeURIComponent(text.id)}/`,
+    selectable = false,
+    selectedIds = [],
+    onToggle,
 }: {
     texts: Post[];
     hrefForText?: (text: Post) => string;
+    selectable?: boolean;
+    selectedIds?: string[];
+    onToggle?: (postId: string) => void;
 }) {
     const visibleTexts = texts.filter((text) => text.contentType === "text");
     if (!visibleTexts.length) return null;
     return (
         <Stack spacing={1.25}>
             {visibleTexts.map((text) => (
-                <TextCard key={text.id} text={text} hrefForText={hrefForText} />
+                <TextCard
+                    key={text.id}
+                    text={text}
+                    hrefForText={hrefForText}
+                    selectable={selectable}
+                    selected={selectedIds.includes(text.id)}
+                    onToggle={onToggle}
+                />
             ))}
         </Stack>
     );
