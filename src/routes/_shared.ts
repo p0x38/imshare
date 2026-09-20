@@ -47,6 +47,8 @@ export function postView(post: any) {
         publishedAt: post.publishedAt,
         scheduledAt: post.scheduledAt,
         hiddenAt: post.hiddenAt,
+        isNSFW: post.isNSFW,
+        contentWarningType: post.contentWarningType,
         contentWarning: post.contentWarning,
         permalinkPattern: post.permalinkPattern,
         permalinkIdType: post.permalinkIdType,
