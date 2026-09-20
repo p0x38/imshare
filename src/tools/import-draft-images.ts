@@ -9,8 +9,10 @@ import { env } from "../lib/env.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
-
-const GIF_INPUT_PIXEL_LIMIT = 1_073_741_824;
+import {
+    GIF_SHARP_PIXEL_LIMIT,
+    validateGifMetadata,
+} from "../lib/gif-security.js";
 
 const IMAGE_EXTENSIONS = new Map<string, string>([
     ["image/jpeg", ".jpg"],
@@ -144,12 +146,14 @@ async function prepareImage(source: string): Promise<PreparedImage> {
     const isGif = path.extname(source).toLowerCase() === ".gif";
     const sharpOptions = {
         animated: true,
-        ...(isGif ? { limitInputPixels: GIF_INPUT_PIXEL_LIMIT } : {}),
+        ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
     };
     const original = await sharp(source, sharpOptions).metadata();
 
     if (!original.width || !original.height)
         throw new Error("Unable to read image dimensions.");
+
+    if (original.format === "gif") validateGifMetadata(original);
 
     const normalized = await sharp(source, sharpOptions)
         .rotate()
