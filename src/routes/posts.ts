@@ -40,6 +40,8 @@ function lifecycleData(body: {
     status?: string;
     visibility?: string;
     scheduledAt?: string | null;
+    isNSFW?: boolean;
+    contentWarningType?: string | null;
     contentWarning?: string | null;
 }) {
     const scheduledAt = body.scheduledAt ? new Date(body.scheduledAt) : null;
@@ -50,6 +52,8 @@ function lifecycleData(body: {
         visibility: body.visibility ?? "public",
         scheduledAt,
         publishedAt: status === "published" && !scheduledAt ? new Date() : null,
+        isNSFW: body.isNSFW ?? false,
+        contentWarningType: body.contentWarningType ?? null,
         contentWarning: body.contentWarning ?? null,
     };
 }
@@ -120,6 +124,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 status?: string;
                 visibility?: string;
                 scheduledAt?: string | null;
+                isNSFW?: boolean;
+                contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
                 categoryId?: string | null;
@@ -317,6 +323,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         body.status !== undefined ||
                         body.visibility !== undefined ||
                         body.scheduledAt !== undefined ||
+                        body.isNSFW !== undefined ||
+                        body.contentWarningType !== undefined ||
                         body.contentWarning !== undefined
                             ? lifecycleData({
                                   status: body.status ?? post.status,
@@ -325,6 +333,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                       body.scheduledAt !== undefined
                                           ? body.scheduledAt
                                           : (post.scheduledAt?.toISOString() ?? null),
+                                  isNSFW: body.isNSFW ?? post.isNSFW,
+                                  contentWarningType:
+                                      body.contentWarningType !== undefined
+                                          ? body.contentWarningType
+                                          : post.contentWarningType,
                                   contentWarning:
                                       body.contentWarning !== undefined
                                           ? body.contentWarning
@@ -345,6 +358,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                             scheduledAt: post.scheduledAt,
                             publishedAt: post.publishedAt,
                             categoryId: post.categoryId,
+                            isNSFW: post.isNSFW,
+                            contentWarningType: post.contentWarningType,
                             tagsJson: JSON.stringify(post.tags.map((tag) => tag.tagId)),
                             contentWarning: post.contentWarning,
                             createdById: user.id,
