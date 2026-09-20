@@ -21,41 +21,6 @@ const IMAGE_TYPES = new Map([
     [".bmp", "image/bmp"],
     [".avif", "image/avif"],
 ]);
-function hasImageSignature(buffer: Buffer, extension: string): boolean {
-    switch (extension) {
-        case ".jpg":
-        case ".jpeg":
-            return (
-                buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
-            );
-        case ".png":
-            return buffer
-                .subarray(0, 8)
-                .equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
-        case ".gif":
-            return (
-                buffer.subarray(0, 6).equals(Buffer.from("GIF87a")) ||
-                buffer.subarray(0, 6).equals(Buffer.from("GIF89a"))
-            );
-        case ".webp":
-            return (
-                buffer.length >= 12 &&
-                buffer.subarray(0, 4).toString() === "RIFF" &&
-                buffer.subarray(8, 12).toString() === "WEBP"
-            );
-        case ".bmp":
-            return buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d;
-        case ".avif":
-            return (
-                buffer.length >= 12 &&
-                buffer.subarray(4, 8).toString() === "ftyp" &&
-                (buffer.subarray(8).toString().includes("avif") ||
-                    buffer.subarray(8).toString().includes("avis"))
-            );
-        default:
-            return false;
-    }
-}
 function uploadView(upload: any) {
     return {
         ...upload,
@@ -131,7 +96,10 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "processing", progress: 100 });
                 const content = await readFile(temporaryPath);
-                if (!hasImageSignature(content.subarray(0, 32), ext)) {
+                let metadata;
+                try {
+                    metadata = await sharp(content, { animated: true }).metadata();
+                } catch {
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
                         uploadId,
@@ -142,11 +110,25 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_FILE",
+                            message: "File content is not a valid supported image.",
+                        },
+                    });
+                }
+                if (metadata.mediaType !== mime) {
+                    await unlink(temporaryPath).catch(() => undefined);
+                    broadcastUploadStatus(user.id, {
+                        uploadId,
+                        status: "failed",
+                        error: "Image type does not match the uploaded file type.",
+                    });
+                    observability.recordUploadError("invalid_content");
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_FILE",
                             message: "File content does not match its image type.",
                         },
                     });
                 }
-                const metadata = await sharp(content, { animated: true }).metadata();
                 if (!metadata.width || !metadata.height) {
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
