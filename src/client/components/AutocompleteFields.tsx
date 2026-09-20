@@ -43,9 +43,11 @@ function normalizeTags(values: string[]) {
 export function TagAutocomplete({
     value,
     onChange,
+    helperText = "Tags appear as chips inside the field. Press Enter or comma to add a tag.",
 }: {
     value: string;
     onChange: (value: string) => void;
+    helperText?: string;
 }) {
     const [inputValue, setInputValue] = useState("");
     const [options, setOptions] = useState<TagOption[]>([]);
@@ -146,7 +148,7 @@ export function TagAutocomplete({
                     {...params}
                     label="Tags"
                     placeholder={selectedValues.length ? "Add a tag" : "Search tags"}
-                    helperText="Tags appear as chips inside the field. Press Enter or comma to add a tag."
+                    helperText={helperText}
                     slotProps={{
                         input: {
                             ...params.InputProps,
