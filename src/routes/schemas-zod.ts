@@ -181,9 +181,20 @@ export const postBatchDeleteInput = z
     })
     .meta({ description: "Deletes multiple owned posts in one operation." });
 
+export const postBatchUploadInput = z
+    .object({
+        uploadIds: z
+            .array(z.string().min(1))
+            .min(2)
+            .max(20)
+            .meta({ description: "Uploaded image identifiers to create as separate drafts." }),
+    })
+    .meta({ description: "Creates one draft image post for each uploaded image." });
+
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostMergeInput = z.infer<typeof postMergeInput>;
 export type PostBatchDeleteInput = z.infer<typeof postBatchDeleteInput>;
+export type PostBatchUploadInput = z.infer<typeof postBatchUploadInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
 const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, unknown> =>
@@ -191,4 +202,5 @@ const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, 
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 export const postMergeBodyJsonSchema = jsonSchema(postMergeInput);
 export const postBatchDeleteBodyJsonSchema = jsonSchema(postBatchDeleteInput);
+export const postBatchUploadBodyJsonSchema = jsonSchema(postBatchUploadInput);
 export const postUpdateBodyJsonSchema = { ...jsonSchema(postUpdateInput), minProperties: 1 };
