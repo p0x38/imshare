@@ -17,6 +17,7 @@ const sections = [
     ["about", 3],
     ["accounts", 5],
     ["posts", 5],
+    ["rateLimits", 4],
     ["privacy", 4],
     ["discovery", 4],
     ["analytics", 3],
