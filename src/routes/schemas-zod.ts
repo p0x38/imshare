@@ -161,6 +161,42 @@ export const postUpdateInput = z
     })
     .meta({ description: "One or more post fields to update. At least one field is required." });
 
+export const postBatchUpdateInput = z
+    .object({
+        postIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(100)
+            .meta({ description: "Owned post identifiers to update." }),
+        allowDownload: z
+            .boolean()
+            .optional()
+            .meta({ description: "Set whether viewers may download attached files." }),
+        ...lifecycleProperties,
+        tags: z
+            .array(z.string().min(1).max(100))
+            .max(100)
+            .optional()
+            .meta({ description: "Replacement tag set applied to every selected post." }),
+        categoryId: z.string().min(1).nullable().optional().meta({
+            description: "Category identifier applied to every selected post, or null to remove it.",
+        }),
+    })
+    .refine(
+        (value) =>
+            value.allowDownload !== undefined ||
+            value.status !== undefined ||
+            value.visibility !== undefined ||
+            value.scheduledAt !== undefined ||
+            value.contentWarning !== undefined ||
+            value.tags !== undefined ||
+            value.categoryId !== undefined,
+        { message: "At least one batch-edit field is required." },
+    )
+    .meta({
+        description: "Applies shared metadata and publication settings to multiple owned posts.",
+    });
+
 export const postMergeInput = z
     .object({
         postIds: z
@@ -193,6 +229,7 @@ export const postBatchUploadInput = z
 
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostMergeInput = z.infer<typeof postMergeInput>;
+export type PostBatchUpdateInput = z.infer<typeof postBatchUpdateInput>;
 export type PostBatchDeleteInput = z.infer<typeof postBatchDeleteInput>;
 export type PostBatchUploadInput = z.infer<typeof postBatchUploadInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
@@ -201,6 +238,7 @@ const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, 
     createSchema(schema).schema as Record<string, unknown>;
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 export const postMergeBodyJsonSchema = jsonSchema(postMergeInput);
+export const postBatchUpdateBodyJsonSchema = jsonSchema(postBatchUpdateInput);
 export const postBatchDeleteBodyJsonSchema = jsonSchema(postBatchDeleteInput);
 export const postBatchUploadBodyJsonSchema = jsonSchema(postBatchUploadInput);
 export const postUpdateBodyJsonSchema = { ...jsonSchema(postUpdateInput), minProperties: 1 };
