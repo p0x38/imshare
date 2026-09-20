@@ -678,6 +678,23 @@ function DashboardPostsPage() {
                                                                 </Typography>
                                                             </Stack>
                                                         </Tooltip>
+                                                        <Tooltip title="Comments">
+                                                            <Stack
+                                                                direction="row"
+                                                                spacing={0.25}
+                                                                alignItems="center"
+                                                            >
+                                                                <ChatBubbleOutlineIcon
+                                                                    sx={{ fontSize: 15 }}
+                                                                />
+                                                                <Typography
+                                                                    component="span"
+                                                                    variant="caption"
+                                                                >
+                                                                    {post.commentCount ?? 0}
+                                                                </Typography>
+                                                            </Stack>
+                                                        </Tooltip>
                                                         <Tooltip title="Likes">
                                                             <Stack
                                                                 direction="row"
