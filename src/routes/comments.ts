@@ -36,7 +36,7 @@ const commentBody = {
     },
 } satisfies OpenApiSchema;
 
-function view(comment: any) {
+function view(comment: any, upload: any = null) {
     return {
         id: comment.id,
         body: comment.body,
@@ -48,12 +48,12 @@ function view(comment: any) {
         },
         likes: comment.reactions?._count?._all ?? comment._count?.reactions ?? 0,
         liked: Boolean(comment.reactions?.some?.((reaction: any) => reaction.userId)),
-        attachment: comment.upload
+        attachment: upload
             ? {
-                  id: comment.upload.id,
-                  originalName: comment.upload.originalName,
-                  mimeType: comment.upload.mimeType,
-                  url: `/v1/posts/image/${encodeURIComponent(comment.upload.id)}`,
+                  id: upload.id,
+                  originalName: upload.originalName,
+                  mimeType: upload.mimeType,
+                  url: `/v1/posts/image/${encodeURIComponent(upload.id)}`,
               }
             : null,
     };
@@ -64,11 +64,16 @@ async function commentView(id: string, userId?: string) {
         where: { id },
         include: {
             user: { select: commentUserSelect },
-            upload: true,
             _count: { select: { reactions: true } },
         },
     });
     if (!comment) return null;
+    const upload = comment.uploadId
+        ? await prisma.upload.findUnique({
+              where: { id: comment.uploadId },
+              select: { id: true, originalName: true, mimeType: true },
+          })
+        : null;
     const liked = userId
         ? Boolean(
               await prisma.commentReaction.findUnique({
@@ -76,7 +81,7 @@ async function commentView(id: string, userId?: string) {
               }),
           )
         : false;
-    return { ...view(comment), liked };
+    return { ...view(comment, upload), liked };
 }
 
 export const commentRoutes: FastifyPluginAsync = async (fastify) => {
@@ -108,7 +113,6 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     where,
                     include: {
                         user: { select: commentUserSelect },
-                        upload: true,
                         _count: { select: { reactions: true } },
                     },
                     skip: p.skip,
@@ -131,8 +135,18 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                       ).map((x) => x.commentId),
                   )
                 : new Set<string>();
+            const uploads = comments.some((comment) => comment.uploadId)
+                ? await prisma.upload.findMany({
+                      where: { id: { in: comments.flatMap((comment) => comment.uploadId ? [comment.uploadId] : []) } },
+                      select: { id: true, originalName: true, mimeType: true },
+                  })
+                : [];
+            const uploadMap = new Map(uploads.map((upload) => [upload.id, upload]));
             return collection(
-                comments.map((comment) => ({ ...view(comment), liked: liked.has(comment.id) })),
+                comments.map((comment) => ({
+                    ...view(comment, comment.uploadId ? uploadMap.get(comment.uploadId) : null),
+                    liked: liked.has(comment.id),
+                })),
                 p.page,
                 p.limit,
                 total,
@@ -232,7 +246,9 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     postId,
                     commentId: comment.id,
                 });
-            return reply.code(201).send(ok({ ...view(comment), liked: false }));
+            return reply
+                .code(201)
+                .send(ok({ ...view(comment, createdUpload), liked: false }));
         },
     );
 
