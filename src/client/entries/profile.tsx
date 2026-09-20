@@ -17,6 +17,7 @@ import {
     Tab,
     Tabs,
     Typography,
+    Pagination,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -60,20 +61,22 @@ type ProfileTab = "posts" | "about" | "followers" | "following";
 
 function RelationshipList({ value, kind }: { value: string; kind: "followers" | "following" }) {
     const [items, setItems] = useState<RelationshipUser[]>([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     useEffect(() => {
         setLoading(true);
         setError("");
         void api<{ data: RelationshipUser[] }>(
-            `/v1/users/${encodeURIComponent(value)}/${kind}?limit=100`,
+            `/v1/users/${encodeURIComponent(value)}/${kind}?limit=50&page=${page}`,
         )
-            .then((response) => setItems(response.data ?? []))
+            .then((response) => { setItems(response.data ?? []); setTotalPages(response.totalPages ?? 1); })
             .catch((cause) =>
                 setError(cause instanceof Error ? cause.message : `Unable to load ${kind}.`),
             )
             .finally(() => setLoading(false));
-    }, [value, kind]);
+    }, [value, kind, page]);
     if (loading) return <LoadingState label={`Loading ${kind}…`} />;
     if (error) return <Alert severity="error">{error}</Alert>;
     if (!items.length)
@@ -123,6 +126,7 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
                     </Box>
                 ))}
             </List>
+            {totalPages > 1 ? <Stack alignItems="center" sx={{ p: 2 }}><Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} /></Stack> : null}
         </Card>
     );
 }
@@ -131,6 +135,8 @@ function ProfilePage() {
     const value = decodeURIComponent(location.pathname.split("/").filter(Boolean).at(-1) ?? "");
     const [profile, setProfile] = useState<Profile | null>(null);
     const [posts, setPosts] = useState<Post[]>([]);
+    const [postsPage, setPostsPage] = useState(1);
+    const [postsTotalPages, setPostsTotalPages] = useState(1);
     const [tab, setTab] = useState<ProfileTab>("posts");
     const [error, setError] = useState("");
     const [busy, setBusy] = useState(false);
@@ -144,9 +150,9 @@ function ProfilePage() {
             setProfile(profileResponse.data);
             if (profileResponse.data.stats.posts > 0) {
                 const postsResponse = await api<{ data: Post[] }>(
-                    `/v1/users/${encodeURIComponent(value)}/posts?limit=100`,
+                    `/v1/users/${encodeURIComponent(value)}/posts?limit=48&page=${postsPage}`,
                 );
-                setPosts(postsResponse.data);
+                setPosts(postsResponse.data); setPostsTotalPages(postsResponse.pagination?.totalPages ?? 1);
             } else setPosts([]);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to load profile.");
@@ -154,7 +160,7 @@ function ProfilePage() {
     }
     useEffect(() => {
         void load();
-    }, [value]);
+    }, [value, postsPage]);
     useEffect(() => {
         if (!profile) return;
         const existing = document.head.querySelector('meta[name="robots"]');
@@ -336,6 +342,7 @@ function ProfilePage() {
                                 <PostGrid posts={imagePosts} />
                             </Stack>
                         ) : null}
+                        {postsTotalPages > 1 ? <Pagination count={postsTotalPages} page={postsPage} onChange={(_, value) => setPostsPage(value)} /> : null}
                         {texts.length ? (
                             <Stack spacing={1.5}>
                                 <Typography variant="h5" component="h2">
