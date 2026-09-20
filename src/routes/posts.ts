@@ -19,6 +19,7 @@ import {
 } from "./schemas.js";
 import {
     postBatchDeleteBodyJsonSchema,
+    postBatchUploadBodyJsonSchema,
     postCreateBodyJsonSchema,
     postMergeBodyJsonSchema,
     postUpdateBodyJsonSchema,
@@ -192,6 +193,82 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
             });
             return reply.code(201).send(ok(postView(post)));
+        },
+    );
+
+    fastify.post(
+        "/v1/posts/batch",
+        { schema: { body: postBatchUploadBodyJsonSchema } },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+
+            const body = request.body as { uploadIds: string[] };
+            const uploadIds = [...new Set(body.uploadIds)];
+            const uploads = await prisma.upload.findMany({
+                where: { id: { in: uploadIds }, userId: user.id },
+                orderBy: { createdAt: "asc" },
+            });
+
+            if (uploads.length !== uploadIds.length)
+                return reply.code(404).send({
+                    error: {
+                        code: "UPLOAD_NOT_FOUND",
+                        message: "One or more uploaded images were not found.",
+                    },
+                });
+
+            if (uploads.some((upload) => upload.postId))
+                return reply.code(409).send({
+                    error: {
+                        code: "UPLOAD_IN_USE",
+                        message: "One or more uploaded images are already attached to a post.",
+                    },
+                });
+
+            const created = await prisma.$transaction(async (tx) => {
+                const posts = [];
+                for (const upload of uploads) {
+                    const title =
+                        upload.originalName?.replace(/\.[^.]+$/, "")?.trim() || "Untitled";
+                    const post = await tx.post.create({
+                        data: {
+                            title,
+                            contentType: "image",
+                            textContent: null,
+                            description: null,
+                            caption: null,
+                            sourceUrl: null,
+                            originalCreator: null,
+                            originalCreatedAt: null,
+                            allowDownload: true,
+                            status: "draft",
+                            visibility: "private",
+                            publishedAt: null,
+                            scheduledAt: null,
+                            hiddenAt: null,
+                            contentWarning: null,
+                            permalinkPattern: "user",
+                            permalinkIdType: "internalId",
+                            customPostId: null,
+                            userId: user.id,
+                            categoryId: null,
+                            uploads: { connect: [{ id: upload.id }] },
+                        },
+                        include: postInclude,
+                    });
+                    posts.push(
+                        await tx.post.update({
+                            where: { id: post.id },
+                            data: { permalinkKey: permalinkBase(post, "internalId") },
+                            include: postInclude,
+                        }),
+                    );
+                }
+                return posts;
+            });
+
+            return reply.code(201).send(ok(created.map(postView)));
         },
     );
 
