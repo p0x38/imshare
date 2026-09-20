@@ -128,6 +128,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
+                tagMode?: "replace" | "addition" | "subtraction";
                 categoryId?: string | null;
                 uploadIds?: string[];
             };
@@ -317,7 +318,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                 });
 
-            const tags = body.tags !== undefined ? await findTags(body.tags) : undefined;
+            const tags =
+                body.tags !== undefined && body.tagMode !== "subtraction"
+                    ? await findTags(body.tags)
+                    : undefined;
+            const tagNames = body.tags?.map((tag) => tag.trim().toLowerCase()).filter(Boolean) ?? [];
 
             await prisma.$transaction(async (tx) => {
                 for (const post of posts) {
@@ -374,10 +379,37 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                             categoryId: body.categoryId,
                             ...(body.tags !== undefined
                                 ? {
-                                      tags: {
-                                          deleteMany: {},
-                                          create: tags!.map((tag) => ({ tagId: tag.id })),
-                                      },
+                                      tags:
+                                          body.tagMode === "addition"
+                                              ? {
+                                                    create: (tags ?? [])
+                                                        .filter(
+                                                            (tag) =>
+                                                                !post.tags.some(
+                                                                    (current) => current.tagId === tag.id,
+                                                                ),
+                                                        )
+                                                        .map((tag) => ({ tagId: tag.id })),
+                                                }
+                                              : body.tagMode === "subtraction"
+                                                ? {
+                                                      deleteMany: {
+                                                          tagId: {
+                                                              in: await prisma.tag
+                                                                  .findMany({
+                                                                      where: {
+                                                                          name: { in: tagNames },
+                                                                      },
+                                                                      select: { id: true },
+                                                                  })
+                                                                  .then((items) => items.map((item) => item.id)),
+                                                          },
+                                                      },
+                                                  }
+                                                : {
+                                                      deleteMany: {},
+                                                      create: (tags ?? []).map((tag) => ({ tagId: tag.id })),
+                                                  },
                                   }
                                 : {}),
                             ...lifecycle,
