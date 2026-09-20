@@ -91,6 +91,7 @@ export async function buildApp() {
         logController: new LogController({ disableRequestLogging: true }),
     });
     const viewLimiter = new RateLimiter(75, 60_000);
+    const highVolumeImageLimiter = new RateLimiter(12_500, 60_000);
     const uploadDailyLimiter = new RateLimiter(950, 86_400_000);
     const uploadBurstLimiter = new RateLimiter(5, 120_000);
     const rateLimitingEnabled = process.env.NODE_ENV !== "test";
@@ -178,7 +179,24 @@ export async function buildApp() {
 
             return;
         }
-        if (
+        if (request.method === "GET" && pathname.startsWith("/api/v1/posts/image/")) {
+            const result = highVolumeImageLimiter.consume(key);
+            reply
+                .header("X-RateLimit-Limit", "12500")
+                .header("X-RateLimit-Remaining", String(result.remaining));
+            if (rateLimitingEnabled && !result.allowed) {
+                observability.recordRateLimitHit("api_image_get");
+                return reply
+                    .code(429)
+                    .header("Retry-After", String(result.retryAfter))
+                    .send({
+                        error: {
+                            code: "RATE_LIMITED",
+                            message: "Too many image requests. Try again later.",
+                        },
+                    });
+            }
+        } else if (
             request.method === "GET" &&
             pathname.startsWith("/api/v1/") &&
             !pathname.startsWith("/api/v1/health") &&
