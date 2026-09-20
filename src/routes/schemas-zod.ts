@@ -171,12 +171,24 @@ export const postMergeInput = z
     })
     .meta({ description: "Combines multiple owned image drafts into one draft post." });
 
+export const postBatchDeleteInput = z
+    .object({
+        postIds: z
+            .array(z.string().min(1))
+            .min(1)
+            .max(100)
+            .meta({ description: "Owned post identifiers to delete." }),
+    })
+    .meta({ description: "Deletes multiple owned posts in one operation." });
+
 export type PostCreateInput = z.infer<typeof postCreateInput>;
 export type PostMergeInput = z.infer<typeof postMergeInput>;
+export type PostBatchDeleteInput = z.infer<typeof postBatchDeleteInput>;
 export type PostUpdateInput = z.infer<typeof postUpdateInput>;
 
 const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, unknown> =>
     createSchema(schema).schema as Record<string, unknown>;
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 export const postMergeBodyJsonSchema = jsonSchema(postMergeInput);
+export const postBatchDeleteBodyJsonSchema = jsonSchema(postBatchDeleteInput);
 export const postUpdateBodyJsonSchema = { ...jsonSchema(postUpdateInput), minProperties: 1 };
