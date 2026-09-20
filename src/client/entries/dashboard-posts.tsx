@@ -26,6 +26,7 @@ import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
+import { TagAutocomplete } from "../components/AutocompleteFields";
 import { LoadingState } from "../components/States";
 import { TextList } from "../components/TextList";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
@@ -844,13 +845,7 @@ function DashboardPostsPage() {
                         }
                         label="Clear content warnings"
                     />
-                    <TextField
-                        label="Tags"
-                        value={batchTags}
-                        onChange={(event) => setBatchTags(event.target.value)}
-                        helperText="Comma-separated replacement tag list. Leave blank to keep current tags."
-                        fullWidth
-                    />
+                    <TagAutocomplete value={batchTags} onChange={setBatchTags} />
                 </Stack>
             </DialogContent>
             <DialogActions>
