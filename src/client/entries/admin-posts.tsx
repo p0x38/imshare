@@ -144,7 +144,8 @@ function AdminPostsPage() {
                         </CardContent>
                     </Card>
                 ))}
-                        {total > PAGE_SIZE ? (
+            </Stack>
+            {total > PAGE_SIZE ? (
                 <Stack spacing={1.5} alignItems="center" sx={{ pt: 1 }}>
                     <Pagination
                         count={Math.ceil(total / PAGE_SIZE)}
