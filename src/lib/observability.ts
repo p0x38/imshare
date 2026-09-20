@@ -634,6 +634,45 @@ function createMetricHandles(
         "Total database query errors.",
     );
 
+    // Materialize zero-valued counters so they are visible from startup in
+    // Prometheus /metrics and through the OTLP metric exporter.
+    for (const metric of [
+        postsCreated,
+        postsDeleted,
+        textsCreated,
+        postViews,
+        commentsCreated,
+        reactions,
+        follows,
+        reports,
+        notifications,
+        usersRegistered,
+        authAttempts,
+        apiErrors,
+        permissionDenials,
+        csrfRejections,
+        rateLimitHits,
+        uploadBytes,
+        uploads,
+        uploadErrors,
+        imageServed,
+        imageTransformations,
+        imageProcessingErrors,
+        cacheHits,
+        cacheMisses,
+        cacheStale,
+        cacheWrites,
+        cacheWriteBytes,
+        cacheErrors,
+        cachePruned,
+        realtimeConnectionEvents,
+        realtimeMessages,
+        realtimeErrors,
+        resourceOperations,
+        databaseErrors,
+    ])
+        metric.add(0);
+
     return {
         requestCount,
         requestDuration,
@@ -733,20 +772,26 @@ function registerMetricHooks(
             if (/^\/api\/v1\/posts\/[^/]+\/comments$/.test(pathname))
                 metricsSet.commentsCreated.add(1);
         }
-        if (
-            pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
-            request.method === "DELETE" &&
-            reply.statusCode >= 200 &&
-            reply.statusCode < 300
-        )
-            metricsSet.postsDeleted.add(1);
+        if (request.method === "DELETE" && reply.statusCode >= 200 && reply.statusCode < 300) {
+            if (/^\/api\/v1\/posts\/[^/]+$/.test(pathname)) {
+                metricsSet.postsDeleted.add(1);
+            } else if (pathname === "/api/v1/posts/batch") {
+                const body = request.body as { postIds?: unknown };
+                const count = Array.isArray(body?.postIds) ? body.postIds.length : 1;
+                metricsSet.postsDeleted.add(count);
+            }
+        }
         if (
             pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
             request.method === "GET" &&
             reply.statusCode === 200
         )
             metricsSet.postViews.add(1);
-        if (pathname.startsWith("/uploads/") && reply.statusCode >= 200 && reply.statusCode < 400)
+        if (
+            (pathname.startsWith("/uploads/") || pathname.startsWith("/api/v1/posts/image/")) &&
+            reply.statusCode >= 200 &&
+            reply.statusCode < 400
+        )
             metricsSet.imageServed.add(1);
         if (
             request.method === "PUT" &&
