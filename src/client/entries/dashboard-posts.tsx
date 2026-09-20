@@ -530,6 +530,56 @@ function DashboardPostsPage() {
                                                     />
                                                 ) : null}
                                                 <CardContent>
+                                                    {(post.tags?.length || post.isNSFW || post.contentWarningType && post.contentWarningType !== "none" || post.contentWarning) ? (
+                                                        <Stack
+                                                            direction="row"
+                                                            spacing={0.5}
+                                                            useFlexGap
+                                                            flexWrap="wrap"
+                                                            sx={{ mb: 0.75 }}
+                                                        >
+                                                            {post.isNSFW ? (
+                                                                <Chip
+                                                                    size="small"
+                                                                    label="NSFW"
+                                                                    variant="outlined"
+                                                                />
+                                                            ) : null}
+                                                            {post.contentWarningType &&
+                                                            post.contentWarningType !== "none" ? (
+                                                                <Chip
+                                                                    size="small"
+                                                                    label={
+                                                                        post.contentWarningType === "flashing"
+                                                                            ? "Flashing"
+                                                                            : post.contentWarningType.charAt(0).toUpperCase() +
+                                                                              post.contentWarningType.slice(1)
+                                                                    }
+                                                                    variant="outlined"
+                                                                />
+                                                            ) : null}
+                                                            {post.contentWarning ? (
+                                                                <Chip
+                                                                    size="small"
+                                                                    label={post.contentWarning}
+                                                                    variant="outlined"
+                                                                    title={post.contentWarning}
+                                                                    sx={{ maxWidth: 220 }}
+                                                                />
+                                                            ) : null}
+                                                            {post.tags?.map((tag) => {
+                                                                const name = tag.tag?.name ?? tag.name;
+                                                                return name ? (
+                                                                    <Chip
+                                                                        key={tag.tag?.id ?? tag.id ?? name}
+                                                                        size="small"
+                                                                        label={name}
+                                                                        variant="outlined"
+                                                                    />
+                                                                ) : null;
+                                                            })}
+                                                        </Stack>
+                                                    ) : null}
                                                     <Typography variant="subtitle1" noWrap>
                                                         {post.title || t("common.untitled")}
                                                         {" · "}
