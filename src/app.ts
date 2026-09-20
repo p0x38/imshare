@@ -93,7 +93,7 @@ export async function buildApp() {
     const viewLimiter = new RateLimiter(75, 60_000);
     const highVolumeImageLimiter = new RateLimiter(12_500, 60_000);
     const uploadDailyLimiter = new RateLimiter(950, 86_400_000);
-    const uploadBurstLimiter = new RateLimiter(5, 120_000);
+    const uploadBurstLimiter = new RateLimiter(20, 120_000);
     const rateLimitingEnabled = process.env.NODE_ENV !== "test";
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
@@ -148,7 +148,7 @@ export async function buildApp() {
             reply
                 .header("X-RateLimit-Limit", "950")
                 .header("X-RateLimit-Remaining", String(daily.remaining))
-                .header("X-RateLimit-Burst-Limit", "5")
+                .header("X-RateLimit-Burst-Limit", "20")
                 .header("X-RateLimit-Burst-Remaining", String(burst.remaining));
 
             if (rateLimitingEnabled && !daily.allowed) {
