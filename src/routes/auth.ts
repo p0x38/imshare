@@ -4,6 +4,7 @@ import { auth } from "../lib/auth.js";
 import { getPublicConfig, loadConfig } from "../lib/config.js";
 import { getRegistrationToken, isValidRegistrationToken } from "../lib/registration-token.js";
 import { openapi } from "../lib/openapi-route.js";
+import { observability } from "../instrumentation.js";
 
 function toWebRequest(request: FastifyRequest, body?: unknown): Request {
     const headers = fromNodeHeaders(request.headers);
@@ -152,6 +153,8 @@ export const authRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
                 const response = await auth.handler(toWebRequest(request, body));
+                if (isRegistration && response.status >= 200 && response.status < 300)
+                    observability.recordResourceOperation("users", "register");
                 reply.code(response.status);
                 response.headers.forEach((value, key) => reply.header(key, value));
                 const contentType = response.headers.get("content-type");
