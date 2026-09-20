@@ -26,6 +26,7 @@ interface Options {
     recursive: boolean;
     apply: boolean;
     deleteSource: boolean;
+    check: boolean;
 }
 
 interface PreparedImage {
@@ -47,6 +48,7 @@ function parseOptions(argv: string[]): Options {
     let recursive = false;
     let apply = false;
     let deleteSource = false;
+    let check = false;
 
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
@@ -63,6 +65,7 @@ function parseOptions(argv: string[]): Options {
         } else if (arg === "--recursive" || arg === "-r") recursive = true;
         else if (arg === "--apply") apply = true;
         else if (arg === "--delete-source") deleteSource = true;
+        else if (arg === "--check") check = true;
         else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
@@ -77,8 +80,9 @@ function parseOptions(argv: string[]): Options {
                     "--file <path>            Import one image. Repeat for multiple files.",
                     "--directory <path>       Import supported images from a directory.",
                     "--recursive              Recurse into subdirectories.",
-                    "--apply                  Actually write files and database records.",
+                    "--apply                  Actually write files and database records after preflight validation.",
                     "--delete-source          Delete source images after successful import.",
+                    "--check                  Validate all candidate images and database state without writing anything.",
                     "--help                   Show this help.",
                 ].join("\n"),
             );
@@ -94,8 +98,9 @@ function parseOptions(argv: string[]): Options {
     if (!files.length && !directory) throw new Error("Provide at least one --file or --directory.");
     if (files.length && directory) throw new Error("--file and --directory cannot be combined.");
     if (deleteSource && !apply) throw new Error("--delete-source requires --apply.");
+    if (check && apply) throw new Error("--check cannot be combined with --apply.");
 
-    return { user, files, directory, recursive, apply, deleteSource };
+    return { user, files, directory, recursive, apply, deleteSource, check };
 }
 
 function resolveUser(prisma: PrismaClient, value: string) {
@@ -182,6 +187,82 @@ async function prepareImage(source: string): Promise<PreparedImage> {
             importer: "import-draft-images",
         }),
     };
+}
+
+async function preflight(
+    prisma: PrismaClient,
+    userId: string,
+    sourceFiles: string[],
+): Promise<{ source: string; image: PreparedImage }[]> {
+    const prepared: { source: string; image: PreparedImage }[] = [];
+    const errors: string[] = [];
+
+    for (const source of sourceFiles) {
+        try {
+            const sourceStats = await stat(source);
+            if (!sourceStats.isFile()) {
+                errors.push(source + ": not a file.");
+                continue;
+            }
+
+            const image = await prepareImage(source);
+            const existing = await prisma.upload.findUnique({
+                where: {
+                    userId_contentHash: {
+                        userId,
+                        contentHash: image.contentHash,
+                    },
+                },
+                select: { id: true, postId: true },
+            });
+
+            if (existing?.postId) {
+                console.log(
+                    "CHECK " +
+                        image.originalName +
+                        ": already attached to post " +
+                        existing.postId +
+                        ".",
+                );
+                continue;
+            }
+
+            console.log(
+                "CHECK " +
+                    image.originalName +
+                    ": " +
+                    image.mimeType +
+                    " " +
+                    image.width +
+                    "x" +
+                    image.height +
+                    " OK.",
+            );
+            prepared.push({ source, image });
+        } catch (error) {
+            errors.push(
+                source +
+                    ": " +
+                    (error instanceof Error ? error.message : String(error)),
+            );
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new Error(
+            "Preflight check failed with " +
+                errors.length +
+                " error(s):\n" +
+                errors.map((error) => "  - " + error).join("\n"),
+        );
+    }
+
+    console.log(
+        "Preflight check passed: " +
+            prepared.length +
+            " image(s) are ready to import.",
+    );
+    return prepared;
 }
 
 async function targetFilename(uploadDirectory: string, image: PreparedImage): Promise<string> {
@@ -357,13 +438,18 @@ async function main(): Promise<void> {
                 (user.handle ? "@" + user.handle : user.id),
         );
 
+        const preparedFiles = await preflight(prisma, user.id, supportedFiles);
+
+        if (options.check) return;
+
+        console.log("Preflight passed. Applying " + preparedFiles.length + " image import(s)...");
+
         let imported = 0;
         let skipped = 0;
         let failed = 0;
 
-        for (const source of supportedFiles) {
+        for (const { source, image } of preparedFiles) {
             try {
-                const image = await prepareImage(source);
                 const existing = await prisma.upload.findUnique({
                     where: {
                         userId_contentHash: {
@@ -387,7 +473,7 @@ async function main(): Promise<void> {
 
                 const title = path.parse(image.originalName).name.trim() || "Untitled";
                 console.log(
-                    (options.apply ? "IMPORT " : "WOULD IMPORT ") +
+                    "IMPORT " +
                         image.originalName +
                         " -> draft " +
                         JSON.stringify(title) +
@@ -396,14 +482,9 @@ async function main(): Promise<void> {
                         ")",
                 );
 
-                if (!options.apply) {
-                    imported += 1;
-                    continue;
-                }
-
                 const result = await createDraft(
                     prisma,
-                    uploadDirectory,
+                    path.resolve(process.cwd(), config.storage.uploadDirectory),
                     user.id,
                     image,
                 );
