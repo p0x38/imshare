@@ -143,6 +143,30 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         });
         expect(updateUser.statusCode).toBe(200);
 
+        const batchPost = await request({
+            method: "POST",
+            url: "/api/v1/posts",
+            headers: { cookie },
+            payload: { title: "Batch Delete Post", content: "Batch delete content" },
+        });
+        expect(batchPost.statusCode).toBe(201);
+        const batchPostId = batchPost.json().data.id as string;
+
+        const batchDelete = await request({
+            method: "DELETE",
+            url: "/api/v1/posts/batch",
+            headers: { cookie },
+            payload: { postIds: [postId, batchPostId] },
+        });
+        expect(batchDelete.statusCode).toBe(200);
+        expect(batchDelete.json().data.deletedCount).toBe(2);
+
+        const deletedPost = await request({
+            method: "GET",
+            url: `/api/v1/posts/${postId}`,
+        });
+        expect(deletedPost.statusCode).toBe(404);
+
         const signupSecond = await request({
             method: "POST",
             url: "/api/v1/auth/sign-up/email",
