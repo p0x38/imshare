@@ -3,11 +3,14 @@ import { getSession } from "../lib/api.js";
 import { loadConfigSync, resolveBaseUrl } from "../lib/config.js";
 import { hasRole } from "../lib/permissions.js";
 import { prisma } from "../lib/auth.js";
+import { getBuildInfo } from "../lib/build-info.js";
 import { postPermalink } from "../lib/post-permalink.js";
 
 const reactPage = (entry: string, rootId: string, attributes = "") =>
-    `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#1976d2" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>imshare</title><style>html,body{margin:0;min-height:100%}body{background:#fff;color:#111}@media(prefers-color-scheme:dark){body{background:#121212;color:#fff}}#app-loading{min-height:100vh;display:grid;place-items:center;box-sizing:border-box;padding:24px;font:400 14px/1.5 system-ui,sans-serif}#app-loading-content{display:flex;align-items:center;gap:12px;opacity:.72}#app-loading-spinner{width:20px;height:20px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:app-loading-spin 700ms linear infinite}@keyframes app-loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#app-loading-spinner{animation-duration:1400ms}}</style></head><body ${attributes}><div id="app-loading" role="status" aria-live="polite"><div id="app-loading-content"><span id="app-loading-spinner" aria-hidden="true"></span><span>Loading…</span></div></div><div id="${rootId}"></div><script type="module" src="/client/${entry}.js"></script></body></html>`;
+    `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#1976d2" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>imshare</title><style>html,body{margin:0;min-height:100%}body{background:#fff;color:#111}@media(prefers-color-scheme:dark){body{background:#121212;color:#fff}}#app-loading{min-height:100vh;display:grid;place-items:center;box-sizing:border-box;padding:24px;font:400 14px/1.5 system-ui,sans-serif}#app-loading-content{display:flex;align-items:center;gap:12px;opacity:.72}#app-loading-spinner{width:20px;height:20px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:app-loading-spin 700ms linear infinite}@keyframes app-loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#app-loading-spinner{animation-duration:1400ms}}</style></head><body ${attributes}><div id="app-loading" role="status" aria-live="polite"><div id="app-loading-content"><span id="app-loading-spinner" aria-hidden="true"></span><span>Loading…</span></div></div><div id="${rootId}"></div><script type="module" src="/client/${entry}.js?v=${encodeURIComponent(clientCacheVersion)}"></script></body></html>`;
 
+const buildInfo = getBuildInfo();
+const clientCacheVersion = buildInfo.commitHash !== "unknown" ? buildInfo.commitHash : Date.now().toString();
 const baseUrl = resolveBaseUrl(loadConfigSync());
 const baseUrlHostname = new URL(baseUrl).hostname.toLowerCase();
 
@@ -75,7 +78,10 @@ async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply
         if (permalinkPost && (await canViewPost(request, permalinkPost)))
             return reply.redirect("/posts/" + encodeURIComponent(id) + "/", 302);
     }
-    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+    return reply
+        .type("text/html; charset=utf-8")
+        .header("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        .send(reactPage("post", "post"));
 }
 
 async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyReply) {
@@ -104,7 +110,10 @@ async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyRe
     const permalink = postPermalink(post, post.user);
     const currentPath = request.url.split("?", 1)[0] ?? "/";
     if (currentPath !== permalink) return reply.redirect(permalink, 302);
-    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+    return reply
+        .type("text/html; charset=utf-8")
+        .header("Cache-Control", "no-cache, max-age=0, must-revalidate")
+        .send(reactPage("post", "post"));
 }
 const maintenancePage = (reply: FastifyReply) =>
     reply
@@ -120,6 +129,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
             if (isMaintenanceMode(request)) return maintenancePage(reply);
             return reply
                 .type("text/html; charset=utf-8")
+                .header("Cache-Control", "no-cache, max-age=0, must-revalidate")
                 .send(reactPage(entry, rootId, attributes));
         };
     const requireAdminPage =
