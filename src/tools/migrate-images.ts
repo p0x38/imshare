@@ -242,6 +242,44 @@ function parseListMetadata(raw: string): ImportMetadata[] {
             throw new Error("list.json entry " + index + " is missing files.");
         if (!name) throw new Error("list.json entry " + index + " is missing name.");
 
+        if (
+            record.tags !== undefined &&
+            record.tags !== null &&
+            (!Array.isArray(record.tags) ||
+                record.tags.some(
+                    (item) => typeof item !== "string" || !item.trim(),
+                ))
+        ) {
+            throw new Error("list.json entry " + index + " has invalid tags.");
+        }
+
+        if (
+            record.categories !== undefined &&
+            record.categories !== null &&
+            (!Array.isArray(record.categories) ||
+                record.categories.some(
+                    (item) => typeof item !== "string" || !item.trim(),
+                ))
+        ) {
+            throw new Error("list.json entry " + index + " has invalid categories.");
+        }
+
+        if (
+            record.visibility !== undefined &&
+            record.visibility !== "public" &&
+            record.visibility !== "unlisted" &&
+            record.visibility !== "private"
+        ) {
+            throw new Error("list.json entry " + index + " has invalid visibility.");
+        }
+
+        if (
+            record.allowDownload !== undefined &&
+            typeof record.allowDownload !== "boolean"
+        ) {
+            throw new Error("list.json entry " + index + " has invalid allowDownload.");
+        }
+
         return {
             files,
             name,
@@ -352,14 +390,13 @@ async function checkManifest(
             }
         }
 
-        for (const field of ["tags", "categories"] as const) {
-            const value = (metadata as Record<string, unknown>)[field];
-
-            if (value !== undefined && value !== null && !Array.isArray(value)) {
-                errors.push(manifestEntry + ": " + field + " must be an array.");
-            } else if (
-                Array.isArray(value) &&
-                value.some((item) => typeof item !== "string" || !item.trim())
+        for (const [field, value] of [
+            ["tags", metadata.tags],
+            ["categories", metadata.categories],
+        ] as const) {
+            if (
+                value !== undefined &&
+                value.some((item) => !item.trim())
             ) {
                 errors.push(
                     manifestEntry +
