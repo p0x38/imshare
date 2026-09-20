@@ -4,6 +4,7 @@ import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
 import { PageTransition } from "./Motion";
 import { OidcLoginButton } from "./OidcLoginButton";
+import { UploadBox } from "./UploadBox";
 
 export function Page({
     children,
@@ -38,6 +39,11 @@ export function Page({
     return (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
             <Navigation />
+            <Box sx={{ px: { xs: 1.5, sm: 2, md: 3 }, py: 1 }}>
+                <Box sx={{ width: "100%", maxWidth: 560, mx: "auto" }}>
+                    <UploadBox />
+                </Box>
+            </Box>
             <PageTransition>
                 <Container
                     component="main"
