@@ -126,8 +126,6 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 scheduledAt?: string | null;
                 isNSFW?: boolean;
                 contentWarningType?: string | null;
-                isNSFW?: boolean;
-                contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
                 categoryId?: string | null;
@@ -294,6 +292,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 status?: string;
                 visibility?: string;
                 scheduledAt?: string | null;
+                isNSFW?: boolean;
+                contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
                 categoryId?: string | null;
@@ -327,9 +327,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         body.scheduledAt !== undefined ||
                         body.isNSFW !== undefined ||
                         body.contentWarningType !== undefined ||
-                        body.isNSFW !== undefined ||
-                body.contentWarningType !== undefined ||
-                body.contentWarning !== undefined
+                        body.contentWarning !== undefined
                             ? lifecycleData({
                                   status: body.status ?? post.status,
                                   visibility: body.visibility ?? post.visibility,
@@ -673,6 +671,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 status?: string;
                 visibility?: string;
                 scheduledAt?: string | null;
+                isNSFW?: boolean;
+                contentWarningType?: string | null;
                 contentWarning?: string | null;
                 categoryId?: string | null;
                 tags?: string[];
@@ -686,6 +686,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 body.status !== undefined ||
                 body.visibility !== undefined ||
                 body.scheduledAt !== undefined ||
+                body.isNSFW !== undefined ||
+                body.contentWarningType !== undefined ||
                 body.contentWarning !== undefined
                     ? lifecycleData({
                           status: body.status ?? existing.status,
