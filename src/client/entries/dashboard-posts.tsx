@@ -43,8 +43,9 @@ function DashboardPostsPage() {
     const { t } = useTranslation();
     const [posts, setPosts] = useState<Post[] | null>(null);
     const [error, setError] = useState("");
-    const [selectedDrafts, setSelectedDrafts] = useState<string[]>([]);
+    const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
     const [merging, setMerging] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
     const [menuPost, setMenuPost] = useState<Post | null>(null);
     const [splitBusy, setSplitBusy] = useState(false);
@@ -53,6 +54,14 @@ function DashboardPostsPage() {
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
     const drafts = imagePosts.filter((post) => post.status === "draft");
+    const selectedPosts = posts?.filter((post) => selectedPostIds.includes(post.id)) ?? [];
+    const selectedDraftIds = selectedPosts
+        .filter((post) => post.contentType === "image" && post.status === "draft")
+        .map((post) => post.id);
+    const allPostIds = posts?.map((post) => post.id) ?? [];
+    const allSelected = allPostIds.length > 0 && selectedPostIds.length === allPostIds.length;
+    const partiallySelected = selectedPostIds.length > 0 && !allSelected;
+    const canCombineSelected = selectedDraftIds.length >= 2 && selectedDraftIds.length === selectedPosts.length;
     useEffect(() => {
         void api<{ data?: Post[] }>("/v1/me/posts?limit=100")
             .then((response) => setPosts(response.data ?? []))
@@ -66,36 +75,64 @@ function DashboardPostsPage() {
             });
     }, [t]);
 
-    function toggleDraft(postId: string) {
-        setSelectedDrafts((current) =>
+    function togglePost(postId: string) {
+        setSelectedPostIds((current) =>
             current.includes(postId)
                 ? current.filter((id) => id !== postId)
                 : [...current, postId],
         );
     }
 
-    async function combineDrafts() {
-        if (selectedDrafts.length < 2) return;
+    function toggleAllPosts() {
+        setSelectedPostIds(allSelected ? [] : allPostIds);
+    }
+
+    async function combineSelected() {
+        if (!canCombineSelected) return;
         setMerging(true);
         setError("");
         try {
             const response = await api<{ data: Post }>("/v1/posts/merge", {
                 method: "POST",
-                body: JSON.stringify({ postIds: selectedDrafts }),
+                body: JSON.stringify({ postIds: selectedDraftIds }),
             });
-            setSelectedDrafts([]);
+            setSelectedPostIds([]);
             setPosts((current) =>
                 current
-                    ? [
-                          response.data,
-                          ...current.filter((post) => !selectedDrafts.includes(post.id)),
-                      ]
+                    ? [response.data, ...current.filter((post) => !selectedDraftIds.includes(post.id))]
                     : current,
             );
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to combine drafts.");
+            setError(cause instanceof Error ? cause.message : "Unable to combine selected posts.");
         } finally {
             setMerging(false);
+        }
+    }
+
+    async function deleteSelected() {
+        if (
+            !selectedPostIds.length ||
+            !window.confirm(
+                `Delete ${selectedPostIds.length} selected posts permanently? This cannot be undone.`,
+            )
+        )
+            return;
+
+        setDeleting(true);
+        setError("");
+        try {
+            await api<{ data: { deletedCount: number } }>("/v1/posts/batch", {
+                method: "DELETE",
+                body: JSON.stringify({ postIds: selectedPostIds }),
+            });
+            setPosts((current) =>
+                current ? current.filter((post) => !selectedPostIds.includes(post.id)) : current,
+            );
+            setSelectedPostIds([]);
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to delete selected posts.");
+        } finally {
+            setDeleting(false);
         }
     }
 
@@ -194,7 +231,47 @@ function DashboardPostsPage() {
                         {t("dashboardPosts.newPost")}
                     </Button>
                 </Stack>
-                {error ? <Alert severity="error">{error}</Alert> : null}
+                {error ? <Alert severity="error">{error}</Alert> : null}                {posts && posts.length > 0 ? (
+                    <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1}
+                        alignItems={{ xs: "stretch", sm: "center" }}
+                        justifyContent="space-between"
+                        sx={{ p: 1, border: 1, borderColor: "divider", borderRadius: 1 }}
+                    >
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={allSelected}
+                                    indeterminate={partiallySelected}
+                                    onChange={toggleAllPosts}
+                                    inputProps={{ "aria-label": "Select all posts" }}
+                                />
+                            }
+                            label={selectedPostIds.length ? `${selectedPostIds.length} selected` : "Select all posts"}
+                        />
+                        {selectedPostIds.length ? (
+                            <Stack direction={{ xs: "column", sm: "row" }} spacing={1}>
+                                <Button
+                                    color="error"
+                                    variant="outlined"
+                                    disabled={deleting}
+                                    onClick={() => void deleteSelected()}
+                                >
+                                    {deleting ? "Deleting…" : `Delete selected (${selectedPostIds.length})`}
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    disabled={!canCombineSelected || merging}
+                                    onClick={() => void combineSelected()}
+                                >
+                                    {merging ? "Combining…" : `Combine selected (${selectedDraftIds.length})`}
+                                </Button>
+                            </Stack>
+                        ) : null}
+                    </Stack>
+                ) : null}
+
                 {posts === null && !error ? (
                     <LoadingState label={t("dashboardPosts.loading")} />
                 ) : null}
@@ -226,12 +303,10 @@ function DashboardPostsPage() {
                                     {drafts.length > 1 ? (
                                         <Button
                                             variant="outlined"
-                                            disabled={selectedDrafts.length < 2 || merging}
-                                            onClick={() => void combineDrafts()}
+                                            disabled={!canCombineSelected || merging}
+                                            onClick={() => void combineSelected()}
                                         >
-                                            {merging
-                                                ? "Combining…"
-                                                : `Combine drafts (${selectedDrafts.length})`}
+                                            {merging ? "Combining…" : `Combine selected (${selectedDraftIds.length})`}
                                         </Button>
                                     ) : null}
                                 </Stack>
@@ -264,22 +339,18 @@ function DashboardPostsPage() {
                                                     <MoreVertIcon />
                                                 </IconButton>
 
-                                            {post.status === "draft" ? (
-                                                <Box sx={{ px: 1, pt: 1 }}>
-                                                    <Checkbox
-                                                        checked={selectedDrafts.includes(post.id)}
-                                                        onChange={() => toggleDraft(post.id)}
-                                                        inputProps={{ "aria-label": `Select draft ${post.title || post.id}` }}
-                                                    />
-                                                    <Typography
-                                                        component="span"
-                                                        variant="caption"
-                                                        color="text.secondary"
-                                                    >
+                                            <Box sx={{ px: 1, pt: 1, display: "flex", alignItems: "center" }}>
+                                                <Checkbox
+                                                    checked={selectedPostIds.includes(post.id)}
+                                                    onChange={() => togglePost(post.id)}
+                                                    inputProps={{ "aria-label": `Select post ${post.title || post.id}` }}
+                                                />
+                                                {post.status === "draft" ? (
+                                                    <Typography component="span" variant="caption" color="text.secondary">
                                                         Draft
                                                     </Typography>
-                                                </Box>
-                                            ) : null}
+                                                ) : null}
+                                            </Box>
                                             <CardActionArea
                                                 component="a"
                                                 href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
@@ -415,6 +486,9 @@ function DashboardPostsPage() {
                                     hrefForText={(text) =>
                                         `/dashboard/posts/${encodeURIComponent(text.id)}/`
                                     }
+                                    selectable
+                                    selectedIds={selectedPostIds}
+                                    onToggle={togglePost}
                                 />
                             </Stack>
                         ) : null}
