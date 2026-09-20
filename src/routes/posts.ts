@@ -297,6 +297,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
+                tagMode?: "replace" | "addition" | "subtraction";
                 categoryId?: string | null;
             };
             const postIds = [...new Set(body.postIds)];
