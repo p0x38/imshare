@@ -248,7 +248,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                 });
             return reply
                 .code(201)
-                .send(ok({ ...view(comment, createdUpload), liked: false }));
+                .send(ok({ ...view(comment, comment.upload), liked: false }));
         },
     );
 
