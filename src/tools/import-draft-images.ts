@@ -440,7 +440,7 @@ async function main(): Promise<void> {
 
         const preparedFiles = await preflight(prisma, user.id, supportedFiles);
 
-        if (options.check) return;
+        if (options.check || !options.apply) return;
 
         console.log("Preflight passed. Applying " + preparedFiles.length + " image import(s)...");
 
