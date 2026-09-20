@@ -10,6 +10,8 @@ import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
 
+const GIF_INPUT_PIXEL_LIMIT = 1_073_741_824;
+
 const IMAGE_EXTENSIONS = new Map<string, string>([
     ["image/jpeg", ".jpg"],
     ["image/png", ".png"],
@@ -139,16 +141,21 @@ function isSupportedSource(source: string): boolean {
 }
 
 async function prepareImage(source: string): Promise<PreparedImage> {
-    const original = await sharp(source, { animated: true }).metadata();
+    const isGif = path.extname(source).toLowerCase() === ".gif";
+    const sharpOptions = {
+        animated: true,
+        ...(isGif ? { limitInputPixels: GIF_INPUT_PIXEL_LIMIT } : {}),
+    };
+    const original = await sharp(source, sharpOptions).metadata();
 
     if (!original.width || !original.height)
         throw new Error("Unable to read image dimensions.");
 
-    const normalized = await sharp(source, { animated: true })
+    const normalized = await sharp(source, sharpOptions)
         .rotate()
         .toColorspace("srgb")
         .toBuffer();
-    const metadata = await sharp(normalized, { animated: true }).metadata();
+    const metadata = await sharp(normalized, sharpOptions).metadata();
     const mimeType = metadata.mediaType;
     const extension = mimeType ? IMAGE_EXTENSIONS.get(mimeType) : undefined;
 
