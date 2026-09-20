@@ -210,6 +210,10 @@ model PostRevision {
   caption String?
   sourceUrl String?
   allowDownload Boolean
+  status String @default("published")
+  visibility String @default("public")
+  scheduledAt DateTime?
+  publishedAt DateTime?
   categoryId String?
   tagsJson String
   contentWarning String?
