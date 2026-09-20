@@ -1,4 +1,4 @@
-import { Alert, Button, Card, CardContent, Stack, TextField, Typography } from "@mui/material";
+import { Alert, Button, Card, CardContent, Pagination, Stack, TextField, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
@@ -29,12 +29,15 @@ function TaxonomyPage() {
             : t("taxonomy.tags").replace(/s$/i, "");
     const endpoint = `/v1/${taxonomy}`;
     const [items, setItems] = useState<TaxonomyItem[]>([]);
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
     const [name, setName] = useState("");
     const [error, setError] = useState("");
     async function load() {
         try {
-            const response = await api<{ data?: TaxonomyItem[] }>(endpoint);
+            const response = await api<{ data?: TaxonomyItem[]; pagination?: { totalPages?: number } }>(`${endpoint}?page=${page}&limit=100`);
             setItems(response.data || []);
+            setTotalPages(response.pagination?.totalPages ?? 1);
         } catch (cause) {
             setError(
                 cause instanceof Error
@@ -45,7 +48,7 @@ function TaxonomyPage() {
     }
     useEffect(() => {
         void load();
-    }, []);
+    }, [page]);
     async function create(event: React.FormEvent) {
         event.preventDefault();
         const trimmedName = name.trim();
@@ -56,6 +59,7 @@ function TaxonomyPage() {
                 body: JSON.stringify({ name: trimmedName, slug: slugify(trimmedName) }),
             });
             setName("");
+            setPage(1);
             await load();
         } catch (cause) {
             setError(
@@ -126,6 +130,7 @@ function TaxonomyPage() {
                     ))}
                 </Stack>
             </Stack>
+            {totalPages > 1 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
         </Page>
     );
 }
