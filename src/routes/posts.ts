@@ -235,6 +235,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
 
             const [keeper, ...merged] = posts;
+            if (!keeper)
+                return reply.code(400).send({
+                    error: { code: "INVALID_MERGE", message: "At least one post is required to merge." },
+                });
+
             const uploadIds = posts.flatMap((post) => post.uploads.map((upload) => upload.id));
             const tagIds = [...new Set(posts.flatMap((post) => post.tags.map((tag) => tag.tagId)))];
 
