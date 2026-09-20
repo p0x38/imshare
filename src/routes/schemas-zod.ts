@@ -15,12 +15,21 @@ const lifecycleProperties = {
         .nullable()
         .optional()
         .meta({ description: "Optional time at which the post should become active." }),
+    isNSFW: z
+        .boolean()
+        .optional()
+        .meta({ description: "Marks the post as not safe for work." }),
+    contentWarningType: z
+        .enum(["none", "sexual", "violence", "gore", "drugs", "flashing", "spoilers", "other"])
+        .nullable()
+        .optional()
+        .meta({ description: "Category of the content warning." }),
     contentWarning: z
         .string()
         .max(500)
         .nullable()
         .optional()
-        .meta({ description: "Optional content warning shown with the post." }),
+        .meta({ description: "Optional custom content warning shown with the post." }),
 };
 
 const originalPostProperties = {
