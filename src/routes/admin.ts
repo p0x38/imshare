@@ -303,27 +303,34 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
         const query = request.query as { limit?: unknown; offset?: unknown };
         const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 100);
         const offset = Math.max(Number(query.offset) || 0, 0);
-        const users = await prisma.user.findMany({
-            orderBy: { createdAt: "desc" },
-            skip: offset,
-            take: limit,
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                isBanned: true,
-                banReason: true,
-                bannedAt: true,
-                bannedUntil: true,
-                createdAt: true,
-                handle: true,
-                badgesJson: true,
-            },
+        const [users, total] = await Promise.all([
+            prisma.user.findMany({
+                orderBy: { createdAt: "desc" },
+                skip: offset,
+                take: limit,
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    isBanned: true,
+                    banReason: true,
+                    bannedAt: true,
+                    bannedUntil: true,
+                    createdAt: true,
+                    handle: true,
+                    badgesJson: true,
+                },
+            }),
+            prisma.user.count(),
+        ]);
+        return ok({
+            users: users.map((user) => ({
+                ...user,
+                manualBadges: JSON.parse(user.badgesJson || "[]"),
+            })),
+            total,
         });
-        return ok(
-            users.map((user) => ({ ...user, manualBadges: JSON.parse(user.badgesJson || "[]") })),
-        );
     });
     fastify.get("/v1/admin/posts", async (request, reply) => {
         const actor = await requireRole(request, reply, "admin");
@@ -479,20 +486,26 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
     fastify.get("/v1/admin/reports", async (request, reply) => {
         const actor = await requireRole(request, reply, "moderator");
         if (!actor) return;
-        const query = request.query as { status?: unknown; limit?: unknown };
+        const query = request.query as { status?: unknown; limit?: unknown; offset?: unknown };
         const status = typeof query.status === "string" ? query.status : "open";
         const limit = Math.min(Math.max(Number(query.limit) || 50, 1), 100);
-        const reports = await prisma.report.findMany({
-            where: { status },
-            orderBy: { createdAt: "desc" },
-            take: limit,
-            include: {
-                reporter: { select: { id: true, name: true, handle: true } },
-                post: { select: { id: true, title: true } },
-                comment: { select: { id: true, body: true } },
-            },
-        });
-        return ok(reports);
+        const offset = Math.max(Number(query.offset) || 0, 0);
+        const where = { status };
+        const [reports, total] = await Promise.all([
+            prisma.report.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                skip: offset,
+                take: limit,
+                include: {
+                    reporter: { select: { id: true, name: true, handle: true } },
+                    post: { select: { id: true, title: true } },
+                    comment: { select: { id: true, body: true } },
+                },
+            }),
+            prisma.report.count({ where }),
+        ]);
+        return ok({ reports, total });
     });
     fastify.patch("/v1/admin/reports/:reportId", async (request, reply) => {
         const actor = await requireRole(request, reply, "moderator");
@@ -726,17 +739,21 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
     fastify.get("/v1/admin/logs", async (request, reply) => {
         const actor = await requireRole(request, reply, "admin");
         if (!actor) return;
-        const query = request.query as { limit?: unknown };
+        const query = request.query as { limit?: unknown; offset?: unknown };
         const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 200);
-        return ok(
-            await prisma.moderationLog.findMany({
+        const offset = Math.max(Number(query.offset) || 0, 0);
+        const [logs, total] = await Promise.all([
+            prisma.moderationLog.findMany({
                 orderBy: { createdAt: "desc" },
+                skip: offset,
                 take: limit,
                 include: {
                     actor: { select: { id: true, name: true, handle: true } },
                     targetUser: { select: { id: true, name: true, handle: true } },
                 },
             }),
-        );
+            prisma.moderationLog.count(),
+        ]);
+        return ok({ logs, total });
     });
 }
