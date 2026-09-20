@@ -10,7 +10,7 @@ import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 
 interface ImportMetadata {
-    file: string;
+    files: string[];
     name: string;
     originalPostDate?: string | number | null;
     description?: string | null;
@@ -84,12 +84,12 @@ function parseOptions(argv: string[]): Options {
                     "      nested/",
                     "        image3.webp",
                     "",
-                    "The root list.json contains an array of image metadata objects.",
+                    "The root list.json contains an array of post metadata objects. Use "files" for multi-image posts.",
                     "",
                     "Example list.json:",
                     "  [",
                     "    {",
-                    '      "file": "image1.png",',
+                    '      "files": ["deviantart/image1.png", "deviantart/image2.png"],',
                     '      "name": "Artwork title",',
                     '      "originalPostDate": "2024-01-15T12:34:56Z",',
                     '      "description": "Original description.",',
@@ -225,15 +225,19 @@ function parseListMetadata(raw: string): ImportMetadata[] {
             throw new Error("list.json entry " + index + " must be an object.");
 
         const record = entry as Record<string, unknown>;
-        const file = cleanString(record.file);
+        const files = Array.isArray(record.files)
+            ? cleanStringList(record.files)
+            : cleanString(record.file)
+              ? [cleanString(record.file)!]
+              : [];
         const name = cleanString(record.name);
 
-        if (!file) throw new Error("list.json entry " + index + " is missing file.");
+        if (files.length === 0)
+            throw new Error("list.json entry " + index + " is missing files.");
         if (!name) throw new Error("list.json entry " + index + " is missing name.");
 
         return {
-            ...record,
-            file,
+            files,
             name,
             originalPostDate: record.originalPostDate as ImportMetadata["originalPostDate"],
             description: record.description as string | null | undefined,
@@ -249,7 +253,6 @@ function parseListMetadata(raw: string): ImportMetadata[] {
         };
     });
 }
-
 async function resolveUser(prisma: PrismaClient, value: string) {
     return (
         (await prisma.user.findUnique({
@@ -342,45 +345,78 @@ async function importList(
     const referencedFiles = new Set<string>();
 
     for (const metadata of metadataEntries) {
-        const relativeFile = normalizeRelative(metadata.file);
-        const relativeKey = relativeFile.toLowerCase();
+        const relativeFiles = metadata.files.map(normalizeRelative);
+        const duplicateFile = relativeFiles.find((file, index) =>
+            relativeFiles.findIndex((candidate) => candidate.toLowerCase() === file.toLowerCase()) !== index,
+        );
 
-        if (referencedFiles.has(relativeKey)) {
+        if (duplicateFile) {
+            skipped += 1;
+            console.error("SKIP list.json: duplicate file in post: " + duplicateFile);
+            continue;
+        }
+
+        const alreadyReferenced = relativeFiles.find((file) =>
+            referencedFiles.has(file.toLowerCase()),
+        );
+
+        if (alreadyReferenced) {
             skipped += 1;
             console.error(
-                "SKIP list.json: duplicate file " + relativeFile,
+                "SKIP list.json: file referenced by multiple posts: " + alreadyReferenced,
             );
             continue;
         }
 
-        referencedFiles.add(relativeKey);
+        for (const relativeFile of relativeFiles) referencedFiles.add(relativeFile.toLowerCase());
 
         try {
-            const source = resolveWithinRoot(sourceDirectory, metadata.file);
-            const sourceStats = await stat(source);
+            const preparedFiles = [];
 
-            if (!sourceStats.isFile()) throw new Error("Source path is not a file.");
+            for (const relativeFile of relativeFiles) {
+                const source = resolveWithinRoot(sourceDirectory, relativeFile);
+                const sourceStats = await stat(source);
 
-            const extension = path.extname(source).toLowerCase();
-            if (!IMAGE_TYPES[extension])
-                throw new Error("Unsupported image extension: " + extension);
+                if (!sourceStats.isFile())
+                    throw new Error("Source path is not a file: " + relativeFile);
 
-            const prepared = await normalizeImage(source);
-            const existing = await prisma.upload.findUnique({
-                where: {
-                    userId_contentHash: {
-                        userId,
-                        contentHash: prepared.contentHash,
+                const extension = path.extname(source).toLowerCase();
+                if (!IMAGE_TYPES[extension])
+                    throw new Error("Unsupported image extension: " + extension);
+
+                const prepared = await normalizeImage(source);
+                const existing = await prisma.upload.findUnique({
+                    where: {
+                        userId_contentHash: {
+                            userId,
+                            contentHash: prepared.contentHash,
+                        },
                     },
-                },
-                select: { id: true, filename: true, postId: true },
-            });
+                    select: { id: true, filename: true, postId: true },
+                });
 
-            const destinationFilename = targetFilename(
-                prepared.contentHash,
-                prepared.extension,
-            );
-            const destination = path.join(uploadDirectory, destinationFilename);
+                preparedFiles.push({
+                    relativeFile,
+                    source,
+                    prepared,
+                    existing,
+                });
+            }
+
+            const existingPostIds = [
+                ...new Set(
+                    preparedFiles
+                        .map((file) => file.existing?.postId)
+                        .filter((postId): postId is string => Boolean(postId)),
+                ),
+            ];
+
+            if (existingPostIds.length > 1) {
+                throw new Error(
+                    "Files in one manifest entry already belong to different posts: " +
+                        existingPostIds.join(", "),
+                );
+            }
 
             const originalUrl = cleanString(metadata.originalUrl);
             const description = appendImportAttribution(
@@ -392,8 +428,8 @@ async function importList(
 
             if (categories.length > 1) {
                 console.warn(
-                    "WARN " +
-                        relativeFile +
+                    'WARN ' +
+                        relativeFiles.join(", ") +
                         ': imshare supports one category per post; using "' +
                         categories[0] +
                         '".',
@@ -402,9 +438,9 @@ async function importList(
 
             console.log(
                 (options.apply ? "IMPORT " : "WOULD IMPORT ") +
-                    relativeFile +
-                    " -> " +
-                    destinationFilename,
+                    relativeFiles.join(", ") +
+                    " -> post " +
+                    metadata.name,
             );
 
             if (!options.apply) {
@@ -412,10 +448,119 @@ async function importList(
                 continue;
             }
 
-            await mkdir(path.dirname(destination), { recursive: true });
+            const newFiles = preparedFiles.filter((file) => !file.existing);
+            const existingWithoutPost = preparedFiles.filter(
+                (file) => file.existing && !file.existing.postId,
+            );
 
-            if (!existing) {
-                await writeFile(destination, prepared.normalized, { flag: "wx" }).catch(
+            if (options.noPost) {
+                for (const file of newFiles) {
+                    const destinationFilename = targetFilename(
+                        file.prepared.contentHash,
+                        file.prepared.extension,
+                    );
+                    const destination = path.join(uploadDirectory, destinationFilename);
+
+                    await mkdir(path.dirname(destination), { recursive: true });
+                    await writeFile(destination, file.prepared.normalized, { flag: "wx" }).catch(
+                        (error: unknown) => {
+                            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+                        },
+                    );
+
+                    const stored = await readFile(destination);
+                    const storedHash = createHash("sha256").update(stored).digest("hex");
+                    if (storedHash !== file.prepared.contentHash)
+                        throw new Error(
+                            "Destination image failed SHA-256 verification: " +
+                                file.relativeFile,
+                        );
+
+                    await prisma.upload.create({
+                        data: {
+                            id: randomUUID(),
+                            filename: destinationFilename,
+                            originalName: path.basename(file.source),
+                            mimeType: file.prepared.mimeType,
+                            size: stored.byteLength,
+                            width: file.prepared.width,
+                            height: file.prepared.height,
+                            contentHash: file.prepared.contentHash,
+                            thumbhash: await generateThumbHash(destination),
+                            metadataJson: JSON.stringify(metadata),
+                            userId,
+                        },
+                    });
+                }
+
+                if (newFiles.length === 0) {
+                    console.log(
+                        "SKIP existing uploads: " +
+                            preparedFiles.map((file) => file.existing!.id).join(", "),
+                    );
+                }
+
+                imported += 1;
+                continue;
+            }
+
+            let postId = existingPostIds[0];
+
+            if (postId) {
+                const post = await prisma.post.findUnique({
+                    where: { id: postId },
+                    select: { id: true },
+                });
+
+                if (!post) throw new Error("Existing post no longer exists: " + postId);
+            } else {
+                const category = categories[0]
+                    ? await resolveCategory(prisma as never, categories[0])
+                    : undefined;
+
+                const createdPost = await prisma.post.create({
+                    data: {
+                        title: metadata.name,
+                        contentType: "image",
+                        description,
+                        caption: cleanString(metadata.caption),
+                        sourceUrl: originalUrl,
+                        originalCreator: cleanString(metadata.originalAuthor),
+                        originalCreatedAt: parseOriginalDate(metadata.originalPostDate),
+                        allowDownload: metadata.allowDownload ?? true,
+                        status: "published",
+                        visibility: normalizeVisibility(metadata.visibility),
+                        publishedAt: new Date(),
+                        contentWarning: cleanString(metadata.contentWarning),
+                        userId,
+                        categoryId: category?.id,
+                    },
+                });
+
+                postId = createdPost.id;
+
+                for (const tagName of tags) {
+                    const tag = await resolveTag(prisma as never, tagName);
+                    await prisma.postTag.create({
+                        data: { postId, tagId: tag.id },
+                    });
+                }
+
+                await prisma.post.update({
+                    where: { id: postId },
+                    data: { permalinkKey: postId },
+                });
+            }
+
+            for (const file of newFiles) {
+                const destinationFilename = targetFilename(
+                    file.prepared.contentHash,
+                    file.prepared.extension,
+                );
+                const destination = path.join(uploadDirectory, destinationFilename);
+
+                await mkdir(path.dirname(destination), { recursive: true });
+                await writeFile(destination, file.prepared.normalized, { flag: "wx" }).catch(
                     (error: unknown) => {
                         if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
                     },
@@ -423,137 +568,52 @@ async function importList(
 
                 const stored = await readFile(destination);
                 const storedHash = createHash("sha256").update(stored).digest("hex");
-                if (storedHash !== prepared.contentHash)
-                    throw new Error("Destination image failed SHA-256 verification.");
+                if (storedHash !== file.prepared.contentHash)
+                    throw new Error(
+                        "Destination image failed SHA-256 verification: " + file.relativeFile,
+                    );
 
-                const thumbhash = await generateThumbHash(destination);
-                const uploadId = randomUUID();
-
-                if (options.noPost) {
-                    await prisma.upload.create({
-                        data: {
-                            id: uploadId,
-                            filename: destinationFilename,
-                            originalName: path.basename(source),
-                            mimeType: prepared.mimeType,
-                            size: stored.byteLength,
-                            width: prepared.width,
-                            height: prepared.height,
-                            contentHash: prepared.contentHash,
-                            thumbhash,
-                            metadataJson: JSON.stringify(metadata),
-                            userId,
-                        },
-                    });
-                } else {
-                    await prisma.$transaction(async (tx) => {
-                        const category = categories[0]
-                            ? await resolveCategory(tx, categories[0])
-                            : undefined;
-
-                        const post = await tx.post.create({
-                            data: {
-                                title: metadata.name,
-                                contentType: "image",
-                                description,
-                                caption: cleanString(metadata.caption),
-                                sourceUrl: originalUrl,
-                                originalCreator: cleanString(metadata.originalAuthor),
-                                originalCreatedAt: parseOriginalDate(
-                                    metadata.originalPostDate,
-                                ),
-                                allowDownload: metadata.allowDownload ?? true,
-                                status: "published",
-                                visibility: normalizeVisibility(metadata.visibility),
-                                publishedAt: new Date(),
-                                contentWarning: cleanString(metadata.contentWarning),
-                                userId,
-                                categoryId: category?.id,
-                            },
-                        });
-
-                        await tx.upload.create({
-                            data: {
-                                id: uploadId,
-                                filename: destinationFilename,
-                                originalName: path.basename(source),
-                                mimeType: prepared.mimeType,
-                                size: stored.byteLength,
-                                width: prepared.width,
-                                height: prepared.height,
-                                contentHash: prepared.contentHash,
-                                thumbhash,
-                                metadataJson: JSON.stringify(metadata),
-                                userId,
-                                postId: post.id,
-                            },
-                        });
-
-                        for (const tagName of tags) {
-                            const tag = await resolveTag(tx, tagName);
-                            await tx.postTag.create({
-                                data: { postId: post.id, tagId: tag.id },
-                            });
-                        }
-
-                        await tx.post.update({
-                            where: { id: post.id },
-                            data: { permalinkKey: post.id },
-                        });
-                    });
-                }
-            } else if (!options.noPost && !existing.postId) {
-                await prisma.$transaction(async (tx) => {
-                    const category = categories[0]
-                        ? await resolveCategory(tx, categories[0])
-                        : undefined;
-
-                    const post = await tx.post.create({
-                        data: {
-                            title: metadata.name,
-                            contentType: "image",
-                            description,
-                            caption: cleanString(metadata.caption),
-                            sourceUrl: originalUrl,
-                            originalCreator: cleanString(metadata.originalAuthor),
-                            originalCreatedAt: parseOriginalDate(
-                                metadata.originalPostDate,
-                            ),
-                            allowDownload: metadata.allowDownload ?? true,
-                            status: "published",
-                            visibility: normalizeVisibility(metadata.visibility),
-                            publishedAt: new Date(),
-                            contentWarning: cleanString(metadata.contentWarning),
-                            userId,
-                            categoryId: category?.id,
-                        },
-                    });
-
-                    await tx.upload.update({
-                        where: { id: existing.id },
-                        data: { postId: post.id },
-                    });
-
-                    for (const tagName of tags) {
-                        const tag = await resolveTag(tx, tagName);
-                        await tx.postTag.create({
-                            data: { postId: post.id, tagId: tag.id },
-                        });
-                    }
-
-                    await tx.post.update({
-                        where: { id: post.id },
-                        data: { permalinkKey: post.id },
-                    });
+                await prisma.upload.create({
+                    data: {
+                        id: randomUUID(),
+                        filename: destinationFilename,
+                        originalName: path.basename(file.source),
+                        mimeType: file.prepared.mimeType,
+                        size: stored.byteLength,
+                        width: file.prepared.width,
+                        height: file.prepared.height,
+                        contentHash: file.prepared.contentHash,
+                        thumbhash: await generateThumbHash(destination),
+                        metadataJson: JSON.stringify(metadata),
+                        userId,
+                        postId,
+                    },
                 });
-            } else {
+            }
+
+            if (existingWithoutPost.length > 0) {
+                await prisma.upload.updateMany({
+                    where: {
+                        id: { in: existingWithoutPost.map((file) => file.existing!.id) },
+                        userId,
+                        postId: null,
+                    },
+                    data: { postId },
+                });
+            }
+
+            if (newFiles.length === 0 && existingWithoutPost.length === 0) {
                 console.log(
-                    "SKIP existing upload " + existing.id + " (" + existing.filename + ")",
+                    "SKIP existing post " +
+                        postId +
+                        " (" +
+                        preparedFiles.map((file) => file.existing!.id).join(", ") +
+                        ")",
                 );
             }
 
             if (options.deleteSource) {
-                await unlink(source);
+                for (const file of preparedFiles) await unlink(file.source);
             }
 
             imported += 1;
@@ -561,7 +621,7 @@ async function importList(
             failed += 1;
             console.error(
                 "FAILED " +
-                    relativeFile +
+                    relativeFiles.join(", ") +
                     ": " +
                     (error instanceof Error ? error.message : String(error)),
             );
