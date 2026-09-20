@@ -8,15 +8,21 @@ import {
     Tooltip,
     Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../lib/api";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
+
+function imageUrl(url: string, width = 512) {
+    const image = new URL(url, window.location.origin);
+    if (image.pathname.startsWith("/v1/")) image.pathname = `/api${image.pathname}`;
+    image.searchParams.set("width", String(width));
+    image.searchParams.set("format", "webp");
+    return image.href;
+}
 
 function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
     return Array.isArray(value) ? value : Array.isArray(value.posts) ? value.posts : [];
@@ -25,41 +31,6 @@ function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
 export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } }) {
     const { t } = useTranslation();
     const posts = normalizePosts(input).filter((post) => post.contentType !== "text");
-    const [thumbnails, setThumbnails] = useState<Record<string, string>>({});
-
-    useEffect(() => {
-        const uploadIds = [
-            ...new Set(
-                posts
-                    .map((post) => post.uploads?.[0]?.id)
-                    .filter((id): id is string => Boolean(id)),
-            ),
-        ];
-        if (uploadIds.length === 0) return;
-
-        let cancelled = false;
-        void (async () => {
-            const next: Record<string, string> = {};
-            for (let offset = 0; offset < uploadIds.length; offset += 100) {
-                const ids = uploadIds.slice(offset, offset + 100);
-                const response = await api<{
-                    data: { items: Array<{ uploadId: string; data: string }> };
-                }>("/v1/images/thumbnails/batch", {
-                    method: "POST",
-                    body: JSON.stringify({ uploadIds: ids }),
-                });
-                for (const item of response.data.items)
-                    next[item.uploadId] = `data:image/webp;base64,${item.data}`;
-            }
-            if (!cancelled) setThumbnails(next);
-        })().catch(() => undefined);
-
-        return () => {
-            cancelled = true;
-        };
-    }, [posts]);
-
-
 
     if (posts.length === 0) {
         return (
@@ -114,7 +85,7 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                             {post.uploads?.[0] ? (
                                 <CardMedia
                                     component="img"
-                                    image={thumbnails[post.uploads[0].id]}
+                                    image={imageUrl(post.uploads[0].url)}
                                     alt={post.uploads[0].alt || post.title || ""}
                                     loading="lazy"
                                     sx={{
