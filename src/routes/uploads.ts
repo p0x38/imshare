@@ -47,16 +47,30 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 const uploadStartedAt = process.hrtime.bigint();
                 const ext = path.extname(part.filename).toLowerCase();
                 const mime = IMAGE_TYPES.get(ext);
-                if (!mime || part.mimetype !== mime) {
+                if (!mime) {
                     part.file.resume();
+                    const message = `File "${part.filename}" has an unsupported image extension. Supported types are JPEG, PNG, GIF, WebP, BMP, and AVIF.`;
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
-                        error: "Unsupported image type.",
+                        error: message,
                     });
                     observability.recordUploadError("invalid_type");
                     return reply.code(400).send({
-                        error: { code: "INVALID_FILE", message: "Unsupported image type." },
+                        error: { code: "INVALID_FILE", message },
+                    });
+                }
+                if (part.mimetype !== mime) {
+                    part.file.resume();
+                    const message = `File "${part.filename}" has MIME type ${part.mimetype || "unknown"}, but its extension expects ${mime}.`;
+                    broadcastUploadStatus(user.id, {
+                        uploadId,
+                        status: "failed",
+                        error: message,
+                    });
+                    observability.recordUploadError("invalid_type");
+                    return reply.code(400).send({
+                        error: { code: "INVALID_FILE", message },
                     });
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "uploading", progress: 0 });
@@ -68,10 +82,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     const cancelled =
                         (error as NodeJS.ErrnoException).name === "AbortError" ||
                         request.raw.destroyed;
+                    const message = cancelled
+                        ? undefined
+                        : `Failed to read file "${part.filename}" while uploading.`;
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: cancelled ? "cancelled" : "failed",
-                        error: cancelled ? undefined : "Upload failed.",
+                        error: message,
                     });
                     if (cancelled)
                         return reply.code(499).send({
@@ -90,7 +107,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     return reply.code(413).send({
                         error: {
                             code: "FILE_TOO_LARGE",
-                            message: "Maximum file size exceeded.",
+                            message: `File "${part.filename}" exceeds the maximum allowed upload size.`,
                         },
                     });
                 }
@@ -104,13 +121,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
-                        error: "Invalid image content.",
+                        error: `File "${part.filename}" is not a valid supported image.`,
                     });
                     observability.recordUploadError("invalid_content");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_FILE",
-                            message: "File content is not a valid supported image.",
+                            message: `File "${part.filename}" is not a valid supported image.`,
                         },
                     });
                 }
@@ -119,13 +136,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
-                        error: "Image type does not match the uploaded file type.",
+                        error: `File "${part.filename}" does not match its declared image type.`,
                     });
                     observability.recordUploadError("invalid_content");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_FILE",
-                            message: "File content does not match its image type.",
+                            message: `File "${part.filename}" does not match its declared image type. The server detected ${metadata.mediaType ?? "an unknown image type"}.`,
                         },
                     });
                 }
@@ -134,13 +151,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
-                        error: "Unable to read image dimensions.",
+                        error: `File "${part.filename}" has no readable image dimensions.`,
                     });
                     observability.recordUploadError("invalid_dimensions");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_IMAGE",
-                            message: "Unable to read image dimensions.",
+                            message: `File "${part.filename}" has no readable image dimensions.`,
                         },
                     });
                 }
@@ -242,7 +259,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         broadcastUploadStatus(user.id, {
                             uploadId,
                             status: "failed",
-                            error: "Upload failed.",
+                            error: `Failed to store file "${part.filename}".`,
                         });
                         throw error;
                     }
@@ -252,7 +269,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
             request.log.error(error);
             return reply
                 .code(500)
-                .send({ error: { code: "UPLOAD_FAILED", message: "Upload failed." } });
+                .send({
+                    error: {
+                        code: "UPLOAD_FAILED",
+                        message: "Upload processing failed" +
+                            (uploads.length === 0 ? "." : ". One or more files could not be processed."),
+                    },
+                });
         }
         if (!uploads.length)
             return reply
