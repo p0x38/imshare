@@ -102,6 +102,10 @@ function DashboardPostsPage() {
     const [revisionsOpen, setRevisionsOpen] = useState(false);
     const [revisions, setRevisions] = useState<PostRevision[]>([]);
     const [revisionsLoading, setRevisionsLoading] = useState(false);
+    const [renameOpen, setRenameOpen] = useState(false);
+    const [renamePost, setRenamePost] = useState<Post | null>(null);
+    const [renameTitle, setRenameTitle] = useState("");
+    const [renaming, setRenaming] = useState(false);
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
     const drafts = imagePosts.filter((post) => post.status === "draft");
@@ -172,6 +176,53 @@ function DashboardPostsPage() {
 
     function closeActionsMenu() {
         setActionsAnchor(null);
+    }
+
+    function openQuickRename(post: Post) {
+        closePostMenu();
+        setRenamePost(post);
+        setRenameTitle(post.title ?? "");
+        setRenameOpen(true);
+    }
+
+    async function submitQuickRename() {
+        if (!renamePost) return;
+        const title = renameTitle.trim();
+        if (!title) {
+            setError("Post title cannot be empty.");
+            return;
+        }
+        if (title === (renamePost.title ?? "")) {
+            setRenameOpen(false);
+            return;
+        }
+
+        setRenaming(true);
+        setError("");
+        try {
+            const response = await api<{ data: Post }>(
+                "/v1/posts/" + encodeURIComponent(renamePost.id),
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ title }),
+                },
+            );
+            setPosts((current) =>
+                current
+                    ? current.map((post) =>
+                          post.id === renamePost.id
+                              ? { ...post, ...response.data, title }
+                              : post,
+                      )
+                    : current,
+            );
+            setRenameOpen(false);
+            setRenamePost(null);
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to rename post.");
+        } finally {
+            setRenaming(false);
+        }
     }
 
     function openBatchEdit() {
@@ -730,6 +781,10 @@ function DashboardPostsPage() {
                 <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
                 Delete
             </MenuItem>
+            <MenuItem onClick={() => { if (menuPost) openQuickRename(menuPost); }}>
+                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                Quick Rename
+            </MenuItem>
             <MenuItem
                 onClick={() => {
                     if (menuPost)
@@ -938,6 +993,43 @@ function DashboardPostsPage() {
                     disabled={batchEditing || !selectedPostIds.length}
                 >
                     {batchEditing ? "Applying…" : "Apply changes"}
+                </Button>
+            </DialogActions>
+        </Dialog>
+        <Dialog
+            open={renameOpen}
+            onClose={() => (renaming ? null : setRenameOpen(false))}
+            fullWidth
+            maxWidth="sm"
+        >
+            <DialogTitle>Quick Rename</DialogTitle>
+            <DialogContent>
+                <TextField
+                    autoFocus
+                    label="Post title"
+                    value={renameTitle}
+                    onChange={(event) => setRenameTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            event.preventDefault();
+                            void submitQuickRename();
+                        }
+                    }}
+                    fullWidth
+                    inputProps={{ maxLength: 500 }}
+                    sx={{ mt: 1 }}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setRenameOpen(false)} disabled={renaming}>
+                    Cancel
+                </Button>
+                <Button
+                    variant="contained"
+                    onClick={() => void submitQuickRename()}
+                    disabled={renaming || !renameTitle.trim()}
+                >
+                    {renaming ? "Renaming…" : "Rename"}
                 </Button>
             </DialogActions>
         </Dialog>
