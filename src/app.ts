@@ -225,6 +225,10 @@ export async function buildApp() {
     });
 
     app.addHook("onSend", async (request, reply, payload) => {
+        if (request.url.startsWith("/client/")) {
+            reply.header("Cache-Control", "no-cache");
+            return payload;
+        }
         if (request.url === "/docs" || request.url.startsWith("/docs/")) return payload;
         reply.header("X-Content-Type-Options", "nosniff");
         reply.header("X-Frame-Options", "SAMEORIGIN");
