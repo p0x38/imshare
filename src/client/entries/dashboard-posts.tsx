@@ -422,7 +422,6 @@ function DashboardPostsPage() {
                             variant="outlined"
                             endIcon={<ArrowDropDownIcon />}
                             onClick={(event) => setActionsAnchor(event.currentTarget)}
-                            disabled={!selectedPostIds.length}
                             aria-haspopup="menu"
                             aria-expanded={Boolean(actionsAnchor) ? "true" : undefined}
                         >
