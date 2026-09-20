@@ -31,20 +31,30 @@ function uploadSingle(
                 try {
                     resolve(JSON.parse(xhr.responseText).data as UploadedFile);
                 } catch {
-                    reject(new Error("Invalid upload response."));
+                    reject(new Error(`Failed to upload "${file.name}": the server returned an invalid response.`));
                 }
-            } else {
-                reject(
-                    new Error(
-                        xhr.status === 429
-                            ? "Upload rate limit exceeded."
-                            : "Image upload failed.",
-                    ),
-                );
+                return;
             }
+
+            let serverMessage = "";
+            try {
+                const payload = JSON.parse(xhr.responseText) as {
+                    error?: { message?: string };
+                };
+                serverMessage = payload.error?.message?.trim() ?? "";
+            } catch {
+                // Use the HTTP status when the response is not JSON.
+            }
+
+            const reason =
+                serverMessage ||
+                (xhr.status === 429
+                    ? "Upload rate limit exceeded. Try again later."
+                    : `The server returned HTTP ${xhr.status}.`);
+            reject(new Error(`Failed to upload "${file.name}": ${reason}`));
         };
-        xhr.onerror = () => reject(new Error("Image upload failed."));
-        xhr.onabort = () => reject(new Error("Upload cancelled."));
+        xhr.onerror = () => reject(new Error(`Failed to upload "${file.name}": network error.`));
+        xhr.onabort = () => reject(new Error(`Failed to upload "${file.name}": upload cancelled.`));
         const data = new FormData();
         data.append("file", file);
         xhr.send(data);
@@ -60,16 +70,28 @@ export function UploadBox() {
     const [error, setError] = useState("");
 
     async function handleFiles(files: FileList | File[]) {
-        const selected = Array.from(files).filter((file) => file.type.startsWith("image/"));
+        const candidates = Array.from(files);
+        const rejected = candidates.filter((file) => !file.type.startsWith("image/"));
+        const selected = candidates.filter((file) => file.type.startsWith("image/"));
+        if (rejected.length > 0) {
+            setError(
+                `Unsupported file${rejected.length === 1 ? "" : "s"}: ${rejected
+                    .map((file) => `"${file.name}"`)
+                    .join(", ")}. Please select image files.`,
+            );
+        } else {
+            setError("");
+        }
         if (!selected.length) return;
         setBusy(true);
-        setError("");
         try {
+            let activeFile = "";
             const uploaded: UploadedFile[] = [];
             let completedBytes = 0;
             const totalBytes = selected.reduce((sum, file) => sum + file.size, 0);
 
             for (const [index, file] of selected.entries()) {
+                activeFile = file.name;
                 setCurrentFile(file.name);
                 const fileSize = file.size;
                 const uploadedFile = await uploadSingle(file, (fileProgress) => {
@@ -90,13 +112,26 @@ export function UploadBox() {
             }
 
             setCurrentFile("Creating draft posts…");
-            await api("/v1/posts/batch", {
-                method: "POST",
-                body: JSON.stringify({ uploadIds: uploaded.map((upload) => upload.id) }),
-            });
+            try {
+                await api("/v1/posts/batch", {
+                    method: "POST",
+                    body: JSON.stringify({ uploadIds: uploaded.map((upload) => upload.id) }),
+                });
+            } catch (cause) {
+                const reason = cause instanceof Error ? cause.message : "the server returned an unknown error.";
+                throw new Error(
+                    `Failed to create draft posts from ${uploaded.length} uploaded files: ${reason}`,
+                );
+            }
             location.href = "/dashboard/posts/";
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Upload failed.");
+            setError(
+                cause instanceof Error
+                    ? cause.message
+                    : activeFile
+                      ? `Failed to upload "${activeFile}": unknown error.`
+                      : "Failed to upload the selected files: unknown error.",
+            );
         } finally {
             setBusy(false);
             setProgress(0);
