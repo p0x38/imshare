@@ -18,14 +18,6 @@ import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
 import type { Post } from "../lib/types";
 import { AnimatedItem } from "./Motion";
 
-function imageUrl(url: string, width = 512) {
-    const image = new URL(url, window.location.origin);
-    if (image.pathname.startsWith("/v1/")) image.pathname = `/api${image.pathname}`;
-    image.searchParams.set("width", String(width));
-    image.searchParams.set("format", "webp");
-    return image.href;
-}
-
 function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
     return Array.isArray(value) ? value : Array.isArray(value.posts) ? value.posts : [];
 }
@@ -122,7 +114,7 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
                             {post.uploads?.[0] ? (
                                 <CardMedia
                                     component="img"
-                                    image={thumbnails[post.uploads[0].id] || imageUrl(post.uploads[0].url)}
+                                    image={thumbnails[post.uploads[0].id]}
                                     alt={post.uploads[0].alt || post.title || ""}
                                     loading="lazy"
                                     sx={{

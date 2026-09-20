@@ -202,6 +202,7 @@ export async function buildApp() {
             }
         }
         viewLimiter.prune();
+        highVolumeImageLimiter.prune();
         uploadDailyLimiter.prune();
         uploadBurstLimiter.prune();
     });
