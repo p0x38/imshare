@@ -11,10 +11,10 @@ import { loadConfig } from "../lib/config.js";
 import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { observability } from "../instrumentation.js";
-
-const GIF_MAX_FRAMES = 1_000;
-const GIF_MAX_TOTAL_PIXELS = 500_000_000;
-const GIF_INPUT_PIXEL_LIMIT = 268_402_689;
+import {
+    GIF_SHARP_PIXEL_LIMIT,
+    validateGifMetadata,
+} from "../lib/gif-security.js";
 
 const IMAGE_TYPES = new Map([
     [".jpg", "image/jpeg"],
@@ -116,7 +116,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 try {
                     metadata = await sharp(content, {
                         animated: true,
-                        limitInputPixels: isGif ? GIF_INPUT_PIXEL_LIMIT : undefined,
+                        limitInputPixels: isGif ? GIF_SHARP_PIXEL_LIMIT : undefined,
                     }).metadata();
                 } catch {
                     await unlink(temporaryPath).catch(() => undefined);
@@ -134,17 +134,9 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
                 if (isGif) {
-                    const frames = metadata.pages ?? 1;
-                    const width = metadata.width ?? 0;
-                    const height = metadata.pageHeight ?? metadata.height ?? 0;
-                    const totalPixels = width * height * frames;
-                    if (
-                        frames > GIF_MAX_FRAMES ||
-                        !width ||
-                        !height ||
-                        !Number.isSafeInteger(totalPixels) ||
-                        totalPixels > GIF_MAX_TOTAL_PIXELS
-                    ) {
+                    try {
+                        validateGifMetadata(metadata);
+                    } catch (error) {
                         await unlink(temporaryPath).catch(() => undefined);
                         const message = `File "${part.filename}" has an animation that exceeds imshare's GIF safety limits.`;
                         broadcastUploadStatus(user.id, {
@@ -160,7 +152,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 const sharpOptions = {
                     animated: true,
-                    ...(isGif ? { limitInputPixels: GIF_INPUT_PIXEL_LIMIT } : {}),
+                    ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
                 };
                 const detectedMime = metadata.mediaType;
                 const detectedExt = detectedMime ? IMAGE_EXTENSIONS.get(detectedMime) : undefined;
