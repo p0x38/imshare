@@ -114,10 +114,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     content.subarray(0, 6).toString("ascii") === "GIF89a";
                 let metadata;
                 try {
-                    metadata = await sharp(content, {
-                        animated: true,
-                        limitInputPixels: isGif ? GIF_SHARP_PIXEL_LIMIT : undefined,
-                    }).metadata();
+                    metadata = await sharp(content).metadata();
                 } catch {
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
@@ -133,12 +130,16 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
                 }
-                if (isGif) {
+                const detectedIsGif = metadata.format === "gif";
+                if (detectedIsGif) {
                     try {
                         validateGifMetadata(metadata);
                     } catch (error) {
                         await unlink(temporaryPath).catch(() => undefined);
-                        const message = `File "${part.filename}" has an animation that exceeds imshare's GIF safety limits.`;
+                        const message =
+                            error instanceof Error
+                                ? `File "${part.filename}" is unsafe to process: ${error.message}`
+                                : `File "${part.filename}" has an animation that exceeds imshare's GIF safety limits.`;
                         broadcastUploadStatus(user.id, {
                             uploadId,
                             status: "failed",
@@ -152,7 +153,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 const sharpOptions = {
                     animated: true,
-                    ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
+                    ...(detectedIsGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
                 };
                 const detectedMime = metadata.mediaType;
                 const detectedExt = detectedMime ? IMAGE_EXTENSIONS.get(detectedMime) : undefined;
