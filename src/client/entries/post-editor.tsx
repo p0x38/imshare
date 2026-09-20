@@ -16,13 +16,13 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { ArrowDownward, ArrowUpward, CloudUpload, Delete } from "@mui/icons-material";
+import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { TagAutocomplete } from "../components/AutocompleteFields";
-import { api, apiUrl } from "../lib/api";
+import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 
 interface Category {
@@ -60,12 +60,18 @@ function PostEditor() {
     const [tags, setTags] = useState("");
     const [categoryId, setCategoryId] = useState("");
     const [files, setFiles] = useState<File[]>([]);
+    const [initialUploadId, setInitialUploadId] = useState<string | null>(null);
     const [error, setError] = useState("");
     const [uploadStatus, setUploadStatus] = useState("");
     const [progress, setProgress] = useState(0);
     const [saving, setSaving] = useState(false);
     const [dragging, setDragging] = useState(false);
     const [batchUploading, setBatchUploading] = useState(false);
+
+    useEffect(() => {
+        const uploadId = new URLSearchParams(location.search).get("uploadId");
+        if (uploadId && !editing) setInitialUploadId(uploadId);
+    }, [editing]);
 
     useEffect(() => {
         void Promise.all([
@@ -139,40 +145,6 @@ function PostEditor() {
     function removeFile(index: number) {
         setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
     }
-    function upload(file: File): Promise<UploadedFile> {
-        return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open("POST", apiUrl("/v1/uploads"));
-            xhr.upload.onprogress = (event) => {
-                if (!event.lengthComputable) return;
-                setProgress((event.loaded / event.total) * 100);
-                setUploadStatus(
-                    `Uploading ${file.name}… ${Math.round((event.loaded / event.total) * 100)}%`,
-                );
-            };
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    try {
-                        resolve(JSON.parse(xhr.responseText).data as UploadedFile);
-                    } catch {
-                        reject(new Error("Invalid upload response."));
-                    }
-                } else
-                    reject(
-                        new Error(
-                            xhr.status === 429
-                                ? "Upload rate limit exceeded."
-                                : "Image upload failed.",
-                        ),
-                    );
-            };
-            xhr.onerror = () => reject(new Error("Image upload failed."));
-            xhr.onabort = () => reject(new Error("Upload cancelled."));
-            const data = new FormData();
-            data.append("file", file);
-            xhr.send(data);
-        });
-    }
     function originalCreatedAtValue() {
         return originalCreatedAt ? new Date(originalCreatedAt).toISOString() : null;
     }
@@ -228,36 +200,9 @@ function PostEditor() {
         event.preventDefault();
         setSaving(true);
         setError("");
-        setProgress(0);
-        setUploadStatus("");
         try {
-            const uploadIds: string[] = [];
-            if (files.length > 1 && !editing) {
-                setBatchUploading(true);
-                const response = await api<{ data: UploadedFile[] }>("/v1/uploads?multiple=true", {
-                    method: "POST",
-                    body: (() => {
-                        const data = new FormData();
-                        for (const file of files) data.append("file", file);
-                        return data;
-                    })(),
-                });
-                const uploaded = response.data;
-                if (uploaded.length !== files.length)
-                    throw new Error("Some images could not be uploaded.");
+            const uploadIds: string[] = initialUploadId ? [initialUploadId] : [];
 
-                for (let index = 0; index < uploaded.length; index += 1) {
-                    setUploadStatus(`Creating draft ${index + 1} of ${uploaded.length}…`);
-                    await createPost([uploaded[index]!.id], files[index]!.name.replace(/\.[^.]+$/, "") || "Untitled");
-                }
-                location.href = "/dashboard/posts/";
-                return;
-            }
-
-            for (const file of files) {
-                const uploaded = await upload(file);
-                uploadIds.push(uploaded.id);
-            }
             if (editing && postId) {
                 await api(`/v1/posts/${encodeURIComponent(postId)}`, {
                     method: "PATCH",
@@ -273,27 +218,25 @@ function PostEditor() {
                         status,
                         visibility,
                         uploadIds: uploadIds.length ? uploadIds : undefined,
-                        tags: tags
-                            .split(",")
-                            .map((value) => value.trim())
-                            .filter(Boolean),
+                        tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
                         categoryId: categoryId || null,
                     }),
                 });
                 location.href = `/posts/${encodeURIComponent(postId)}/`;
-            } else {
-                const created = await createPost(uploadIds, title.trim() || "Untitled");
-                if (mergeIntoMultiPost) {
-                    location.href = `/dashboard/posts/${encodeURIComponent(created.id)}/edit/`;
-                } else {
-                    location.href = `/posts/${encodeURIComponent(created.id)}/`;
-                }
+                return;
             }
+
+            if (!uploadIds.length)
+                throw new Error("Choose an image from the upload box first.");
+
+            const created = await createPost(uploadIds, title.trim() || "Untitled");
+            location.href = mergeIntoMultiPost
+                ? `/dashboard/posts/${encodeURIComponent(created.id)}/edit/`
+                : `/posts/${encodeURIComponent(created.id)}/`;
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to save post.");
         } finally {
             setSaving(false);
-            setBatchUploading(false);
         }
     }
 
@@ -305,101 +248,17 @@ function PostEditor() {
                         {error ? <Alert severity="error">{error}</Alert> : null}
                         <Stack spacing={1.5}>
                             <Typography variant="h6" component="h2">
-                                Images
+                                Image
                             </Typography>
-                            <Button
-                                component="label"
-                                variant="outlined"
-                                fullWidth
-                                startIcon={<CloudUpload />}
-                                onDragEnter={() => setDragging(true)}
-                                onDragOver={(event) => {
-                                    event.preventDefault();
-                                    event.dataTransfer.dropEffect = "copy";
-                                    setDragging(true);
-                                }}
-                                onDragLeave={(event) => {
-                                    if (event.currentTarget.contains(event.relatedTarget as Node))
-                                        return;
-                                    setDragging(false);
-                                }}
-                                onDrop={(event) => {
-                                    event.preventDefault();
-                                    setDragging(false);
-                                    if (event.dataTransfer.files.length)
-                                        addFiles(event.dataTransfer.files);
-                                }}
-                                sx={{
-                                    minHeight: 144,
-                                    justifyContent: "center",
-                                    flexDirection: "column",
-                                    gap: 0.5,
-                                    borderWidth: 2,
-                                    borderStyle: "dashed",
-                                    borderColor: dragging ? "primary.main" : "divider",
-                                    bgcolor: dragging ? "action.hover" : "transparent",
-                                    transition: "border-color 120ms ease, background-color 120ms ease",
-                                }}
-                            >
-                                <Typography variant="body1">
-                                    Drop images here or click to choose
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    PNG, JPEG, GIF, WebP, and other supported image files
-                                </Typography>
-                                <input
-                                    hidden
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={(event) => {
-                                        if (event.target.files) addFiles(event.target.files);
-                                        event.target.value = "";
-                                    }}
-                                />
-                            </Button>
-                            {files.map((file, index) => (
-                                <Card key={`${file.name}-${index}`} variant="outlined">
-                                    <CardContent>
-                                        <Stack direction="row" spacing={1} alignItems="center">
-                                            <Typography
-                                                sx={{
-                                                    flex: 1,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                }}
-                                            >
-                                                {file.name}
-                                            </Typography>
-                                            <IconButton
-                                                onClick={() => moveFile(index, -1)}
-                                                disabled={index === 0}
-                                            >
-                                                <ArrowUpward />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => moveFile(index, 1)}
-                                                disabled={index === files.length - 1}
-                                            >
-                                                <ArrowDownward />
-                                            </IconButton>
-                                            <IconButton
-                                                color="error"
-                                                onClick={() => removeFile(index)}
-                                            >
-                                                <Delete />
-                                            </IconButton>
-                                        </Stack>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            {uploadStatus ? (
-                                <Typography variant="body2">{uploadStatus}</Typography>
-                            ) : null}
-                            {batchUploading ? <Typography variant="body2">Batch upload: each image becomes a draft post.</Typography> : null}
-                            {saving && progress > 0 ? (
-                                <LinearProgress variant="determinate" value={progress} />
-                            ) : null}
+                            {initialUploadId ? (
+                                <Alert severity="success">
+                                    Image uploaded. Finish the post details below.
+                                </Alert>
+                            ) : (
+                                <Alert severity="info">
+                                    Use the upload box above to add an image.
+                                </Alert>
+                            )}
                         </Stack>
                         <TextField
                             label="Title"
