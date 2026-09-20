@@ -84,8 +84,8 @@ export function UploadBox() {
         }
         if (!selected.length) return;
         setBusy(true);
+        let activeFile = "";
         try {
-            let activeFile = "";
             const uploaded: UploadedFile[] = [];
             let completedBytes = 0;
             const totalBytes = selected.reduce((sum, file) => sum + file.size, 0);
