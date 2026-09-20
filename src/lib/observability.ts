@@ -731,8 +731,6 @@ function registerMetricHooks(
                 metricsSet.postsCreated.add(1);
             }
             if (pathname === "/api/v1/comments") metricsSet.commentsCreated.add(1);
-            if (pathname === "/api/v1/uploads") metricsSet.uploads.add(1);
-            if (pathname === "/api/v1/reports") metricsSet.reports.add(1);
         }
         if (
             pathname.match(/^\/api\/v1\/posts\/[^/]+$/) &&
@@ -749,12 +747,16 @@ function registerMetricHooks(
             metricsSet.postViews.add(1);
         if (pathname.startsWith("/uploads/") && reply.statusCode >= 200 && reply.statusCode < 400)
             metricsSet.imageServed.add(1);
+        if (
+            request.method === "PUT" &&
+            reply.statusCode >= 200 &&
+            reply.statusCode < 300 &&
+            /^\/api\/v1\/posts\/[^/]+\/reactions$/.test(pathname)
+        )
+            metricsSet.reactions.add(1);
         if (request.method === "POST" && reply.statusCode >= 200 && reply.statusCode < 300) {
-            if (pathname.includes("/reactions")) metricsSet.reactions.add(1);
             if (pathname.endsWith("/follow") || pathname.includes("/follows"))
                 metricsSet.follows.add(1);
-            if (pathname.includes("/notifications")) metricsSet.notifications.add(1);
-            if (pathname.includes("/reports")) metricsSet.reports.add(1);
             if (pathname.includes("/auth/")) metricsSet.authAttempts.add(1, { result: "success" });
         }
         if (pathname.includes("/auth/") && (reply.statusCode === 401 || reply.statusCode === 403))
