@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, stat, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import sharp from "sharp";
 
 import { env } from "../lib/env.js";
@@ -10,7 +10,8 @@ import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 
 interface ImportMetadata {
-    name?: string;
+    file: string;
+    name: string;
     originalPostDate?: string | number | null;
     description?: string | null;
     originalAuthor?: string | null;
@@ -21,7 +22,6 @@ interface ImportMetadata {
     visibility?: "public" | "unlisted" | "private";
     allowDownload?: boolean;
     contentWarning?: string | null;
-    [key: string]: unknown;
 }
 
 interface Options {
@@ -29,8 +29,7 @@ interface Options {
     user: string;
     apply: boolean;
     deleteSource: boolean;
-    recursive: boolean;
-    allowMissingJson: boolean;
+    allowMissingMetadata: boolean;
     noPost: boolean;
 }
 
@@ -60,8 +59,7 @@ function parseOptions(argv: string[]): Options {
     const options = {
         apply: false,
         deleteSource: false,
-        recursive: true,
-        allowMissingJson: false,
+        allowMissingMetadata: false,
         noPost: false,
     };
 
@@ -72,36 +70,50 @@ function parseOptions(argv: string[]): Options {
         else if (arg === "--user" || arg === "-u") user = argv[++index] ?? "";
         else if (arg === "--apply") options.apply = true;
         else if (arg === "--delete-source") options.deleteSource = true;
-        else if (arg === "--no-recursive") options.recursive = false;
-        else if (arg === "--allow-missing-json") options.allowMissingJson = true;
+        else if (arg === "--allow-missing-metadata") options.allowMissingMetadata = true;
         else if (arg === "--no-post") options.noPost = true;
         else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
-                    "Usage: pnpm migrate:images --directory <path> --user <id-or-handle> [options]",
+                    "Usage: pnpm migrate:images --directory <lists-root> --user <id-or-handle> [options]",
                     "",
-                    "Expected files:",
-                    "  image.png",
-                    "  image.png.json",
+                    "Expected layout:",
+                    "  lists/",
+                    "    list-a/",
+                    "      list.json",
+                    "      image1.png",
+                    "      image2.jpg",
+                    "    list-b/",
+                    "      list.json",
+                    "      image3.webp",
                     "",
-                    "JSON fields:",
-                    "  name, originalPostDate, description, originalAuthor, originalUrl,",
-                    "  tags, categories, caption, visibility, allowDownload, contentWarning",
+                    "Each list.json contains an array of image metadata objects.",
                     "",
-                    "Description imports with originalUrl are stored as:",
+                    "Example list.json:",
+                    "  [",
+                    "    {",
+                    '      "file": "image1.png",',
+                    '      "name": "Artwork title",',
+                    '      "originalPostDate": "2024-01-15T12:34:56Z",',
+                    '      "description": "Original description.",',
+                    '      "originalAuthor": "artist",',
+                    '      "originalUrl": "https://www.deviantart.com/...",',
+                    '      "tags": ["art", "fanart"],',
+                    '      "categories": ["Artwork"]',
+                    "    }",
+                    "  ]",
+                    "",
+                    "When originalUrl is present, description becomes:",
                     "  <description>",
                     "",
                     "  Imported from <originalUrl> using custom importer",
                     "",
-                    "Without --apply, this command only performs a dry run.",
-                    "",
-                    "--directory <path>       Source directory.",
-                    "--user <id-or-handle>    Destination imshare user.",
+                    "--directory <path>       Root directory containing list directories.",
+                    "--user <id-or-handle>    imshare user that owns imported data.",
                     "--apply                  Write files and database records.",
-                    "--delete-source         Delete source image/JSON after successful import.",
-                    "--no-recursive           Do not scan subdirectories.",
-                    "--allow-missing-json    Import images without usable JSON metadata.",
-                    "--no-post                Import only Upload records.",
+                    "--delete-source         Delete imported source files after success.",
+                    "--allow-missing-metadata Import images not mentioned by list.json.",
+                    "--no-post                Import Upload records without creating Posts.",
                     "--help                   Show this help.",
                 ].join("\n"),
             );
@@ -119,38 +131,28 @@ function parseOptions(argv: string[]): Options {
     return { ...options, directory, user };
 }
 
-async function collectFiles(root: string, recursive: boolean, relative = ""): Promise<string[]> {
-    const entries = await readdir(path.join(root, relative), { withFileTypes: true });
-    const files: string[] = [];
-
-    for (const entry of entries) {
-        const child = path.join(relative, entry.name);
-
-        if (entry.isDirectory() && recursive)
-            files.push(...(await collectFiles(root, recursive, child)));
-        else if (entry.isFile())
-            files.push(child);
-    }
-
-    return files;
-}
-
 function normalizeRelative(value: string): string {
     return value.replaceAll("\\", "/");
 }
 
-function matchingJson(files: string[], imageRelative: string): string | undefined {
-    const expected = (normalizeRelative(imageRelative) + ".json").toLowerCase();
-    return files.find((file) => normalizeRelative(file).toLowerCase() === expected);
-}
+function resolveWithinRoot(root: string, relative: string): string {
+    const normalized = relative.replaceAll("\\", "/");
 
-function parseMetadata(raw: string): ImportMetadata {
-    const value: unknown = JSON.parse(raw);
+    if (!normalized || path.posix.isAbsolute(normalized))
+        throw new Error("Metadata file path must be relative to its list directory.");
 
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        throw new Error("JSON root must be an object.");
+    const target = path.resolve(root, normalized);
+    const relativeTarget = path.relative(root, target);
 
-    return value as ImportMetadata;
+    if (
+        relativeTarget === ".." ||
+        relativeTarget.startsWith(".." + path.sep) ||
+        path.isAbsolute(relativeTarget)
+    ) {
+        throw new Error("Metadata file path escapes its list directory: " + relative);
+    }
+
+    return target;
 }
 
 function cleanString(value: unknown): string | undefined {
@@ -217,6 +219,50 @@ function targetFilename(contentHash: string, extension: string): string {
     );
 }
 
+function parseListMetadata(raw: string): ImportMetadata[] {
+    const value: unknown = JSON.parse(raw);
+
+    if (!Array.isArray(value)) throw new Error("list.json root must be an array.");
+
+    return value.map((entry, index) => {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry))
+            throw new Error("list.json entry " + index + " must be an object.");
+
+        const record = entry as Record<string, unknown>;
+        const file = cleanString(record.file);
+        const name = cleanString(record.name);
+
+        if (!file) throw new Error("list.json entry " + index + " is missing file.");
+        if (!name) throw new Error("list.json entry " + index + " is missing name.");
+
+        return {
+            ...record,
+            file,
+            name,
+            originalPostDate: record.originalPostDate as ImportMetadata["originalPostDate"],
+            description: record.description as string | null | undefined,
+            originalAuthor: record.originalAuthor as string | null | undefined,
+            originalUrl: record.originalUrl as string | null | undefined,
+            tags: cleanStringList(record.tags),
+            categories: cleanStringList(record.categories),
+            caption: record.caption as string | null | undefined,
+            visibility: normalizeVisibility(record.visibility),
+            allowDownload:
+                typeof record.allowDownload === "boolean" ? record.allowDownload : true,
+            contentWarning: record.contentWarning as string | null | undefined,
+        };
+    });
+}
+
+async function listDirectories(root: string): Promise<string[]> {
+    const entries = await readdir(root, { withFileTypes: true });
+
+    return entries
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => path.join(root, entry.name))
+        .sort();
+}
+
 async function resolveUser(prisma: PrismaClient, value: string) {
     return (
         (await prisma.user.findUnique({
@@ -261,26 +307,323 @@ async function normalizeImage(source: string): Promise<PreparedImage> {
     };
 }
 
-async function resolveTag(prisma: PrismaClient, name: string) {
+async function resolveTag(tx: Prisma.TransactionClient, name: string) {
     const trimmed = name.trim();
     const slug = slugify(trimmed);
 
     return (
-        (await prisma.tag.findUnique({ where: { name: trimmed } })) ??
-        (await prisma.tag.findUnique({ where: { slug } })) ??
-        (await prisma.tag.create({ data: { name: trimmed, slug } }))
+        (await tx.tag.findUnique({ where: { name: trimmed } })) ??
+        (await tx.tag.findUnique({ where: { slug } })) ??
+        (await tx.tag.create({ data: { name: trimmed, slug } }))
     );
 }
 
-async function resolveCategory(prisma: PrismaClient, name: string) {
+async function resolveCategory(tx: Prisma.TransactionClient, name: string) {
     const trimmed = name.trim();
     const slug = slugify(trimmed);
 
     return (
-        (await prisma.category.findUnique({ where: { name: trimmed } })) ??
-        (await prisma.category.findUnique({ where: { slug } })) ??
-        (await prisma.category.create({ data: { name: trimmed, slug } }))
+        (await tx.category.findUnique({ where: { name: trimmed } })) ??
+        (await tx.category.findUnique({ where: { slug } })) ??
+        (await tx.category.create({ data: { name: trimmed, slug } }))
     );
+}
+
+async function importList(
+    prisma: PrismaClient,
+    sourceDirectory: string,
+    uploadDirectory: string,
+    userId: string,
+    options: Options,
+): Promise<{ imported: number; skipped: number; failed: number }> {
+    const listDirectories = await listDirectories(sourceDirectory);
+    if (listDirectories.length === 0)
+        throw new Error("No list directories found under " + sourceDirectory);
+
+    let imported = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const listDirectory of listDirectories) {
+        const listPath = path.join(listDirectory, "list.json");
+
+        let metadataEntries: ImportMetadata[] = [];
+        try {
+            metadataEntries = parseListMetadata(await readFile(listPath, "utf8"));
+        } catch (error) {
+            skipped += 1;
+            console.error(
+                "SKIP " +
+                    normalizeRelative(path.relative(sourceDirectory, listPath)) +
+                    ": " +
+                    (error instanceof Error ? error.message : String(error)),
+            );
+            continue;
+        }
+
+        const referencedFiles = new Set<string>();
+
+        for (const metadata of metadataEntries) {
+            const relativeFile = normalizeRelative(metadata.file);
+
+            if (referencedFiles.has(relativeFile.toLowerCase())) {
+                skipped += 1;
+                console.error(
+                    "SKIP " +
+                        normalizeRelative(path.relative(sourceDirectory, listPath)) +
+                        ": duplicate file " +
+                        relativeFile,
+                );
+                continue;
+            }
+            referencedFiles.add(relativeFile.toLowerCase());
+
+            try {
+                const source = resolveWithinRoot(listDirectory, metadata.file);
+                const sourceStats = await stat(source);
+
+                if (!sourceStats.isFile()) throw new Error("Source path is not a file.");
+
+                const extension = path.extname(source).toLowerCase();
+                if (!IMAGE_TYPES[extension])
+                    throw new Error("Unsupported image extension: " + extension);
+
+                const prepared = await normalizeImage(source);
+                const existing = await prisma.upload.findUnique({
+                    where: {
+                        userId_contentHash: {
+                            userId,
+                            contentHash: prepared.contentHash,
+                        },
+                    },
+                    select: { id: true, filename: true, postId: true },
+                });
+
+                const destinationFilename = targetFilename(
+                    prepared.contentHash,
+                    prepared.extension,
+                );
+                const destination = path.join(uploadDirectory, destinationFilename);
+
+                const originalUrl = cleanString(metadata.originalUrl);
+                const description = appendImportAttribution(
+                    cleanString(metadata.description),
+                    originalUrl,
+                );
+                const tags = cleanStringList(metadata.tags);
+                const categories = cleanStringList(metadata.categories);
+
+                if (categories.length > 1) {
+                    console.warn(
+                        "WARN " +
+                            normalizeRelative(path.relative(sourceDirectory, listDirectory)) +
+                            "/" +
+                            relativeFile +
+                            ': imshare supports one category per post; using "' +
+                            categories[0] +
+                            '".',
+                    );
+                }
+
+                console.log(
+                    (options.apply ? "IMPORT " : "WOULD IMPORT ") +
+                        normalizeRelative(path.relative(sourceDirectory, listDirectory)) +
+                        "/" +
+                        relativeFile +
+                        " -> " +
+                        destinationFilename,
+                );
+
+                if (!options.apply) {
+                    imported += 1;
+                    continue;
+                }
+
+                await mkdir(path.dirname(destination), { recursive: true });
+
+                if (!existing) {
+                    await writeFile(destination, prepared.normalized, { flag: "wx" }).catch(
+                        (error: unknown) => {
+                            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+                        },
+                    );
+
+                    const stored = await readFile(destination);
+                    const storedHash = createHash("sha256").update(stored).digest("hex");
+                    if (storedHash !== prepared.contentHash)
+                        throw new Error("Destination image failed SHA-256 verification.");
+
+                    const thumbhash = await generateThumbHash(destination);
+                    const uploadId = randomUUID();
+
+                    if (options.noPost) {
+                        await prisma.upload.create({
+                            data: {
+                                id: uploadId,
+                                filename: destinationFilename,
+                                originalName: path.basename(source),
+                                mimeType: prepared.mimeType,
+                                size: stored.byteLength,
+                                width: prepared.width,
+                                height: prepared.height,
+                                contentHash: prepared.contentHash,
+                                thumbhash,
+                                metadataJson: JSON.stringify(metadata),
+                                userId,
+                            },
+                        });
+                    } else {
+                        await prisma.$transaction(async (tx) => {
+                            const category = categories[0]
+                                ? await resolveCategory(tx, categories[0])
+                                : undefined;
+
+                            const post = await tx.post.create({
+                                data: {
+                                    title: metadata.name,
+                                    contentType: "image",
+                                    description,
+                                    caption: cleanString(metadata.caption),
+                                    sourceUrl: originalUrl,
+                                    originalCreator: cleanString(metadata.originalAuthor),
+                                    originalCreatedAt: parseOriginalDate(
+                                        metadata.originalPostDate,
+                                    ),
+                                    allowDownload: metadata.allowDownload ?? true,
+                                    status: "published",
+                                    visibility: normalizeVisibility(metadata.visibility),
+                                    publishedAt: new Date(),
+                                    contentWarning: cleanString(metadata.contentWarning),
+                                    userId,
+                                    categoryId: category?.id,
+                                },
+                            });
+
+                            await tx.upload.create({
+                                data: {
+                                    id: uploadId,
+                                    filename: destinationFilename,
+                                    originalName: path.basename(source),
+                                    mimeType: prepared.mimeType,
+                                    size: stored.byteLength,
+                                    width: prepared.width,
+                                    height: prepared.height,
+                                    contentHash: prepared.contentHash,
+                                    thumbhash,
+                                    metadataJson: JSON.stringify(metadata),
+                                    userId,
+                                    postId: post.id,
+                                },
+                            });
+
+                            for (const tagName of tags) {
+                                const tag = await resolveTag(tx, tagName);
+                                await tx.postTag.create({
+                                    data: { postId: post.id, tagId: tag.id },
+                                });
+                            }
+
+                            await tx.post.update({
+                                where: { id: post.id },
+                                data: { permalinkKey: post.id },
+                            });
+                        });
+                    }
+                } else if (!options.noPost && !existing.postId) {
+                    await prisma.$transaction(async (tx) => {
+                        const category = categories[0]
+                            ? await resolveCategory(tx, categories[0])
+                            : undefined;
+
+                        const post = await tx.post.create({
+                            data: {
+                                title: metadata.name,
+                                contentType: "image",
+                                description,
+                                caption: cleanString(metadata.caption),
+                                sourceUrl: originalUrl,
+                                originalCreator: cleanString(metadata.originalAuthor),
+                                originalCreatedAt: parseOriginalDate(
+                                    metadata.originalPostDate,
+                                ),
+                                allowDownload: metadata.allowDownload ?? true,
+                                status: "published",
+                                visibility: normalizeVisibility(metadata.visibility),
+                                publishedAt: new Date(),
+                                contentWarning: cleanString(metadata.contentWarning),
+                                userId,
+                                categoryId: category?.id,
+                            },
+                        });
+
+                        await tx.upload.update({
+                            where: { id: existing.id },
+                            data: { postId: post.id },
+                        });
+
+                        for (const tagName of tags) {
+                            const tag = await resolveTag(tx, tagName);
+                            await tx.postTag.create({
+                                data: { postId: post.id, tagId: tag.id },
+                            });
+                        }
+
+                        await tx.post.update({
+                            where: { id: post.id },
+                            data: { permalinkKey: post.id },
+                        });
+                    });
+                } else {
+                    console.log(
+                        "SKIP existing upload " + existing.id + " (" + existing.filename + ")",
+                    );
+                }
+
+                if (options.deleteSource) {
+                    await unlink(source);
+                    const jsonPath = path.join(listDirectory, "list.json");
+                    if (metadataEntries.length === 1) {
+                        await unlink(jsonPath).catch(() => undefined);
+                    }
+                }
+
+                imported += 1;
+            } catch (error) {
+                failed += 1;
+                console.error(
+                    "FAILED " +
+                        normalizeRelative(path.relative(sourceDirectory, listDirectory)) +
+                        "/" +
+                        relativeFile +
+                        ": " +
+                        (error instanceof Error ? error.message : String(error)),
+                );
+            }
+        }
+
+        if (options.allowMissingMetadata) {
+            const allFiles = await readdir(listDirectory, { withFileTypes: true });
+            const known = new Set(metadataEntries.map((entry) => entry.file.toLowerCase()));
+
+            for (const entry of allFiles) {
+                if (!entry.isFile()) continue;
+                const extension = path.extname(entry.name).toLowerCase();
+                if (!IMAGE_TYPES[extension]) continue;
+                if (known.has(entry.name.toLowerCase())) continue;
+
+                skipped += 1;
+                console.warn(
+                    "SKIP unlisted image " +
+                        normalizeRelative(
+                            path.relative(sourceDirectory, path.join(listDirectory, entry.name)),
+                        ) +
+                        ": no list.json entry.",
+                );
+            }
+        }
+    }
+
+    return { imported, skipped, failed };
 }
 
 async function main(): Promise<void> {
@@ -300,269 +643,22 @@ async function main(): Promise<void> {
         const user = await resolveUser(prisma, options.user);
         if (!user) throw new Error("User not found: " + options.user);
 
-        const files = await collectFiles(sourceDirectory, options.recursive);
-        const images = files
-            .filter((file) => Boolean(IMAGE_TYPES[path.extname(file).toLowerCase()]))
-            .sort();
-
-        let processed = 0;
-        let skipped = 0;
-        let failed = 0;
-
-        for (const relativeImage of images) {
-            const source = path.join(sourceDirectory, relativeImage);
-            const jsonRelative = matchingJson(files, relativeImage);
-            const jsonSource = jsonRelative
-                ? path.join(sourceDirectory, jsonRelative)
-                : undefined;
-
-            let metadata: ImportMetadata = {};
-
-            if (jsonSource) {
-                try {
-                    metadata = parseMetadata(await readFile(jsonSource, "utf8"));
-                } catch (error) {
-                    if (!options.allowMissingJson) {
-                        skipped += 1;
-                        console.error(
-                            "SKIP " + normalizeRelative(relativeImage) + ": invalid JSON (" +
-                                (error instanceof Error ? error.message : String(error)) + ")",
-                        );
-                        continue;
-                    }
-
-                    console.warn(
-                        "WARN " + normalizeRelative(relativeImage) +
-                            ": invalid JSON; importing without metadata.",
-                    );
-                }
-            } else if (!options.allowMissingJson) {
-                skipped += 1;
-                console.error(
-                    "SKIP " + normalizeRelative(relativeImage) + ": matching JSON file not found.",
-                );
-                continue;
-            }
-
-            try {
-                const prepared = await normalizeImage(source);
-                const existing = await prisma.upload.findUnique({
-                    where: {
-                        userId_contentHash: {
-                            userId: user.id,
-                            contentHash: prepared.contentHash,
-                        },
-                    },
-                    select: { id: true, filename: true, postId: true },
-                });
-
-                const destinationFilename = targetFilename(
-                    prepared.contentHash,
-                    prepared.extension,
-                );
-                const destination = path.join(uploadDirectory, destinationFilename);
-
-                const name =
-                    cleanString(metadata.name) ??
-                    path.basename(relativeImage, path.extname(relativeImage));
-                const originalUrl = cleanString(metadata.originalUrl);
-                const description = appendImportAttribution(
-                    cleanString(metadata.description),
-                    originalUrl,
-                );
-                const originalAuthor = cleanString(metadata.originalAuthor);
-                const originalPostDate = parseOriginalDate(metadata.originalPostDate);
-                const tags = cleanStringList(metadata.tags);
-                const categories = cleanStringList(metadata.categories);
-                const category = categories[0];
-                const caption = cleanString(metadata.caption);
-                const visibility = normalizeVisibility(metadata.visibility);
-                const allowDownload =
-                    typeof metadata.allowDownload === "boolean"
-                        ? metadata.allowDownload
-                        : true;
-                const contentWarning = cleanString(metadata.contentWarning);
-
-                if (categories.length > 1) {
-                    console.warn(
-                        "WARN " + normalizeRelative(relativeImage) +
-                            ': imshare currently supports one category per post; using first category "' +
-                            category +
-                            '".',
-                    );
-                }
-
-                console.log(
-                    (options.apply ? "IMPORT " : "WOULD IMPORT ") +
-                        normalizeRelative(relativeImage) +
-                        " -> " +
-                        destinationFilename,
-                );
-
-                if (!options.apply) {
-                    processed += 1;
-                    continue;
-                }
-
-                await mkdir(path.dirname(destination), { recursive: true });
-
-                if (!existing) {
-                    await writeFile(destination, prepared.normalized, { flag: "wx" }).catch(
-                        (error: unknown) => {
-                            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
-                        },
-                    );
-
-                    const stored = await readFile(destination);
-                    const storedHash = createHash("sha256").update(stored).digest("hex");
-
-                    if (storedHash !== prepared.contentHash)
-                        throw new Error("Destination image failed SHA-256 verification.");
-
-                    const thumbhash = await generateThumbHash(destination);
-                    const uploadId = randomUUID();
-
-                    if (options.noPost) {
-                        await prisma.upload.create({
-                            data: {
-                                id: uploadId,
-                                filename: destinationFilename,
-                                originalName: path.basename(relativeImage),
-                                mimeType: prepared.mimeType,
-                                size: stored.byteLength,
-                                width: prepared.width,
-                                height: prepared.height,
-                                contentHash: prepared.contentHash,
-                                thumbhash,
-                                metadataJson: JSON.stringify(metadata),
-                                userId: user.id,
-                            },
-                        });
-                    } else {
-                        await prisma.$transaction(async (tx) => {
-                            const resolvedCategory = category
-                                ? await resolveCategory(tx, category)
-                                : undefined;
-
-                            const post = await tx.post.create({
-                                data: {
-                                    title: name,
-                                    contentType: "image",
-                                    description,
-                                    caption,
-                                    sourceUrl: originalUrl,
-                                    originalCreator: originalAuthor,
-                                    originalCreatedAt: originalPostDate,
-                                    allowDownload,
-                                    status: "published",
-                                    visibility,
-                                    publishedAt: new Date(),
-                                    contentWarning,
-                                    userId: user.id,
-                                    categoryId: resolvedCategory?.id,
-                                },
-                            });
-
-                            await tx.upload.create({
-                                data: {
-                                    id: uploadId,
-                                    filename: destinationFilename,
-                                    originalName: path.basename(relativeImage),
-                                    mimeType: prepared.mimeType,
-                                    size: stored.byteLength,
-                                    width: prepared.width,
-                                    height: prepared.height,
-                                    contentHash: prepared.contentHash,
-                                    thumbhash,
-                                    metadataJson: JSON.stringify(metadata),
-                                    userId: user.id,
-                                    postId: post.id,
-                                },
-                            });
-
-                            for (const tagName of tags) {
-                                const tag = await resolveTag(tx, tagName);
-
-                                await tx.postTag.create({
-                                    data: { postId: post.id, tagId: tag.id },
-                                });
-                            }
-
-                            await tx.post.update({
-                                where: { id: post.id },
-                                data: { permalinkKey: post.id },
-                            });
-                        });
-                    }
-                } else if (!options.noPost && !existing.postId) {
-                    await prisma.$transaction(async (tx) => {
-                        const resolvedCategory = category
-                            ? await resolveCategory(tx, category)
-                            : undefined;
-
-                        const post = await tx.post.create({
-                            data: {
-                                title: name,
-                                contentType: "image",
-                                description,
-                                caption,
-                                sourceUrl: originalUrl,
-                                originalCreator: originalAuthor,
-                                originalCreatedAt: originalPostDate,
-                                allowDownload,
-                                status: "published",
-                                visibility,
-                                publishedAt: new Date(),
-                                contentWarning,
-                                userId: user.id,
-                                categoryId: resolvedCategory?.id,
-                            },
-                        });
-
-                        await tx.upload.update({
-                            where: { id: existing.id },
-                            data: { postId: post.id },
-                        });
-
-                        for (const tagName of tags) {
-                            const tag = await resolveTag(tx, tagName);
-
-                            await tx.postTag.create({
-                                data: { postId: post.id, tagId: tag.id },
-                            });
-                        }
-
-                        await tx.post.update({
-                            where: { id: post.id },
-                            data: { permalinkKey: post.id },
-                        });
-                    });
-                } else {
-                    console.log(
-                        "SKIP existing upload " + existing.id + " (" + existing.filename + ")",
-                    );
-                }
-
-                if (options.deleteSource) {
-                    const { unlink } = await import("node:fs/promises");
-                    await unlink(source);
-
-                    if (jsonSource) await unlink(jsonSource).catch(() => undefined);
-                }
-
-                processed += 1;
-            } catch (error) {
-                failed += 1;
-                console.error(
-                    "FAILED " + normalizeRelative(relativeImage) + ": " +
-                        (error instanceof Error ? error.message : String(error)),
-                );
-            }
-        }
+        const result = await importList(
+            prisma,
+            sourceDirectory,
+            uploadDirectory,
+            user.id,
+            options,
+        );
 
         console.log(
-            "Migration complete: " + processed + " imported/planned, " +
-                skipped + " skipped, " + failed + " failed.",
+            "Migration complete: " +
+                result.imported +
+                " imported/planned, " +
+                result.skipped +
+                " skipped, " +
+                result.failed +
+                " failed.",
         );
     } finally {
         await prisma.$disconnect();
