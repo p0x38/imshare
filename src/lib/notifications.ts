@@ -1,4 +1,5 @@
 import { prisma } from "./auth.js";
+import { observability } from "../instrumentation.js";
 import { broadcastNotification } from "./realtime.js";
 import { sendWebPushNotification } from "./push.js";
 
@@ -16,6 +17,7 @@ export async function createNotification(input: {
         data: input,
         include: { actor: { select: { id: true, name: true } } },
     });
+    observability.recordResourceOperation("notifications", "create");
     const payload = {
         id: notification.id,
         type: notification.type,
