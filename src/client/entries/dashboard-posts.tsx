@@ -97,6 +97,7 @@ function DashboardPostsPage() {
     const [batchNSFW, setBatchNSFW] = useState("");
     const [batchWarningType, setBatchWarningType] = useState("");
     const [batchTags, setBatchTags] = useState("");
+    const [batchTagMode, setBatchTagMode] = useState<"replace" | "addition" | "subtraction">("replace");
     const [revisionsOpen, setRevisionsOpen] = useState(false);
     const [revisions, setRevisions] = useState<PostRevision[]>([]);
     const [revisionsLoading, setRevisionsLoading] = useState(false);
@@ -182,6 +183,7 @@ function DashboardPostsPage() {
         setBatchNSFW("");
         setBatchWarningType("");
         setBatchTags("");
+        setBatchTagMode("replace");
         setBatchEditOpen(true);
     }
 
@@ -195,8 +197,10 @@ function DashboardPostsPage() {
         if (batchWarningType) payload.contentWarningType = batchWarningType === "none" ? null : batchWarningType;
         if (batchClearContentWarning) payload.contentWarning = null;
         else if (batchContentWarning.trim()) payload.contentWarning = batchContentWarning.trim();
-        if (batchTags.trim())
+        if (batchTags.trim()) {
             payload.tags = batchTags.split(",").map((value) => value.trim()).filter(Boolean);
+            payload.tagMode = batchTagMode;
+        }
 
         if (Object.keys(payload).length === 1) {
             setError("Choose at least one field to change.");
@@ -845,7 +849,32 @@ function DashboardPostsPage() {
                         }
                         label="Clear content warnings"
                     />
-                    <TagAutocomplete value={batchTags} onChange={setBatchTags} />
+                    <TextField
+                        select
+                        label="Tag operation"
+                        value={batchTagMode}
+                        onChange={(event) =>
+                            setBatchTagMode(
+                                event.target.value as "replace" | "addition" | "subtraction",
+                            )
+                        }
+                        fullWidth
+                    >
+                        <MenuItem value="replace">Replace</MenuItem>
+                        <MenuItem value="addition">Addition</MenuItem>
+                        <MenuItem value="subtraction">Subtraction</MenuItem>
+                    </TextField>
+                    <TagAutocomplete
+                        value={batchTags}
+                        onChange={setBatchTags}
+                        helperText={
+                            batchTagMode === "replace"
+                                ? "Replace all existing tags with these tags."
+                                : batchTagMode === "addition"
+                                  ? "Add these tags and keep existing tags."
+                                  : "Remove these tags from selected posts."
+                        }
+                    />
                 </Stack>
             </DialogContent>
             <DialogActions>
