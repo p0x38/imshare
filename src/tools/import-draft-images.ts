@@ -258,7 +258,7 @@ async function createDraft(
                     data: {
                         id: uploadId,
                         filename: path
-                            .relative(process.cwd(), destination!)
+                            .relative(uploadDirectory, destination!)
                             .split(path.sep)
                             .join("/"),
                         originalName: image.originalName,
