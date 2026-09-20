@@ -183,7 +183,11 @@ function PostEditor() {
             customPostId: permalinkIdType === "custom" ? customPostId.trim() || null : null,
         };
     }
-    async function createPost(uploadIds: string[], postTitle: string) {
+    async function createPost(
+        uploadIds: string[],
+        postTitle: string,
+        forceStatus?: PostStatus,
+    ) {
         const response = await api<{ data: Post }>("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -195,7 +199,7 @@ function PostEditor() {
                 originalCreatedAt: originalCreatedAtValue(),
                 ...permalinkValues(),
                 allowDownload,
-                status: status,
+                status: forceStatus ?? status,
                 visibility,
                 uploadIds,
                 tags: tags
