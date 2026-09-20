@@ -186,7 +186,15 @@ export const postBatchUpdateInput = z
             .array(z.string().min(1).max(100))
             .max(100)
             .optional()
-            .meta({ description: "Replacement tag set applied to every selected post." }),
+            .meta({ description: "Tags to apply according to tagMode." }),
+        tagMode: z
+            .enum(["replace", "addition", "subtraction"])
+            .optional()
+            .default("replace")
+            .meta({
+                description:
+                    "How the supplied tags should be applied: replace the current set, add to it, or remove matching tags.",
+            }),
         categoryId: z.string().min(1).nullable().optional().meta({
             description: "Category identifier applied to every selected post, or null to remove it.",
         }),
