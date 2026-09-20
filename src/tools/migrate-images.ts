@@ -297,7 +297,7 @@ async function normalizeImage(source: string): Promise<PreparedImage> {
     };
 }
 
-async function resolveTag(tx: Prisma.TransactionClient, name: string) {
+async function resolveTag(tx: PrismaClient | Prisma.TransactionClient, name: string) {
     const trimmed = name.trim();
     const slug = slugify(trimmed);
 
@@ -308,7 +308,7 @@ async function resolveTag(tx: Prisma.TransactionClient, name: string) {
     );
 }
 
-async function resolveCategory(tx: Prisma.TransactionClient, name: string) {
+async function resolveCategory(tx: PrismaClient | Prisma.TransactionClient, name: string) {
     const trimmed = name.trim();
     const slug = slugify(trimmed);
 
@@ -515,7 +515,7 @@ async function importList(
                 if (!post) throw new Error("Existing post no longer exists: " + postId);
             } else {
                 const category = categories[0]
-                    ? await resolveCategory(prisma as never, categories[0])
+                    ? await resolveCategory(prisma, categories[0])
                     : undefined;
 
                 const createdPost = await prisma.post.create({
@@ -540,7 +540,7 @@ async function importList(
                 postId = createdPost.id;
 
                 for (const tagName of tags) {
-                    const tag = await resolveTag(prisma as never, tagName);
+                    const tag = await resolveTag(prisma, tagName);
                     await prisma.postTag.create({
                         data: { postId, tagId: tag.id },
                     });
