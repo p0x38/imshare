@@ -175,6 +175,8 @@ model Post {
   publishedAt DateTime?
   scheduledAt DateTime?
   hiddenAt DateTime?
+  isNSFW Boolean @default(false)
+  contentWarningType String?
   contentWarning String?
   permalinkPattern String @default("user")
   permalinkIdType String @default("internalId")
@@ -216,6 +218,8 @@ model PostRevision {
   publishedAt DateTime?
   categoryId String?
   tagsJson String
+  isNSFW Boolean @default(false)
+  contentWarningType String?
   contentWarning String?
   createdAt DateTime @default(now())
   createdById String
