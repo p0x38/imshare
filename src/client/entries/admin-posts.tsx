@@ -7,6 +7,7 @@ import {
     Dialog,
     DialogActions,
     DialogContent,
+    Pagination,
     DialogTitle,
     FormControlLabel,
     MenuItem,
@@ -19,6 +20,8 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { AdminLayout } from "../components/AdminLayout";
 import { api } from "../lib/api";
+const PAGE_SIZE = 100;
+
 interface Post {
     id: string;
     title: string;
@@ -38,17 +41,25 @@ function AdminPostsPage() {
     const [status, setStatus] = useState("published");
     const [allowDownload, setAllowDownload] = useState(true);
     const [reason, setReason] = useState("");
-    const load = async () => {
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const load = async (targetPage: number) => {
         try {
-            const r = await api<{ data: { posts: Post[] } }>("/v1/admin/posts?limit=100");
+            const offset = (targetPage - 1) * PAGE_SIZE;
+            const r = await api<{ data: { posts: Post[]; total: number } }>(
+                `/v1/admin/posts?limit=${PAGE_SIZE}&offset=${offset}`,
+            );
             setPosts(r.data.posts);
+            setTotal(r.data.total);
+            return r.data.posts;
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to load posts.");
+            return null;
         }
     };
     useEffect(() => {
-        void load();
-    }, []);
+        void load(page);
+    }, [page]);
     const edit = async () => {
         if (!selected) return;
         try {
@@ -57,7 +68,7 @@ function AdminPostsPage() {
                 body: JSON.stringify({ title, visibility, status, allowDownload }),
             });
             setSelected(null);
-            await load();
+            await load(page);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to update post.");
         }
@@ -70,7 +81,8 @@ function AdminPostsPage() {
                 body: JSON.stringify({ reason }),
             });
             setSelected(null);
-            await load();
+            if (posts.length === 1 && page > 1) setPage(page - 1);
+            else await load(page);
         } catch (e) {
             setError(e instanceof Error ? e.message : "Failed to delete post.");
         }
@@ -132,7 +144,21 @@ function AdminPostsPage() {
                         </CardContent>
                     </Card>
                 ))}
-            </Stack>
+                        {total > PAGE_SIZE ? (
+                <Stack spacing={1.5} alignItems="center" sx={{ pt: 1 }}>
+                    <Pagination
+                        count={Math.ceil(total / PAGE_SIZE)}
+                        page={page}
+                        onChange={(_, value) => setPage(value)}
+                        showFirstButton
+                        showLastButton
+                        color="primary"
+                    />
+                    <Typography variant="body2" color="text.secondary">
+                        Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} posts
+                    </Typography>
+                </Stack>
+            ) : null}
             <Dialog
                 open={Boolean(selected)}
                 onClose={() => setSelected(null)}
