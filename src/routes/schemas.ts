@@ -91,6 +91,22 @@ const contentProperties = {
     contentType: { type: "string", enum: ["image", "text"] },
     textContent: { type: "string", minLength: 1, maxLength: 100000 },
 };
+export const postMergeSchema = {
+    body: {
+        type: "object",
+        additionalProperties: false,
+        required: ["postIds"],
+        properties: {
+            postIds: {
+                type: "array",
+                minItems: 2,
+                maxItems: 50,
+                items: { type: "string", minLength: 1 },
+            },
+        },
+    },
+} as const;
+
 export const postCreateSchema = {
     body: {
         type: "object",
