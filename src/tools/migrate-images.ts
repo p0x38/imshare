@@ -84,7 +84,7 @@ function parseOptions(argv: string[]): Options {
                     "      nested/",
                     "        image3.webp",
                     "",
-                    "The root list.json contains an array of post metadata objects. Use "files" for multi-image posts.",
+                    "The root list.json contains an array of post metadata objects. Use \"files\" for multi-image posts.",
                     "",
                     "Example list.json:",
                     "  [",
