@@ -323,6 +323,27 @@
                     }
                 ]
             },
+            "rateLimits": {
+                "title": "Rate limits",
+                "items": [
+                    {
+                        "question": "What are the upload rate limits?",
+                        "answer": "Uploads are limited to 950 requests per 24 hours and 5 upload requests per 2 minutes per client IP address."
+                    },
+                    {
+                        "question": "Why did I get a 429 response while uploading?",
+                        "answer": "A 429 response means an upload rate limit was reached. Either the 24-hour limit or the 2-minute burst limit may have been exceeded."
+                    },
+                    {
+                        "question": "How long do I have to wait after hitting an upload limit?",
+                        "answer": "The response includes a Retry-After header indicating how many seconds remain in the current rate-limit window."
+                    },
+                    {
+                        "question": "Do the upload limits apply to each account?",
+                        "answer": "The upload limiter is keyed by client IP address, so multiple accounts sharing the same public IP can be affected by the same limit."
+                    }
+                ]
+            },
             "privacy": {
                 "title": "Privacy and moderation",
                 "items": [
