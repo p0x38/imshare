@@ -253,7 +253,7 @@ function DashboardPostsPage() {
                         </Typography>
                         {posts ? (
                             <Typography color="text.secondary">
-                                {t("dashboardPosts.postCount", { count: posts.length })}
+                                {t("dashboardPosts.postCount", { count: total })}
                             </Typography>
                         ) : null}
                     </div>
@@ -522,6 +522,20 @@ function DashboardPostsPage() {
                                 />
                             </Stack>
                         ) : null}
+                    </Stack>
+                ) : null}
+                {total > 100 ? (
+                    <Stack spacing={1} alignItems="center" sx={{ pt: 1 }}>
+                        <Pagination
+                            count={Math.ceil(total / 100)}
+                            page={page}
+                            onChange={(_, value) => setPage(value)}
+                            showFirstButton
+                            showLastButton
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                            Showing {(page - 1) * 100 + 1}–{Math.min(page * 100, total)} of {total} posts
+                        </Typography>
                     </Stack>
                 ) : null}
             </Stack>
