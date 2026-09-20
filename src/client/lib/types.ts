@@ -38,6 +38,8 @@ export interface Post {
     publishedAt?: string | null;
     scheduledAt?: string | null;
     hiddenAt?: string | null;
+    isNSFW?: boolean;
+    contentWarningType?: "none" | "sexual" | "violence" | "gore" | "drugs" | "flashing" | "spoilers" | "other" | null;
     contentWarning?: string | null;
     permalinkPattern?: "user" | "posts";
     permalinkIdType?: "normalizedTitle" | "internalId" | "creationDate" | "custom";
