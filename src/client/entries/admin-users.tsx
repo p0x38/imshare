@@ -15,6 +15,7 @@ import {
     Stack,
     TextField,
     Typography,
+    Pagination,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -60,18 +61,24 @@ function AdminUsersPage() {
     const [role, setRole] = useState<Role>("user");
     const [manualBadges, setManualBadges] = useState<string[]>([]);
     const [busy, setBusy] = useState(false);
+    const [page, setPage] = useState(1);
+    const [total, setTotal] = useState(0);
 
-    async function load() {
+    async function load(targetPage = page) {
         try {
-            setUsers((await api<{ data: User[] }>("/v1/admin/users?limit=100")).data);
+            const response = await api<{ data: { users: User[]; total: number } }>(
+                `/v1/admin/users?limit=100&offset=${(targetPage - 1) * 100}`,
+            );
+            setUsers(response.data.users);
+            setTotal(response.data.total);
         } catch (e) {
             setError(e instanceof Error ? e.message : t("adminUsers.loadError"));
         }
     }
 
     useEffect(() => {
-        void load();
-    }, []);
+        void load(page);
+    }, [page]);
 
     function openAction(user: User, nextAction: Action) {
         setTarget(user);
@@ -218,6 +225,7 @@ function AdminUsersPage() {
                     </Card>
                 ))}
             </Stack>
+            {total > 100 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={Math.ceil(total / 100)} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
             <Dialog
                 open={Boolean(target && action)}
                 onClose={() => !busy && setAction(null)}
