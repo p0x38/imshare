@@ -65,6 +65,7 @@ function PostEditor() {
     const [progress, setProgress] = useState(0);
     const [saving, setSaving] = useState(false);
     const [dragging, setDragging] = useState(false);
+    const [batchUploading, setBatchUploading] = useState(false);
 
     useEffect(() => {
         void Promise.all([
@@ -227,6 +228,28 @@ function PostEditor() {
         setUploadStatus("");
         try {
             const uploadIds: string[] = [];
+            if (files.length > 1 && !editing) {
+                setBatchUploading(true);
+                const response = await api<{ data: UploadedFile[] }>("/v1/uploads?multiple=true", {
+                    method: "POST",
+                    body: (() => {
+                        const data = new FormData();
+                        for (const file of files) data.append("file", file);
+                        return data;
+                    })(),
+                });
+                const uploaded = response.data;
+                if (uploaded.length !== files.length)
+                    throw new Error("Some images could not be uploaded.");
+
+                for (let index = 0; index < uploaded.length; index += 1) {
+                    setUploadStatus(`Creating draft ${index + 1} of ${uploaded.length}…`);
+                    await createPost([uploaded[index]!.id], files[index]!.name.replace(/\\.[^.]+$/, "") || "Untitled");
+                }
+                location.href = "/dashboard/posts/";
+                return;
+            }
+
             for (const file of files) {
                 const uploaded = await upload(file);
                 uploadIds.push(uploaded.id);
@@ -266,6 +289,7 @@ function PostEditor() {
             setError(cause instanceof Error ? cause.message : "Unable to save post.");
         } finally {
             setSaving(false);
+            setBatchUploading(false);
         }
     }
 
@@ -368,6 +392,7 @@ function PostEditor() {
                             {uploadStatus ? (
                                 <Typography variant="body2">{uploadStatus}</Typography>
                             ) : null}
+                            {batchUploading ? <Typography variant="body2">Batch upload: each image becomes a draft post.</Typography> : null}
                             {saving && progress > 0 ? (
                                 <LinearProgress variant="determinate" value={progress} />
                             ) : null}
