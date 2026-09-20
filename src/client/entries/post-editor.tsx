@@ -16,7 +16,7 @@ import {
     TextField,
     Typography,
 } from "@mui/material";
-import { ArrowDownward, ArrowUpward, Delete } from "@mui/icons-material";
+import { ArrowDownward, ArrowUpward, CloudUpload, Delete } from "@mui/icons-material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
@@ -275,6 +275,103 @@ function PostEditor() {
                 <CardContent component="form" onSubmit={submit}>
                     <Stack spacing={2}>
                         {error ? <Alert severity="error">{error}</Alert> : null}
+                        <Stack spacing={1.5}>
+                            <Typography variant="h6" component="h2">
+                                Images
+                            </Typography>
+                            <Button
+                                component="label"
+                                variant="outlined"
+                                fullWidth
+                                startIcon={<CloudUpload />}
+                                onDragEnter={() => setDragging(true)}
+                                onDragOver={(event) => {
+                                    event.preventDefault();
+                                    event.dataTransfer.dropEffect = "copy";
+                                    setDragging(true);
+                                }}
+                                onDragLeave={(event) => {
+                                    if (event.currentTarget.contains(event.relatedTarget as Node))
+                                        return;
+                                    setDragging(false);
+                                }}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    setDragging(false);
+                                    if (event.dataTransfer.files.length)
+                                        addFiles(event.dataTransfer.files);
+                                }}
+                                sx={{
+                                    minHeight: 144,
+                                    justifyContent: "center",
+                                    flexDirection: "column",
+                                    gap: 0.5,
+                                    borderWidth: 2,
+                                    borderStyle: "dashed",
+                                    borderColor: dragging ? "primary.main" : "divider",
+                                    bgcolor: dragging ? "action.hover" : "transparent",
+                                    transition: "border-color 120ms ease, background-color 120ms ease",
+                                }}
+                            >
+                                <Typography variant="body1">
+                                    Drop images here or click to choose
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    PNG, JPEG, GIF, WebP, and other supported image files
+                                </Typography>
+                                <input
+                                    hidden
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={(event) => {
+                                        if (event.target.files) addFiles(event.target.files);
+                                        event.target.value = "";
+                                    }}
+                                />
+                            </Button>
+                            {files.map((file, index) => (
+                                <Card key={`${file.name}-${index}`} variant="outlined">
+                                    <CardContent>
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Typography
+                                                sx={{
+                                                    flex: 1,
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                }}
+                                            >
+                                                {file.name}
+                                            </Typography>
+                                            <IconButton
+                                                onClick={() => moveFile(index, -1)}
+                                                disabled={index === 0}
+                                            >
+                                                <ArrowUpward />
+                                            </IconButton>
+                                            <IconButton
+                                                onClick={() => moveFile(index, 1)}
+                                                disabled={index === files.length - 1}
+                                            >
+                                                <ArrowDownward />
+                                            </IconButton>
+                                            <IconButton
+                                                color="error"
+                                                onClick={() => removeFile(index)}
+                                            >
+                                                <Delete />
+                                            </IconButton>
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            {uploadStatus ? (
+                                <Typography variant="body2">{uploadStatus}</Typography>
+                            ) : null}
+                            {saving && progress > 0 ? (
+                                <LinearProgress variant="determinate" value={progress} />
+                            ) : null}
+                        </Stack>
                         <TextField
                             label="Title"
                             value={title}
@@ -423,63 +520,6 @@ function PostEditor() {
                             }
                             label="Continue editing after save"
                         />
-                        <Stack spacing={1}>
-                            <Typography variant="subtitle2">Images</Typography>
-                            <Button component="label" variant="outlined">
-                                Choose images
-                                <input
-                                    hidden
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    onChange={(event) => {
-                                        if (event.target.files) addFiles(event.target.files);
-                                        event.target.value = "";
-                                    }}
-                                />
-                            </Button>
-                            {files.map((file, index) => (
-                                <Card key={`${file.name}-${index}`} variant="outlined">
-                                    <CardContent>
-                                        <Stack direction="row" spacing={1} alignItems="center">
-                                            <Typography
-                                                sx={{
-                                                    flex: 1,
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                }}
-                                            >
-                                                {file.name}
-                                            </Typography>
-                                            <IconButton
-                                                onClick={() => moveFile(index, -1)}
-                                                disabled={index === 0}
-                                            >
-                                                <ArrowUpward />
-                                            </IconButton>
-                                            <IconButton
-                                                onClick={() => moveFile(index, 1)}
-                                                disabled={index === files.length - 1}
-                                            >
-                                                <ArrowDownward />
-                                            </IconButton>
-                                            <IconButton
-                                                color="error"
-                                                onClick={() => removeFile(index)}
-                                            >
-                                                <Delete />
-                                            </IconButton>
-                                        </Stack>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            {uploadStatus ? (
-                                <Typography variant="body2">{uploadStatus}</Typography>
-                            ) : null}
-                            {saving && progress > 0 ? (
-                                <LinearProgress variant="determinate" value={progress} />
-                            ) : null}
-                        </Stack>
                         <Button type="submit" variant="contained" disabled={saving}>
                             {saving ? "Saving…" : editing ? "Save changes" : "Create post"}
                         </Button>
