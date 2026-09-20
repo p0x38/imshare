@@ -126,6 +126,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 scheduledAt?: string | null;
                 isNSFW?: boolean;
                 contentWarningType?: string | null;
+                isNSFW?: boolean;
+                contentWarningType?: string | null;
                 contentWarning?: string | null;
                 tags?: string[];
                 categoryId?: string | null;
@@ -325,7 +327,9 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         body.scheduledAt !== undefined ||
                         body.isNSFW !== undefined ||
                         body.contentWarningType !== undefined ||
-                        body.contentWarning !== undefined
+                        body.isNSFW !== undefined ||
+                body.contentWarningType !== undefined ||
+                body.contentWarning !== undefined
                             ? lifecycleData({
                                   status: body.status ?? post.status,
                                   visibility: body.visibility ?? post.visibility,
@@ -571,6 +575,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         publishedAt: existing.publishedAt,
                         scheduledAt: existing.scheduledAt,
                         hiddenAt: existing.hiddenAt,
+                        isNSFW: existing.isNSFW,
+                        contentWarningType: existing.contentWarningType,
                         contentWarning: existing.contentWarning,
                         permalinkPattern: existing.permalinkPattern,
                         permalinkIdType: "internalId",
@@ -688,6 +694,11 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                               body.scheduledAt !== undefined
                                   ? body.scheduledAt
                                   : (existing.scheduledAt?.toISOString() ?? null),
+                          isNSFW: body.isNSFW ?? existing.isNSFW,
+                          contentWarningType:
+                              body.contentWarningType !== undefined
+                                  ? body.contentWarningType
+                                  : existing.contentWarningType,
                           contentWarning:
                               body.contentWarning !== undefined
                                   ? body.contentWarning
