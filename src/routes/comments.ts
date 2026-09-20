@@ -32,6 +32,7 @@ const commentBody = {
     required: ["body"],
     properties: {
         body: { type: "string", minLength: 1, maxLength: 5000, description: "Comment text." },
+        uploadId: { type: "string", description: "Optional image upload to attach to the comment." },
     },
 } satisfies OpenApiSchema;
 
@@ -47,13 +48,25 @@ function view(comment: any) {
         },
         likes: comment.reactions?._count?._all ?? comment._count?.reactions ?? 0,
         liked: Boolean(comment.reactions?.some?.((reaction: any) => reaction.userId)),
+        attachment: comment.upload
+            ? {
+                  id: comment.upload.id,
+                  originalName: comment.upload.originalName,
+                  mimeType: comment.upload.mimeType,
+                  url: `/v1/posts/image/${encodeURIComponent(comment.upload.id)}`,
+              }
+            : null,
     };
 }
 
 async function commentView(id: string, userId?: string) {
     const comment = await prisma.comment.findUnique({
         where: { id },
-        include: { user: { select: commentUserSelect }, _count: { select: { reactions: true } } },
+        include: {
+            user: { select: commentUserSelect },
+            upload: true,
+            _count: { select: { reactions: true } },
+        },
     });
     if (!comment) return null;
     const liked = userId
@@ -95,6 +108,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     where,
                     include: {
                         user: { select: commentUserSelect },
+                        upload: true,
                         _count: { select: { reactions: true } },
                     },
                     skip: p.skip,
@@ -157,16 +171,37 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
             const user = await requireUser(request, reply);
             if (!user) return;
             const { postId } = request.params as { postId: string };
-            const text = (request.body as { body?: string }).body?.trim() ?? "";
-            if (!text || text.length > 5000)
+            const body = request.body as { body?: string; uploadId?: string };
+            const text = body.body?.trim() ?? "";
+            const uploadId = body.uploadId?.trim() || null;
+            if ((!text && !uploadId) || text.length > 5000)
                 return reply
                     .code(400)
                     .send({
                         error: {
                             code: "INVALID_COMMENT",
-                            message: "Comment must contain 1–5000 characters.",
+                            message: "Comment must contain text or an image.",
                         },
                     });
+            let upload = null;
+            if (uploadId) {
+                upload = await prisma.upload.findUnique({
+                    where: { id: uploadId },
+                    select: { id: true, userId: true, postId: true },
+                });
+                if (!upload)
+                    return reply.code(404).send({
+                        error: { code: "UPLOAD_NOT_FOUND", message: "Image upload not found." },
+                    });
+                if (upload.userId !== user.id)
+                    return reply.code(403).send({
+                        error: { code: "FORBIDDEN", message: "You do not own this image upload." },
+                    });
+                if (upload.postId)
+                    return reply.code(409).send({
+                        error: { code: "UPLOAD_IN_USE", message: "Image upload is already attached to a post." },
+                    });
+            }
             const post = await prisma.post.findUnique({
                 where: { id: postId },
                 select: { id: true, userId: true, title: true },
@@ -176,9 +211,15 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
             const comment = await prisma.comment.create({
-                data: { body: text, userId: user.id, postId },
+                data: {
+                    body: text,
+                    userId: user.id,
+                    postId,
+                    uploadId,
+                },
                 include: {
                     user: { select: commentUserSelect },
+                    upload: true,
                     _count: { select: { reactions: true } },
                 },
             });
