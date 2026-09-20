@@ -336,15 +336,15 @@ async function importList(
     userId: string,
     options: Options,
 ): Promise<{ imported: number; skipped: number; failed: number }> {
-    const listDirectories = await listDirectories(sourceDirectory);
-    if (listDirectories.length === 0)
+    const directories = await listDirectories(sourceDirectory);
+    if (directories.length === 0)
         throw new Error("No list directories found under " + sourceDirectory);
 
     let imported = 0;
     let skipped = 0;
     let failed = 0;
 
-    for (const listDirectory of listDirectories) {
+    for (const listDirectory of directories) {
         const listPath = path.join(listDirectory, "list.json");
 
         let metadataEntries: ImportMetadata[] = [];
