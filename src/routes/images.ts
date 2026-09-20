@@ -6,6 +6,7 @@ import path from "node:path";
 import sharp from "sharp";
 import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
+import { ok } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { cacheMaxAgeSeconds, ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "../lib/cache.js";
