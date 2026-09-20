@@ -5,6 +5,7 @@ import {
     CardActionArea,
     CardContent,
     CardMedia,
+    Chip,
     Stack,
     Tooltip,
     Typography,
