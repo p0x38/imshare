@@ -21,7 +21,7 @@ export const postInclude = {
     tags: { include: { tag: true } },
     uploads: true,
     reactions: { select: { type: true } },
-    _count: { select: { views: true } },
+    _count: { select: { views: true, comments: true } },
 } as const;
 
 export function postView(post: any) {
@@ -68,6 +68,7 @@ export function postView(post: any) {
         },
         authorName: post.user.name || post.user.id,
         viewCount: post._count?.views ?? 0,
+        commentCount: post._count?.comments ?? 0,
         category: post.category,
         tags: post.tags.map((x: any) => x.tag),
         uploads: post.uploads.map((x: any) => ({
