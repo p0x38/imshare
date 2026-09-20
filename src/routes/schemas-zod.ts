@@ -182,20 +182,11 @@ export const postBatchUpdateInput = z
             description: "Category identifier applied to every selected post, or null to remove it.",
         }),
     })
-    .refine(
-        (value) =>
-            value.allowDownload !== undefined ||
-            value.status !== undefined ||
-            value.visibility !== undefined ||
-            value.scheduledAt !== undefined ||
-            value.contentWarning !== undefined ||
-            value.tags !== undefined ||
-            value.categoryId !== undefined,
-        { message: "At least one batch-edit field is required." },
-    )
     .meta({
-        description: "Applies shared metadata and publication settings to multiple owned posts.",
+        description:
+            "Applies shared metadata and publication settings to multiple owned posts.",
     });
+
 
 export const postMergeInput = z
     .object({
@@ -238,7 +229,10 @@ const jsonSchema = (schema: Parameters<typeof createSchema>[0]): Record<string, 
     createSchema(schema).schema as Record<string, unknown>;
 export const postCreateBodyJsonSchema = jsonSchema(postCreateInput);
 export const postMergeBodyJsonSchema = jsonSchema(postMergeInput);
-export const postBatchUpdateBodyJsonSchema = jsonSchema(postBatchUpdateInput);
+export const postBatchUpdateBodyJsonSchema = {
+    ...jsonSchema(postBatchUpdateInput),
+    minProperties: 2,
+};
 export const postBatchDeleteBodyJsonSchema = jsonSchema(postBatchDeleteInput);
 export const postBatchUploadBodyJsonSchema = jsonSchema(postBatchUploadInput);
 export const postUpdateBodyJsonSchema = { ...jsonSchema(postUpdateInput), minProperties: 1 };
