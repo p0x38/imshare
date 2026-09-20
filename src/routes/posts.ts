@@ -17,7 +17,12 @@ import {
     postTagSchema,
     postUpdateSchema,
 } from "./schemas.js";
-import { postCreateBodyJsonSchema, postMergeBodyJsonSchema, postUpdateBodyJsonSchema } from "./schemas-zod.js";
+import {
+    postBatchDeleteBodyJsonSchema,
+    postCreateBodyJsonSchema,
+    postMergeBodyJsonSchema,
+    postUpdateBodyJsonSchema,
+} from "./schemas-zod.js";
 
 function publicPostWhere() {
     return {
@@ -187,6 +192,35 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
             });
             return reply.code(201).send(ok(postView(post)));
+        },
+    );
+
+    fastify.delete(
+        "/v1/posts/batch",
+        { schema: { body: postBatchDeleteBodyJsonSchema } },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+
+            const body = request.body as { postIds: string[] };
+            const postIds = [...new Set(body.postIds)];
+            const posts = await prisma.post.findMany({
+                where: { id: { in: postIds } },
+                select: { id: true, userId: true },
+            });
+
+            if (posts.length !== postIds.length)
+                return reply.code(404).send({
+                    error: { code: "POST_NOT_FOUND", message: "One or more posts were not found." },
+                });
+
+            if (posts.some((post) => post.userId !== user.id))
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You can only delete your own posts." },
+                });
+
+            const result = await prisma.post.deleteMany({ where: { id: { in: postIds } } });
+            return ok({ deletedCount: result.count });
         },
     );
 
