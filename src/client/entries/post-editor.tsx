@@ -49,6 +49,9 @@ function PostEditor() {
     const [allowDownload, setAllowDownload] = useState(true);
     const [status, setStatus] = useState<PostStatus>("published");
     const [visibility, setVisibility] = useState<PostVisibility>("public");
+    const [isNSFW, setIsNSFW] = useState(false);
+    const [contentWarningType, setContentWarningType] = useState("none");
+    const [contentWarning, setContentWarning] = useState("");
     const [permalinkPattern, setPermalinkPattern] = useState<PermalinkPattern>("user");
     const [permalinkIdType, setPermalinkIdType] = useState<PermalinkIdType>("internalId");
     const [customPostId, setCustomPostId] = useState("");
@@ -95,6 +98,9 @@ function PostEditor() {
                             ? value.visibility
                             : "public",
                     );
+                    setIsNSFW(value.isNSFW === true);
+                    setContentWarningType(value.contentWarningType ?? "none");
+                    setContentWarning(value.contentWarning ?? "");
                     setPermalinkPattern(value.permalinkPattern === "posts" ? "posts" : "user");
                     setPermalinkIdType(
                         value.permalinkIdType === "normalizedTitle" ||
@@ -146,6 +152,9 @@ function PostEditor() {
                 allowDownload,
                 status: forceStatus ?? status,
                 visibility,
+                isNSFW,
+                contentWarningType: contentWarningType === "none" ? null : contentWarningType,
+                contentWarning: contentWarning.trim() || null,
                 uploadIds,
                 tags: tags
                     .split(",")
@@ -190,6 +199,10 @@ function PostEditor() {
                         allowDownload,
                         status,
                         visibility,
+                        isNSFW,
+                        contentWarningType:
+                            contentWarningType === "none" ? null : contentWarningType,
+                        contentWarning: contentWarning.trim() || null,
                         uploadIds: uploadIds.length ? uploadIds : undefined,
                         tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
                         categoryId: categoryId || null,
@@ -232,6 +245,40 @@ function PostEditor() {
                                     Use the upload box above to add an image.
                                 </Alert>
                             )}
+                        </Stack>
+                        <Stack spacing={1}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={isNSFW}
+                                        onChange={(event) => setIsNSFW(event.target.checked)}
+                                    />
+                                }
+                                label="Is content NSFW?"
+                            />
+                            <TextField
+                                select
+                                label="Type of Content Warning"
+                                value={contentWarningType}
+                                onChange={(event) => setContentWarningType(event.target.value)}
+                                fullWidth
+                            >
+                                <MenuItem value="none">None</MenuItem>
+                                <MenuItem value="sexual">Sexual content</MenuItem>
+                                <MenuItem value="violence">Violence</MenuItem>
+                                <MenuItem value="gore">Gore</MenuItem>
+                                <MenuItem value="drugs">Drugs</MenuItem>
+                                <MenuItem value="flashing">Flashing lights</MenuItem>
+                                <MenuItem value="spoilers">Spoilers</MenuItem>
+                                <MenuItem value="other">Other</MenuItem>
+                            </TextField>
+                            <TextField
+                                label="Content Warning"
+                                value={contentWarning}
+                                onChange={(event) => setContentWarning(event.target.value)}
+                                helperText="Optional text shown with the warning."
+                                fullWidth
+                            />
                         </Stack>
                         <TextField
                             label="Title"
