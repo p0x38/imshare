@@ -91,7 +91,8 @@ export async function buildApp() {
         logController: new LogController({ disableRequestLogging: true }),
     });
     const viewLimiter = new RateLimiter(75, 60_000);
-    const uploadLimiter = new RateLimiter(30, 86_400_000);
+    const uploadDailyLimiter = new RateLimiter(950, 86_400_000);
+    const uploadBurstLimiter = new RateLimiter(5, 120_000);
     const rateLimitingEnabled = process.env.NODE_ENV !== "test";
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
@@ -140,22 +141,41 @@ export async function buildApp() {
         }
         const pathname = request.url.split("?", 1)[0] ?? "/";
         if (request.method === "POST" && pathname === "/api/v1/uploads") {
-            const result = uploadLimiter.consume(key);
+            const daily = uploadDailyLimiter.consume(key);
+            const burst = uploadBurstLimiter.consume(key);
+
             reply
-                .header("X-RateLimit-Limit", "30")
-                .header("X-RateLimit-Remaining", String(result.remaining));
-            if (rateLimitingEnabled && !result.allowed) {
-                observability.recordRateLimitHit("upload");
+                .header("X-RateLimit-Limit", "950")
+                .header("X-RateLimit-Remaining", String(daily.remaining))
+                .header("X-RateLimit-Burst-Limit", "5")
+                .header("X-RateLimit-Burst-Remaining", String(burst.remaining));
+
+            if (rateLimitingEnabled && !daily.allowed) {
+                observability.recordRateLimitHit("upload_daily");
                 return reply
                     .code(429)
-                    .header("Retry-After", String(result.retryAfter))
+                    .header("Retry-After", String(daily.retryAfter))
                     .send({
                         error: {
                             code: "UPLOAD_RATE_LIMITED",
-                            message: "Upload limit exceeded. Try again later.",
+                            message: "Daily upload limit exceeded. Try again later.",
                         },
                     });
             }
+
+            if (rateLimitingEnabled && !burst.allowed) {
+                observability.recordRateLimitHit("upload_burst");
+                return reply
+                    .code(429)
+                    .header("Retry-After", String(burst.retryAfter))
+                    .send({
+                        error: {
+                            code: "UPLOAD_RATE_LIMITED",
+                            message: "Upload rate limit exceeded. Try again later.",
+                        },
+                    });
+            }
+
             return;
         }
         if (
@@ -182,7 +202,8 @@ export async function buildApp() {
             }
         }
         viewLimiter.prune();
-        uploadLimiter.prune();
+        uploadDailyLimiter.prune();
+        uploadBurstLimiter.prune();
     });
 
     app.addHook("onRequest", async (request, reply) => {
