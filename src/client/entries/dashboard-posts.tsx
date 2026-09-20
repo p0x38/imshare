@@ -10,6 +10,14 @@ import {
     Typography,
     Checkbox,
     Box,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
+    IconButton,
+    Menu,
+    MenuItem,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -22,6 +30,7 @@ import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import BookmarkBorderIcon from "@mui/icons-material/BookmarkBorder";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 function imageUrl(url: string, width = 512): string {
@@ -36,6 +45,11 @@ function DashboardPostsPage() {
     const [error, setError] = useState("");
     const [selectedDrafts, setSelectedDrafts] = useState<string[]>([]);
     const [merging, setMerging] = useState(false);
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+    const [menuPost, setMenuPost] = useState<Post | null>(null);
+    const [splitBusy, setSplitBusy] = useState(false);
+    const [convertOpen, setConvertOpen] = useState(false);
+    const [convertSelection, setConvertSelection] = useState<string[]>([]);
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
     const drafts = imagePosts.filter((post) => post.status === "draft");
@@ -82,6 +96,78 @@ function DashboardPostsPage() {
             setError(cause instanceof Error ? cause.message : "Unable to combine drafts.");
         } finally {
             setMerging(false);
+        }
+    }
+
+
+    function openPostMenu(event: React.MouseEvent<HTMLElement>, post: Post) {
+        event.preventDefault();
+        event.stopPropagation();
+        setMenuAnchor(event.currentTarget);
+        setMenuPost(post);
+    }
+
+    function closePostMenu() {
+        setMenuAnchor(null);
+        setMenuPost(null);
+    }
+
+    function openConvertDialog() {
+        if (!menuPost) return;
+        setConvertSelection([menuPost.id]);
+        setConvertOpen(true);
+        closePostMenu();
+    }
+
+    async function convertToMultiPost() {
+        if (convertSelection.length < 2) return;
+        setMerging(true);
+        setError("");
+        try {
+            const response = await api<{ data: Post }>("/v1/posts/merge", {
+                method: "POST",
+                body: JSON.stringify({ postIds: convertSelection }),
+            });
+            setConvertOpen(false);
+            setConvertSelection([]);
+            setPosts((current) =>
+                current
+                    ? [
+                          response.data,
+                          ...current.filter((post) => !convertSelection.includes(post.id)),
+                      ]
+                    : current,
+            );
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to convert posts.");
+        } finally {
+            setMerging(false);
+        }
+    }
+
+    async function splitPost(post: Post) {
+        if (!post.uploads || post.uploads.length < 2) return;
+        if (!window.confirm("Split this multi-image post into separate posts?")) return;
+        setSplitBusy(true);
+        setError("");
+        try {
+            const response = await api<{ data: Post[] }>(
+                `/v1/posts/${encodeURIComponent(post.id)}/split`,
+                { method: "POST" },
+            );
+            setPosts((current) =>
+                current
+                    ? [
+                          ...response.data,
+                          ...current.filter((currentPost) => currentPost.id !== post.id),
+                      ]
+                    : current,
+            );
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to split post.");
+        } finally {
+            setSplitBusy(false);
+            closePostMenu();
         }
     }
 
@@ -163,6 +249,21 @@ function DashboardPostsPage() {
                                             variant="outlined"
                                             sx={{ overflow: "hidden", height: "100%" }}
                                         >
+                                            <Box sx={{ position: "relative" }}>
+                                                <IconButton
+                                                    aria-label={`Actions for ${post.title || post.id}`}
+                                                    onClick={(event) => openPostMenu(event, post)}
+                                                    sx={{
+                                                        position: "absolute",
+                                                        top: 8,
+                                                        right: 8,
+                                                        zIndex: 2,
+                                                        bgcolor: "background.paper",
+                                                    }}
+                                                >
+                                                    <MoreVertIcon />
+                                                </IconButton>
+
                                             {post.status === "draft" ? (
                                                 <Box sx={{ px: 1, pt: 1 }}>
                                                     <Checkbox
@@ -298,6 +399,7 @@ function DashboardPostsPage() {
                                                     </Stack>
                                                 </CardContent>
                                             </CardActionArea>
+                                            </Box>
                                         </Card>
                                     ))}
                                 </Stack>
@@ -319,6 +421,62 @@ function DashboardPostsPage() {
                     </Stack>
                 ) : null}
             </Stack>
+        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closePostMenu}>
+            {menuPost?.status === "draft" ? (
+                <MenuItem onClick={openConvertDialog} disabled={drafts.length < 2}>
+                    Convert to multi-post
+                </MenuItem>
+            ) : null}
+            {menuPost?.uploads && menuPost.uploads.length > 1 ? (
+                <MenuItem onClick={() => void splitPost(menuPost)} disabled={splitBusy}>
+                    {splitBusy ? "Splitting…" : "Split to single posts"}
+                </MenuItem>
+            ) : null}
+            <MenuItem
+                onClick={() => {
+                    if (menuPost)
+                        window.location.href = `/dashboard/posts/${encodeURIComponent(menuPost.id)}/`;
+                    closePostMenu();
+                }}
+            >
+                Open
+            </MenuItem>
+        </Menu>
+        <Dialog open={convertOpen} onClose={() => setConvertOpen(false)} fullWidth maxWidth="sm">
+            <DialogTitle>Convert to multi-post</DialogTitle>
+            <DialogContent>
+                <Stack spacing={0.5}>
+                    {drafts.map((draft) => (
+                        <FormControlLabel
+                            key={draft.id}
+                            control={
+                                <Checkbox
+                                    checked={convertSelection.includes(draft.id)}
+                                    onChange={() =>
+                                        setConvertSelection((current) =>
+                                            current.includes(draft.id)
+                                                ? current.filter((id) => id !== draft.id)
+                                                : [...current, draft.id],
+                                        )
+                                    }
+                                />
+                            }
+                            label={draft.title || t("common.untitled")}
+                        />
+                    ))}
+                </Stack>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={() => setConvertOpen(false)}>Cancel</Button>
+                <Button
+                    variant="contained"
+                    disabled={convertSelection.length < 2 || merging}
+                    onClick={() => void convertToMultiPost()}
+                >
+                    {merging ? "Converting…" : "Convert"}
+                </Button>
+            </DialogActions>
+        </Dialog>
         </Page>
     );
 }
