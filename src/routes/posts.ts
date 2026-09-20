@@ -271,6 +271,109 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         },
     );
 
+
+    fastify.post("/v1/posts/:postId/split", async (request, reply) => {
+        const user = await requireUser(request, reply);
+        if (!user) return;
+
+        const { postId } = request.params as { postId: string };
+        const existing = await prisma.post.findUnique({
+            where: { id: postId },
+            include: {
+                tags: { select: { tagId: true } },
+                uploads: { orderBy: { createdAt: "asc" } },
+            },
+        });
+
+        if (!existing)
+            return reply.code(404).send({
+                error: { code: "POST_NOT_FOUND", message: "Post not found." },
+            });
+
+        if (existing.userId !== user.id)
+            return reply.code(403).send({
+                error: { code: "FORBIDDEN", message: "You do not own this post." },
+            });
+
+        if (existing.contentType !== "image" || existing.uploads.length < 2)
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_SPLIT",
+                    message: "Only multi-image posts can be split.",
+                },
+            });
+
+        const [firstUpload, ...additionalUploads] = existing.uploads;
+        if (!firstUpload)
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_SPLIT",
+                    message: "The post does not contain an image to keep.",
+                },
+            });
+
+        const result = await prisma.$transaction(async (tx) => {
+            const updated = await tx.post.update({
+                where: { id: existing.id },
+                data: {
+                    uploads: {
+                        set: [{ id: firstUpload.id }],
+                    },
+                },
+                include: postInclude,
+            });
+
+            const createdPosts = [];
+            for (const upload of additionalUploads) {
+                const created = await tx.post.create({
+                    data: {
+                        title: existing.title,
+                        contentType: "image",
+                        textContent: null,
+                        description: existing.description,
+                        caption: existing.caption,
+                        sourceUrl: existing.sourceUrl,
+                        originalCreator: existing.originalCreator,
+                        originalCreatedAt: existing.originalCreatedAt,
+                        allowDownload: existing.allowDownload,
+                        status: existing.status,
+                        visibility: existing.visibility,
+                        publishedAt: existing.publishedAt,
+                        scheduledAt: existing.scheduledAt,
+                        hiddenAt: existing.hiddenAt,
+                        contentWarning: existing.contentWarning,
+                        permalinkPattern: existing.permalinkPattern,
+                        permalinkIdType: "internalId",
+                        customPostId: null,
+                        userId: existing.userId,
+                        categoryId: existing.categoryId,
+                        tags: {
+                            create: existing.tags.map(({ tagId }) => ({ tagId })),
+                        },
+                        uploads: {
+                            connect: [{ id: upload.id }],
+                        },
+                    },
+                    include: postInclude,
+                });
+
+                createdPosts.push(
+                    await tx.post.update({
+                        where: { id: created.id },
+                        data: {
+                            permalinkKey: permalinkBase(created, "internalId"),
+                        },
+                        include: postInclude,
+                    }),
+                );
+            }
+
+            return [updated, ...createdPosts];
+        });
+
+        return ok(result.map(postView));
+    });
+
     fastify.get("/v1/posts/:postId", async (request, reply) => {
         const { postId } = request.params as { postId: string };
         const session = await getSession(request);
