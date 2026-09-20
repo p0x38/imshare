@@ -68,7 +68,7 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
     useEffect(() => {
         setLoading(true);
         setError("");
-        void api<{ data: RelationshipUser[] }>(
+        void api<{ data: RelationshipUser[]; totalPages?: number }>(
             `/v1/users/${encodeURIComponent(value)}/${kind}?limit=50&page=${page}`,
         )
             .then((response) => { setItems(response.data ?? []); setTotalPages(response.totalPages ?? 1); })
