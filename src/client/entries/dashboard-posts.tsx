@@ -8,6 +8,8 @@ import {
     Stack,
     Tooltip,
     Typography,
+    Checkbox,
+    Box,
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -32,8 +34,11 @@ function DashboardPostsPage() {
     const { t } = useTranslation();
     const [posts, setPosts] = useState<Post[] | null>(null);
     const [error, setError] = useState("");
+    const [selectedDrafts, setSelectedDrafts] = useState<string[]>([]);
+    const [merging, setMerging] = useState(false);
     const imagePosts = posts?.filter((post) => post.contentType !== "text") ?? [];
     const texts = posts?.filter((post) => post.contentType === "text") ?? [];
+    const drafts = imagePosts.filter((post) => post.status === "draft");
     useEffect(() => {
         void api<{ data?: Post[] }>("/v1/me/posts?limit=100")
             .then((response) => setPosts(response.data ?? []))
@@ -46,6 +51,40 @@ function DashboardPostsPage() {
                 setError(cause instanceof Error ? cause.message : t("dashboardPosts.loadError"));
             });
     }, [t]);
+
+    function toggleDraft(postId: string) {
+        setSelectedDrafts((current) =>
+            current.includes(postId)
+                ? current.filter((id) => id !== postId)
+                : [...current, postId],
+        );
+    }
+
+    async function combineDrafts() {
+        if (selectedDrafts.length < 2) return;
+        setMerging(true);
+        setError("");
+        try {
+            const response = await api<{ data: Post }>("/v1/posts/merge", {
+                method: "POST",
+                body: JSON.stringify({ postIds: selectedDrafts }),
+            });
+            setSelectedDrafts([]);
+            setPosts((current) =>
+                current
+                    ? [
+                          response.data,
+                          ...current.filter((post) => !selectedDrafts.includes(post.id)),
+                      ]
+                    : current,
+            );
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : "Unable to combine drafts.");
+        } finally {
+            setMerging(false);
+        }
+    }
+
     return (
         <Page>
             <Stack spacing={{ xs: 2, sm: 3 }}>
@@ -89,9 +128,27 @@ function DashboardPostsPage() {
                     <Stack spacing={{ xs: 3, sm: 4 }}>
                         {imagePosts.length ? (
                             <Stack spacing={1.5}>
-                                <Typography variant="h5" component="h2">
-                                    Posts
-                                </Typography>
+                                <Stack
+                                    direction={{ xs: "column", sm: "row" }}
+                                    spacing={1}
+                                    justifyContent="space-between"
+                                    alignItems={{ xs: "stretch", sm: "center" }}
+                                >
+                                    <Typography variant="h5" component="h2">
+                                        Posts
+                                    </Typography>
+                                    {drafts.length > 1 ? (
+                                        <Button
+                                            variant="outlined"
+                                            disabled={selectedDrafts.length < 2 || merging}
+                                            onClick={() => void combineDrafts()}
+                                        >
+                                            {merging
+                                                ? "Combining…"
+                                                : `Combine drafts (${selectedDrafts.length})`}
+                                        </Button>
+                                    ) : null}
+                                </Stack>
                                 <Stack
                                     sx={{
                                         display: "grid",
@@ -106,6 +163,22 @@ function DashboardPostsPage() {
                                             variant="outlined"
                                             sx={{ overflow: "hidden", height: "100%" }}
                                         >
+                                            {post.status === "draft" ? (
+                                                <Box sx={{ px: 1, pt: 1 }}>
+                                                    <Checkbox
+                                                        checked={selectedDrafts.includes(post.id)}
+                                                        onChange={() => toggleDraft(post.id)}
+                                                        inputProps={{ "aria-label": `Select draft ${post.title || post.id}` }}
+                                                    />
+                                                    <Typography
+                                                        component="span"
+                                                        variant="caption"
+                                                        color="text.secondary"
+                                                    >
+                                                        Draft
+                                                    </Typography>
+                                                </Box>
+                                            ) : null}
                                             <CardActionArea
                                                 component="a"
                                                 href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
