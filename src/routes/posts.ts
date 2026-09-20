@@ -310,30 +310,28 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
 
             const tags = body.tags !== undefined ? await findTags(body.tags) : undefined;
-            const lifecycle =
-                body.status !== undefined ||
-                body.visibility !== undefined ||
-                body.scheduledAt !== undefined ||
-                body.contentWarning !== undefined
-                    ? lifecycleData({
-                          status: body.status,
-                          visibility: body.visibility,
-                          scheduledAt: body.scheduledAt,
-                          contentWarning: body.contentWarning,
-                      })
-                    : {};
-
-            const data = {
-                allowDownload: body.allowDownload,
-                categoryId: body.categoryId,
-                ...(body.tags !== undefined
-                    ? { tags: { deleteMany: {}, create: tags!.map((tag) => ({ tagId: tag.id })) } }
-                    : {}),
-                ...lifecycle,
-            };
 
             await prisma.$transaction(async (tx) => {
                 for (const post of posts) {
+                    const lifecycle =
+                        body.status !== undefined ||
+                        body.visibility !== undefined ||
+                        body.scheduledAt !== undefined ||
+                        body.contentWarning !== undefined
+                            ? lifecycleData({
+                                  status: body.status ?? post.status,
+                                  visibility: body.visibility ?? post.visibility,
+                                  scheduledAt:
+                                      body.scheduledAt !== undefined
+                                          ? body.scheduledAt
+                                          : (post.scheduledAt?.toISOString() ?? null),
+                                  contentWarning:
+                                      body.contentWarning !== undefined
+                                          ? body.contentWarning
+                                          : post.contentWarning,
+                              })
+                            : {};
+
                     await tx.postRevision.create({
                         data: {
                             postId: post.id,
@@ -350,7 +348,19 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                     await tx.post.update({
                         where: { id: post.id },
-                        data,
+                        data: {
+                            allowDownload: body.allowDownload,
+                            categoryId: body.categoryId,
+                            ...(body.tags !== undefined
+                                ? {
+                                      tags: {
+                                          deleteMany: {},
+                                          create: tags!.map((tag) => ({ tagId: tag.id })),
+                                      },
+                                  }
+                                : {}),
+                            ...lifecycle,
+                        },
                     });
                 }
             });
