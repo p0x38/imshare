@@ -21,6 +21,9 @@ const IMAGE_TYPES = new Map([
     [".bmp", "image/bmp"],
     [".avif", "image/avif"],
 ]);
+const IMAGE_EXTENSIONS = new Map(
+    Array.from(IMAGE_TYPES.entries(), ([extension, mime]) => [mime, extension]),
+);
 function uploadView(upload: any) {
     return {
         ...upload,
@@ -45,24 +48,14 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 if (part.type !== "file") continue;
                 const uploadId = randomUUID();
                 const uploadStartedAt = process.hrtime.bigint();
-                const ext = path.extname(part.filename).toLowerCase();
-                const mime = IMAGE_TYPES.get(ext);
-                if (!mime) {
+                const declaredExt = path.extname(part.filename).toLowerCase();
+                const declaredMime = part.mimetype || "unknown";
+                const declaredTypeSupported =
+                    IMAGE_TYPES.has(declaredExt) ||
+                    Array.from(IMAGE_TYPES.values()).includes(part.mimetype);
+                if (!declaredTypeSupported) {
                     part.file.resume();
-                    const message = `File "${part.filename}" has an unsupported image extension. Supported types are JPEG, PNG, GIF, WebP, BMP, and AVIF.`;
-                    broadcastUploadStatus(user.id, {
-                        uploadId,
-                        status: "failed",
-                        error: message,
-                    });
-                    observability.recordUploadError("invalid_type");
-                    return reply.code(400).send({
-                        error: { code: "INVALID_FILE", message },
-                    });
-                }
-                if (part.mimetype !== mime) {
-                    part.file.resume();
-                    const message = `File "${part.filename}" has MIME type ${part.mimetype || "unknown"}, but its extension expects ${mime}.`;
+                    const message = `File "${part.filename}" is not recognized as a supported image upload. Supported types are JPEG, PNG, GIF, WebP, BMP, and AVIF.`;
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
@@ -74,7 +67,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "uploading", progress: 0 });
-                const temporaryPath = path.join(uploadDir, `.upload-${uploadId}${ext}`);
+                const temporaryPath = path.join(uploadDir, `.upload-${uploadId}`);
                 try {
                     await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
                 } catch (error) {
@@ -131,18 +124,20 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
                 }
-                if (metadata.mediaType !== mime) {
+                const detectedMime = metadata.mediaType;
+                const detectedExt = detectedMime ? IMAGE_EXTENSIONS.get(detectedMime) : undefined;
+                if (!detectedMime || !detectedExt) {
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
                         uploadId,
                         status: "failed",
-                        error: `File "${part.filename}" does not match its declared image type.`,
+                        error: `File "${part.filename}" is a ${detectedMime ?? "unknown"} format, which imshare does not support.`,
                     });
                     observability.recordUploadError("invalid_content");
                     return reply.code(400).send({
                         error: {
                             code: "INVALID_FILE",
-                            message: `File "${part.filename}" does not match its declared image type. The server detected ${metadata.mediaType ?? "an unknown image type"}.`,
+                            message: `File "${part.filename}" is a ${detectedMime ?? "unknown"} format, which imshare does not support.`,
                         },
                     });
                 }
@@ -198,7 +193,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     continue;
                 }
                 await unlink(temporaryPath).catch(() => undefined);
-                const filename = `${contentHash}${ext}`;
+                const filename = `${contentHash}${detectedExt}`;
                 const relativeFilename = path.posix.join(
                     contentHash.slice(0, 2),
                     contentHash.slice(0, 4),
@@ -218,7 +213,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             id: uploadId,
                             filename: relativeFilename,
                             originalName: part.filename,
-                            mimeType: part.mimetype,
+                            mimeType: detectedMime,
                             size: normalized.byteLength,
                             width: normalizedMetadata.width,
                             height: normalizedMetadata.height,
@@ -231,7 +226,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     uploads.push(upload);
                     observability.recordUpload(
                         normalized.byteLength,
-                        part.mimetype,
+                        detectedMime,
                         Number(process.hrtime.bigint() - uploadStartedAt) / 1_000_000_000,
                     );
                     broadcastUploadStatus(user.id, {
