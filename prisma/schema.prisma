@@ -293,6 +293,7 @@ model Comment {
   reactions CommentReaction[]
   notifications Notification[]
   reports Report[]
+  uploadId String? @unique
   @@index([postId, createdAt])
   @@index([userId, createdAt])
   @@map("comment")

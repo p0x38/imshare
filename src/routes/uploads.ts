@@ -12,6 +12,8 @@ import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { observability } from "../instrumentation.js";
 
+const GIF_INPUT_PIXEL_LIMIT = 1_073_741_824;
+
 const IMAGE_TYPES = new Map([
     [".jpg", "image/jpeg"],
     [".jpeg", "image/jpeg"],
@@ -106,9 +108,15 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "processing", progress: 100 });
                 const content = await readFile(temporaryPath);
+                const isGif = content.subarray(0, 6).toString("ascii") === "GIF87a" ||
+                    content.subarray(0, 6).toString("ascii") === "GIF89a";
+                const sharpOptions = {
+                    animated: true,
+                    ...(isGif ? { limitInputPixels: GIF_INPUT_PIXEL_LIMIT } : {}),
+                };
                 let metadata;
                 try {
-                    metadata = await sharp(content, { animated: true }).metadata();
+                    metadata = await sharp(content, sharpOptions).metadata();
                 } catch {
                     await unlink(temporaryPath).catch(() => undefined);
                     broadcastUploadStatus(user.id, {
@@ -156,11 +164,11 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                         },
                     });
                 }
-                const normalized = await sharp(content, { animated: true })
+                const normalized = await sharp(content, sharpOptions)
                     .rotate()
                     .toColorspace("srgb")
                     .toBuffer();
-                const normalizedMetadata = await sharp(normalized, { animated: true }).metadata();
+                const normalizedMetadata = await sharp(normalized, sharpOptions).metadata();
                 const metadataJson = JSON.stringify({
                     format: metadata.format,
                     width: normalizedMetadata.width,

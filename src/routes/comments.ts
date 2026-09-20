@@ -32,10 +32,11 @@ const commentBody = {
     required: ["body"],
     properties: {
         body: { type: "string", minLength: 1, maxLength: 5000, description: "Comment text." },
+        uploadId: { type: "string", description: "Optional image upload to attach to the comment." },
     },
 } satisfies OpenApiSchema;
 
-function view(comment: any) {
+function view(comment: any, upload: any = null) {
     return {
         id: comment.id,
         body: comment.body,
@@ -47,15 +48,32 @@ function view(comment: any) {
         },
         likes: comment.reactions?._count?._all ?? comment._count?.reactions ?? 0,
         liked: Boolean(comment.reactions?.some?.((reaction: any) => reaction.userId)),
+        attachment: upload
+            ? {
+                  id: upload.id,
+                  originalName: upload.originalName,
+                  mimeType: upload.mimeType,
+                  url: `/v1/posts/image/${encodeURIComponent(upload.id)}`,
+              }
+            : null,
     };
 }
 
 async function commentView(id: string, userId?: string) {
     const comment = await prisma.comment.findUnique({
         where: { id },
-        include: { user: { select: commentUserSelect }, _count: { select: { reactions: true } } },
+        include: {
+            user: { select: commentUserSelect },
+            _count: { select: { reactions: true } },
+        },
     });
     if (!comment) return null;
+    const upload = comment.uploadId
+        ? await prisma.upload.findUnique({
+              where: { id: comment.uploadId },
+              select: { id: true, originalName: true, mimeType: true },
+          })
+        : null;
     const liked = userId
         ? Boolean(
               await prisma.commentReaction.findUnique({
@@ -63,7 +81,7 @@ async function commentView(id: string, userId?: string) {
               }),
           )
         : false;
-    return { ...view(comment), liked };
+    return { ...view(comment, upload), liked };
 }
 
 export const commentRoutes: FastifyPluginAsync = async (fastify) => {
@@ -117,8 +135,18 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                       ).map((x) => x.commentId),
                   )
                 : new Set<string>();
+            const uploads = comments.some((comment) => comment.uploadId)
+                ? await prisma.upload.findMany({
+                      where: { id: { in: comments.flatMap((comment) => comment.uploadId ? [comment.uploadId] : []) } },
+                      select: { id: true, originalName: true, mimeType: true },
+                  })
+                : [];
+            const uploadMap = new Map(uploads.map((upload) => [upload.id, upload]));
             return collection(
-                comments.map((comment) => ({ ...view(comment), liked: liked.has(comment.id) })),
+                comments.map((comment) => ({
+                    ...view(comment, comment.uploadId ? uploadMap.get(comment.uploadId) : null),
+                    liked: liked.has(comment.id),
+                })),
                 p.page,
                 p.limit,
                 total,
@@ -157,16 +185,37 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
             const user = await requireUser(request, reply);
             if (!user) return;
             const { postId } = request.params as { postId: string };
-            const text = (request.body as { body?: string }).body?.trim() ?? "";
-            if (!text || text.length > 5000)
+            const body = request.body as { body?: string; uploadId?: string };
+            const text = body.body?.trim() ?? "";
+            const uploadId = body.uploadId?.trim() || null;
+            if ((!text && !uploadId) || text.length > 5000)
                 return reply
                     .code(400)
                     .send({
                         error: {
                             code: "INVALID_COMMENT",
-                            message: "Comment must contain 1–5000 characters.",
+                            message: "Comment must contain text or an image.",
                         },
                     });
+            let upload = null;
+            if (uploadId) {
+                upload = await prisma.upload.findUnique({
+                    where: { id: uploadId },
+                    select: { id: true, userId: true, postId: true },
+                });
+                if (!upload)
+                    return reply.code(404).send({
+                        error: { code: "UPLOAD_NOT_FOUND", message: "Image upload not found." },
+                    });
+                if (upload.userId !== user.id)
+                    return reply.code(403).send({
+                        error: { code: "FORBIDDEN", message: "You do not own this image upload." },
+                    });
+                if (upload.postId)
+                    return reply.code(409).send({
+                        error: { code: "UPLOAD_IN_USE", message: "Image upload is already attached to a post." },
+                    });
+            }
             const post = await prisma.post.findUnique({
                 where: { id: postId },
                 select: { id: true, userId: true, title: true },
@@ -176,9 +225,15 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
             const comment = await prisma.comment.create({
-                data: { body: text, userId: user.id, postId },
+                data: {
+                    body: text,
+                    userId: user.id,
+                    postId,
+                    uploadId,
+                },
                 include: {
                     user: { select: commentUserSelect },
+                    upload: true,
                     _count: { select: { reactions: true } },
                 },
             });
@@ -191,7 +246,9 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     postId,
                     commentId: comment.id,
                 });
-            return reply.code(201).send(ok({ ...view(comment), liked: false }));
+            return reply
+                .code(201)
+                .send(ok({ ...view(comment, createdUpload), liked: false }));
         },
     );
 
