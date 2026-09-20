@@ -50,6 +50,7 @@ function parseOptions(argv: string[]): Options {
 
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
+        if (arg === undefined) continue;
 
         if (arg === "--user" || arg === "-u") user = argv[++index] ?? "";
         else if (arg === "--file" || arg === "-f") {
