@@ -143,17 +143,18 @@ function isSupportedSource(source: string): boolean {
 }
 
 async function prepareImage(source: string): Promise<PreparedImage> {
-    const isGif = path.extname(source).toLowerCase() === ".gif";
-    const sharpOptions = {
-        animated: true,
-        ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
-    };
-    const original = await sharp(source, sharpOptions).metadata();
+    const original = await sharp(source).metadata();
 
     if (!original.width || !original.height)
         throw new Error("Unable to read image dimensions.");
 
-    if (original.format === "gif") validateGifMetadata(original);
+    const isGif = original.format === "gif";
+    if (isGif) validateGifMetadata(original);
+
+    const sharpOptions = {
+        animated: true,
+        ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
+    };
 
     const normalized = await sharp(source, sharpOptions)
         .rotate()
