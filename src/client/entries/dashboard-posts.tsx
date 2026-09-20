@@ -93,6 +93,8 @@ function DashboardPostsPage() {
     const [batchAllowDownload, setBatchAllowDownload] = useState("");
     const [batchContentWarning, setBatchContentWarning] = useState("");
     const [batchClearContentWarning, setBatchClearContentWarning] = useState(false);
+    const [batchNSFW, setBatchNSFW] = useState("");
+    const [batchWarningType, setBatchWarningType] = useState("");
     const [batchTags, setBatchTags] = useState("");
     const [revisionsOpen, setRevisionsOpen] = useState(false);
     const [revisions, setRevisions] = useState<PostRevision[]>([]);
@@ -176,6 +178,8 @@ function DashboardPostsPage() {
         setBatchAllowDownload("");
         setBatchContentWarning("");
         setBatchClearContentWarning(false);
+        setBatchNSFW("");
+        setBatchWarningType("");
         setBatchTags("");
         setBatchEditOpen(true);
     }
@@ -186,6 +190,8 @@ function DashboardPostsPage() {
         if (batchVisibility) payload.visibility = batchVisibility;
         if (batchStatus) payload.status = batchStatus;
         if (batchAllowDownload) payload.allowDownload = batchAllowDownload === "true";
+        if (batchNSFW) payload.isNSFW = batchNSFW === "true";
+        if (batchWarningType) payload.contentWarningType = batchWarningType === "none" ? null : batchWarningType;
         if (batchClearContentWarning) payload.contentWarning = null;
         else if (batchContentWarning.trim()) payload.contentWarning = batchContentWarning.trim();
         if (batchTags.trim())
@@ -791,6 +797,34 @@ function DashboardPostsPage() {
                         <MenuItem value="">No change</MenuItem>
                         <MenuItem value="true">Allow downloads</MenuItem>
                         <MenuItem value="false">Disable downloads</MenuItem>
+                    </TextField>
+                    <TextField
+                        select
+                        label="Is content NSFW?"
+                        value={batchNSFW}
+                        onChange={(event) => setBatchNSFW(event.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">No change</MenuItem>
+                        <MenuItem value="true">Yes</MenuItem>
+                        <MenuItem value="false">No</MenuItem>
+                    </TextField>
+                    <TextField
+                        select
+                        label="Type of Content Warning"
+                        value={batchWarningType}
+                        onChange={(event) => setBatchWarningType(event.target.value)}
+                        fullWidth
+                    >
+                        <MenuItem value="">No change</MenuItem>
+                        <MenuItem value="none">None</MenuItem>
+                        <MenuItem value="sexual">Sexual content</MenuItem>
+                        <MenuItem value="violence">Violence</MenuItem>
+                        <MenuItem value="gore">Gore</MenuItem>
+                        <MenuItem value="drugs">Drugs</MenuItem>
+                        <MenuItem value="flashing">Flashing lights</MenuItem>
+                        <MenuItem value="spoilers">Spoilers</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
                     </TextField>
                     <TextField
                         label="Content warning"
