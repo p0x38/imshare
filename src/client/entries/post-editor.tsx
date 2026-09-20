@@ -248,7 +248,7 @@ function PostEditor() {
 
                 for (let index = 0; index < uploaded.length; index += 1) {
                     setUploadStatus(`Creating draft ${index + 1} of ${uploaded.length}…`);
-                    await createPost([uploaded[index]!.id], files[index]!.name.replace(/\\.[^.]+$/, "") || "Untitled");
+                    await createPost([uploaded[index]!.id], files[index]!.name.replace(/\.[^.]+$/, "") || "Untitled");
                 }
                 location.href = "/dashboard/posts/";
                 return;
