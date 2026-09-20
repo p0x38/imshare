@@ -37,6 +37,7 @@ import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import LinkIcon from "@mui/icons-material/Link";
+import AttachFileIcon from "@mui/icons-material/AttachFile";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Page } from "./Page";
@@ -50,6 +51,12 @@ interface Comment {
     createdAt: string;
     liked?: boolean;
     likes?: number;
+    attachment?: {
+        id: string;
+        originalName?: string;
+        mimeType?: string;
+        url: string;
+    } | null;
     author?: {
         id: string;
         name?: string | null;
@@ -76,6 +83,11 @@ function imageUrl(url: string, width = 1600) {
     image.searchParams.set("width", String(width));
     image.searchParams.set("format", "webp");
     return image.href;
+}
+
+function displayImageUrl(upload: { url: string; mimeType?: string | null }, width = 1600) {
+    if (upload.mimeType === "image/gif") return new URL(upload.url, window.location.origin).href;
+    return imageUrl(upload.url, width);
 }
 
 function downloadUrl(url: string) {
@@ -487,9 +499,21 @@ function CommentItem({
                             </Typography>
                         </Stack>
                     </Stack>
-                    <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                        {comment.body}
-                    </Typography>
+                    {comment.body ? (
+                        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+                            {comment.body}
+                        </Typography>
+                    ) : null}
+                    {comment.attachment ? (
+                        <Card variant="outlined" sx={{ overflow: "hidden" }}>
+                            <CardMedia
+                                component="img"
+                                image={new URL(comment.attachment.url, window.location.origin).href}
+                                alt={comment.attachment.originalName || "Comment attachment"}
+                                sx={{ maxHeight: 480, objectFit: "contain" }}
+                            />
+                        </Card>
+                    ) : null}
                     <Stack direction="row" spacing={1}>
                         <Button
                             size="small"
@@ -533,6 +557,8 @@ function Comments({ postId }: { postId: string }) {
     const [comments, setComments] = useState<Comment[]>([]);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const [body, setBody] = useState("");
+    const [attachment, setAttachment] = useState<{ id: string; name: string } | null>(null);
+    const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
@@ -567,15 +593,16 @@ function Comments({ postId }: { postId: string }) {
     const submit = async (event: React.FormEvent) => {
         event.preventDefault();
         const value = body.trim();
-        if (!value || submitting) return;
+        if ((!value && !attachment) || submitting || uploading) return;
         setSubmitting(true);
         setError("");
         try {
             await api(`/v1/posts/${encodeURIComponent(postId)}/comments`, {
                 method: "POST",
-                body: JSON.stringify({ body: value }),
+                body: JSON.stringify({ body: value, uploadId: attachment?.id }),
             });
             setBody("");
+            setAttachment(null);
             await load();
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to post comment.");
@@ -623,8 +650,56 @@ function Comments({ postId }: { postId: string }) {
                     onChange={(event) => setBody(event.target.value)}
                     inputProps={{ maxLength: 5000 }}
                 />
-                <Stack direction="row" justifyContent="flex-end">
-                    <Button type="submit" variant="contained" disabled={submitting || !body.trim()}>
+                {attachment ? (
+                    <Alert severity="info" onClose={() => setAttachment(null)}>
+                        Attached: {attachment.name}
+                    </Alert>
+                ) : null}
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Button
+                        component="label"
+                        variant="outlined"
+                        startIcon={<AttachFileIcon />}
+                        disabled={uploading || submitting}
+                    >
+                        {uploading ? "Uploading…" : "Attach image"}
+                        <input
+                            hidden
+                            type="file"
+                            accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/avif"
+                            onChange={async (event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = "";
+                                if (!file) return;
+                                setUploading(true);
+                                setError("");
+                                try {
+                                    const form = new FormData();
+                                    form.append("file", file, file.name);
+                                    const response = await api<{
+                                        data: { id: string; originalName?: string };
+                                    }>("/v1/uploads", { method: "POST", body: form });
+                                    setAttachment({
+                                        id: response.data.id,
+                                        name: response.data.originalName || file.name,
+                                    });
+                                } catch (cause) {
+                                    setError(
+                                        cause instanceof Error
+                                            ? cause.message
+                                            : "Unable to upload image.",
+                                    );
+                                } finally {
+                                    setUploading(false);
+                                }
+                            }}
+                        />
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="contained"
+                        disabled={submitting || uploading || (!body.trim() && !attachment)}
+                    >
                         {submitting ? "Posting…" : "Post comment"}
                     </Button>
                 </Stack>
@@ -804,7 +879,7 @@ export function PostPage({
                                                 >
                                                     <CardMedia
                                                         component="img"
-                                                        image={imageUrl(upload.url)}
+                                                        image={displayImageUrl(upload)}
                                                         alt={upload.alt || post.title || ""}
                                                         sx={{
                                                             maxHeight: "80vh",
