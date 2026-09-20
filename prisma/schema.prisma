@@ -250,7 +250,6 @@ model Upload {
   postId String?
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
-  comment Comment?
   @@index([userId, createdAt])
   @@index([postId])
   @@unique([userId, contentHash])
@@ -294,7 +293,6 @@ model Comment {
   reactions CommentReaction[]
   notifications Notification[]
   reports Report[]
-  upload Upload? @relation(fields: [uploadId], references: [id], onDelete: SetNull)
   uploadId String? @unique
   @@index([postId, createdAt])
   @@index([userId, createdAt])
