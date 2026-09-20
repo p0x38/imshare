@@ -19,6 +19,7 @@ import {
 } from "./schemas.js";
 import {
     postBatchDeleteBodyJsonSchema,
+    postBatchUpdateBodyJsonSchema,
     postBatchUploadBodyJsonSchema,
     postCreateBodyJsonSchema,
     postMergeBodyJsonSchema,
@@ -269,6 +270,95 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             });
 
             return reply.code(201).send(ok(created.map(postView)));
+        },
+    );
+
+    fastify.patch(
+        "/v1/posts/batch",
+        { schema: { body: postBatchUpdateBodyJsonSchema } },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+
+            const body = request.body as {
+                postIds: string[];
+                allowDownload?: boolean;
+                status?: string;
+                visibility?: string;
+                scheduledAt?: string | null;
+                contentWarning?: string | null;
+                tags?: string[];
+                categoryId?: string | null;
+            };
+            const postIds = [...new Set(body.postIds)];
+            const posts = await prisma.post.findMany({
+                where: { id: { in: postIds } },
+                include: { tags: { select: { tagId: true } } },
+            });
+
+            if (posts.length !== postIds.length)
+                return reply.code(404).send({
+                    error: { code: "POST_NOT_FOUND", message: "One or more posts were not found." },
+                });
+
+            if (posts.some((post) => post.userId !== user.id))
+                return reply.code(403).send({
+                    error: {
+                        code: "FORBIDDEN",
+                        message: "You can only edit your own posts.",
+                    },
+                });
+
+            const tags = body.tags !== undefined ? await findTags(body.tags) : undefined;
+            const lifecycle =
+                body.status !== undefined ||
+                body.visibility !== undefined ||
+                body.scheduledAt !== undefined ||
+                body.contentWarning !== undefined
+                    ? lifecycleData({
+                          status: body.status,
+                          visibility: body.visibility,
+                          scheduledAt: body.scheduledAt,
+                          contentWarning: body.contentWarning,
+                      })
+                    : {};
+
+            const data = {
+                allowDownload: body.allowDownload,
+                categoryId: body.categoryId,
+                ...(body.tags !== undefined
+                    ? { tags: { deleteMany: {}, create: tags!.map((tag) => ({ tagId: tag.id })) } }
+                    : {}),
+                ...lifecycle,
+            };
+
+            await prisma.$transaction(async (tx) => {
+                for (const post of posts) {
+                    await tx.postRevision.create({
+                        data: {
+                            postId: post.id,
+                            title: post.title,
+                            description: post.description,
+                            caption: post.caption,
+                            sourceUrl: post.sourceUrl,
+                            allowDownload: post.allowDownload,
+                            categoryId: post.categoryId,
+                            tagsJson: JSON.stringify(post.tags.map((tag) => tag.tagId)),
+                            contentWarning: post.contentWarning,
+                            createdById: user.id,
+                        },
+                    });
+                    await tx.post.update({
+                        where: { id: post.id },
+                        data,
+                    });
+                }
+            });
+
+            return ok({
+                updatedCount: posts.length,
+                postIds,
+            });
         },
     );
 
