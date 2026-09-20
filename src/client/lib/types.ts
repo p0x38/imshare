@@ -49,6 +49,7 @@ export interface Post {
     author?: Author | null;
     authorName?: string | null;
     viewCount?: number;
+    commentCount?: number;
     uploads?: Upload[];
     category?: { id: string; name: string } | null;
     tags?: Array<{ id?: string; name?: string; tag?: { id: string; name: string } }>;
