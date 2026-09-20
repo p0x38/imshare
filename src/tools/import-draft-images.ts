@@ -10,7 +10,9 @@ import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
 
-const GIF_INPUT_PIXEL_LIMIT = 1_073_741_824;
+const GIF_MAX_FRAMES = 1_000;
+const GIF_MAX_TOTAL_PIXELS = 500_000_000;
+const GIF_INPUT_PIXEL_LIMIT = 268_402_689;
 
 const IMAGE_EXTENSIONS = new Map<string, string>([
     ["image/jpeg", ".jpg"],
@@ -150,6 +152,22 @@ async function prepareImage(source: string): Promise<PreparedImage> {
 
     if (!original.width || !original.height)
         throw new Error("Unable to read image dimensions.");
+
+    if (original.format === "gif") {
+        const frames = original.pages ?? 1;
+        const width = original.width;
+        const height = original.pageHeight ?? original.height;
+        const totalPixels = width * height * frames;
+        if (
+            frames > GIF_MAX_FRAMES ||
+            !Number.isSafeInteger(totalPixels) ||
+            totalPixels > GIF_MAX_TOTAL_PIXELS
+        ) {
+            throw new Error(
+                `Animated GIF exceeds imshare's safety limits (${frames} frames, ${totalPixels.toLocaleString()} decoded pixels).`,
+            );
+        }
+    }
 
     const normalized = await sharp(source, sharpOptions)
         .rotate()
