@@ -1,6 +1,5 @@
 import {
     Alert,
-    Box,
     Button,
     Card,
     CardContent,
@@ -29,9 +28,6 @@ interface Category {
     id: string;
     name: string;
 }
-interface UploadedFile {
-    id: string;
-}
 type PostStatus = "draft" | "published";
 type PostVisibility = "public" | "unlisted" | "private";
 type PermalinkPattern = "user" | "posts";
@@ -59,7 +55,6 @@ function PostEditor() {
     const [mergeIntoMultiPost, setMergeIntoMultiPost] = useState(false);
     const [tags, setTags] = useState("");
     const [categoryId, setCategoryId] = useState("");
-    const [files, setFiles] = useState<File[]>([]);
     const [initialUploadId, setInitialUploadId] = useState<string | null>(null);
     const [error, setError] = useState("");
     const [uploadStatus, setUploadStatus] = useState("");
@@ -123,28 +118,6 @@ function PostEditor() {
             );
     }, [editing, postId]);
 
-    function addFiles(next: FileList | File[]) {
-        const selected = Array.from(next).filter((file) => file.type.startsWith("image/"));
-        setFiles((current) => [...current, ...selected]);
-        if (!title.trim() && selected[0])
-            setTitle(selected.length === 1 ? selected[0].name.replace(/\.[^.]+$/, "") : "");
-    }
-    function moveFile(index: number, delta: -1 | 1) {
-        setFiles((current) => {
-            const target = index + delta;
-            if (target < 0 || target >= current.length) return current;
-            const next = [...current];
-            const currentFile = next[index];
-            const targetFile = next[target];
-            if (!currentFile || !targetFile) return current;
-            next[index] = targetFile;
-            next[target] = currentFile;
-            return next;
-        });
-    }
-    function removeFile(index: number) {
-        setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
-    }
     function originalCreatedAtValue() {
         return originalCreatedAt ? new Date(originalCreatedAt).toISOString() : null;
     }
