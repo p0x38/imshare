@@ -149,7 +149,7 @@ function ProfilePage() {
             );
             setProfile(profileResponse.data);
             if (profileResponse.data.stats.posts > 0) {
-                const postsResponse = await api<{ data: Post[] }>(
+                const postsResponse = await api<{ data: Post[]; pagination?: { totalPages?: number } }>(
                     `/v1/users/${encodeURIComponent(value)}/posts?limit=48&page=${postsPage}`,
                 );
                 setPosts(postsResponse.data); setPostsTotalPages(postsResponse.pagination?.totalPages ?? 1);
