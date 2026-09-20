@@ -30,6 +30,7 @@ interface Options {
     apply: boolean;
     deleteSource: boolean;
     noPost: boolean;
+    check: boolean;
 }
 
 interface PreparedImage {
@@ -59,6 +60,7 @@ function parseOptions(argv: string[]): Options {
         apply: false,
         deleteSource: false,
         noPost: false,
+        check: false,
     };
 
     for (let index = 0; index < argv.length; index += 1) {
@@ -69,6 +71,7 @@ function parseOptions(argv: string[]): Options {
         else if (arg === "--apply") options.apply = true;
         else if (arg === "--delete-source") options.deleteSource = true;
         else if (arg === "--no-post") options.noPost = true;
+        else if (arg === "--check") options.check = true;
         else if (arg === "--help" || arg === "-h") {
             console.log(
                 [
@@ -110,6 +113,7 @@ function parseOptions(argv: string[]): Options {
                     "--apply                  Write files and database records.",
                     "--delete-source         Delete imported source images after success.",
                     "--no-post                Import Upload records without creating Posts.",
+                    "--check                  Validate list.json and every referenced image only.",
                     "--help                   Show this help.",
                 ].join("\n"),
             );
@@ -123,6 +127,8 @@ function parseOptions(argv: string[]): Options {
     if (!user) throw new Error("--user is required.");
     if (options.deleteSource && !options.apply)
         throw new Error("--delete-source requires --apply.");
+    if (options.check && options.apply)
+        throw new Error("--check cannot be combined with --apply.");
 
     return { ...options, directory, user };
 }
@@ -253,6 +259,148 @@ function parseListMetadata(raw: string): ImportMetadata[] {
         };
     });
 }
+async function checkManifest(
+    sourceDirectory: string,
+    metadataEntries: ImportMetadata[],
+): Promise<void> {
+    const referencedFiles = new Set<string>();
+    const errors: string[] = [];
+
+    for (const [index, metadata] of metadataEntries.entries()) {
+        const relativeFiles = metadata.files.map(normalizeRelative);
+        const manifestEntry = "entry " + index;
+
+        for (const relativeFile of relativeFiles) {
+            const key = relativeFile.toLowerCase();
+
+            if (referencedFiles.has(key)) {
+                errors.push(
+                    manifestEntry +
+                        ': file is referenced more than once: "' +
+                        relativeFile +
+                        '"',
+                );
+                continue;
+            }
+
+            referencedFiles.add(key);
+
+            try {
+                const source = resolveWithinRoot(sourceDirectory, relativeFile);
+                const sourceStats = await stat(source);
+
+                if (!sourceStats.isFile()) {
+                    errors.push(manifestEntry + ': not a file: "' + relativeFile + '"');
+                    continue;
+                }
+
+                const extension = path.extname(source).toLowerCase();
+                if (!IMAGE_TYPES[extension]) {
+                    errors.push(
+                        manifestEntry +
+                            ': unsupported image extension "' +
+                            extension +
+                            '" for "' +
+                            relativeFile +
+                            '"',
+                    );
+                    continue;
+                }
+
+                const metadata = await sharp(source, { animated: true }).metadata();
+                if (!metadata.width || !metadata.height) {
+                    errors.push(
+                        manifestEntry +
+                            ': unable to read image dimensions: "' +
+                            relativeFile +
+                            '"',
+                    );
+                }
+            } catch (error) {
+                errors.push(
+                    manifestEntry +
+                        ': invalid source "' +
+                        relativeFile +
+                        '": ' +
+                        (error instanceof Error ? error.message : String(error)),
+                );
+            }
+        }
+
+        if (metadata.originalPostDate !== undefined && metadata.originalPostDate !== null) {
+            if (!parseOriginalDate(metadata.originalPostDate)) {
+                errors.push(manifestEntry + ": invalid originalPostDate.");
+            }
+        }
+
+        const originalUrl = cleanString(metadata.originalUrl);
+        if (metadata.originalUrl !== undefined && metadata.originalUrl !== null) {
+            if (!originalUrl) {
+                errors.push(manifestEntry + ": originalUrl must be a non-empty string.");
+            } else {
+                try {
+                    const url = new URL(originalUrl);
+                    if (url.protocol !== "http:" && url.protocol !== "https:") {
+                        errors.push(
+                            manifestEntry +
+                                ": originalUrl must use http or https.",
+                        );
+                    }
+                } catch {
+                    errors.push(manifestEntry + ": originalUrl is not a valid URL.");
+                }
+            }
+        }
+
+        for (const field of ["tags", "categories"] as const) {
+            const value = (metadata as Record<string, unknown>)[field];
+
+            if (value !== undefined && value !== null && !Array.isArray(value)) {
+                errors.push(manifestEntry + ": " + field + " must be an array.");
+            } else if (
+                Array.isArray(value) &&
+                value.some((item) => typeof item !== "string" || !item.trim())
+            ) {
+                errors.push(
+                    manifestEntry +
+                        ": " +
+                        field +
+                        " must contain only non-empty strings.",
+                );
+            }
+        }
+
+        if (metadata.visibility !== undefined &&
+            metadata.visibility !== "public" &&
+            metadata.visibility !== "unlisted" &&
+            metadata.visibility !== "private") {
+            errors.push(manifestEntry + ": invalid visibility.");
+        }
+
+        if (metadata.allowDownload !== undefined &&
+            typeof metadata.allowDownload !== "boolean") {
+            errors.push(manifestEntry + ": allowDownload must be a boolean.");
+        }
+    }
+
+    if (errors.length > 0) {
+        throw new Error(
+            "Manifest validation failed with " +
+                errors.length +
+                " error(s):\n" +
+                errors.map((error) => "  - " + error).join("\n"),
+        );
+    }
+
+    console.log(
+        "Manifest check passed: " +
+            metadataEntries.length +
+            " post(s), " +
+            referencedFiles.size +
+            " image(s).",
+    );
+}
+
 async function resolveUser(prisma: PrismaClient, value: string) {
     return (
         (await prisma.user.findUnique({
@@ -338,6 +486,8 @@ async function importList(
                 (error instanceof Error ? error.message : String(error)),
         );
     }
+
+    await checkManifest(sourceDirectory, metadataEntries);
 
     let imported = 0;
     let skipped = 0;
@@ -640,6 +790,24 @@ async function main(): Promise<void> {
     const sourceStats = await stat(sourceDirectory).catch(() => undefined);
     if (!sourceStats?.isDirectory())
         throw new Error("Source directory does not exist: " + sourceDirectory);
+
+    if (options.check) {
+        let metadataEntries: ImportMetadata[];
+
+        try {
+            metadataEntries = parseListMetadata(
+                await readFile(path.join(sourceDirectory, "list.json"), "utf8"),
+            );
+        } catch (error) {
+            throw new Error(
+                "Unable to read root list.json: " +
+                    (error instanceof Error ? error.message : String(error)),
+            );
+        }
+
+        await checkManifest(sourceDirectory, metadataEntries);
+        return;
+    }
 
     const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
     const prisma = new PrismaClient({ adapter });
