@@ -17,7 +17,7 @@ import {
     postTagSchema,
     postUpdateSchema,
 } from "./schemas.js";
-import { postCreateBodyJsonSchema, postUpdateBodyJsonSchema } from "./schemas-zod.js";
+import { postCreateBodyJsonSchema, postMergeBodyJsonSchema, postUpdateBodyJsonSchema } from "./schemas-zod.js";
 
 function publicPostWhere() {
     return {
@@ -187,6 +187,82 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
             });
             return reply.code(201).send(ok(postView(post)));
+        },
+    );
+
+    fastify.post(
+        "/v1/posts/merge",
+        { schema: { body: postMergeBodyJsonSchema } },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+
+            const body = request.body as { postIds: string[] };
+            const postIds = [...new Set(body.postIds)];
+
+            if (postIds.length < 2)
+                return reply.code(400).send({
+                    error: { code: "INVALID_MERGE", message: "At least two posts are required." },
+                });
+
+            const posts = await prisma.post.findMany({
+                where: { id: { in: postIds } },
+                include: {
+                    tags: { select: { tagId: true } },
+                    uploads: { select: { id: true } },
+                },
+                orderBy: { createdAt: "asc" },
+            });
+
+            if (posts.length !== postIds.length)
+                return reply.code(404).send({
+                    error: { code: "POST_NOT_FOUND", message: "One or more posts were not found." },
+                });
+
+            if (posts.some((post) => post.userId !== user.id))
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You can only combine your own posts." },
+                });
+
+            if (posts.some((post) => post.status !== "draft"))
+                return reply.code(400).send({
+                    error: { code: "INVALID_MERGE", message: "Only draft posts can be combined." },
+                });
+
+            if (posts.some((post) => post.contentType !== "image"))
+                return reply.code(400).send({
+                    error: { code: "INVALID_MERGE", message: "Only image posts can be combined." },
+                });
+
+            const [keeper, ...merged] = posts;
+            const uploadIds = posts.flatMap((post) => post.uploads.map((upload) => upload.id));
+            const tagIds = [...new Set(posts.flatMap((post) => post.tags.map((tag) => tag.tagId)))];
+
+            const result = await prisma.$transaction(async (tx) => {
+                const updated = await tx.post.update({
+                    where: { id: keeper.id },
+                    data: {
+                        uploads: {
+                            connect: uploadIds
+                                .filter((id) => !keeper.uploads.some((upload) => upload.id === id))
+                                .map((id) => ({ id })),
+                        },
+                        tags: {
+                            deleteMany: {},
+                            create: tagIds.map((tagId) => ({ tagId })),
+                        },
+                    },
+                    include: postInclude,
+                });
+
+                await tx.post.deleteMany({
+                    where: { id: { in: merged.map((post) => post.id) } },
+                });
+
+                return updated;
+            });
+
+            return ok(postView(result));
         },
     );
 
