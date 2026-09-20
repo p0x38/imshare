@@ -10,6 +10,29 @@ import { CloudUpload } from "@mui/icons-material";
 import { useRef, useState } from "react";
 import { api, apiUrl } from "../lib/api";
 
+const MAX_FILES = 20;
+const ACCEPTED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/bmp",
+    "image/avif",
+] as const;
+const ACCEPTED_IMAGE_EXTENSIONS = [
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".webp",
+    ".bmp",
+    ".avif",
+] as const;
+const ACCEPT_ATTRIBUTE = [
+    ...ACCEPTED_IMAGE_EXTENSIONS,
+    ...ACCEPTED_IMAGE_TYPES,
+].join(", ");
+
 interface UploadedFile {
     id: string;
     originalName?: string | null;
@@ -71,13 +94,27 @@ export function UploadBox() {
 
     async function handleFiles(files: FileList | File[]) {
         const candidates = Array.from(files);
-        const rejected = candidates.filter((file) => !file.type.startsWith("image/"));
-        const selected = candidates.filter((file) => file.type.startsWith("image/"));
+
+        if (candidates.length > MAX_FILES) {
+            setError(`You can select up to ${MAX_FILES} files at once.`);
+            return;
+        }
+
+        const rejected = candidates.filter(
+            (file) => !ACCEPTED_IMAGE_TYPES.includes(
+                file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
+            ),
+        );
+        const selected = candidates.filter(
+            (file) => ACCEPTED_IMAGE_TYPES.includes(
+                file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
+            ),
+        );
         if (rejected.length > 0) {
             setError(
                 `Unsupported file${rejected.length === 1 ? "" : "s"}: ${rejected
                     .map((file) => `"${file.name}"`)
-                    .join(", ")}. Please select image files.`,
+                    .join(", ")}. Please select JPEG, PNG, GIF, WebP, BMP, or AVIF images.`,
             );
         } else {
             setError("");
@@ -184,17 +221,27 @@ export function UploadBox() {
                         {busy ? "Uploading…" : "Drag & Drop, or select"}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                        Images only
+                        JPEG, PNG, GIF, WebP, BMP, or AVIF · Up to {MAX_FILES} files
                     </Typography>
                 </Box>
                 <input
                     ref={inputRef}
                     hidden
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPT_ATTRIBUTE}
                     multiple
                     onChange={(event) => {
-                        if (event.target.files) void handleFiles(event.target.files);
+                        const files = event.target.files;
+
+                        if (!files) return;
+
+                        if (files.length > MAX_FILES) {
+                            setError(`You can select up to ${MAX_FILES} files at once.`);
+                            event.target.value = "";
+                            return;
+                        }
+
+                        void handleFiles(files);
                         event.target.value = "";
                     }}
                 />
