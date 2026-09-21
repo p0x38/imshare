@@ -701,7 +701,10 @@
         "reportSubmitted": "Report submitted. Thank you.",
         "deleteConfirm": "Delete this post? This cannot be undone.",
         "download": "Download",
-        "downloadImage": "Download image {{number}}"
+        "downloadImage": "Download image {{number}}",
+        "likes": "Likes",
+        "favorites": "Favorites",
+        "saves": "Saves"
     },
     "adminUsers": {
         "title": "Users",
