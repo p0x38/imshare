@@ -14,6 +14,10 @@ const publicPostWhere = {
     user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
 };
 
+function taxonomyBannerUrl(uploadId: string | undefined) {
+    return uploadId ? `/v1/posts/image/${encodeURIComponent(uploadId)}` : null;
+}
+
 const categoryId = parameter.path(
     "categoryId",
     { type: "string" },
@@ -78,11 +82,27 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                     skip: p.skip,
                     take: p.limit,
                     orderBy: { name: parseOrder(q.order) },
-                    include: { _count: { select: { posts: true } } },
+                    include: {
+                        _count: { select: { posts: true } },
+                        posts: {
+                            where: publicPostWhere,
+                            take: 1,
+                            orderBy: { createdAt: "desc" },
+                            include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } },
+                        },
+                    },
                 }),
                 prisma.category.count(),
             ]);
-            return collection(items, p.page, p.limit, total);
+            return collection(
+                items.map(({ posts, ...category }) => ({
+                    ...category,
+                    bannerUrl: taxonomyBannerUrl(posts[0]?.uploads[0]?.id),
+                })),
+                p.page,
+                p.limit,
+                total,
+            );
         },
     );
 
@@ -146,7 +166,15 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
             const { categoryId } = request.params as { categoryId: string };
             const category = await prisma.category.findUnique({
                 where: { id: categoryId },
-                include: { _count: { select: { posts: true } } },
+                include: {
+                    _count: { select: { posts: true } },
+                    posts: {
+                        where: publicPostWhere,
+                        take: 1,
+                        orderBy: { createdAt: "desc" },
+                        include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } },
+                    },
+                },
             });
             if (!category)
                 return reply
@@ -154,7 +182,7 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                     .send({
                         error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
                     });
-            return ok(category);
+            return ok({ ...category, bannerUrl: taxonomyBannerUrl(category.posts[0]?.uploads[0]?.id), posts: undefined });
         },
     );
 
