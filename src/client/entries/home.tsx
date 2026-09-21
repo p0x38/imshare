@@ -39,7 +39,7 @@ function HomePage() {
             .catch((cause) =>
                 setError(cause instanceof Error ? cause.message : t("postsPage.loadError")),
             );
-    }, [t]);
+    }, [t, limit]);
     return (
         <Page maxWidth="full">
             <Stack
