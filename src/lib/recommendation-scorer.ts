@@ -244,15 +244,12 @@ export function scorePersonalizedRecommendation(
         [recency, RECOMMENDATION_WEIGHTS.recency],
     ] as const;
 
-    const activeWeight = weighted.reduce(
-        (sum, [value, weight]) => sum + (value > 0 ? weight : 0),
-        0,
-    );
+    const totalWeight = weighted.reduce((sum, [, weight]) => sum + weight, 0);
     const total =
-        activeWeight === 0
+        totalWeight === 0
             ? 0
             : (weighted.reduce((sum, [value, weight]) => sum + value * weight, 0) /
-                  activeWeight) *
+                  totalWeight) *
               RECOMMENDATION_SCORE_MULTIPLIER;
 
     return {
