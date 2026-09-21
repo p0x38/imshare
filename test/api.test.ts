@@ -349,7 +349,7 @@ test("recommendations return public posts for anonymous visitors", async () => {
 test("personalized recommendations rank recent likes, views, and interests", async () => {
     const app = await buildApp();
     const suffix = "recommendation-" + Date.now().toString(36);
-    const userId = `${suffix}-viewer`;
+    let userId = "";
     const creatorId = `${suffix}-creator`;
     const email = `${suffix}@example.test`;
     let cookie = "";
@@ -384,6 +384,13 @@ test("personalized recommendations rank recent likes, views, and interests", asy
               : [];
         cookie = signupCookies.map((item) => item.split(";", 1)[0]).join("; ");
         expect(cookie).not.toBe("");
+
+        const viewer = await prisma.user.findUnique({
+            where: { email },
+            select: { id: true },
+        });
+        expect(viewer).not.toBeNull();
+        userId = viewer!.id;
 
         const tag = await prisma.tag.create({
             data: { name: `${suffix}-interest`, slug: `${suffix}-interest` },
