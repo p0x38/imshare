@@ -375,6 +375,20 @@ export async function buildApp() {
             }
         } else if (userPermalinkMatch) {
             canonical = `${origin}${currentPath}`;
+            const handle = decodeURIComponent(currentPath.split("/")[1] ?? "");
+            const user = await prisma.user.findFirst({
+                where: { OR: [{ handle }, { handle: handle.replace(/^@/, "") }] },
+                select: { name: true, bio: true, image: true, profileBannerUrl: true, updatedAt: true },
+            });
+            if (user) {
+                metaTitle = `${user.name} · ${config.site.name}`;
+                metaDescription = user.bio?.trim() || `Profile of ${user.name} on ${config.site.name}`;
+                if (user.image) {
+                    metaImage = user.image.startsWith("http") ? user.image : `${origin}${user.image.startsWith("/") ? "" : "/"}${user.image}`;
+                } else if (user.profileBannerUrl) {
+                    metaImage = user.profileBannerUrl.startsWith("http") ? user.profileBannerUrl : `${origin}${user.profileBannerUrl.startsWith("/") ? "" : "/"}${user.profileBannerUrl}`;
+                }
+            }
         }
         const tags = [
             `<meta name="description" content="${escapeMeta(metaDescription)}">`,
