@@ -678,7 +678,11 @@
         "allowDownloads": "Allow downloads by default",
         "contentWarning": "Default content warning",
         "saving": "Saving…",
-        "save": "Save preferences"
+        "save": "Save preferences",
+        "recommendations": "Recommendations",
+        "recommendationInterests": "Recommendations",
+        "recommendationInterestsHelp": "Choose topics and categories that should influence your recommendations.",
+        "interestedCategories": "Recommendation topics"
     },
     "postUi": {
         "like": "Like",
