@@ -143,10 +143,6 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             score: jitterRecommendationScore(item.score),
         }));
         const explored = applyRecommendationExploration(rankedWithJitter);
-        explored.sort(
-            (a, b) =>
-                b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime(),
-        );
         const items = explored.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
         return collection(items, p.page, p.limit, ranked.length);
     });
