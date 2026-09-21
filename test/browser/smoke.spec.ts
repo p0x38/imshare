@@ -129,6 +129,21 @@ test.describe("public frontend", () => {
     });
 
     test("settings expose recommendation interest preferences", async ({ page }) => {
+        await page.route("**/api/v1/me", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    data: {
+                        id: "test-user",
+                        name: "Test User",
+                        email: "test@example.test",
+                        handle: "test-user",
+                        profileLinks: [],
+                    },
+                }),
+            });
+        });
         await page.route("**/api/v1/me/preferences", async (route) => {
             if (route.request().method() === "GET") {
                 await route.fulfill({
