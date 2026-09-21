@@ -14,6 +14,10 @@ const publicPostWhere = {
     user: { isPublic: true, showPosts: true, showProfile: true, isBanned: false },
 };
 const tagId = parameter.path("tagId", { type: "string" }, { description: "Tag ID." });
+function taxonomyBannerUrl(uploadId: string | undefined) {
+    return uploadId ? `/v1/posts/image/${encodeURIComponent(uploadId)}` : null;
+}
+
 const pagination = [
     parameter.query("page", { type: "integer", minimum: 1, default: 1 }),
     parameter.query("limit", { type: "integer", minimum: 1, maximum: 100, default: 20 }),
@@ -45,11 +49,27 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                     skip: p.skip,
                     take: p.limit,
                     orderBy: { name: parseOrder(q.order) },
-                    include: { _count: { select: { posts: true } } },
+                    include: {
+                        _count: { select: { posts: true } },
+                        posts: {
+                            where: { post: publicPostWhere },
+                            take: 1,
+                            orderBy: { post: { createdAt: "desc" } },
+                            include: { post: { include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } } } },
+                        },
+                    },
                 }),
                 prisma.tag.count({ where }),
             ]);
-            return collection(items, p.page, p.limit, total);
+            return collection(
+                items.map(({ posts, ...tag }) => ({
+                    ...tag,
+                    bannerUrl: taxonomyBannerUrl(posts[0]?.post.uploads[0]?.id),
+                })),
+                p.page,
+                p.limit,
+                total,
+            );
         },
     );
 
@@ -87,7 +107,15 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                     : {},
                 take: limit,
                 orderBy: { name: "asc" },
-                include: { _count: { select: { posts: true } } },
+                include: {
+                    _count: { select: { posts: true } },
+                    posts: {
+                        where: { post: publicPostWhere },
+                        take: 1,
+                        orderBy: { post: { createdAt: "desc" } },
+                        include: { post: { include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } } } },
+                    },
+                },
             });
             return ok(
                 items.map((tag) => ({
@@ -160,7 +188,7 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply
                     .code(404)
                     .send({ error: { code: "TAG_NOT_FOUND", message: "Tag not found." } });
-            return ok(tag);
+            return ok({ ...tag, bannerUrl: taxonomyBannerUrl(tag.posts[0]?.post.uploads[0]?.id), posts: undefined });
         },
     );
 
