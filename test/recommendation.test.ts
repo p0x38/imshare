@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import {
     RECOMMENDATION_SCORE_MULTIPLIER,
     RECOMMENDATION_WEIGHTS,
+    applyRecommendationExploration,
+    jitterRecommendationScore,
     scorePersonalizedRecommendation,
     scoreTrending,
     type RecommendationPost,
@@ -93,6 +95,32 @@ test("recent liked posts contribute more than the same recent viewed post", () =
         0,
     );
     expect(likedOnly.total).toBeGreaterThan(viewedOnly.total);
+});
+
+test("exploration keeps ranked order when exploration is disabled", () => {
+    const items = [
+        { post: post({ id: "high" }), score: 9 },
+        { post: post({ id: "mid" }), score: 6 },
+        { post: post({ id: "low" }), score: 2 },
+    ];
+    const result = applyRecommendationExploration(items, 0, () => 0.99);
+    expect(result.map(({ post }) => post.id)).toEqual(["high", "mid", "low"]);
+});
+
+test("exploration can promote a lower-ranked candidate", () => {
+    const items = [
+        { post: post({ id: "high" }), score: 9 },
+        { post: post({ id: "mid" }), score: 6 },
+        { post: post({ id: "low" }), score: 2 },
+    ];
+    const result = applyRecommendationExploration(items, 1, () => 0.99);
+    expect(result[0].post.id).not.toBe("high");
+});
+
+test("recommendation score jitter stays bounded", () => {
+    expect(jitterRecommendationScore(5, 0.15, () => 1)).toBe(5.15);
+    expect(jitterRecommendationScore(0, 0.15, () => 0)).toBe(0);
+    expect(jitterRecommendationScore(10, 0.15, () => 1)).toBe(10);
 });
 
 test("recommendation score remains bounded by the ten-point multiplier", () => {
