@@ -27,7 +27,7 @@ export interface RecommendationPost {
     tags: Array<{ tag: { id?: string; name: string } }>;
     _count: {
         views: number;
-        reactions: number;
+        reactions?: number;
         comments: number;
     };
 }
@@ -298,7 +298,7 @@ export function scoreRecommendation(
         Math.min(
             (
                 Math.log1p(candidate._count.views) * 0.45 +
-                Math.log1p(candidate._count.reactions) * 1.5 +
+                Math.log1p(candidate._count.reactions ?? 0) * 1.5 +
                 Math.log1p(candidate._count.comments) * 1.25
             ) / 12,
             1,
