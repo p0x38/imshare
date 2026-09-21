@@ -309,6 +309,43 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
 });
 
 
+test("recommendations return public posts for anonymous visitors", async () => {
+    const app = await buildApp();
+    const suffix = "recommendation-anon-" + Date.now().toString(36);
+    const userId = `${suffix}-creator`;
+    try {
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: "Recommendation Anonymous Creator",
+                email: `${suffix}@example.test`,
+            },
+        });
+        const post = await prisma.post.create({
+            data: {
+                id: `${suffix}-post`,
+                title: "Anonymous recommendation candidate",
+                userId,
+                status: "published",
+                visibility: "public",
+            },
+        });
+
+        const response = await app.inject({
+            method: "GET",
+            url: "/api/v1/recommendations?limit=10",
+        });
+        expect(response.statusCode).toBe(200);
+        expect(response.json()).toMatchObject({
+            data: expect.arrayContaining([expect.objectContaining({ id: post.id })]),
+        });
+    } finally {
+        await prisma.post.deleteMany({ where: { userId } });
+        await prisma.user.delete({ where: { id: userId } });
+        await app.close();
+    }
+}, 30_000);
+
 test("personalized recommendations rank recent likes, views, and interests", async () => {
     const app = await buildApp();
     const suffix = "recommendation-" + Date.now().toString(36);
