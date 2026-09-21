@@ -76,7 +76,11 @@
         "search": "検索",
         "page": "{{page}} / {{totalPages}} ページ",
         "loading": "投稿を読み込み中…",
-        "loadError": "投稿を読み込めませんでした。"
+        "loadError": "投稿を読み込めませんでした。",
+        "gridDensity": "グリッド密度",
+        "compact": "コンパクト",
+        "comfortable": "標準",
+        "spacious": "ゆったり"
     },
     "postGrid": {
         "noPosts": "投稿が見つかりません",
