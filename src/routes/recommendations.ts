@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, parsePagination, requireUser } from "../lib/api.js";
-import { scoreRecommendation } from "../lib/recommendation-scorer.js";
+import { scoreRecommendation, scorePersonalizedRecommendation, scoreTrending } from "../lib/recommendation-scorer.js";
 import { postInclude, postView } from "./_shared.js";
 
 const publicPostWhere = {
@@ -17,68 +17,126 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
         const session = await getSession(request);
         const q = request.query as Record<string, unknown>;
         const p = parsePagination(q);
-        let preferredTagIds: string[] = [];
-        let preferredCategoryIds: string[] = [];
-        let excludedIds: string[] = [];
+
+        const candidatePool = Math.min(Math.max(p.limit * 20, 120), 500);
+        const candidates = await prisma.post.findMany({
+            where: publicPostWhere,
+            take: candidatePool,
+            include: {
+                ...postInclude,
+                _count: { select: { views: true, reactions: true, comments: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        let ranked = candidates.map((post) => ({
+            post,
+            score: 0,
+        }));
+
         if (session?.user.id) {
-            const [reactions, ownPosts] = await Promise.all([
-                prisma.postReaction.findMany({
+            const [views, likes, preferences, ownPosts, reactionGroups] = await Promise.all([
+                prisma.postView.findMany({
                     where: { userId: session.user.id },
+                    orderBy: { viewedAt: "desc" },
+                    distinct: ["postId"],
+                    take: 20,
+                    include: { post: { include: postInclude } },
+                }),
+                prisma.postReaction.findMany({
+                    where: { userId: session.user.id, type: "like" },
+                    orderBy: { createdAt: "desc" },
+                    take: 20,
+                    include: { post: { include: postInclude } },
+                }),
+                prisma.user.findUnique({
+                    where: { id: session.user.id },
                     select: {
-                        post: {
-                            select: {
-                                id: true,
-                                categoryId: true,
-                                tags: { select: { tagId: true } },
-                            },
-                        },
+                        interestedTagsJson: true,
+                        interestedCategoryIdsJson: true,
                     },
                 }),
-                prisma.post.findMany({ where: { userId: session.user.id }, select: { id: true } }),
+                prisma.post.findMany({
+                    where: { userId: session.user.id },
+                    select: { id: true },
+                }),
+                prisma.postReaction.groupBy({
+                    by: ["postId", "type"],
+                    where: {
+                        postId: { in: candidates.map((post) => post.id) },
+                        type: { in: ["like", "favorite"] },
+                    },
+                    _count: { _all: true },
+                }),
             ]);
-            excludedIds = ownPosts.map((post) => post.id);
-            preferredCategoryIds = [
-                ...new Set(
-                    reactions
-                        .map((row) => row.post.categoryId)
-                        .filter((id): id is string => Boolean(id)),
-                ),
-            ];
-            preferredTagIds = [
-                ...new Set(reactions.flatMap((row) => row.post.tags.map((tag) => tag.tagId))),
-            ];
+
+            const excludedIds = new Set([
+                ...ownPosts.map((post) => post.id),
+                ...views.map((view) => view.postId),
+                ...likes.map((reaction) => reaction.postId),
+            ]);
+            const viewedPosts = views.map((view) => view.post);
+            const likedPosts = likes.map((reaction) => reaction.post);
+            let interestedTags: string[] = [];
+            let interestedCategoryIds: string[] = [];
+            try {
+                interestedTags = JSON.parse(preferences?.interestedTagsJson ?? "[]");
+                interestedCategoryIds = JSON.parse(preferences?.interestedCategoryIdsJson ?? "[]");
+            } catch {
+                // Ignore malformed legacy preference data.
+            }
+
+            const reactionMetrics = new Map<string, { likes: number; favorites: number }>();
+            for (const row of reactionGroups) {
+                const metrics = reactionMetrics.get(row.postId) ?? { likes: 0, favorites: 0 };
+                metrics[row.type as "like" | "favorite"] = row._count._all;
+                reactionMetrics.set(row.postId, metrics);
+            }
+
+            ranked = candidates
+                .filter((post) => !excludedIds.has(post.id))
+                .map((post) => {
+                    const reactions = reactionMetrics.get(post.id) ?? { likes: 0, favorites: 0 };
+                    const trending = scoreTrending({
+                        views: post._count.views,
+                        likes: reactions.likes,
+                        favorites: reactions.favorites,
+                        comments: post._count.comments,
+                        createdAt: post.createdAt,
+                    });
+                    return {
+                        post,
+                        score: scorePersonalizedRecommendation(
+                            post,
+                            {
+                                viewedPosts,
+                                likedPosts,
+                                interestedTags,
+                                interestedCategoryIds,
+                            },
+                            trending,
+                        ).total,
+                    };
+                });
+        } else {
+            ranked = candidates.map((post) => ({
+                post,
+                score: scoreTrending({
+                    views: post._count.views,
+                    likes: post._count.reactions,
+                    favorites: 0,
+                    comments: post._count.comments,
+                    createdAt: post.createdAt,
+                }),
+            }));
         }
-        const where = {
-            ...publicPostWhere,
-            id: { notIn: excludedIds },
-            ...(preferredCategoryIds.length || preferredTagIds.length
-                ? {
-                      AND: [
-                          {
-                              OR: [
-                                  ...(preferredCategoryIds.length
-                                      ? [{ categoryId: { in: preferredCategoryIds } }]
-                                      : []),
-                                  ...(preferredTagIds.length
-                                      ? [{ tags: { some: { tagId: { in: preferredTagIds } } } }]
-                                      : []),
-                              ],
-                          },
-                      ],
-                  }
-                : {}),
-        };
-        const [items, total] = await Promise.all([
-            prisma.post.findMany({
-                where,
-                include: postInclude,
-                skip: p.skip,
-                take: p.limit,
-                orderBy: { createdAt: "desc" },
-            }),
-            prisma.post.count({ where }),
-        ]);
-        return collection(items.map(postView), p.page, p.limit, total);
+
+        ranked.sort(
+            (a, b) =>
+                b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime(),
+        );
+        const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
+        return collection(items, p.page, p.limit, ranked.length);
     });
 
     fastify.post("/v1/posts/:postId/view", async (request, reply) => {
