@@ -127,6 +127,17 @@ test("API integration: authentication, users, posts, tags, categories, and searc
         expect(search.statusCode).toBe(200);
         expect(search.json().data.posts).toHaveLength(1);
 
+        const tagPosts = await request({ method: "GET", url: `/api/v1/tags/${tagId}/posts` });
+        expect(tagPosts.statusCode).toBe(200);
+        expect(tagPosts.json().pagination.total).toBe(1);
+
+        const categoryPosts = await request({
+            method: "GET",
+            url: `/api/v1/categories/${categoryId}/posts`,
+        });
+        expect(categoryPosts.statusCode).toBe(200);
+        expect(categoryPosts.json().pagination.total).toBe(1);
+
         const update = await request({
             method: "PATCH",
             url: `/api/v1/posts/${postId}`,
@@ -239,17 +250,6 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             headers: { cookie: secondCookie },
         });
         expect(forbiddenDelete.statusCode).toBe(403);
-
-        const tagPosts = await request({ method: "GET", url: `/api/v1/tags/${tagId}/posts` });
-        expect(tagPosts.statusCode).toBe(200);
-        expect(tagPosts.json().pagination.total).toBe(1);
-
-        const categoryPosts = await request({
-            method: "GET",
-            url: `/api/v1/categories/${categoryId}/posts`,
-        });
-        expect(categoryPosts.statusCode).toBe(200);
-        expect(categoryPosts.json().pagination.total).toBe(1);
 
         const logout = await request({
             method: "POST",
