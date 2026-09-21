@@ -7,197 +7,205 @@ datasource db {
 }
 
 model User {
-  id String @id
-  name String
-  handle String? @unique
-  email String @unique
-  emailVerified Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
-  image String?
-  bio String?
-  websiteUrl String?
-  githubUrl String?
-  avatarMode String @default("initials")
-  avatarValue String?
-  profileBannerUrl String?
-  accentColor String?
-  role String @default("user")
-  badgesJson String @default("[]")
-  registrationStatus String @default("approved")
-  isPublic Boolean @default(true)
-  followApprovalRequired Boolean @default(false)
-  showEmail Boolean @default(false)
-  showPosts Boolean @default(true)
-  showProfile Boolean @default(true)
-  showHandle Boolean @default(true)
-  showFollowers Boolean @default(true)
-  showFollowings Boolean @default(true)
-  allowSearchEngineIndex Boolean @default(true)
-  defaultCategoryId String?
-  defaultPostVisibility String @default("public")
-  defaultAllowDownload Boolean @default(true)
-  defaultContentWarning String?
-  interestedTagsJson String @default("[]")
-  interestedCategoryIdsJson String @default("[]")
-  isBanned Boolean @default(false)
-  banReason String?
-  bannedAt DateTime?
-  bannedUntil DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sessions Session[]
-  accounts Account[]
-  posts Post[]
-  uploads Upload[]
-  profileLinks ProfileLink[]
-  reactions PostReaction[]
-  comments Comment[]
-  commentReactions CommentReaction[]
-  reports Report[]
-  notifications Notification[] @relation("notificationRecipient")
-  actedNotifications Notification[] @relation("notificationActor")
-  emojis Emoji[]
-  moderationActions ModerationLog[] @relation("moderationActor")
-  moderationTargets ModerationLog[] @relation("moderationTarget")
-  postRevisions PostRevision[]
-  postViews PostView[]
-  following Follow[] @relation("followFollower")
-  followers Follow[] @relation("followFollowing")
-  twoFactor twoFactor?
-  pushSubscriptions PushSubscription[]
-  apiTokens ApiToken[]
-  defaultCategory Category? @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+  id                        String             @id
+  name                      String
+  handle                    String?            @unique
+  email                     String             @unique
+  emailVerified             Boolean            @default(false)
+  twoFactorEnabled          Boolean            @default(false)
+  image                     String?
+  bio                       String?
+  websiteUrl                String?
+  githubUrl                 String?
+  avatarMode                String             @default("initials")
+  avatarValue               String?
+  profileBannerUrl          String?
+  accentColor               String?
+  role                      String             @default("user")
+  badgesJson                String             @default("[]")
+  registrationStatus        String             @default("approved")
+  isPublic                  Boolean            @default(true)
+  followApprovalRequired    Boolean            @default(false)
+  showEmail                 Boolean            @default(false)
+  showPosts                 Boolean            @default(true)
+  showProfile               Boolean            @default(true)
+  showHandle                Boolean            @default(true)
+  showFollowers             Boolean            @default(true)
+  showFollowings            Boolean            @default(true)
+  allowSearchEngineIndex    Boolean            @default(true)
+  defaultCategoryId         String?
+  defaultPostVisibility     String             @default("public")
+  defaultAllowDownload      Boolean            @default(true)
+  defaultContentWarning     String?
+  interestedTagsJson        String             @default("[]")
+  interestedCategoryIdsJson String             @default("[]")
+  isBanned                  Boolean            @default(false)
+  banReason                 String?
+  bannedAt                  DateTime?
+  bannedUntil               DateTime?
+  createdAt                 DateTime           @default(now())
+  updatedAt                 DateTime           @updatedAt
+  sessions                  Session[]
+  accounts                  Account[]
+  posts                     Post[]
+  uploads                   Upload[]
+  profileLinks              ProfileLink[]
+  reactions                 PostReaction[]
+  comments                  Comment[]
+  commentReactions          CommentReaction[]
+  reports                   Report[]
+  notifications             Notification[]     @relation("notificationRecipient")
+  actedNotifications        Notification[]     @relation("notificationActor")
+  emojis                    Emoji[]
+  moderationActions         ModerationLog[]    @relation("moderationActor")
+  moderationTargets         ModerationLog[]    @relation("moderationTarget")
+  postRevisions             PostRevision[]
+  postViews                 PostView[]
+  following                 Follow[]           @relation("followFollower")
+  followers                 Follow[]           @relation("followFollowing")
+  twoFactor                 twoFactor?
+  pushSubscriptions         PushSubscription[]
+  apiTokens                 ApiToken[]
+  defaultCategory           Category?          @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+
   @@index([defaultCategoryId])
   @@index([registrationStatus, createdAt])
   @@map("user")
 }
 
 model Session {
-  id String @id
+  id        String   @id
   expiresAt DateTime
-  token String @unique
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("session")
 }
 
 model Account {
-  id String @id
-  accountId String
-  providerId String
-  userId String
-  accessToken String?
-  refreshToken String?
-  accessTokenExpiresAt DateTime?
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scope String?
-  idToken String?
-  password String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  scope                 String?
+  idToken               String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@index([providerId, accountId])
   @@map("account")
 }
 
 model Verification {
-  id String @id @default(cuid())
+  id         String   @id @default(cuid())
   identifier String
-  value String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
   @@index([identifier])
   @@map("verification")
 }
 
 model twoFactor {
-  id String @id @default(cuid())
-  userId String @unique
-  secret String
-  backupCodes String
-  verified Boolean @default(false)
-  failedVerificationCount Int @default(0)
-  lockedUntil DateTime?
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(cuid())
+  userId                  String    @unique
+  secret                  String
+  backupCodes             String
+  verified                Boolean   @default(false)
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@map("two_factor")
 }
 
 model ApiToken {
-  id String @id @default(cuid())
-  name String
-  tokenPrefix String
-  tokenHash String @unique
-  permissionsJson String @default("{}")
-  enabled Boolean @default(true)
-  expiresAt DateTime?
-  lastUsedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  name            String
+  tokenPrefix     String
+  tokenHash       String    @unique
+  permissionsJson String    @default("{}")
+  enabled         Boolean   @default(true)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
   @@index([userId, enabled])
   @@map("api_token")
 }
 
 model PushSubscription {
-  id String @id @default(cuid())
-  endpoint String @unique
-  p256dh String
-  auth String
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
   userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
   @@map("push_subscription")
 }
 
 model Post {
-  id String @id @default(cuid())
-  title String
-  contentType String @default("image")
-  textContent String?
-  description String?
-  caption String?
-  sourceUrl String?
-  originalCreator String?
-  originalCreatedAt DateTime?
-  allowDownload Boolean @default(true)
-  status String @default("published")
-  visibility String @default("public")
-  publishedAt DateTime?
-  scheduledAt DateTime?
-  hiddenAt DateTime?
-  isNSFW Boolean @default(false)
+  id                 String         @id @default(cuid())
+  title              String
+  contentType        String         @default("image")
+  textContent        String?
+  description        String?
+  caption            String?
+  sourceUrl          String?
+  originalCreator    String?
+  originalCreatedAt  DateTime?
+  allowDownload      Boolean        @default(true)
+  status             String         @default("published")
+  visibility         String         @default("public")
+  publishedAt        DateTime?
+  scheduledAt        DateTime?
+  hiddenAt           DateTime?
+  isNSFW             Boolean        @default(false)
   contentWarningType String?
-  contentWarning String?
-  permalinkPattern String @default("user")
-  permalinkIdType String @default("internalId")
-  permalinkKey String? @unique
-  customPostId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  categoryId String?
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  uploads Upload[]
-  tags PostTag[]
-  reactions PostReaction[]
-  comments Comment[]
-  reports Report[]
-  notifications Notification[]
-  revisions PostRevision[]
-  views PostView[]
+  contentWarning     String?
+  permalinkPattern   String         @default("user")
+  permalinkIdType    String         @default("internalId")
+  permalinkKey       String?        @unique
+  customPostId       String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  userId             String
+  categoryId         String?
+  user               User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category           Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  uploads            Upload[]
+  tags               PostTag[]
+  reactions          PostReaction[]
+  comments           Comment[]
+  reports            Report[]
+  notifications      Notification[]
+  revisions          PostRevision[]
+  views              PostView[]
+
   @@index([userId, createdAt])
   @@index([categoryId, createdAt])
   @@index([status, visibility, scheduledAt])
@@ -207,84 +215,90 @@ model Post {
 }
 
 model PostRevision {
-  id String @id @default(cuid())
-  postId String
-  title String
-  description String?
-  caption String?
-  sourceUrl String?
-  allowDownload Boolean
-  status String @default("published")
-  visibility String @default("public")
-  scheduledAt DateTime?
-  publishedAt DateTime?
-  categoryId String?
-  tagsJson String
-  isNSFW Boolean @default(false)
+  id                 String    @id @default(cuid())
+  postId             String
+  title              String
+  description        String?
+  caption            String?
+  sourceUrl          String?
+  allowDownload      Boolean
+  status             String    @default("published")
+  visibility         String    @default("public")
+  scheduledAt        DateTime?
+  publishedAt        DateTime?
+  categoryId         String?
+  tagsJson           String
+  isNSFW             Boolean   @default(false)
   contentWarningType String?
-  contentWarning String?
-  createdAt DateTime @default(now())
-  createdById String
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  contentWarning     String?
+  createdAt          DateTime  @default(now())
+  createdById        String
+  post               Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdBy          User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
   @@index([postId, createdAt])
   @@index([createdById, createdAt])
   @@map("post_revision")
 }
 
 model PostView {
-  id String @id @default(cuid())
-  postId String
-  userId String?
+  id       String   @id @default(cuid())
+  postId   String
+  userId   String?
   viewedAt DateTime @default(now())
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([postId, viewedAt])
   @@index([userId, viewedAt])
   @@map("post_view")
 }
 
 model Upload {
-  id String @id
-  filename String
+  id           String   @id
+  filename     String
   originalName String
-  mimeType String
-  size Int
-  width Int?
-  height Int?
-  contentHash String?
-  thumbhash String?
+  mimeType     String
+  size         Int
+  width        Int?
+  height       Int?
+  contentHash  String?
+  thumbhash    String?
   metadataJson String?
-  createdAt DateTime @default(now())
-  userId String
-  postId String?
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  userId       String
+  postId       String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment      Comment?
+
+  @@unique([userId, contentHash])
   @@index([userId, createdAt])
   @@index([postId])
-  @@unique([userId, contentHash])
   @@map("upload")
 }
 
 model Emoji {
-  id String @id @default(cuid())
-  name String @unique
-  url String
+  id        String   @id @default(cuid())
+  name      String   @unique
+  url       String
   createdAt DateTime @default(now())
   creatorId String
-  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator   User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
   @@index([creatorId, createdAt])
   @@map("emoji")
 }
 
 model PostReaction {
-  id String @id @default(cuid())
-  type String
+  id        String   @id @default(cuid())
+  type      String
   createdAt DateTime @default(now())
-  userId String
-  postId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
   @@unique([userId, postId, type])
   @@index([postId, type])
   @@index([userId, type])
@@ -292,48 +306,52 @@ model PostReaction {
 }
 
 model Comment {
-  id String @id @default(cuid())
-  body String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  userId String
-  postId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reactions CommentReaction[]
+  id            String            @id @default(cuid())
+  body          String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  userId        String
+  postId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post          Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reactions     CommentReaction[]
   notifications Notification[]
-  reports Report[]
-  uploadId String? @unique
+  reports       Report[]
+  uploadId      String?           @unique
+  upload        Upload?           @relation(fields: [uploadId], references: [id], onDelete: SetNull)
+
   @@index([postId, createdAt])
   @@index([userId, createdAt])
   @@map("comment")
 }
 
 model CommentReaction {
-  id String @id @default(cuid())
-  type String @default("like")
+  id        String   @id @default(cuid())
+  type      String   @default("like")
   createdAt DateTime @default(now())
-  userId String
+  userId    String
   commentId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  comment Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
   @@unique([userId, commentId, type])
   @@index([commentId, type])
   @@map("comment_reaction")
 }
 
 model Report {
-  id String @id @default(cuid())
-  reason String
-  details String?
-  status String @default("open")
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  reason     String
+  details    String?
+  status     String   @default("open")
+  createdAt  DateTime @default(now())
   reporterId String
-  postId String?
-  commentId String?
-  reporter User @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade)
-  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  postId     String?
+  commentId  String?
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
   @@index([status, createdAt])
   @@index([postId])
   @@index([commentId])
@@ -341,77 +359,83 @@ model Report {
 }
 
 model Notification {
-  id String @id @default(cuid())
-  type String
-  message String
-  createdAt DateTime @default(now())
-  readAt DateTime?
-  actorId String?
-  recipientId String
-  postId String?
-  commentId String?
+  id           String    @id @default(cuid())
+  type         String
+  message      String
+  createdAt    DateTime  @default(now())
+  readAt       DateTime?
+  actorId      String?
+  recipientId  String
+  postId       String?
+  commentId    String?
   reactionType String?
-  actor User? @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
-  recipient User @relation("notificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
-  post Post? @relation(fields: [postId], references: [id], onDelete: SetNull)
-  comment Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  actor        User?     @relation("notificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  recipient    User      @relation("notificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  post         Post?     @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment      Comment?  @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
   @@index([recipientId, readAt, createdAt])
   @@index([postId])
   @@map("notification")
 }
 
 model ProfileLink {
-  id String @id @default(cuid())
-  label String
-  url String
-  position Int @default(0)
+  id        String   @id @default(cuid())
+  label     String
+  url       String
+  position  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId String
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, position])
   @@map("profile_link")
 }
 
 model Tag {
-  id String @id @default(cuid())
-  name String @unique
-  slug String @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  posts PostTag[]
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  posts     PostTag[]
+
   @@map("tag")
 }
 
 model PostTag {
   postId String
-  tagId String
-  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  tagId  String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
   @@id([postId, tagId])
   @@index([tagId, postId])
   @@map("post_tag")
 }
 
 model Category {
-  id String @id @default(cuid())
-  name String @unique
-  slug String @unique
-  description String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  posts Post[]
-  defaultForUsers User[] @relation("userDefaultCategory")
+  id              String   @id @default(cuid())
+  name            String   @unique
+  slug            String   @unique
+  description     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  posts           Post[]
+  defaultForUsers User[]   @relation("userDefaultCategory")
+
   @@map("category")
 }
 
 model Follow {
-  followerId String
+  followerId  String
   followingId String
-  status String @default("approved")
-  createdAt DateTime @default(now())
-  follower User @relation("followFollower", fields: [followerId], references: [id], onDelete: Cascade)
-  following User @relation("followFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+  status      String   @default("approved")
+  createdAt   DateTime @default(now())
+  follower    User     @relation("followFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("followFollowing", fields: [followingId], references: [id], onDelete: Cascade)
+
   @@id([followerId, followingId])
   @@index([followingId, status, createdAt])
   @@index([followerId, status, createdAt])
@@ -419,15 +443,16 @@ model Follow {
 }
 
 model ModerationLog {
-  id String @id @default(cuid())
-  action String
-  reason String?
-  createdAt DateTime @default(now())
-  expiresAt DateTime?
-  actorId String
+  id           String    @id @default(cuid())
+  action       String
+  reason       String?
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime?
+  actorId      String
   targetUserId String
-  actor User @relation("moderationActor", fields: [actorId], references: [id], onDelete: Cascade)
-  targetUser User @relation("moderationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  actor        User      @relation("moderationActor", fields: [actorId], references: [id], onDelete: Cascade)
+  targetUser   User      @relation("moderationTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
   @@index([createdAt])
   @@index([targetUserId, createdAt])
   @@map("moderation_log")

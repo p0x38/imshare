@@ -17,6 +17,7 @@ function isLocalhost(hostname: string): boolean {
 }
 
 function isMaintenanceMode(request: FastifyRequest): boolean {
+    if (process.env.IMSHARE_E2E === "true") return false;
     if (process.env.NODE_ENV === "test") return true;
 
     // A localhost base URL means the public/deployed hostname should show the
@@ -24,13 +25,16 @@ function isMaintenanceMode(request: FastifyRequest): boolean {
     return isLocalhost(baseUrlHostname) && !isLocalhost(request.hostname);
 }
 
-async function canViewPost(request: FastifyRequest, post: {
-    userId: string;
-    status: string;
-    visibility: string;
-    hiddenAt: Date | null;
-    scheduledAt: Date | null;
-}): Promise<boolean> {
+async function canViewPost(
+    request: FastifyRequest,
+    post: {
+        userId: string;
+        status: string;
+        visibility: string;
+        hiddenAt: Date | null;
+        scheduledAt: Date | null;
+    },
+): Promise<boolean> {
     const session = await getSession(request);
     if (post.userId === session?.user.id) return true;
     return (
@@ -48,9 +52,18 @@ async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply
     const post = await prisma.post.findUnique({
         where: { id },
         select: {
-            id: true, title: true, createdAt: true, customPostId: true,
-            permalinkPattern: true, permalinkIdType: true, permalinkKey: true,
-            userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true,
+            id: true,
+            title: true,
+            createdAt: true,
+            customPostId: true,
+            permalinkPattern: true,
+            permalinkIdType: true,
+            permalinkKey: true,
+            userId: true,
+            status: true,
+            visibility: true,
+            hiddenAt: true,
+            scheduledAt: true,
             user: { select: { id: true, handle: true } },
         },
     });
@@ -70,7 +83,13 @@ async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply
     if (!post) {
         const permalinkPost = await prisma.post.findFirst({
             where: { permalinkPattern: "posts", permalinkKey: id },
-            select: { userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true },
+            select: {
+                userId: true,
+                status: true,
+                visibility: true,
+                hiddenAt: true,
+                scheduledAt: true,
+            },
         });
         if (permalinkPost && (await canViewPost(request, permalinkPost)))
             return reply.redirect("/posts/" + encodeURIComponent(id) + "/", 302);
@@ -87,15 +106,21 @@ async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyRe
         where: {
             permalinkPattern: "user",
             user: { OR: [{ handle }, { id: handle }] },
-            OR: [
-                { permalinkKey: key },
-                { permalinkIdType: "internalId", id: key },
-            ],
+            OR: [{ permalinkKey: key }, { permalinkIdType: "internalId", id: key }],
         },
         select: {
-            id: true, title: true, createdAt: true, customPostId: true,
-            permalinkPattern: true, permalinkIdType: true, permalinkKey: true,
-            userId: true, status: true, visibility: true, hiddenAt: true, scheduledAt: true,
+            id: true,
+            title: true,
+            createdAt: true,
+            customPostId: true,
+            permalinkPattern: true,
+            permalinkIdType: true,
+            permalinkKey: true,
+            userId: true,
+            status: true,
+            visibility: true,
+            hiddenAt: true,
+            scheduledAt: true,
             user: { select: { id: true, handle: true } },
         },
     });
