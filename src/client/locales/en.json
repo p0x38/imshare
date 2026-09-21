@@ -76,7 +76,11 @@
         "search": "Search",
         "page": "Page {{page}} / {{totalPages}}",
         "loading": "Loading posts…",
-        "loadError": "Unable to load posts."
+        "loadError": "Unable to load posts.",
+        "gridDensity": "Grid density",
+        "compact": "Compact",
+        "comfortable": "Comfortable",
+        "spacious": "Spacious"
     },
     "postGrid": {
         "noPosts": "No posts found",
