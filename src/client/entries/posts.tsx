@@ -1,4 +1,4 @@
-import { Button, Stack, TextField, Typography } from "@mui/material";
+import { Button, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
@@ -21,6 +21,18 @@ function PostsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [density, setDensity] = useState<"compact" | "comfortable" | "spacious">(
+        () => (localStorage.getItem("imshare.postGridDensity") as "compact" | "comfortable" | "spacious") || "comfortable",
+    );
+
+    function changeDensity(
+        _event: React.MouseEvent<HTMLElement>,
+        value: "compact" | "comfortable" | "spacious" | null,
+    ) {
+        if (!value) return;
+        setDensity(value);
+        localStorage.setItem("imshare.postGridDensity", value);
+    }
     const load = useCallback(async () => {
         setLoading(true);
         setError("");
@@ -73,12 +85,33 @@ function PostsPage() {
                         {t("postsPage.search")}
                     </Button>
                 </Stack>
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "stretch", sm: "center" }}
+                    spacing={1}
+                >
+                    <Typography variant="body2" color="text.secondary">
+                        {t("postsPage.gridDensity")}
+                    </Typography>
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={density}
+                        onChange={changeDensity}
+                        aria-label={t("postsPage.gridDensity")}
+                    >
+                        <ToggleButton value="compact">{t("postsPage.compact")}</ToggleButton>
+                        <ToggleButton value="comfortable">{t("postsPage.comfortable")}</ToggleButton>
+                        <ToggleButton value="spacious">{t("postsPage.spacious")}</ToggleButton>
+                    </ToggleButtonGroup>
+                </Stack>
                 {loading ? (
                     <SkeletonGrid count={12} />
                 ) : error ? (
                     <ErrorState message={error} />
                 ) : (
-                    <PostGrid posts={posts} />
+                    <PostGrid posts={posts} density={density} />
                 )}
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Button
