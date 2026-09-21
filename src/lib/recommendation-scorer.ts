@@ -1,4 +1,6 @@
 export const RECOMMENDATION_SCORE_MULTIPLIER = 10;
+export const RECOMMENDATION_EXPLORATION_RATE = 0.1;
+export const RECOMMENDATION_SCORE_JITTER = 0.15;
 
 export const RECOMMENDATION_WEIGHTS = {
     recentViewedPosts: 1,
@@ -57,6 +59,41 @@ export interface RecommendationScore {
     contentType: number;
     recency: number;
     total: number;
+}
+
+export interface RecommendationRankedItem<T = RecommendationPost> {
+    post: T;
+    score: number;
+}
+
+export function applyRecommendationExploration<T>(
+    items: RecommendationRankedItem<T>[],
+    explorationRate = RECOMMENDATION_EXPLORATION_RATE,
+    random: () => number = Math.random,
+): RecommendationRankedItem<T>[] {
+    const ranked = [...items].sort((a, b) => b.score - a.score);
+    const rate = Math.min(Math.max(explorationRate, 0), 1);
+
+    for (let index = 0; index < ranked.length - 1; index++) {
+        if (random() >= rate) continue;
+        const remaining = ranked.length - index - 1;
+        const randomIndex = index + 1 + Math.floor(random() * remaining);
+        [ranked[index], ranked[randomIndex]] = [ranked[randomIndex], ranked[index]];
+    }
+
+    return ranked;
+}
+
+export function jitterRecommendationScore(
+    score: number,
+    jitter = RECOMMENDATION_SCORE_JITTER,
+    random: () => number = Math.random,
+): number {
+    if (jitter <= 0) return score;
+    return Math.min(
+        RECOMMENDATION_SCORE_MULTIPLIER,
+        Math.max(0, score + (random() * 2 - 1) * jitter),
+    );
 }
 
 function normalizeText(value: string | null | undefined, maxLength = 1200): string {
