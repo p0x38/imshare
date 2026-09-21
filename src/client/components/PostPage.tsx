@@ -1052,7 +1052,7 @@ export function PostPage({
                             top: { lg: 88 },
                         }}
                     >
-                        <RecommendationSections postId={post.id} />
+                        <RecommendationSections postId={post.id} density="spacious" />
                     </Stack>
                 </Stack>
             </Stack>
