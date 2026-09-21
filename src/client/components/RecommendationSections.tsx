@@ -57,7 +57,7 @@ export function RecommendationSections({ postId, density: densityProp, storageKe
         return () => {
             active = false;
         };
-    }, [postId, t]);
+    }, [postId, t, limit]);
     const visible = related.length + recommended.length + trending.length > 0;
     if (!visible && !error) return null;
     return (
@@ -68,6 +68,7 @@ export function RecommendationSections({ postId, density: densityProp, storageKe
                 <RecommendationSection
                     title={t("recommendations.recommended")}
                     posts={recommended}
+                    density={density}
                 />
                 <RecommendationSection title={t("recommendations.trending")} posts={trending} density={density} />
             </Stack>
