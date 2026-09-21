@@ -678,7 +678,11 @@
         "allowDownloads": "デフォルトでダウンロードを許可",
         "contentWarning": "デフォルトのコンテンツ警告",
         "saving": "保存中…",
-        "save": "設定を保存"
+        "save": "設定を保存",
+        "recommendations": "おすすめ",
+        "recommendationInterests": "おすすめ",
+        "recommendationInterestsHelp": "おすすめに反映するタグやカテゴリを選択します。",
+        "interestedCategories": "興味のあるカテゴリ"
     },
     "postUi": {
         "like": "いいね",
