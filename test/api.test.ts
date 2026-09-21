@@ -307,3 +307,179 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
         await app.close();
     }
 });
+
+
+test("personalized recommendations rank recent likes, views, and interests", async () => {
+    const app = await buildApp();
+    const suffix = "recommendation-" + Date.now().toString(36);
+    const userId = `${suffix}-viewer`;
+    const creatorId = `${suffix}-creator`;
+    const email = `${suffix}@example.test`;
+    let cookie = "";
+    let tagId = "";
+    let categoryId = "";
+
+    try {
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: "Recommendation Viewer",
+                email,
+            },
+        });
+        await prisma.user.create({
+            data: {
+                id: creatorId,
+                name: "Recommendation Creator",
+                email: `${suffix}-creator@example.test`,
+                handle: `${suffix.slice(0, 20)}`,
+            },
+        });
+
+        const signup = await app.inject({
+            method: "POST",
+            url: "/api/v1/auth/sign-up/email",
+            payload: {
+                name: "Recommendation Viewer",
+                email,
+                password: "recommendation-password-123",
+            },
+        });
+        expect([200, 201, 409]).toContain(signup.statusCode);
+
+        const setCookie = signup.headers["set-cookie"];
+        const cookies = Array.isArray(setCookie)
+            ? setCookie
+            : setCookie
+              ? [setCookie]
+              : [];
+        cookie = cookies.map((item) => item.split(";", 1)[0]).join("; ");
+        if (!cookie) {
+            const session = await auth.api.signInEmail({
+                body: { email, password: "recommendation-password-123" },
+            });
+            const headers = session?.headers;
+            const values = headers?.getSetCookie?.() ?? [];
+            cookie = values.map((item) => item.split(";", 1)[0]).join("; ");
+        }
+        expect(cookie).not.toBe("");
+
+        const tag = await prisma.tag.create({
+            data: { name: `${suffix}-interest`, slug: `${suffix}-interest` },
+        });
+        tagId = tag.id;
+        const category = await prisma.category.create({
+            data: { name: `${suffix} category`, slug: `${suffix}-category` },
+        });
+        categoryId = category.id;
+
+        const createPost = async (title: string, options: {
+            tags?: string[];
+            categoryId?: string | null;
+            views?: number;
+        }) => {
+            const post = await prisma.post.create({
+                data: {
+                    id: `${suffix}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+                    title,
+                    userId: creatorId,
+                    status: "published",
+                    visibility: "public",
+                    categoryId: options.categoryId ?? null,
+                    tags: options.tags?.length
+                        ? {
+                              create: options.tags.map((id) => ({ tagId: id })),
+                          }
+                        : undefined,
+                },
+            });
+            for (let index = 0; index < (options.views ?? 0); index++) {
+                await prisma.postView.create({
+                    data: {
+                        id: `${post.id}-view-${index}`,
+                        postId: post.id,
+                        userId: null,
+                    },
+                });
+            }
+            return post;
+        };
+
+        const viewedSource = await createPost("Viewed source", { tags: [tagId] });
+        const likedSource = await createPost("Liked source", { tags: [tagId], categoryId });
+
+        const viewedMatch = await createPost("Viewed match", { tags: [tagId] });
+        const likedMatch = await createPost("Liked match", { tags: [tagId], categoryId });
+        const neutral = await createPost("Neutral candidate", {});
+        const ownPost = await prisma.post.create({
+            data: {
+                id: `${suffix}-own`,
+                title: "Own post",
+                userId,
+                status: "published",
+                visibility: "public",
+            },
+        });
+
+        await prisma.postView.create({
+            data: {
+                id: `${suffix}-user-view`,
+                postId: viewedSource.id,
+                userId,
+            },
+        });
+        await prisma.postReaction.create({
+            data: {
+                userId,
+                postId: likedSource.id,
+                type: "like",
+            },
+        });
+
+        await prisma.postTag.create({
+            data: { postId: ownPost.id, tagId },
+        });
+
+        const preferences = await app.inject({
+            method: "PATCH",
+            url: "/api/v1/me/preferences",
+            headers: { cookie, "content-type": "application/json" },
+            payload: {
+                interestedTags: [`${suffix}-interest`],
+                interestedCategoryIds: [categoryId],
+            },
+        });
+        expect(preferences.statusCode).toBe(200);
+
+        const response = await app.inject({
+            method: "GET",
+            url: "/api/v1/recommendations?limit=100",
+            headers: { cookie },
+        });
+        expect(response.statusCode).toBe(200);
+
+        const ids = response.json().data.map((post: { id: string }) => post.id);
+        expect(ids).toContain(viewedMatch.id);
+        expect(ids).toContain(likedMatch.id);
+        expect(ids).toContain(neutral.id);
+        expect(ids).not.toContain(viewedSource.id);
+        expect(ids).not.toContain(likedSource.id);
+        expect(ids).not.toContain(ownPost.id);
+
+        expect(ids.indexOf(likedMatch.id)).toBeLessThan(ids.indexOf(viewedMatch.id));
+    } finally {
+        await prisma.postView.deleteMany({
+            where: {
+                post: {
+                    userId: { in: [userId, creatorId] },
+                },
+            },
+        });
+        await prisma.postReaction.deleteMany({ where: { userId } });
+        await prisma.post.deleteMany({ where: { userId: { in: [userId, creatorId] } } });
+        if (tagId) await prisma.tag.delete({ where: { id: tagId } });
+        if (categoryId) await prisma.category.delete({ where: { id: categoryId } });
+        await prisma.user.deleteMany({ where: { id: { in: [userId, creatorId] } } });
+        await app.close();
+    }
+}, 30_000);
