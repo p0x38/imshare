@@ -9,6 +9,7 @@ import {
     Typography,
 } from "@mui/material";
 import { useTranslation } from "react-i18next";
+import { useState } from "react";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import ThumbUpAltOutlinedIcon from "@mui/icons-material/ThumbUpAltOutlined";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -26,13 +27,36 @@ function imageUrl(url: string, width = 512) {
 
 export type PostGridDensity = "compact" | "comfortable" | "spacious";
 
+const DENSITY_KEY = "imshare.postGridDensity";
+
 const densitySettings: Record<
     PostGridDensity,
-    { minWidth: number; gap: { xs: number; sm: number } }
+    { columns: number; gap: { xs: number; sm: number } }
 > = {
-    compact: { minWidth: 168, gap: { xs: 0.75, sm: 1.25 } },
-    comfortable: { minWidth: 224, gap: { xs: 1, sm: 2 } },
-    spacious: { minWidth: 300, gap: { xs: 1.5, sm: 2.5 } },
+    compact: { columns: 6, gap: { xs: 0.75, sm: 1.25 } },
+    comfortable: { columns: 4, gap: { xs: 1, sm: 2 } },
+    spacious: { columns: 3, gap: { xs: 1.5, sm: 2.5 } },
+};
+
+export function usePostGridDensity(storageKey = DENSITY_KEY): [
+    PostGridDensity,
+    (value: PostGridDensity) => void,
+] {
+    const [density, setDensity] = useState<PostGridDensity>(() => {
+        const value = localStorage.getItem(storageKey);
+        return value === "compact" || value === "spacious" ? value : "comfortable";
+    });
+    const changeDensity = (value: PostGridDensity) => {
+        setDensity(value);
+        localStorage.setItem(storageKey, value);
+    };
+    return [density, changeDensity];
+}
+
+export const postGridPostLimits: Record<PostGridDensity, number> = {
+    compact: 36,
+    comfortable: 16,
+    spacious: 9,
 };
 
 function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
@@ -48,7 +72,7 @@ export function PostGrid({
 }) {
     const { t } = useTranslation();
     const posts = normalizePosts(input).filter((post) => post.contentType !== "text");
-    const { minWidth, gap } = densitySettings[density];
+    const { columns, gap } = densitySettings[density];
 
     if (posts.length === 0) {
         return (
@@ -71,7 +95,7 @@ export function PostGrid({
         <Box
             sx={{
                 display: "grid",
-                gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minWidth}px), 1fr))`,
+                gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: `repeat(${Math.min(columns, 3)}, minmax(0, 1fr))`, md: `repeat(${columns}, minmax(0, 1fr))` },
                 gap,
             }}
         >
