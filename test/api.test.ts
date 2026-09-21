@@ -34,7 +34,7 @@ if (process.platform === "win32") {
 }
 
 const { collection, ok, parseOrder, parsePagination } = await import("../src/lib/api.js");
-const { auth, prisma } = await import("../src/lib/auth.js");
+const { prisma } = await import("../src/lib/auth.js");
 const { buildApp } = await import("../src/app.js");
 
 afterAll(async () => {
@@ -366,14 +366,22 @@ test("personalized recommendations rank recent likes, views, and interests", asy
             },
         });
 
-        const signup = await auth.api.signUpEmail({
-            body: {
+        const signup = await app.inject({
+            method: "POST",
+            url: "/api/v1/auth/sign-up/email",
+            payload: {
                 name: "Recommendation Viewer",
                 email,
                 password: "recommendation-password-123",
             },
         });
-        const signupCookies = signup.headers.getSetCookie?.() ?? [];
+        expect([200, 201]).toContain(signup.statusCode);
+        const signupCookieHeader = signup.headers["set-cookie"];
+        const signupCookies = Array.isArray(signupCookieHeader)
+            ? signupCookieHeader
+            : signupCookieHeader
+              ? [signupCookieHeader]
+              : [];
         cookie = signupCookies.map((item) => item.split(";", 1)[0]).join("; ");
         expect(cookie).not.toBe("");
 
