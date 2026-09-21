@@ -373,6 +373,49 @@ export async function buildApp() {
             } catch {
                 // Keep the generic site metadata when the post cannot be loaded.
             }
+        } else if (currentPath.match(/^\/tags\/[^/]+\/?$/)) {
+            const tagId = decodeURIComponent(currentPath.split("/")[2] ?? "");
+            const tag = await prisma.tag.findUnique({
+                where: { id: tagId },
+                select: {
+                    name: true,
+                    posts: {
+                        where: { post: { status: "published", visibility: "public", hiddenAt: null } },
+                        take: 1,
+                        orderBy: { post: { createdAt: "desc" } },
+                        select: { post: { select: { uploads: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } } } } },
+                    },
+                },
+            });
+            if (tag) {
+                canonical = `${origin}${currentPath}`;
+                metaTitle = `#${tag.name} · ${config.site.name}`;
+                metaDescription = `Posts tagged #${tag.name} on ${config.site.name}`;
+                if (tag.posts[0]?.post.uploads[0])
+                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(tag.posts[0].post.uploads[0].id)}`;
+            }
+        } else if (currentPath.match(/^\/categories\/[^/]+\/?$/)) {
+            const categoryId = decodeURIComponent(currentPath.split("/")[2] ?? "");
+            const category = await prisma.category.findUnique({
+                where: { id: categoryId },
+                select: {
+                    name: true,
+                    description: true,
+                    posts: {
+                        where: { status: "published", visibility: "public", hiddenAt: null },
+                        take: 1,
+                        orderBy: { createdAt: "desc" },
+                        select: { uploads: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } } },
+                    },
+                },
+            });
+            if (category) {
+                canonical = `${origin}${currentPath}`;
+                metaTitle = `${category.name} · ${config.site.name}`;
+                metaDescription = category.description?.trim() || `Posts in ${category.name} on ${config.site.name}`;
+                if (category.posts[0]?.uploads[0])
+                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(category.posts[0].uploads[0].id)}`;
+            }
         } else if (userPermalinkMatch) {
             canonical = `${origin}${currentPath}`;
             const handle = decodeURIComponent(currentPath.split("/")[1] ?? "");
