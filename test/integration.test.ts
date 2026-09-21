@@ -199,14 +199,14 @@ test("API integration: authentication, users, posts, tags, categories, and searc
             method: "DELETE",
             url: "/api/v1/posts/batch",
             headers: { cookie },
-            payload: { postIds: [postId, batchPostId] },
+            payload: { postIds: [batchEditPostId, batchPostId] },
         });
         expect(batchDelete.statusCode).toBe(200);
         expect(batchDelete.json().data.deletedCount).toBe(2);
 
         const deletedPost = await request({
             method: "GET",
-            url: `/api/v1/posts/${postId}`,
+            url: `/api/v1/posts/${batchPostId}`,
         });
         expect(deletedPost.statusCode).toBe(404);
 
