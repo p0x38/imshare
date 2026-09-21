@@ -257,36 +257,51 @@ function PostActions({ post }: { post: Post }) {
                     direction="row"
                     sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}
                 >
-                    <Tooltip title={t("postUi.like")}>
-                        <IconButton
-                            aria-label={t("postUi.like")}
-                            disabled={busy !== "" && busy !== "like"}
-                            onClick={() => void toggle("like")}
-                            sx={buttonSx()}
-                        >
-                            <ThumbUpAltOutlinedIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t("postUi.favorite")}>
-                        <IconButton
-                            aria-label={t("postUi.favorite")}
-                            disabled={busy !== "" && busy !== "favorite"}
-                            onClick={() => void toggle("favorite")}
-                            sx={buttonSx(true)}
-                        >
-                            <FavoriteBorderIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title={t("postUi.save")}>
-                        <IconButton
-                            aria-label={t("postUi.save")}
-                            disabled={busy !== "" && busy !== "save"}
-                            onClick={() => void toggle("save")}
-                            sx={buttonSx(true)}
-                        >
-                            <BookmarkBorderIcon />
-                        </IconButton>
-                    </Tooltip>
+                    <Stack alignItems="center" sx={{ minWidth: 58, px: 0.5 }}>
+                        <Tooltip title={t("postUi.like")}>
+                            <IconButton
+                                aria-label={t("postUi.like")}
+                                disabled={busy !== "" && busy !== "like"}
+                                onClick={() => void toggle("like")}
+                                sx={buttonSx()}
+                            >
+                                <ThumbUpAltOutlinedIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                            {t("postUi.likes")}
+                        </Typography>
+                    </Stack>
+                    <Stack alignItems="center" sx={{ minWidth: 68, px: 0.5 }}>
+                        <Tooltip title={t("postUi.favorite")}>
+                            <IconButton
+                                aria-label={t("postUi.favorite")}
+                                disabled={busy !== "" && busy !== "favorite"}
+                                onClick={() => void toggle("favorite")}
+                                sx={buttonSx(true)}
+                            >
+                                <FavoriteBorderIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                            {t("postUi.favorites")}
+                        </Typography>
+                    </Stack>
+                    <Stack alignItems="center" sx={{ minWidth: 58, px: 0.5 }}>
+                        <Tooltip title={t("postUi.save")}>
+                            <IconButton
+                                aria-label={t("postUi.save")}
+                                disabled={busy !== "" && busy !== "save"}
+                                onClick={() => void toggle("save")}
+                                sx={buttonSx(true)}
+                            >
+                                <BookmarkBorderIcon />
+                            </IconButton>
+                        </Tooltip>
+                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                            {t("postUi.saves")}
+                        </Typography>
+                    </Stack>
                     <Tooltip title={t("postUi.moreActions")}>
                         <IconButton
                             aria-label={t("postUi.moreActions")}
