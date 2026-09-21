@@ -498,7 +498,6 @@ export async function buildApp() {
                 }
             }
         }
-        }
         const tags = [
             `<meta name="description" content="${escapeMeta(metaDescription)}">`,
             metaAuthor ? `<meta name="author" content="${escapeMeta(metaAuthor)}">` : "",
