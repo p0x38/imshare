@@ -37,6 +37,8 @@ model User {
   defaultPostVisibility String @default("public")
   defaultAllowDownload Boolean @default(true)
   defaultContentWarning String?
+  interestedTagsJson String @default("[]")
+  interestedCategoryIdsJson String @default("[]")
   isBanned Boolean @default(false)
   banReason String?
   bannedAt DateTime?
