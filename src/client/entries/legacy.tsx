@@ -454,25 +454,55 @@ function EntityListPage({ taxonomy }: { taxonomy: "users" | "tags" | "categories
                 {error ? <Alert severity="error">{error}</Alert> : null}
                 {items === null ? (
                     <LoadingState label={`Loading ${taxonomy}…`} />
+                ) : items.length === 0 ? (
+                    <Card variant="outlined">
+                        <CardContent sx={{ textAlign: "center", py: 5 }}>
+                            <Typography variant="h5" gutterBottom>
+                                Not yet created
+                            </Typography>
+                            <Typography color="text.secondary">
+                                It seems ${label.toLowerCase()} is not created yet.
+                            </Typography>
+                        </CardContent>
+                    </Card>
                 ) : (
-                    <Stack spacing={1}>
+                    <Stack spacing={1.5}>
                         {items.map((item) => {
                             const id = String(item.id);
                             const name = String(item.name ?? id);
                             const count = Number(
                                 (item._count as { posts?: number } | undefined)?.posts ?? 0,
                             );
+                            const bannerUrl = typeof item.bannerUrl === "string" ? item.bannerUrl : null;
+                            const avatarUrl = typeof item.avatarUrl === "string" ? item.avatarUrl : null;
                             return (
-                                <Card key={id} variant="outlined">
+                                <Card key={id} variant="outlined" sx={{ overflow: "hidden" }}>
                                     <CardActionArea
                                         component="a"
                                         href={`/${taxonomy}/${encodeURIComponent(id)}`}
                                     >
+                                        {bannerUrl ? (
+                                            <Box
+                                                component="img"
+                                                src={bannerUrl}
+                                                alt=""
+                                                sx={{ display: "block", width: "100%", height: 120, objectFit: "cover" }}
+                                            />
+                                        ) : null}
                                         <CardContent>
-                                            <Typography variant="h6">{name}</Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {count} post{count === 1 ? "" : "s"}
-                                            </Typography>
+                                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                                {taxonomy === "users" ? (
+                                                    <Avatar src={avatarUrl ?? undefined}>
+                                                        {name.charAt(0).toUpperCase()}
+                                                    </Avatar>
+                                                ) : null}
+                                                <Box>
+                                                    <Typography variant="h6">{name}</Typography>
+                                                    <Typography variant="body2" color="text.secondary">
+                                                        {count} post{count === 1 ? "" : "s"}
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
                                         </CardContent>
                                     </CardActionArea>
                                 </Card>
@@ -625,10 +655,19 @@ function EntityPage({ taxonomy, id }: { taxonomy: "users" | "tags" | "categories
         );
     }
     const name = String(entity.name ?? id);
+    const bannerUrl = typeof entity.bannerUrl === "string" ? entity.bannerUrl : null;
     return (
         <Page>
             <Stack spacing={2}>
-                <Card variant="outlined">
+                <Card variant="outlined" sx={{ overflow: "hidden" }}>
+                    {bannerUrl ? (
+                        <Box
+                            component="img"
+                            src={bannerUrl}
+                            alt=""
+                            sx={{ display: "block", width: "100%", height: { xs: 140, sm: 220 }, objectFit: "cover" }}
+                        />
+                    ) : null}
                     <CardContent>
                         <Typography variant="h4" component="h1">
                             {name}
@@ -638,7 +677,20 @@ function EntityPage({ taxonomy, id }: { taxonomy: "users" | "tags" | "categories
                         </Typography>
                     </CardContent>
                 </Card>
-                <PageCards posts={posts} />
+                {posts.length ? (
+                    <PageCards posts={posts} />
+                ) : (
+                    <Card variant="outlined">
+                        <CardContent sx={{ textAlign: "center", py: 5 }}>
+                            <Typography variant="h5" gutterBottom>
+                                Not yet created
+                            </Typography>
+                            <Typography color="text.secondary">
+                                It seems no posts are created for this {taxonomy === "tags" ? "tag" : "category"} yet.
+                            </Typography>
+                        </CardContent>
+                    </Card>
+                )}
             </Stack>
         </Page>
     );
