@@ -7,7 +7,7 @@ import type { Post } from "../lib/types";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { ErrorState, SkeletonGrid } from "../components/States";
-import { PostGrid } from "../components/PostGrid";
+import { PostGrid, usePostGridDensity } from "../components/PostGrid";
 interface PostsResponse {
     data?: Post[];
     pagination?: { page?: number; totalPages?: number };
@@ -21,18 +21,7 @@ function PostsPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [density, setDensity] = useState<"compact" | "comfortable" | "spacious">(
-        () => (localStorage.getItem("imshare.postGridDensity") as "compact" | "comfortable" | "spacious") || "comfortable",
-    );
-
-    function changeDensity(
-        _event: React.MouseEvent<HTMLElement>,
-        value: "compact" | "comfortable" | "spacious" | null,
-    ) {
-        if (!value) return;
-        setDensity(value);
-        localStorage.setItem("imshare.postGridDensity", value);
-    }
+    const [density, setDensity] = usePostGridDensity();
     const load = useCallback(async () => {
         setLoading(true);
         setError("");
@@ -98,12 +87,12 @@ function PostsPage() {
                         size="small"
                         exclusive
                         value={density}
-                        onChange={changeDensity}
+                        onChange={(_, value) => { if (value) setDensity(value); }}
                         aria-label={t("postsPage.gridDensity")}
                     >
-                        <ToggleButton value="compact">{t("postsPage.compact")}</ToggleButton>
-                        <ToggleButton value="comfortable">{t("postsPage.comfortable")}</ToggleButton>
-                        <ToggleButton value="spacious">{t("postsPage.spacious")}</ToggleButton>
+                        <ToggleButton value="spacious">{t("postsPage.threeByThree")}</ToggleButton>
+                        <ToggleButton value="comfortable">{t("postsPage.fourByFour")}</ToggleButton>
+                        <ToggleButton value="compact">{t("postsPage.sixBySix")}</ToggleButton>
                     </ToggleButtonGroup>
                 </Stack>
                 {loading ? (
