@@ -362,8 +362,8 @@ export async function buildApp() {
                 });
                 if (post) {
                     canonical = `${origin}${postPermalink(post, post.user)}`;
-                    metaTitle = `${post.title} · ${config.site.name}`;
-                    metaDescription = `${post.description?.trim() || post.title} · ${config.site.name} — self-hosted image archive and sharing server`;
+                    metaTitle = post.title?.trim() || config.site.name;
+                    metaDescription = post.description?.trim() || post.title?.trim() || config.site.name;
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                     if (post.uploads[0])
@@ -415,6 +415,27 @@ export async function buildApp() {
                 metaDescription = category.description?.trim() || `Posts in ${category.name} on ${config.site.name}`;
                 if (category.posts[0]?.uploads[0])
                     metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(category.posts[0].uploads[0].id)}`;
+            }
+        } else if (currentPath.match(/^\/users\/[^/]+\/?$/)) {
+            const userKey = decodeURIComponent(currentPath.split("/")[2] ?? "");
+            const normalizedHandle = userKey.replace(/^@/, "").toLowerCase();
+            const user = await prisma.user.findFirst({
+                where: userKey.startsWith("@")
+                    ? { handle: normalizedHandle }
+                    : { OR: [{ id: userKey }, { handle: normalizedHandle }] },
+                select: {
+                    id: true,
+                    name: true,
+                    bio: true,
+                    updatedAt: true,
+                },
+            });
+            if (user) {
+                canonical = `${origin}${currentPath}`;
+                metaTitle = user.name?.trim() || config.site.name;
+                metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
+                metaImage =
+                    `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
             }
         } else if (userPermalinkMatch) {
             canonical = `${origin}${currentPath}`;
