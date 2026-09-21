@@ -182,13 +182,30 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
             const { tagId } = request.params as { tagId: string };
             const tag = await prisma.tag.findUnique({
                 where: { id: tagId },
-                include: { _count: { select: { posts: true } } },
+                include: {
+                    _count: { select: { posts: true } },
+                    posts: {
+                        where: { post: publicPostWhere },
+                        take: 1,
+                        orderBy: { post: { createdAt: "desc" } },
+                        include: {
+                            post: {
+                                include: {
+                                    uploads: { take: 1, orderBy: { createdAt: "asc" } },
+                                },
+                            },
+                        },
+                    },
+                },
             });
             if (!tag)
                 return reply
                     .code(404)
                     .send({ error: { code: "TAG_NOT_FOUND", message: "Tag not found." } });
-            return ok({ ...tag, bannerUrl: taxonomyBannerUrl(tag.posts[0]?.post.uploads[0]?.id), posts: undefined });
+            return ok({
+                ...tag,
+                bannerUrl: taxonomyBannerUrl(tag.posts[0]?.post.uploads[0]?.id),
+            });
         },
     );
 
