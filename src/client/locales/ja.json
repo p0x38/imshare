@@ -701,7 +701,10 @@
         "reportSubmitted": "報告を送信しました。ありがとうございます。",
         "deleteConfirm": "この投稿を削除しますか？この操作は取り消せません。",
         "download": "ダウンロード",
-        "downloadImage": "画像 {{number}} をダウンロード"
+        "downloadImage": "画像 {{number}} をダウンロード",
+        "likes": "いいね",
+        "favorites": "お気に入り",
+        "saves": "保存"
     },
     "adminUsers": {
         "title": "ユーザー",
