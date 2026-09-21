@@ -128,6 +128,54 @@ test.describe("public frontend", () => {
             .toBe(stored);
     });
 
+    test("settings expose recommendation interest preferences", async ({ page }) => {
+        await page.route("**/api/v1/me/preferences", async (route) => {
+            if (route.request().method() === "GET") {
+                await route.fulfill({
+                    status: 200,
+                    contentType: "application/json",
+                    body: JSON.stringify({
+                        data: {
+                            isPublic: true,
+                            followApprovalRequired: false,
+                            showEmail: false,
+                            showPosts: true,
+                            showProfile: true,
+                            showHandle: true,
+                            showFollowers: true,
+                            showFollowings: true,
+                            allowSearchEngineIndex: true,
+                            defaultCategoryId: null,
+                            defaultPostVisibility: "public",
+                            defaultAllowDownload: true,
+                            defaultContentWarning: null,
+                            interestedTags: ["cats"],
+                            interestedCategoryIds: [],
+                        },
+                    }),
+                });
+                return;
+            }
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: {} }),
+            });
+        });
+        await page.route("**/api/v1/categories?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [] }),
+            });
+        });
+        await page.goto("/account/");
+        await page.getByRole("tab", { name: "Settings" }).click();
+        await page.getByRole("tab", { name: "Recommendations" }).click();
+        await expect(page.getByText("Recommendation topics")).toBeVisible();
+        await expect(page.getByLabel("Tags")).toBeVisible();
+    });
+
     test("settings can switch to automatic device mode", async ({ page }) => {
         await page.emulateMedia({ colorScheme: "dark" });
         await page.goto("/dashboard/settings/");
