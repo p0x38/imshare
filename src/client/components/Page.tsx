@@ -12,11 +12,13 @@ export function Page({
     title,
 }: {
     children: React.ReactNode;
-    maxWidth?: "xs" | "sm" | "md" | "lg" | "xl";
+    maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | "full";
     title?: string;
 }) {
     const width =
-        maxWidth === "xs"
+        maxWidth === "full"
+            ? "none"
+            : maxWidth === "xs"
             ? 444
             : maxWidth === "sm"
               ? 600
