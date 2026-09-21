@@ -89,7 +89,8 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             const reactionMetrics = new Map<string, { likes: number; favorites: number }>();
             for (const row of reactionGroups) {
                 const metrics = reactionMetrics.get(row.postId) ?? { likes: 0, favorites: 0 };
-                metrics[row.type as "like" | "favorite"] = row._count._all;
+                if (row.type === "like") metrics.likes = row._count._all;
+                else if (row.type === "favorite") metrics.favorites = row._count._all;
                 reactionMetrics.set(row.postId, metrics);
             }
 
