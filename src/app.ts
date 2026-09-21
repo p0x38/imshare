@@ -345,7 +345,15 @@ export async function buildApp() {
         if (postMatch) {
             try {
                 const post = await prisma.post.findUnique({
-                    where: { id: decodeURIComponent(postMatch[1]!) },
+                    where: {
+                        OR: [
+                            { id: decodeURIComponent(postMatch[1]!) },
+                            {
+                                permalinkPattern: "posts",
+                                permalinkKey: decodeURIComponent(postMatch[1]!),
+                            },
+                        ],
+                    },
                     select: {
                         title: true,
                         description: true,
@@ -438,21 +446,58 @@ export async function buildApp() {
                     `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
             }
         } else if (userPermalinkMatch) {
-            canonical = `${origin}${currentPath}`;
             const handle = decodeURIComponent(currentPath.split("/")[1] ?? "");
-            const user = await prisma.user.findFirst({
-                where: { OR: [{ handle }, { handle: handle.replace(/^@/, "") }] },
-                select: { name: true, bio: true, image: true, profileBannerUrl: true, updatedAt: true },
+            const key = decodeURIComponent(currentPath.split("/")[2] ?? "");
+            const post = await prisma.post.findFirst({
+                where: {
+                    permalinkPattern: "user",
+                    user: { OR: [{ handle }, { id: handle }] },
+                    OR: [{ permalinkKey: key }, { permalinkIdType: "internalId", id: key }],
+                    status: "published",
+                    visibility: { in: ["public", "unlisted"] },
+                    hiddenAt: null,
+                    AND: [{ OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] }],
+                },
+                select: {
+                    title: true,
+                    description: true,
+                    id: true,
+                    createdAt: true,
+                    customPostId: true,
+                    permalinkPattern: true,
+                    permalinkIdType: true,
+                    permalinkKey: true,
+                    user: { select: { id: true, handle: true, name: true } },
+                    tags: { select: { tag: { select: { name: true } } } },
+                    uploads: {
+                        orderBy: { createdAt: "asc" },
+                        take: 1,
+                        select: { id: true },
+                    },
+                },
             });
-            if (user) {
-                metaTitle = `${user.name} · ${config.site.name}`;
-                metaDescription = user.bio?.trim() || `Profile of ${user.name} on ${config.site.name}`;
-                if (user.image) {
-                    metaImage = user.image.startsWith("http") ? user.image : `${origin}${user.image.startsWith("/") ? "" : "/"}${user.image}`;
-                } else if (user.profileBannerUrl) {
-                    metaImage = user.profileBannerUrl.startsWith("http") ? user.profileBannerUrl : `${origin}${user.profileBannerUrl.startsWith("/") ? "" : "/"}${user.profileBannerUrl}`;
+            if (post) {
+                canonical = `${origin}${currentPath}`;
+                metaTitle = post.title?.trim() || config.site.name;
+                metaDescription = post.description?.trim() || post.title?.trim() || config.site.name;
+                metaAuthor = post.user.name;
+                metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
+                if (post.uploads[0])
+                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
+                metaType = "article";
+            } else {
+                const user = await prisma.user.findFirst({
+                    where: { OR: [{ handle }, { id: handle }] },
+                    select: { id: true, name: true, bio: true, updatedAt: true },
+                });
+                if (user) {
+                    canonical = `${origin}${currentPath}`;
+                    metaTitle = user.name?.trim() || config.site.name;
+                    metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
+                    metaImage = `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
                 }
             }
+        }
         }
         const tags = [
             `<meta name="description" content="${escapeMeta(metaDescription)}">`,
