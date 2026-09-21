@@ -80,7 +80,10 @@
         "gridDensity": "グリッド密度",
         "compact": "コンパクト",
         "comfortable": "標準",
-        "spacious": "ゆったり"
+        "spacious": "ゆったり",
+        "threeByThree": "3×3",
+        "fourByFour": "4×4",
+        "sixBySix": "6×6"
     },
     "postGrid": {
         "noPosts": "投稿が見つかりません",
