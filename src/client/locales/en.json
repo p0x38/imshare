@@ -328,7 +328,7 @@
                 "items": [
                     {
                         "question": "What are the upload rate limits?",
-                        "answer": "Uploads are limited to 950 requests per 24 hours and 5 upload requests per 2 minutes per client IP address."
+                        "answer": "Uploads are limited to 950 requests per 24 hours and 20 upload requests per 2 minutes per client IP address."
                     },
                     {
                         "question": "Why did I get a 429 response while uploading?",
