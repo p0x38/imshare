@@ -344,7 +344,7 @@ export async function buildApp() {
         const userPermalinkMatch = currentPath.match(/^\/[^/]+\/[^/]+\/?$/);
         if (postMatch) {
             try {
-                const post = await prisma.post.findUnique({
+                const post = await prisma.post.findFirst({
                     where: {
                         OR: [
                             { id: decodeURIComponent(postMatch[1]!) },
