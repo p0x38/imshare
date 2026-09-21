@@ -1,7 +1,13 @@
 import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, parsePagination, requireUser } from "../lib/api.js";
-import { scoreRecommendation, scorePersonalizedRecommendation, scoreTrending } from "../lib/recommendation-scorer.js";
+import {
+    applyRecommendationExploration,
+    jitterRecommendationScore,
+    scoreRecommendation,
+    scorePersonalizedRecommendation,
+    scoreTrending,
+} from "../lib/recommendation-scorer.js";
 import { postInclude, postView } from "./_shared.js";
 
 const publicPostWhere = {
@@ -132,11 +138,16 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             }));
         }
 
-        ranked.sort(
+        const rankedWithJitter = ranked.map((item) => ({
+            ...item,
+            score: jitterRecommendationScore(item.score),
+        }));
+        const explored = applyRecommendationExploration(rankedWithJitter);
+        explored.sort(
             (a, b) =>
                 b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime(),
         );
-        const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
+        const items = explored.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
         return collection(items, p.page, p.limit, ranked.length);
     });
 
