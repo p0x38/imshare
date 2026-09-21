@@ -346,6 +346,75 @@ test("recommendations return public posts for anonymous visitors", async () => {
     }
 }, 30_000);
 
+test("post page views are recorded separately from post reads", async () => {
+    const app = await buildApp();
+    const suffix = "view-" + Date.now().toString(36);
+    const userId = `${suffix}-user`;
+    const postId = `${suffix}-post`;
+    const permalinkKey = `${suffix}-permalink`;
+
+    try {
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: "View Test User",
+                email: `${suffix}@example.test`,
+                handle: suffix.slice(0, 20),
+            },
+        });
+        await prisma.post.create({
+            data: {
+                id: postId,
+                title: "View test",
+                userId,
+                permalinkPattern: "user",
+                permalinkIdType: "internalId",
+                permalinkKey,
+                status: "published",
+                visibility: "public",
+            },
+        });
+
+        const firstRead = await app.inject({
+            method: "GET",
+            url: `/api/v1/posts/${postId}`,
+        });
+        expect(firstRead.statusCode).toBe(200);
+        expect(firstRead.json().data.viewCount).toBe(0);
+        expect(await prisma.postView.count({ where: { postId } })).toBe(0);
+
+        const permalinkRead = await app.inject({
+            method: "GET",
+            url: `/api/v1/posts/permalink/${encodeURIComponent(permalinkKey)}`,
+        });
+        expect(permalinkRead.statusCode).toBe(200);
+        expect(permalinkRead.json().data.viewCount).toBe(0);
+        expect(await prisma.postView.count({ where: { postId } })).toBe(0);
+
+        const view = await app.inject({
+            method: "POST",
+            url: `/api/v1/posts/${postId}/view`,
+        });
+        expect(view.statusCode).toBe(200);
+        expect(view.json()).toEqual({
+            data: { recorded: true, viewCount: 1 },
+        });
+
+        const secondRead = await app.inject({
+            method: "GET",
+            url: `/api/v1/posts/${postId}`,
+        });
+        expect(secondRead.statusCode).toBe(200);
+        expect(secondRead.json().data.viewCount).toBe(1);
+        expect(await prisma.postView.count({ where: { postId } })).toBe(1);
+    } finally {
+        await prisma.postView.deleteMany({ where: { postId } });
+        await prisma.post.delete({ where: { id: postId } });
+        await prisma.user.delete({ where: { id: userId } });
+        await app.close();
+    }
+});
+
 test("personalized recommendations rank recent likes, views, and interests", async () => {
     const app = await buildApp();
     const suffix = "recommendation-" + Date.now().toString(36);
