@@ -38,7 +38,7 @@ import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import LinkIcon from "@mui/icons-material/Link";
 import AttachFileIcon from "@mui/icons-material/AttachFile";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Page } from "./Page";
 import { api } from "../lib/api";
@@ -737,6 +737,7 @@ export function PostPage({
     const [post, setPost] = useState<Post | null>(null);
     const [error, setError] = useState("");
     const reducedMotion = useReducedMotion();
+    const viewedPostIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         let active = true;
@@ -758,6 +759,28 @@ export function PostPage({
             active = false;
         };
     }, [endpoint, identifier]);
+
+    useEffect(() => {
+        if (!post || viewedPostIdRef.current === post.id) return;
+        viewedPostIdRef.current = post.id;
+        let active = true;
+        void api<{ data: { recorded: boolean; viewCount: number } }>(
+            `/v1/posts/${encodeURIComponent(post.id)}/view`,
+            { method: "POST" },
+        )
+            .then((response) => {
+                if (!active) return;
+                setPost((current) =>
+                    current?.id === post.id
+                        ? { ...current, viewCount: response.data.viewCount }
+                        : current,
+                );
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, [post]);
 
     if (error)
         return (

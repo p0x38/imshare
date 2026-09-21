@@ -148,19 +148,28 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.post("/v1/posts/:postId/view", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
+        const session = await getSession(request);
         const { postId } = request.params as { postId: string };
         const post = await prisma.post.findFirst({
-            where: { id: postId, ...publicPostWhere },
+            where: {
+                id: postId,
+                status: "published",
+                visibility: { in: ["public", "unlisted"] },
+                hiddenAt: null,
+                OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }],
+            },
             select: { id: true },
         });
         if (!post)
             return reply
                 .code(404)
                 .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        await prisma.postView.create({ data: { postId, userId: user.id } });
-        return { data: { recorded: true } };
+
+        await prisma.postView.create({
+            data: { postId, userId: session?.user.id ?? null },
+        });
+        const viewCount = await prisma.postView.count({ where: { postId } });
+        return { data: { recorded: true, viewCount } };
     });
 
     fastify.get("/v1/discovery/recently-viewed", async (request, reply) => {

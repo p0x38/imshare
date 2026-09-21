@@ -664,10 +664,6 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             return reply
                 .code(404)
                 .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        await prisma.postView.create({
-            data: { postId, userId: session?.user.id ?? null },
-        });
-        post._count.views += 1;
         return ok(postView(post));
     });
 
