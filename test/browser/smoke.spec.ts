@@ -30,6 +30,55 @@ test.describe("public frontend", () => {
         await expect(skeletons).toBeHidden({ timeout: 3_000 });
     });
 
+    test("home page loads personalized and trending feeds", async ({ page }) => {
+        await page.route("**/api/v1/recommendations?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    data: [
+                        {
+                            id: "recommended-1",
+                            title: "Recommended post",
+                            contentType: "image",
+                            uploads: [],
+                        },
+                    ],
+                    pagination: { page: 1, total: 1, totalPages: 1 },
+                }),
+            });
+        });
+        await page.route("**/api/v1/discovery/trending?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({
+                    data: [
+                        {
+                            id: "trending-1",
+                            title: "Trending post",
+                            contentType: "image",
+                            uploads: [],
+                        },
+                    ],
+                    pagination: { page: 1, total: 1, totalPages: 1 },
+                }),
+            });
+        });
+        await page.route("**/api/v1/posts?*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [], pagination: { page: 1, total: 0, totalPages: 0 } }),
+            });
+        });
+        await page.goto("/");
+        await expect(page.getByRole("heading", { name: "Recommended for you" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Trending" })).toBeVisible();
+        await expect(page.getByText("Recommended post")).toBeVisible();
+        await expect(page.getByText("Trending post")).toBeVisible();
+    });
+
     test("main page entrance motion is wired", async ({ page }) => {
         await page.addInitScript(() => {
             localStorage.setItem(
