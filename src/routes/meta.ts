@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { openapi } from "../lib/openapi-route.js";
+import { postPermalink } from "../lib/post-permalink.js";
 
 function escapeXml(value: string): string {
     return value.replace(
@@ -46,7 +47,14 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                     select: {
                         id: true,
+                        title: true,
+                        createdAt: true,
+                        customPostId: true,
+                        permalinkPattern: true,
+                        permalinkIdType: true,
+                        permalinkKey: true,
                         updatedAt: true,
+                        user: { select: { id: true, handle: true } },
                         uploads: {
                             orderBy: { createdAt: "asc" },
                             take: 1000,
@@ -88,7 +96,8 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                                 `<image:image><image:loc>${escapeXml(absoluteUrl(baseUrl, `/api/v1/posts/image/${encodeURIComponent(upload.id)}`))}</image:loc></image:image>`,
                         )
                         .join("");
-                    return `<url><loc>${escapeXml(absoluteUrl(baseUrl, `/posts/${encodeURIComponent(post.id)}`))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod>${images}</url>`;
+                    const pathname = postPermalink(post, post.user);
+                    return `<url><loc>${escapeXml(absoluteUrl(baseUrl, pathname))}</loc><lastmod>${post.updatedAt.toISOString()}</lastmod>${images}</url>`;
                 }),
                 ...tags.map(
                     (tag) =>
