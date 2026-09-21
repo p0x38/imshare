@@ -461,7 +461,7 @@ function EntityListPage({ taxonomy }: { taxonomy: "users" | "tags" | "categories
                                 Not yet created
                             </Typography>
                             <Typography color="text.secondary">
-                                It seems ${label.toLowerCase()} is not created yet.
+                                It seems {label.toLowerCase()} is not created yet.
                             </Typography>
                         </CardContent>
                     </Card>
