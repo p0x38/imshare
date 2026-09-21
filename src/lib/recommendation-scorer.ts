@@ -78,7 +78,10 @@ export function applyRecommendationExploration<T>(
         if (random() >= rate) continue;
         const remaining = ranked.length - index - 1;
         const randomIndex = index + 1 + Math.floor(random() * remaining);
-        [ranked[index], ranked[randomIndex]] = [ranked[randomIndex], ranked[index]];
+        const current = ranked[index];
+        const candidate = ranked[randomIndex];
+        if (!current || !candidate) continue;
+        [ranked[index], ranked[randomIndex]] = [candidate, current];
     }
 
     return ranked;
