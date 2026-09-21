@@ -761,7 +761,7 @@ export function PostPage({
 
     if (error)
         return (
-            <Page maxWidth="lg">
+            <Page maxWidth="full">
                 <Fade in timeout={reducedMotion ? 0 : 180}>
                     <div>
                         <Alert severity="error">{error}</Alert>
@@ -774,7 +774,7 @@ export function PostPage({
         );
     if (!post)
         return (
-            <Page maxWidth="lg">
+            <Page maxWidth="full">
                 <Fade in timeout={reducedMotion ? 0 : 180}>
                     <div>
                         <Typography color="text.secondary">Loading post…</Typography>
@@ -863,7 +863,7 @@ export function PostPage({
     };
 
     return (
-        <Page maxWidth="lg">
+        <Page maxWidth="full">
             <Stack spacing={{ xs: 2, sm: 3 }}>
                 <Stack
                     sx={{
