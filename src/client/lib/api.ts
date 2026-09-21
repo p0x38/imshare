@@ -11,7 +11,7 @@ export function apiUrl(url: string): string {
 function normalizeResponseUrls(value: unknown, key?: string): unknown {
     if (
         typeof value === "string" &&
-        (key === "url" || key === "avatarUrl") &&
+        (key === "url" || key === "avatarUrl" || key === "bannerUrl") &&
         value.startsWith("/v1/")
     ) {
         return `/api${value}`;
