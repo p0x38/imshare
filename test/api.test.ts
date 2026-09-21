@@ -34,7 +34,7 @@ if (process.platform === "win32") {
 }
 
 const { collection, ok, parseOrder, parsePagination } = await import("../src/lib/api.js");
-const { prisma } = await import("../src/lib/auth.js");
+const { auth, prisma } = await import("../src/lib/auth.js");
 const { buildApp } = await import("../src/app.js");
 
 afterAll(async () => {
@@ -322,13 +322,6 @@ test("personalized recommendations rank recent likes, views, and interests", asy
     try {
         await prisma.user.create({
             data: {
-                id: userId,
-                name: "Recommendation Viewer",
-                email,
-            },
-        });
-        await prisma.user.create({
-            data: {
                 id: creatorId,
                 name: "Recommendation Creator",
                 email: `${suffix}-creator@example.test`,
@@ -336,32 +329,15 @@ test("personalized recommendations rank recent likes, views, and interests", asy
             },
         });
 
-        const signup = await app.inject({
-            method: "POST",
-            url: "/api/v1/auth/sign-up/email",
-            payload: {
+        const signup = await auth.api.signUpEmail({
+            body: {
                 name: "Recommendation Viewer",
                 email,
                 password: "recommendation-password-123",
             },
         });
-        expect([200, 201, 409]).toContain(signup.statusCode);
-
-        const setCookie = signup.headers["set-cookie"];
-        const cookies = Array.isArray(setCookie)
-            ? setCookie
-            : setCookie
-              ? [setCookie]
-              : [];
-        cookie = cookies.map((item) => item.split(";", 1)[0]).join("; ");
-        if (!cookie) {
-            const session = await auth.api.signInEmail({
-                body: { email, password: "recommendation-password-123" },
-            });
-            const headers = session?.headers;
-            const values = headers?.getSetCookie?.() ?? [];
-            cookie = values.map((item) => item.split(";", 1)[0]).join("; ");
-        }
+        const signupCookies = signup.headers.getSetCookie?.() ?? [];
+        cookie = signupCookies.map((item) => item.split(";", 1)[0]).join("; ");
         expect(cookie).not.toBe("");
 
         const tag = await prisma.tag.create({
