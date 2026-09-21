@@ -236,16 +236,19 @@ export async function buildApp() {
     });
 
     app.addHook("onError", async (request, _reply, error) => {
+        const statusCode = error.statusCode ?? 500;
+        const pathname = request.url.split("?", 1)[0] ?? "/";
+        const route = request.routeOptions?.url ?? pathname;
         request.log.error(
             {
                 event: "http.error",
                 method: request.method,
-                path: request.url.split("?", 1)[0] ?? "/",
-                route: request.routeOptions?.url,
-                statusCode: error.statusCode ?? 500,
+                path: pathname,
+                route,
+                statusCode,
                 err: error,
             },
-            "HTTP request failed",
+            `HTTP request failed: ${request.method} ${pathname} -> ${statusCode} (${error.name}): ${error.message}`,
         );
     });
 
@@ -259,6 +262,8 @@ export async function buildApp() {
                 ? undefined
                 : Number(process.hrtime.bigint() - startedAt) / 1_000_000;
 
+        const durationText =
+            durationMs === undefined ? "" : ` in ${durationMs.toFixed(1)}ms`;
         request.log.info(
             {
                 event: "http.access",
@@ -268,7 +273,7 @@ export async function buildApp() {
                 statusCode: reply.statusCode,
                 ...(durationMs === undefined ? {} : { durationMs }),
             },
-            "HTTP request completed",
+            `HTTP request completed: ${request.method} ${pathname} -> ${reply.statusCode}${durationText}`,
         );
 
         if (reply.statusCode < 200 || reply.statusCode >= 300) return;
