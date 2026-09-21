@@ -80,7 +80,10 @@
         "gridDensity": "Grid density",
         "compact": "Compact",
         "comfortable": "Comfortable",
-        "spacious": "Spacious"
+        "spacious": "Spacious",
+        "threeByThree": "3×3",
+        "fourByFour": "4×4",
+        "sixBySix": "6×6"
     },
     "postGrid": {
         "noPosts": "No posts found",
