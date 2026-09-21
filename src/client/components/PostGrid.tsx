@@ -24,13 +24,31 @@ function imageUrl(url: string, width = 512) {
     return image.href;
 }
 
+export type PostGridDensity = "compact" | "comfortable" | "spacious";
+
+const densitySettings: Record<
+    PostGridDensity,
+    { minWidth: number; gap: { xs: number; sm: number } }
+> = {
+    compact: { minWidth: 168, gap: { xs: 0.75, sm: 1.25 } },
+    comfortable: { minWidth: 224, gap: { xs: 1, sm: 2 } },
+    spacious: { minWidth: 300, gap: { xs: 1.5, sm: 2.5 } },
+};
+
 function normalizePosts(value: Post[] | { posts?: Post[] }): Post[] {
     return Array.isArray(value) ? value : Array.isArray(value.posts) ? value.posts : [];
 }
 
-export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } }) {
+export function PostGrid({
+    posts: input,
+    density = "comfortable",
+}: {
+    posts: Post[] | { posts?: Post[] };
+    density?: PostGridDensity;
+}) {
     const { t } = useTranslation();
     const posts = normalizePosts(input).filter((post) => post.contentType !== "text");
+    const { minWidth, gap } = densitySettings[density];
 
     if (posts.length === 0) {
         return (
@@ -53,8 +71,8 @@ export function PostGrid({ posts: input }: { posts: Post[] | { posts?: Post[] } 
         <Box
             sx={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 256px), 1fr))",
-                gap: { xs: 1, sm: 2 },
+                gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${minWidth}px), 1fr))`,
+                gap,
             }}
         >
             {posts.map((post, index) => (
