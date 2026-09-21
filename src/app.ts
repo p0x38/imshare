@@ -96,6 +96,7 @@ export async function buildApp() {
     const uploadDailyLimiter = new RateLimiter(950, 86_400_000);
     const uploadBurstLimiter = new RateLimiter(20, 120_000);
     const rateLimitingEnabled = process.env.NODE_ENV !== "test";
+    const requestStarted = new WeakMap<FastifyRequest, bigint>();
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
@@ -109,6 +110,10 @@ export async function buildApp() {
             prisma.report.count({ where: { status: "open" } }),
         ]);
         return { registeredUsers, publishedPosts, pendingReports };
+    });
+
+    app.addHook("onRequest", async (request) => {
+        requestStarted.set(request, process.hrtime.bigint());
     });
 
     app.addHook("onRequest", async (request, reply) => {
@@ -230,7 +235,42 @@ export async function buildApp() {
         if (!(await authorizeApiTokenRequest(request, reply))) return reply;
     });
 
+    app.addHook("onError", async (request, _reply, error) => {
+        request.log.error(
+            {
+                event: "http.error",
+                method: request.method,
+                path: request.url.split("?", 1)[0] ?? "/",
+                route: request.routeOptions?.url,
+                statusCode: error.statusCode ?? 500,
+                err: error,
+            },
+            "HTTP request failed",
+        );
+    });
+
     app.addHook("onResponse", async (request, reply) => {
+        const pathname = request.url.split("?", 1)[0] ?? "/";
+        if (pathname === observability.prometheusPath) return;
+
+        const startedAt = requestStarted.get(request);
+        const durationMs =
+            startedAt === undefined
+                ? undefined
+                : Number(process.hrtime.bigint() - startedAt) / 1_000_000;
+
+        request.log.info(
+            {
+                event: "http.access",
+                method: request.method,
+                path: pathname,
+                route: request.routeOptions?.url ?? pathname,
+                statusCode: reply.statusCode,
+                ...(durationMs === undefined ? {} : { durationMs }),
+            },
+            "HTTP request completed",
+        );
+
         if (reply.statusCode < 200 || reply.statusCode >= 300) return;
         if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return;
         const route = request.routeOptions.url ?? request.url;
