@@ -34,6 +34,8 @@ const preferenceSchema = {
         defaultPostVisibility: { type: "string" as const, enum: ["public", "unlisted", "private"] },
         defaultAllowDownload: { type: "boolean" as const },
         defaultContentWarning: { type: "string" as const, maxLength: 500, nullable: true },
+        interestedTags: { type: "array" as const, items: { type: "string" as const, minLength: 1, maxLength: 100 }, maxItems: 100 },
+        interestedCategoryIds: { type: "array" as const, items: { type: "string" as const, minLength: 1 }, maxItems: 100 },
     },
 };
 
@@ -209,9 +211,15 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     defaultPostVisibility: true,
                     defaultAllowDownload: true,
                     defaultContentWarning: true,
+                    interestedTagsJson: true,
+                    interestedCategoryIdsJson: true,
                 },
             });
-            return ok(preferences);
+            return ok({
+                ...preferences,
+                interestedTags: JSON.parse(preferences?.interestedTagsJson ?? "[]"),
+                interestedCategoryIds: JSON.parse(preferences?.interestedCategoryIdsJson ?? "[]"),
+            });
         },
     );
 
@@ -247,6 +255,31 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
             const user = await requireUser(request, reply);
             if (!user) return;
             const body = request.body as Record<string, unknown>;
+            const interestedTags = body.interestedTags;
+            const interestedCategoryIds = body.interestedCategoryIds;
+            if (
+                interestedTags !== undefined &&
+                (!Array.isArray(interestedTags) ||
+                    interestedTags.length > 100 ||
+                    interestedTags.some(
+                        (value) => typeof value !== "string" || !value.trim() || value.length > 100,
+                    ))
+            )
+                return reply.code(400).send({
+                    error: { code: "INVALID_PREFERENCE", message: "Invalid interested tags." },
+                });
+            if (
+                interestedCategoryIds !== undefined &&
+                (!Array.isArray(interestedCategoryIds) ||
+                    interestedCategoryIds.length > 100 ||
+                    interestedCategoryIds.some((value) => typeof value !== "string" || !value))
+            )
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PREFERENCE",
+                        message: "Invalid interested categories.",
+                    },
+                });
             const booleanKeys = [
                 "isPublic",
                 "followApprovalRequired",
@@ -337,6 +370,20 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                                   : null,
                           }
                         : {}),
+                    ...(interestedTags !== undefined
+                        ? {
+                              interestedTagsJson: JSON.stringify(
+                                  [...new Set((interestedTags as string[]).map((tag) => tag.trim()).filter(Boolean))],
+                              ),
+                          }
+                        : {}),
+                    ...(interestedCategoryIds !== undefined
+                        ? {
+                              interestedCategoryIdsJson: JSON.stringify(
+                                  [...new Set(interestedCategoryIds as string[])],
+                              ),
+                          }
+                        : {}),
                 },
                 select: {
                     isPublic: true,
@@ -352,9 +399,15 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     defaultPostVisibility: true,
                     defaultAllowDownload: true,
                     defaultContentWarning: true,
+                    interestedTagsJson: true,
+                    interestedCategoryIdsJson: true,
                 },
             });
-            return ok(updated);
+            return ok({
+                ...updated,
+                interestedTags: JSON.parse(updated.interestedTagsJson),
+                interestedCategoryIds: JSON.parse(updated.interestedCategoryIdsJson),
+            });
         },
     );
 
