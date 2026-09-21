@@ -19,6 +19,7 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { TagAutocomplete } from "./AutocompleteFields";
 import { PushSettings } from "./PushSettings";
 import { SecuritySettings } from "./SecuritySettings";
 
@@ -36,6 +37,8 @@ interface Preferences {
     defaultPostVisibility: "public" | "unlisted" | "private";
     defaultAllowDownload: boolean;
     defaultContentWarning: string | null;
+    interestedTags: string[];
+    interestedCategoryIds: string[];
 }
 interface Category {
     id: string;
@@ -104,6 +107,7 @@ export function AccountPreferences() {
                     <Tab label={t("accountUi.postingDefaults")} />
                     <Tab label={t("accountUi.security")} />
                     <Tab label={t("accountUi.notifications")} />
+                    <Tab label={t("accountUi.recommendations")} />
                 </Tabs>
                 {tab === 0 ? (
                     <Stack spacing={1.25}>
@@ -262,12 +266,59 @@ export function AccountPreferences() {
                 ) : null}
                 {tab === 2 ? <SecuritySettings /> : null}
                 {tab === 3 ? <PushSettings /> : null}
+                {tab === 4 ? (
+                    <Stack spacing={2}>
+                        <Typography variant="subtitle1">
+                            {t("accountUi.recommendationInterests")}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {t("accountUi.recommendationInterestsHelp")}
+                        </Typography>
+                        <TagAutocomplete
+                            value={preferences.interestedTags.join(", ")}
+                            onChange={(value) =>
+                                set(
+                                    "interestedTags",
+                                    value
+                                        .split(",")
+                                        .map((tag) => tag.trim())
+                                        .filter(Boolean),
+                                )
+                            }
+                        />
+                        <FormControl fullWidth>
+                            <InputLabel id="interest-category-label">
+                                {t("accountUi.interestedCategories")}
+                            </InputLabel>
+                            <Select
+                                labelId="interest-category-label"
+                                multiple
+                                label={t("accountUi.interestedCategories")}
+                                value={preferences.interestedCategoryIds}
+                                onChange={(event) =>
+                                    set(
+                                        "interestedCategoryIds",
+                                        typeof event.target.value === "string"
+                                            ? event.target.value.split(",")
+                                            : event.target.value,
+                                    )
+                                }
+                            >
+                                {categories.map((category) => (
+                                    <MenuItem key={category.id} value={category.id}>
+                                        {category.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                ) : null}
                 {error ? (
                     <Alert severity="error" sx={{ mt: 2 }}>
                         {error}
                     </Alert>
                 ) : null}
-                {tab < 2 ? (
+                {tab !== 2 && tab !== 3 ? (
                     <Button
                         variant="contained"
                         onClick={() => void save()}
