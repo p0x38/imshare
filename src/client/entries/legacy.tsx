@@ -9,6 +9,9 @@ import {
     CardContent,
     Chip,
     CircularProgress,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     FormControl,
     InputLabel,
     MenuItem,
@@ -24,6 +27,7 @@ import { Page } from "../components/Page";
 import { PostGrid } from "../components/PostGrid";
 import { LoadingState } from "../components/States";
 import { SearchAutocomplete } from "../components/AutocompleteFields";
+import { ProfilePictureCropper } from "../components/ProfilePictureCropper";
 import { api } from "../lib/api";
 import type { Post, User } from "../lib/types";
 
@@ -328,7 +332,11 @@ function ProfileSettingsPage() {
     const [error, setError] = useState("");
     const [saving, setSaving] = useState(false);
     const [avatarMode, setAvatarMode] = useState("initials");
-    const [avatarValue, setAvatarValue] = useState("");
+    const [avatarUploadId, setAvatarUploadId] = useState("");
+    const [externalAvatarUrl, setExternalAvatarUrl] = useState("");
+    const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null);
+    const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | null>(null);
+    const [avatarUploading, setAvatarUploading] = useState(false);
     const [banner, setBanner] = useState("");
     const [accent, setAccent] = useState("#0645ad");
     useEffect(() => {
@@ -336,7 +344,14 @@ function ProfileSettingsPage() {
             .then((r) => {
                 setUser(r.data);
                 setAvatarMode(r.data.avatarMode || "initials");
-                setAvatarValue(r.data.avatarValue || "");
+                const value = r.data.avatarValue || "";
+                if (/^https?:\/\//i.test(value)) {
+                    setExternalAvatarUrl(value);
+                    setAvatarUploadId("");
+                } else {
+                    setAvatarUploadId(value);
+                    setExternalAvatarUrl("");
+                }
                 setBanner(r.data.profileBannerUrl || "");
                 setAccent(r.data.accentColor || "#0645ad");
             })
@@ -350,6 +365,46 @@ function ProfileSettingsPage() {
                 ),
             );
     }, []);
+    async function handleAvatarFile(file: File) {
+        setError("");
+        setAvatarUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const response = await api<{ data: { id: string } }>("/v1/uploads", {
+                method: "POST",
+                body: formData,
+            });
+            setAvatarUploadId(response.data.id);
+            setExternalAvatarUrl("");
+            setAvatarMode("custom");
+            const previewUrl = URL.createObjectURL(file);
+            setAvatarPreviewUrl((current) => {
+                if (current) URL.revokeObjectURL(current);
+                return previewUrl;
+            });
+            setAvatarCropFile(null);
+        } catch (cause) {
+            setError(
+                cause instanceof Error
+                    ? cause.message
+                    : "Unable to upload profile picture.",
+            );
+        } finally {
+            setAvatarUploading(false);
+        }
+    }
+
+    function clearCustomAvatar() {
+        setAvatarUploadId("");
+        setExternalAvatarUrl("");
+        setAvatarMode("initials");
+        setAvatarPreviewUrl((current) => {
+            if (current) URL.revokeObjectURL(current);
+            return null;
+        });
+    }
+
     async function save(e: React.FormEvent) {
         e.preventDefault();
         if (!user) return;
@@ -360,7 +415,10 @@ function ProfileSettingsPage() {
                 method: "PATCH",
                 body: JSON.stringify({
                     avatarMode,
-                    avatarValue: avatarValue || null,
+                    avatarValue:
+                        avatarMode === "custom"
+                            ? avatarUploadId || externalAvatarUrl.trim() || null
+                            : null,
                     profileBannerUrl: banner || null,
                     accentColor: accent,
                 }),
@@ -405,11 +463,96 @@ function ProfileSettingsPage() {
                                     <MenuItem value="custom">Custom</MenuItem>
                                 </Select>
                             </FormControl>
-                            <TextField
-                                label="Avatar value"
-                                value={avatarValue}
-                                onChange={(e) => setAvatarValue(e.target.value)}
-                            />
+                            {avatarMode === "custom" ? (
+                                <Stack spacing={1.5}>
+                                    <Stack
+                                        direction={{ xs: "column", sm: "row" }}
+                                        alignItems={{ xs: "flex-start", sm: "center" }}
+                                        spacing={2}
+                                    >
+                                        <Avatar
+                                            src={
+                                                avatarPreviewUrl ??
+                                                (externalAvatarUrl || user.avatarUrl || undefined)
+                                            }
+                                            alt="Profile picture preview"
+                                            sx={{ width: 96, height: 96 }}
+                                        >
+                                            {(user.name || "U").charAt(0).toUpperCase()}
+                                        </Avatar>
+                                        <Stack spacing={1}>
+                                            <Button
+                                                component="label"
+                                                variant="outlined"
+                                                disabled={avatarUploading}
+                                            >
+                                                {avatarUploading ? "Uploading…" : "Choose image"}
+                                                <input
+                                                    hidden
+                                                    type="file"
+                                                    accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/avif"
+                                                    onChange={(event) => {
+                                                        const file = event.target.files?.[0];
+                                                        event.target.value = "";
+                                                        if (file) setAvatarCropFile(file);
+                                                    }}
+                                                />
+                                            </Button>
+                                            <Button
+                                                variant="text"
+                                                color="inherit"
+                                                disabled={avatarUploading}
+                                                onClick={clearCustomAvatar}
+                                            >
+                                                Remove custom picture
+                                            </Button>
+                                        </Stack>
+                                    </Stack>
+                                    <TextField
+                                        label="External avatar URL"
+                                        value={externalAvatarUrl}
+                                        onChange={(event) => {
+                                            setExternalAvatarUrl(event.target.value);
+                                            setAvatarUploadId("");
+                                            setAvatarPreviewUrl((current) => {
+                                                if (current) URL.revokeObjectURL(current);
+                                                return null;
+                                            });
+                                        }}
+                                        type="url"
+                                        helperText="Use an image URL instead of uploading a picture."
+                                    />
+                                    <Dialog
+                                        open={avatarCropFile !== null}
+                                        fullWidth
+                                        maxWidth="sm"
+                                        onClose={() => {
+                                            if (!avatarUploading) setAvatarCropFile(null);
+                                        }}
+                                    >
+                                        <DialogTitle>Crop profile picture</DialogTitle>
+                                        <DialogContent>
+                                            {avatarCropFile ? (
+                                                <ProfilePictureCropper
+                                                    file={avatarCropFile}
+                                                    onCancel={() => setAvatarCropFile(null)}
+                                                    onConfirm={(blob) =>
+                                                        void handleAvatarFile(
+                                                            new File([blob], "profile-picture.png", {
+                                                                type: "image/png",
+                                                            }),
+                                                        )
+                                                    }
+                                                />
+                                            ) : null}
+                                        </DialogContent>
+                                    </Dialog>
+                                </Stack>
+                            ) : (
+                                <Typography variant="body2" color="text.secondary">
+                                    Switch Avatar mode to Custom to upload and crop a profile picture.
+                                </Typography>
+                            )}
                             <TextField
                                 label="Profile banner URL"
                                 type="url"
