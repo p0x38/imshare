@@ -415,6 +415,59 @@ test("post page views are recorded separately from post reads", async () => {
     }
 });
 
+test("notifications can be marked as read with an explicit empty JSON body", async () => {
+    const app = await buildApp();
+    const suffix = "notification-read-" + Date.now().toString(36);
+    const userId = `${suffix}-user`;
+    const notificationId = `${suffix}-notification`;
+
+    try {
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: "Notification Test User",
+                email: `${suffix}@example.test`,
+                handle: suffix.slice(0, 20),
+            },
+        });
+        await prisma.notification.create({
+            data: {
+                id: notificationId,
+                type: "comment",
+                message: "Test notification",
+                recipientId: userId,
+                readAt: null,
+            },
+        });
+
+        const response = await app.inject({
+            method: "PATCH",
+            url: `/api/v1/me/notifications/${notificationId}/read`,
+            headers: {
+                cookie: "",
+                "content-type": "application/json",
+            },
+            payload: {},
+        });
+        expect(response.statusCode).not.toBe(415);
+        expect(response.statusCode).toBe(401);
+
+        const authedResponse = await app.inject({
+            method: "PATCH",
+            url: `/api/v1/me/notifications/${notificationId}/read`,
+            headers: {
+                "content-type": "application/json",
+            },
+            payload: {},
+        });
+        expect([401, 403]).toContain(authedResponse.statusCode);
+    } finally {
+        await prisma.notification.deleteMany({ where: { id: notificationId } });
+        await prisma.user.delete({ where: { id: userId } });
+        await app.close();
+    }
+});
+
 test("personalized recommendations rank recent likes, views, and interests", async () => {
     const app = await buildApp();
     const suffix = "recommendation-" + Date.now().toString(36);

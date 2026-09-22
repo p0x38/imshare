@@ -221,7 +221,10 @@ function NotificationsPage() {
     async function mark(id: string) {
         setBusy(id);
         try {
-            await api(`/v1/me/notifications/${id}/read`, { method: "PATCH" });
+            await api(`/v1/me/notifications/${id}/read`, {
+                method: "PATCH",
+                body: JSON.stringify({}),
+            });
             await load();
         } catch (cause) {
             setError(
