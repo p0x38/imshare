@@ -1,13 +1,12 @@
 import type { FastifyPluginAsync } from "fastify";
 
-import { loadConfig } from "../lib/config.js";
+import packageJson from "../../package.json" with { type: "json" };
 import { ok } from "../lib/api.js";
 import { getBuildInfo } from "../lib/build-info.js";
 import { prisma } from "../lib/auth.js";
 import { openapi } from "../lib/openapi-route.js";
 
 export const healthRoutes: FastifyPluginAsync = async (fastify) => {
-    const config = await loadConfig();
     const build = getBuildInfo();
 
     fastify.get(
@@ -68,7 +67,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify) => {
         async () =>
             ok({
                 api: "v1",
-                version: config.site.version,
+                version: packageJson.version,
                 commitHash: build.commitHash,
                 commitMessage: build.commitMessage,
             }),
