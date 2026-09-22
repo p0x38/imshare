@@ -243,16 +243,38 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             take: 200,
             include: {
                 ...postInclude,
-                _count: { select: { reactions: true, comments: true } },
+                _count: { select: { views: true, comments: true } },
             },
             orderBy: { createdAt: "desc" },
         });
-        const now = Date.now();
+        const reactionGroups = await prisma.postReaction.groupBy({
+            by: ["postId", "type"],
+            where: {
+                postId: { in: candidates.map((post) => post.id) },
+                type: { in: ["like", "favorite"] },
+            },
+            _count: { _all: true },
+        });
+        const reactionMetrics = new Map<string, { likes: number; favorites: number }>();
+        for (const row of reactionGroups) {
+            const metrics = reactionMetrics.get(row.postId) ?? { likes: 0, favorites: 0 };
+            if (row.type === "like") metrics.likes = row._count._all;
+            else if (row.type === "favorite") metrics.favorites = row._count._all;
+            reactionMetrics.set(row.postId, metrics);
+        }
         const ranked = candidates
             .map((post) => {
-                const ageHours = Math.max((now - post.createdAt.getTime()) / 3_600_000, 1);
-                const engagement = post._count.reactions * 3 + post._count.comments * 2;
-                return { post, score: engagement / Math.pow(ageHours, 0.65) };
+                const reactions = reactionMetrics.get(post.id) ?? { likes: 0, favorites: 0 };
+                return {
+                    post,
+                    score: scoreTrending({
+                        views: post._count.views,
+                        likes: reactions.likes,
+                        favorites: reactions.favorites,
+                        comments: post._count.comments,
+                        createdAt: post.createdAt,
+                    }),
+                };
             })
             .sort((a, b) => b.score - a.score);
         const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));

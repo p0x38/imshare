@@ -10,36 +10,90 @@ import { ErrorState, SkeletonGrid } from "../components/States";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 
+function imagePostsOnly(posts: Post[]) {
+    return posts.filter((post) => post.contentType !== "text");
+}
+
+function takeUniquePosts(posts: Post[], usedIds: Set<string>, limit: number) {
+    const result: Post[] = [];
+    for (const post of imagePostsOnly(posts)) {
+        if (usedIds.has(post.id)) continue;
+        usedIds.add(post.id);
+        result.push(post);
+        if (result.length >= limit) break;
+    }
+    return result;
+}
+
+interface PostResponse {
+    data?: Post[];
+}
+
 function HomePage() {
     const { t } = useTranslation();
     const [posts, setPosts] = useState<Post[]>([]);
     const [recommendations, setRecommendations] = useState<Post[]>([]);
     const [trending, setTrending] = useState<Post[]>([]);
-    const imagePosts = posts.filter((post) => post.contentType !== "text");
-    const texts = posts.filter((post) => post.contentType === "text");
+    const [recentlyViewed, setRecentlyViewed] = useState<Post[]>([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const [density, setDensity] = usePostGridDensity();
     const limit = postGridPostLimits[density];
+    const requestLimit = Math.min(limit * 2, 100);
+
     useEffect(() => {
-        void Promise.all([
-            api<{ data?: Post[] }>(`/v1/recommendations?limit=${limit}`),
-            api<{ data?: Post[] }>(`/v1/discovery/trending?limit=${limit}`),
-        ])
-            .then(([recommended, trendingResponse]) => {
-                setRecommendations(recommended.data || []);
-                setTrending(trendingResponse.data || []);
-            })
-            .catch((cause) =>
-                setError(cause instanceof Error ? cause.message : t("recommendations.error")),
-            )
-            .finally(() => setLoading(false));
-        void api<{ data?: Post[] }>(`/v1/posts?limit=${limit}`)
-            .then((response) => setPosts(response.data || []))
-            .catch((cause) =>
-                setError(cause instanceof Error ? cause.message : t("postsPage.loadError")),
-            );
-    }, [t, limit]);
+        let active = true;
+        setLoading(true);
+        setError("");
+
+        void Promise.allSettled([
+            api<PostResponse>(`/v1/recommendations?limit=${requestLimit}`),
+            api<PostResponse>(`/v1/discovery/trending?limit=${requestLimit}`),
+            api<PostResponse>(`/v1/discovery/recently-viewed?limit=${requestLimit}`),
+            api<PostResponse>(`/v1/posts?limit=${requestLimit}`),
+        ]).then((results) => {
+            if (!active) return;
+            const [recommendedResult, trendingResult, viewedResult, recentResult] = results;
+            let failed = false;
+
+            if (recommendedResult.status === "fulfilled") {
+                setRecommendations(recommendedResult.value.data ?? []);
+            } else {
+                failed = true;
+            }
+
+            if (trendingResult.status === "fulfilled") {
+                setTrending(trendingResult.value.data ?? []);
+            } else {
+                failed = true;
+            }
+
+            if (viewedResult.status === "fulfilled") {
+                setRecentlyViewed(viewedResult.value.data ?? []);
+            }
+
+            if (recentResult.status === "fulfilled") {
+                setPosts(recentResult.value.data ?? []);
+            } else {
+                failed = true;
+            }
+
+            if (failed) setError(t("recommendations.error"));
+            setLoading(false);
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [t, requestLimit]);
+
+    const usedIds = new Set<string>();
+    const recommendedPosts = takeUniquePosts(recommendations, usedIds, limit);
+    const trendingPosts = takeUniquePosts(trending, usedIds, limit);
+    const recentlyViewedPosts = takeUniquePosts(recentlyViewed, usedIds, limit);
+    const recentPosts = takeUniquePosts(posts, usedIds, limit);
+    const texts = posts.filter((post) => post.contentType === "text");
+
     return (
         <Page maxWidth="full">
             <Stack
@@ -66,32 +120,49 @@ function HomePage() {
                     <ToggleButton value="compact">{t("postsPage.sixBySix")}</ToggleButton>
                 </ToggleButtonGroup>
             </Stack>
+
             {loading ? (
                 <SkeletonGrid count={12} />
-            ) : error ? (
-                <ErrorState message={error} />
             ) : (
                 <Stack spacing={{ xs: 3, sm: 4 }}>
-                    <Stack spacing={1.5}>
-                        <Typography variant="h5" component="h2">
-                            {t("recommendations.recommended")}
-                        </Typography>
-                        <PostGrid posts={recommendations.filter((post) => post.contentType !== "text").slice(0, limit)} density={density} />
-                    </Stack>
-                    {trending.length ? (
+                    {error ? <ErrorState message={error} /> : null}
+
+                    {recommendedPosts.length ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="h5" component="h2">
+                                {t("recommendations.recommended")}
+                            </Typography>
+                            <PostGrid posts={recommendedPosts} density={density} />
+                        </Stack>
+                    ) : null}
+
+                    {trendingPosts.length ? (
                         <Stack spacing={1.5}>
                             <Typography variant="h5" component="h2">
                                 {t("recommendations.trending")}
                             </Typography>
-                            <PostGrid posts={trending.filter((post) => post.contentType !== "text").slice(0, limit)} density={density} />
+                            <PostGrid posts={trendingPosts} density={density} />
                         </Stack>
                     ) : null}
-                    <Stack spacing={1.5}>
-                        <Typography variant="h5" component="h2">
-                            {t("home.recentPosts")}
-                        </Typography>
-                        <PostGrid posts={imagePosts.slice(0, limit)} density={density} />
-                    </Stack>
+
+                    {recentlyViewedPosts.length ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="h5" component="h2">
+                                {t("recommendations.recentlyViewed")}
+                            </Typography>
+                            <PostGrid posts={recentlyViewedPosts} density={density} />
+                        </Stack>
+                    ) : null}
+
+                    {recentPosts.length ? (
+                        <Stack spacing={1.5}>
+                            <Typography variant="h5" component="h2">
+                                {t("home.recentPosts")}
+                            </Typography>
+                            <PostGrid posts={recentPosts} density={density} />
+                        </Stack>
+                    ) : null}
+
                     {texts.length ? (
                         <Stack spacing={1.5}>
                             <Typography variant="h5" component="h2">
@@ -105,10 +176,11 @@ function HomePage() {
         </Page>
     );
 }
+
 const root = document.querySelector("#home-page");
 if (root)
     createRoot(root).render(
         <App>
             <HomePage />
-        </App>,
+        </App>
     );

@@ -160,7 +160,8 @@
         "error": "Some recommendation sections could not be loaded.",
         "related": "Related posts",
         "recommended": "Recommended for you",
-        "trending": "Trending"
+        "trending": "Trending",
+        "recentlyViewed": "Recently viewed"
     },
     "taxonomy": {
         "categories": "Categories",

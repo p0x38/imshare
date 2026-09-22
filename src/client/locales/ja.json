@@ -160,7 +160,8 @@
         "error": "一部のおすすめセクションを読み込めませんでした。",
         "related": "関連する投稿",
         "recommended": "おすすめ",
-        "trending": "トレンド"
+        "trending": "トレンド",
+        "recentlyViewed": "最近見た投稿"
     },
     "taxonomy": {
         "categories": "カテゴリー",
