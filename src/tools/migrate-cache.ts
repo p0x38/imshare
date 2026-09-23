@@ -42,7 +42,7 @@ async function migrateDirectory(
 async function main(): Promise<void> {
     const config = await loadConfig();
     const settings = getCacheSettings(config);
-    const legacySource = path.resolve(process.cwd(), "uploads", ".cache");
+    const legacySource = path.resolve(process.cwd(), config.storage.uploadDirectory, ".cache");
     const cacheDirectory = resolveCacheDirectory(config);
 
     await mkdir(cacheDirectory, { recursive: true });
