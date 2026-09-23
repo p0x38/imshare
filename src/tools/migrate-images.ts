@@ -572,12 +572,11 @@ async function importList(
                     throw new Error("Unsupported image extension: " + extension);
 
                 const prepared = await normalizeImage(source);
-                const existing = await prisma.upload.findUnique({
+                const existing = await prisma.upload.findFirst({
                     where: {
-                        userId_contentHash: {
-                            userId,
-                            contentHash: prepared.contentHash,
-                        },
+                        userId,
+                        contentHash: prepared.contentHash,
+                        storageArea: "uploads",
                     },
                     select: { id: true, filename: true, postId: true },
                 });
