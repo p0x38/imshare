@@ -5,6 +5,9 @@ import {
     Button,
     Card,
     CardContent,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     FormControl,
     InputLabel,
     MenuItem,
@@ -21,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { App } from "../components/App";
 import { AccountPreferences } from "../components/AccountPreferences";
 import { ApiTokens } from "../components/ApiTokens";
+import { ProfilePictureCropper } from "../components/ProfilePictureCropper";
 import { DevicesSecurity } from "../components/DevicesSecurity";
 import { OidcLoginButton } from "../components/OidcLoginButton";
 import { Page } from "../components/Page";
@@ -49,6 +53,7 @@ function AccountPage() {
     const [saving, setSaving] = useState(false);
     const [tab, setTab] = useState(0);
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [avatarCropFile, setAvatarCropFile] = useState<File | null>(null);
     const avatarInputRef = useRef<HTMLInputElement>(null);
     async function load() {
         try {
@@ -73,8 +78,8 @@ function AccountPage() {
     useEffect(() => {
         void load();
     }, []);
-    async function uploadAvatar(file: File) {
-        if (!user) return;
+    async function uploadAvatar(file: File): Promise<boolean> {
+        if (!user) return false;
         setUploadingAvatar(true);
         setError("");
         try {
@@ -93,11 +98,12 @@ function AccountPage() {
                 body: JSON.stringify({ avatarMode: "custom", avatarValue: upload.id }),
             });
             await load();
+            return true;
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : t("accountPage.avatarUploadError"));
+            return false;
         } finally {
             setUploadingAvatar(false);
-            if (avatarInputRef.current) avatarInputRef.current.value = "";
         }
     }
 
@@ -316,7 +322,8 @@ function AccountPage() {
                                                 accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/avif"
                                                 onChange={(event) => {
                                                     const file = event.target.files?.[0];
-                                                    if (file) void uploadAvatar(file);
+                                                    event.target.value = "";
+                                                    if (file) setAvatarCropFile(file);
                                                 }}
                                             />
                                         </Button>
@@ -324,6 +331,32 @@ function AccountPage() {
                                             {t("accountPage.uploadAvatarHelp")}
                                         </Typography>
                                     </Stack>
+                                    <Dialog
+                                        open={avatarCropFile !== null}
+                                        fullWidth
+                                        maxWidth="sm"
+                                        onClose={() => {
+                                            if (!uploadingAvatar) setAvatarCropFile(null);
+                                        }}
+                                    >
+                                        <DialogTitle>Crop your avatar</DialogTitle>
+                                        <DialogContent>
+                                            {avatarCropFile ? (
+                                                <ProfilePictureCropper
+                                                    file={avatarCropFile}
+                                                    onCancel={() => setAvatarCropFile(null)}
+                                                    onConfirm={async (blob) => {
+                                                        const uploaded = await uploadAvatar(
+                                                            new File([blob], "profile-picture.png", {
+                                                                type: "image/png",
+                                                            }),
+                                                        );
+                                                        if (uploaded) setAvatarCropFile(null);
+                                                    }}
+                                                />
+                                            ) : null}
+                                        </DialogContent>
+                                    </Dialog>
                                     <TextField
                                         label={t("accountPage.customAvatarValue")}
                                         value={avatarValue}
