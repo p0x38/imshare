@@ -7,6 +7,7 @@ import sharp from "sharp";
 import { thumbHashToRGBA } from "thumbhash";
 import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
+import { uploadStorageDirectory } from "../lib/upload-storage.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { cacheMaxAgeSeconds, ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
@@ -60,7 +61,7 @@ function setCacheHeaders(reply: any, output: Buffer, ttl: number) {
 
 export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
-    const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const uploadDir = uploadStorageDirectory(config, "uploads");
     const cacheSettings = getCacheSettings(config);
     const cacheDir = await ensureCacheDirectory(config);
     const uploadId = parameter.path("uploadId", { type: "string" }, { description: "Upload ID." });
@@ -205,7 +206,10 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply
                     .code(404)
                     .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
-            const source = path.resolve(uploadDir, upload.filename);
+            const sourceDirectory = upload.storageArea === "avatars"
+            ? uploadStorageDirectory(config, "avatars")
+            : uploadDir;
+        const source = path.resolve(sourceDirectory, upload.filename);
             const relative = path.relative(uploadDir, source);
             if (relative.startsWith("..") || path.isAbsolute(relative))
                 return reply
