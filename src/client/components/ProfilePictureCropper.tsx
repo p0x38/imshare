@@ -435,9 +435,9 @@ export function ProfilePictureCropper({
                         <Box
                             sx={{
                                 position: "absolute",
-                                inset: "12%",
+                                inset: 0,
                                 border: 2,
-                                borderColor: "rgba(255,255,255,0.9)",
+                                borderColor: "rgba(255,255,255,0.95)",
                                 borderRadius: "50%",
                                 boxSizing: "border-box",
                                 pointerEvents: "none",
