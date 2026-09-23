@@ -146,7 +146,7 @@ function isValidQuadrilateral(points: PointQuad): boolean {
 
 function warpImage(
     image: HTMLImageElement,
-    sourcePoints: Point[],
+    sourcePoints: PointQuad,
     imageInfo: ImageInfo,
 ): Promise<Blob> {
     const rasterScale = Math.min(
