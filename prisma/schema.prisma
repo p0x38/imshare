@@ -191,6 +191,7 @@ model Post {
   permalinkIdType    String         @default("internalId")
   permalinkKey       String?        @unique
   customPostId       String?
+  thumbnailUploadId  String?
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   userId             String
@@ -211,6 +212,7 @@ model Post {
   @@index([status, visibility, scheduledAt])
   @@index([contentType, createdAt])
   @@index([userId, permalinkKey])
+  @@index([thumbnailUploadId])
   @@map("post")
 }
 
@@ -231,6 +233,7 @@ model PostRevision {
   isNSFW             Boolean   @default(false)
   contentWarningType String?
   contentWarning     String?
+  thumbnailUploadId String?
   createdAt          DateTime  @default(now())
   createdById        String
   post               Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
