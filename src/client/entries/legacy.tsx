@@ -371,7 +371,7 @@ function ProfileSettingsPage() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const response = await api<{ data: { id: string; url: string } }>("/v1/uploads", {
+            const response = await api<{ data: { id: string; url: string } }>("/v1/uploads?area=avatar", {
                 method: "POST",
                 body: formData,
             });
