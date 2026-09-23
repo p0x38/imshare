@@ -1,9 +1,13 @@
 import {
     Alert,
+    Box,
     Button,
     Card,
     CardContent,
     Checkbox,
+    Dialog,
+    DialogContent,
+    DialogTitle,
     FormControl,
     FormControlLabel,
     IconButton,
@@ -21,6 +25,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { TagAutocomplete } from "../components/AutocompleteFields";
+import { ProfilePictureCropper } from "../components/ProfilePictureCropper";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 
@@ -65,6 +70,10 @@ function PostEditor() {
     const [saving, setSaving] = useState(false);
     const [dragging, setDragging] = useState(false);
     const [batchUploading, setBatchUploading] = useState(false);
+    const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+    const [thumbnailUploadId, setThumbnailUploadId] = useState<string | null>(null);
+    const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+    const [thumbnailUploading, setThumbnailUploading] = useState(false);
 
     useEffect(() => {
         const uploadId = new URLSearchParams(location.search).get("uploadId");
@@ -117,6 +126,10 @@ function PostEditor() {
                             .join(", "),
                     );
                     setCategoryId(value.category?.id ?? "");
+                    setThumbnailUploadId(value.thumbnailUploadId ?? null);
+                    setThumbnailPreviewUrl(
+                        value.thumbnailUrl ? new URL(value.thumbnailUrl, window.location.origin).href : null,
+                    );
                 }
             })
             .catch((cause) =>
@@ -178,6 +191,39 @@ function PostEditor() {
             setSaving(false);
         }
     }
+    async function uploadThumbnail(blob: Blob) {
+        setThumbnailUploading(true);
+        try {
+            const file = new File([blob], "thumbnail.png", { type: "image/png" });
+            const form = new FormData();
+            form.append("file", file);
+            const response = await api<{ data: { id: string; url?: string } }>("/v1/uploads", {
+                method: "POST",
+                body: form,
+            });
+            setThumbnailUploadId(response.data.id);
+            setThumbnailPreviewUrl(
+                response.data.url
+                    ? new URL(response.data.url, window.location.origin).href
+                    : URL.createObjectURL(blob),
+            );
+            setThumbnailFile(null);
+        } finally {
+            setThumbnailUploading(false);
+        }
+    }
+
+    function chooseThumbnail(file: File | undefined) {
+        if (!file) return;
+        setThumbnailFile(file);
+    }
+
+    function clearThumbnail() {
+        setThumbnailUploadId(null);
+        setThumbnailPreviewUrl(null);
+        setThumbnailFile(null);
+    }
+
     async function submit(event: React.FormEvent) {
         event.preventDefault();
         setSaving(true);
@@ -206,6 +252,7 @@ function PostEditor() {
                         uploadIds: uploadIds.length ? uploadIds : undefined,
                         tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
                         categoryId: categoryId || null,
+                        thumbnailUploadId,
                     }),
                 });
                 location.href = `/posts/${encodeURIComponent(postId)}/`;
@@ -279,6 +326,70 @@ function PostEditor() {
                                 helperText="Optional text shown with the warning."
                                 fullWidth
                             />
+                        </Stack>
+                        <Stack spacing={1.5}>
+                            <Typography variant="h6" component="h2">
+                                Custom thumbnail
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                                Choose a thumbnail image and crop it to an exact 1:1 square.
+                            </Typography>
+                            <Card
+                                variant="outlined"
+                                sx={{
+                                    position: "relative",
+                                    overflow: "hidden",
+                                    borderStyle: "dashed",
+                                    minHeight: 180,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    backgroundColor: "action.hover",
+                                }}
+                            >
+                                {thumbnailPreviewUrl ? (
+                                    <Box
+                                        component="img"
+                                        src={thumbnailPreviewUrl}
+                                        alt="Custom thumbnail preview"
+                                        sx={{
+                                            width: "100%",
+                                            maxHeight: 260,
+                                            objectFit: "contain",
+                                            display: "block",
+                                        }}
+                                    />
+                                ) : (
+                                    <Stack spacing={1} alignItems="center" sx={{ p: 3, textAlign: "center" }}>
+                                        <Typography fontWeight={600}>Drop an image here or choose one</Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            The same four-point 1:1 crop box used for profile pictures.
+                                        </Typography>
+                                    </Stack>
+                                )}
+                                <Button
+                                    component="label"
+                                    variant={thumbnailPreviewUrl ? "outlined" : "contained"}
+                                    disabled={thumbnailUploading}
+                                    sx={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)" }}
+                                >
+                                    {thumbnailPreviewUrl ? "Replace thumbnail" : "Choose thumbnail"}
+                                    <input
+                                        hidden
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/gif,image/webp,image/bmp,image/avif"
+                                        onChange={(event) => {
+                                            chooseThumbnail(event.target.files?.[0]);
+                                            event.currentTarget.value = "";
+                                        }}
+                                    />
+                                </Button>
+                            </Card>
+                            {thumbnailPreviewUrl ? (
+                                <Button color="inherit" size="small" onClick={clearThumbnail} disabled={thumbnailUploading}>
+                                    Remove custom thumbnail
+                                </Button>
+                            ) : null}
                         </Stack>
                         <TextField
                             label="Title"
@@ -434,6 +545,27 @@ function PostEditor() {
                     </Stack>
                 </CardContent>
             </Card>
+            <Dialog
+                open={thumbnailFile !== null}
+                onClose={() => {
+                    if (!thumbnailUploading) setThumbnailFile(null);
+                }}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>Crop custom thumbnail</DialogTitle>
+                <DialogContent>
+                    {thumbnailFile ? (
+                        <ProfilePictureCropper
+                            file={thumbnailFile}
+                            showCircle={false}
+                            actionLabel="Use this thumbnail"
+                            onCancel={() => setThumbnailFile(null)}
+                            onConfirm={uploadThumbnail}
+                        />
+                    ) : null}
+                </DialogContent>
+            </Dialog>
         </Page>
     );
 }
