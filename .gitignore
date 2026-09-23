@@ -8,6 +8,8 @@ node_modules/
 
 # Runtime data
 uploads/
+data/avatars/
+data/uploads/
 **/*.db
 **/*.db.backup
 .lock
@@ -24,7 +26,7 @@ coverage/
 # Tool caches
 .vite/
 .eslintcache
-.cache/
+.data/cache/
 
 # Logs
 *.log
