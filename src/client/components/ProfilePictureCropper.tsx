@@ -167,11 +167,13 @@ function warpImage(
     sourceContext.drawImage(image, 0, 0, width, height);
     const sourceData = sourceContext.getImageData(0, 0, width, height).data;
 
+    const [sourceTopLeft, sourceTopRight, sourceBottomRight, sourceBottomLeft] =
+        sourcePoints;
     const rasterPoints: PointQuad = [
-        { x: sourcePoints[0].x * rasterScale, y: sourcePoints[0].y * rasterScale },
-        { x: sourcePoints[1].x * rasterScale, y: sourcePoints[1].y * rasterScale },
-        { x: sourcePoints[2].x * rasterScale, y: sourcePoints[2].y * rasterScale },
-        { x: sourcePoints[3].x * rasterScale, y: sourcePoints[3].y * rasterScale },
+        { x: sourceTopLeft.x * rasterScale, y: sourceTopLeft.y * rasterScale },
+        { x: sourceTopRight.x * rasterScale, y: sourceTopRight.y * rasterScale },
+        { x: sourceBottomRight.x * rasterScale, y: sourceBottomRight.y * rasterScale },
+        { x: sourceBottomLeft.x * rasterScale, y: sourceBottomLeft.y * rasterScale },
     ];
     const homography = solveHomography(rasterPoints);
 
@@ -385,7 +387,14 @@ export function ProfilePictureCropper({
             return;
         }
 
-        if (drag.pointIndex === undefined) return;
+        const pointIndex = drag.pointIndex;
+        if (
+            pointIndex === undefined ||
+            pointIndex < 0 ||
+            pointIndex > 3
+        ) {
+            return;
+        }
         setPoints(() => {
             const next: PointQuad = [
                 { ...drag.originPoints[0] },
@@ -393,10 +402,8 @@ export function ProfilePictureCropper({
                 { ...drag.originPoints[2] },
                 { ...drag.originPoints[3] },
             ];
-            const index = drag.pointIndex;
-            const origin = getQuadPoint(drag.originPoints, index);
-            if (index < 0 || index > 3) return next;
-            next[index as 0 | 1 | 2 | 3] = {
+            const origin = getQuadPoint(drag.originPoints, pointIndex);
+            next[pointIndex] = {
                 x: clamp01(origin.x + dx),
                 y: clamp01(origin.y + dy),
             };
