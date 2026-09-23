@@ -287,12 +287,17 @@ export function ProfilePictureCropper({
     useEffect(() => {
         const element = cropRef.current;
         if (!element) return;
-        const update = () => setCropSize(element.clientWidth);
+
+        const update = () => {
+            const nextSize = element.clientWidth;
+            if (nextSize > 0) setCropSize(nextSize);
+        };
+
         update();
         const observer = new ResizeObserver(update);
         observer.observe(element);
         return () => observer.disconnect();
-    }, [imageInfo]);
+    }, [imageInfo, cropSize]);
 
     useEffect(() => {
         if (!src) return;
@@ -471,7 +476,21 @@ export function ProfilePictureCropper({
         );
 
     if (!renderInfo)
-        return <Typography color="text.secondary">Preparing image…</Typography>;
+        return (
+            <Stack spacing={2} sx={{ py: 1 }}>
+                <Box
+                    ref={cropRef}
+                    sx={{
+                        width: "100%",
+                        maxWidth: 420,
+                        mx: "auto",
+                        aspectRatio: "1 / 1",
+                        visibility: "hidden",
+                    }}
+                />
+                <Typography color="text.secondary">Preparing image…</Typography>
+            </Stack>
+        );
 
     const displayPoints = points.map((point) => ({
         x: point.x * cropSize,
