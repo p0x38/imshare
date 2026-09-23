@@ -111,6 +111,12 @@ export const postCreateInput = z
             .nullable()
             .optional()
             .meta({ description: "Optional category identifier." }),
+        thumbnailUploadId: z
+            .string()
+            .min(1)
+            .nullable()
+            .optional()
+            .meta({ description: "Optional owned upload used as the post thumbnail." }),
         uploadIds: z
             .array(z.string().min(1))
             .max(100)
