@@ -18,7 +18,7 @@ Self-hosted image archive and sharing server built with TypeScript, Fastify, Pri
 - pnpm 11.x
 - SQLite
 
-The repository declares Node.js `>=24` and uses pnpm `11.25.0`. The current application version is `1.0.0`.
+The repository declares Node.js `>=24` and uses pnpm `11.25.0`. The current application version is `1.4.2`.
 
 ## Setup
 
@@ -74,8 +74,15 @@ server {
 }
 
 storage {
-    uploadDirectory = "uploads"
+    dataDirectory = "data"
+    uploadDirectory = "data/uploads"
+    avatarDirectory = "data/avatars"
     maxFileSize = 25MiB
+
+    cache {
+        ttl = 30d
+        useHashedDirectory = true
+    }
 }
 
 features {
