@@ -130,12 +130,27 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 tags?: string[];
                 tagMode?: "replace" | "addition" | "subtraction";
                 categoryId?: string | null;
+                thumbnailUploadId?: string | null;
                 uploadIds?: string[];
             };
             if (!body.title.trim())
                 return reply
                     .code(400)
                     .send({ error: { code: "INVALID_POST", message: "title is required." } });
+            const thumbnailUploadId = body.thumbnailUploadId ?? null;
+            if (thumbnailUploadId) {
+                const thumbnail = await prisma.upload.findFirst({
+                    where: { id: thumbnailUploadId, userId: user.id },
+                    select: { id: true },
+                });
+                if (!thumbnail)
+                    return reply.code(403).send({
+                        error: {
+                            code: "INVALID_THUMBNAIL",
+                            message: "You can only use your own uploaded image as a thumbnail.",
+                        },
+                    });
+            }
             const uploadIds = [...new Set(body.uploadIds ?? [])];
             if (uploadIds.length > 0) {
                 const ownedUploads = await prisma.upload.count({
@@ -180,6 +195,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         allowDownload: body.allowDownload ?? true,
                         ...lifecycle,
                         categoryId: body.categoryId,
+                        thumbnailUploadId,
                         userId: user.id,
                         tags: { create: tags.map((tag) => ({ tagId: tag.id })) },
                         uploads: uploadIds.length
@@ -704,12 +720,26 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 contentWarningType?: string | null;
                 contentWarning?: string | null;
                 categoryId?: string | null;
+                thumbnailUploadId?: string | null;
                 tags?: string[];
             };
             if (body.title !== undefined && !body.title.trim())
                 return reply
                     .code(400)
                     .send({ error: { code: "INVALID_POST", message: "title cannot be empty." } });
+            if (body.thumbnailUploadId !== undefined && body.thumbnailUploadId !== null) {
+                const thumbnail = await prisma.upload.findFirst({
+                    where: { id: body.thumbnailUploadId, userId: user.id },
+                    select: { id: true },
+                });
+                if (!thumbnail)
+                    return reply.code(403).send({
+                        error: {
+                            code: "INVALID_THUMBNAIL",
+                            message: "You can only use your own uploaded image as a thumbnail.",
+                        },
+                    });
+            }
             const tags = body.tags ? await findTags(body.tags) : [];
             const lifecycle =
                 body.status !== undefined ||
@@ -775,6 +805,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         categoryId: existing.categoryId,
                         tagsJson: JSON.stringify(existing.tags.map((tag) => tag.tagId)),
                         contentWarning: existing.contentWarning,
+                        thumbnailUploadId: existing.thumbnailUploadId,
                         createdById: user.id,
                     },
                 });
@@ -798,6 +829,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                   : null,
                         allowDownload: body.allowDownload,
                         categoryId: body.categoryId,
+                        thumbnailUploadId:
+                            body.thumbnailUploadId === undefined
+                                ? undefined
+                                : body.thumbnailUploadId,
                         ...permalink,
                         ...(body.tags
                             ? { tags: { create: tags.map((tag) => ({ tagId: tag.id })) } }
