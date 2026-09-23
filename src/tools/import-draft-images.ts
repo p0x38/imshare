@@ -218,12 +218,11 @@ async function preflight(
             }
 
             const image = await prepareImage(source);
-            const existing = await prisma.upload.findUnique({
+            const existing = await prisma.upload.findFirst({
                 where: {
-                    userId_contentHash: {
-                        userId,
-                        contentHash: image.contentHash,
-                    },
+                    userId,
+                    contentHash: image.contentHash,
+                    storageArea: "uploads",
                 },
                 select: { id: true, postId: true },
             });
@@ -293,12 +292,11 @@ async function createDraft(
     userId: string,
     image: PreparedImage,
 ): Promise<{ postId: string; uploadId: string; reused: boolean }> {
-    const existing = await prisma.upload.findUnique({
+    const existing = await prisma.upload.findFirst({
         where: {
-            userId_contentHash: {
-                userId,
-                contentHash: image.contentHash,
-            },
+            userId,
+            contentHash: image.contentHash,
+            storageArea: "uploads",
         },
         select: { id: true, postId: true },
     });
@@ -462,12 +460,11 @@ async function main(): Promise<void> {
 
         for (const { source, image } of preparedFiles) {
             try {
-                const existing = await prisma.upload.findUnique({
+                const existing = await prisma.upload.findFirst({
                     where: {
-                        userId_contentHash: {
-                            userId: user.id,
-                            contentHash: image.contentHash,
-                        },
+                        userId: user.id,
+                        contentHash: image.contentHash,
+                        storageArea: "uploads",
                     },
                     select: { id: true, postId: true },
                 });
