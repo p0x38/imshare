@@ -27,6 +27,7 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "migrate:uploads": "tsx src/tools/migrate-uploads.ts",
+        "migrate:avatars": "tsx src/tools/migrate-avatars.ts",
         "migrate:images": "tsx src/tools/migrate-images.ts",
         "import:draft-images": "tsx src/tools/import-draft-images.ts",
         "migrate:cache": "tsx src/tools/migrate-cache.ts",
