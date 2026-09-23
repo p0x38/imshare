@@ -174,6 +174,7 @@ function PostEditor() {
                     .map((value) => value.trim())
                     .filter(Boolean),
                 categoryId: categoryId || null,
+                thumbnailUploadId,
             }),
         });
         return response.data;
