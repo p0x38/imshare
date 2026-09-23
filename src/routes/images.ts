@@ -210,7 +210,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             ? uploadStorageDirectory(config, "avatars")
             : uploadDir;
         const source = path.resolve(sourceDirectory, upload.filename);
-            const relative = path.relative(uploadDir, source);
+            const relative = path.relative(sourceDirectory, source);
             if (relative.startsWith("..") || path.isAbsolute(relative))
                 return reply
                     .code(404)
