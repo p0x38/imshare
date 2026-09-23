@@ -88,12 +88,12 @@ export const avatarRoutes: FastifyPluginAsync = async (fastify) => {
                 const value = user.avatarValue.trim();
                 if (/^https?:\/\//i.test(value)) return reply.redirect(value);
                 const upload = await prisma.upload.findUnique({
-                    where: { id: value },
-                    select: { userId: true },
+                    where: { id: value, storageArea: "avatars" },
+                    select: { userId: true, filename: true },
                 });
                 if (upload?.userId === userId)
                     return reply.redirect(
-                        `/api/v1/posts/image/${encodeURIComponent(value)}?width=256&height=256&fit=cover&format=webp`,
+                        `/avatars/${String(upload.filename).replaceAll("\\", "/")}`,
                     );
             }
             reply.header("content-type", "image/svg+xml; charset=utf-8");
