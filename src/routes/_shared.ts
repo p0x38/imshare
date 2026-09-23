@@ -54,6 +54,7 @@ export function postView(post: any) {
         permalinkIdType: post.permalinkIdType,
         customPostId: post.customPostId,
         permalinkKey: post.permalinkKey,
+        thumbnailUploadId: post.thumbnailUploadId ?? null,
         thumbnailUrl: post.thumbnailUploadId
             ? `/v1/posts/image/${encodeURIComponent(post.thumbnailUploadId)}`
             : null,
