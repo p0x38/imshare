@@ -337,6 +337,11 @@ function PostEditor() {
                             </Typography>
                             <Card
                                 variant="outlined"
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => {
+                                    event.preventDefault();
+                                    chooseThumbnail(event.dataTransfer.files?.[0]);
+                                }}
                                 sx={{
                                     position: "relative",
                                     overflow: "hidden",
