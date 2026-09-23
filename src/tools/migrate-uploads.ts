@@ -160,6 +160,7 @@ async function main(): Promise<void> {
                 id: true,
                 filename: true,
                 contentHash: true,
+                storageArea: true,
             },
             orderBy: { createdAt: "asc" },
         });
@@ -324,6 +325,7 @@ async function main(): Promise<void> {
             let mismatched = 0;
             let pathMismatches = 0;
 
+            const legacyFiles = await collectFiles(legacyUploadDir).catch(() => []);
             console.log(
                 "Auditing " +
                     files.length +
