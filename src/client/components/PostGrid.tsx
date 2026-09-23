@@ -124,11 +124,11 @@ export function PostGrid({
                             href={`/posts/${encodeURIComponent(post.id)}`}
                             sx={{ display: "block", textAlign: "left", height: "100%" }}
                         >
-                            {post.uploads?.[0] ? (
+                            {post.thumbnailUrl || post.uploads?.[0] ? (
                                 <CardMedia
                                     component="img"
-                                    image={imageUrl(post.uploads[0].url)}
-                                    alt={post.uploads[0].alt || post.title || ""}
+                                    image={imageUrl(post.thumbnailUrl || post.uploads?.[0]?.url || "")}
+                                    alt={post.title || ""}
                                     loading="lazy"
                                     sx={{
                                         aspectRatio: "1 / 1",
