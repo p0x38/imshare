@@ -29,6 +29,15 @@ const RESERVED_HANDLES = new Set([
     "privacy",
     "terms",
 ]);
+function isExternalAvatarUrl(value: string): boolean {
+    try {
+        const url = new URL(value);
+        return url.protocol === "http:" || url.protocol === "https:";
+    } catch {
+        return false;
+    }
+}
+
 const publicPostWhere = {
     status: "published",
     visibility: "public",
@@ -420,6 +429,48 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     .send({
                         error: { code: "INVALID_AVATAR_MODE", message: "Unsupported avatar mode." },
                     });
+            let nextAvatarValue: string | null | undefined = body.avatarValue;
+
+            if (body.avatarMode !== undefined || body.avatarValue !== undefined) {
+                const currentAvatar = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { avatarMode: true, avatarValue: true },
+                });
+                if (!currentAvatar)
+                    return reply.code(404).send({
+                        error: { code: "USER_NOT_FOUND", message: "User not found." },
+                    });
+
+                const nextAvatarMode = body.avatarMode ?? currentAvatar.avatarMode;
+                nextAvatarValue =
+                    body.avatarValue !== undefined
+                        ? body.avatarValue?.trim() || null
+                        : currentAvatar.avatarValue;
+
+                if (nextAvatarMode !== "custom") {
+                    nextAvatarValue = null;
+                } else if (!nextAvatarValue) {
+                    return reply.code(400).send({
+                        error: {
+                            code: "CUSTOM_AVATAR_REQUIRED",
+                            message: "Custom avatar mode requires an image upload or an http(s) avatar URL.",
+                        },
+                    });
+                } else if (!isExternalAvatarUrl(nextAvatarValue)) {
+                    const upload = await prisma.upload.findFirst({
+                        where: { id: nextAvatarValue, userId },
+                        select: { id: true },
+                    });
+                    if (!upload)
+                        return reply.code(400).send({
+                            error: {
+                                code: "INVALID_AVATAR_VALUE",
+                                message: "Custom avatar upload was not found or is not owned by this user.",
+                            },
+                        });
+                }
+            }
+
             try {
                 const updated = await prisma.user.update({
                     where: { id: userId },
@@ -435,8 +486,8 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                             ? { githubUrl: body.githubUrl?.trim() || null }
                             : {}),
                         ...(body.avatarMode !== undefined ? { avatarMode: body.avatarMode } : {}),
-                        ...(body.avatarValue !== undefined
-                            ? { avatarValue: body.avatarValue?.trim() || null }
+                        ...(body.avatarMode !== undefined || body.avatarValue !== undefined
+                            ? { avatarValue: nextAvatarValue ?? null }
                             : {}),
                         ...(body.profileBannerUrl !== undefined
                             ? { profileBannerUrl: body.profileBannerUrl?.trim() || null }

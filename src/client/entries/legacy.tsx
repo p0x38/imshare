@@ -371,18 +371,14 @@ function ProfileSettingsPage() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const response = await api<{ data: { id: string } }>("/v1/uploads", {
+            const response = await api<{ data: { id: string; url: string } }>("/v1/uploads", {
                 method: "POST",
                 body: formData,
             });
             setAvatarUploadId(response.data.id);
             setExternalAvatarUrl("");
             setAvatarMode("custom");
-            const previewUrl = URL.createObjectURL(file);
-            setAvatarPreviewUrl((current) => {
-                if (current) URL.revokeObjectURL(current);
-                return previewUrl;
-            });
+            setAvatarPreviewUrl(response.data.url);
             setAvatarCropFile(null);
         } catch (cause) {
             setError(
@@ -399,10 +395,7 @@ function ProfileSettingsPage() {
         setAvatarUploadId("");
         setExternalAvatarUrl("");
         setAvatarMode("initials");
-        setAvatarPreviewUrl((current) => {
-            if (current) URL.revokeObjectURL(current);
-            return null;
-        });
+        setAvatarPreviewUrl(null);
     }
 
     async function save(e: React.FormEvent) {
@@ -411,7 +404,7 @@ function ProfileSettingsPage() {
         setSaving(true);
         setError("");
         try {
-            await api(`/v1/users/${encodeURIComponent(user.id)}`, {
+            const response = await api<{ data: User }>(`/v1/users/${encodeURIComponent(user.id)}`, {
                 method: "PATCH",
                 body: JSON.stringify({
                     avatarMode,
@@ -423,6 +416,8 @@ function ProfileSettingsPage() {
                     accentColor: accent,
                 }),
             });
+            setUser(response.data);
+            setAvatarPreviewUrl(null);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to save profile settings.");
         } finally {
@@ -514,10 +509,7 @@ function ProfileSettingsPage() {
                                         onChange={(event) => {
                                             setExternalAvatarUrl(event.target.value);
                                             setAvatarUploadId("");
-                                            setAvatarPreviewUrl((current) => {
-                                                if (current) URL.revokeObjectURL(current);
-                                                return null;
-                                            });
+                                            setAvatarPreviewUrl(null);
                                         }}
                                         type="url"
                                         helperText="Use an image URL instead of uploading a picture."
@@ -537,7 +529,7 @@ function ProfileSettingsPage() {
                                                     file={avatarCropFile}
                                                     onCancel={() => setAvatarCropFile(null)}
                                                     onConfirm={(blob) =>
-                                                        void handleAvatarFile(
+                                                        handleAvatarFile(
                                                             new File([blob], "profile-picture.png", {
                                                                 type: "image/png",
                                                             }),

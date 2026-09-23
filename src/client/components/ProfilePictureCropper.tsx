@@ -20,7 +20,7 @@ export function ProfilePictureCropper({
 }: {
     file: File;
     onCancel: () => void;
-    onConfirm: (blob: Blob) => void;
+    onConfirm: (blob: Blob) => void | Promise<void>;
 }) {
     const cropRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
@@ -81,7 +81,7 @@ export function ProfilePictureCropper({
             x: (cropSize - width) / 2,
             y: (cropSize - height) / 2,
         });
-    }, [imageInfo, cropSize, zoom]);
+    }, [imageInfo, cropSize]);
 
     function clamp(next: CropPosition, scale: number): CropPosition {
         if (!imageInfo || cropSize <= 0) return next;
@@ -91,6 +91,36 @@ export function ProfilePictureCropper({
             x: Math.min(0, Math.max(cropSize - width, next.x)),
             y: Math.min(0, Math.max(cropSize - height, next.y)),
         };
+    }
+
+    function changeZoom(nextZoom: number) {
+        if (nextZoom < 1 || nextZoom > 3) return;
+        if (!imageInfo || cropSize <= 0) {
+            setZoom(nextZoom);
+            return;
+        }
+        const baseScale = Math.max(
+            cropSize / imageInfo.width,
+            cropSize / imageInfo.height,
+        );
+        const oldScale = baseScale * zoom;
+        const newScale = baseScale * nextZoom;
+        if (oldScale !== newScale) {
+            setPosition((current) =>
+                clamp(
+                    {
+                        x:
+                            cropSize / 2 -
+                            ((cropSize / 2 - current.x) / oldScale) * newScale,
+                        y:
+                            cropSize / 2 -
+                            ((cropSize / 2 - current.y) / oldScale) * newScale,
+                    },
+                    newScale,
+                ),
+            );
+        }
+        setZoom(nextZoom);
     }
 
     function move(event: React.PointerEvent<HTMLDivElement>) {
@@ -163,7 +193,7 @@ export function ProfilePictureCropper({
                     "image/png",
                 );
             });
-            onConfirm(blob);
+            await onConfirm(blob);
         } finally {
             setWorking(false);
         }
@@ -222,7 +252,8 @@ export function ProfilePictureCropper({
                 onPointerMove={move}
                 onPointerUp={(event) => {
                     dragRef.current = null;
-                    event.currentTarget.releasePointerCapture(event.pointerId);
+                    if (event.currentTarget.hasPointerCapture(event.pointerId))
+                        event.currentTarget.releasePointerCapture(event.pointerId);
                 }}
                 onPointerCancel={() => {
                     dragRef.current = null;
@@ -274,7 +305,9 @@ export function ProfilePictureCropper({
                     min={1}
                     max={3}
                     step={0.01}
-                    onChange={(_, value) => setZoom(value as number)}
+                    onChange={(_, value) =>
+                        changeZoom(Array.isArray(value) ? value[0] ?? 1 : value)
+                    }
                     valueLabelDisplay="auto"
                     aria-label="Profile picture zoom"
                 />
