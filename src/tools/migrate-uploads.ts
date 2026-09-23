@@ -145,6 +145,11 @@ async function main(): Promise<void> {
     const options = parseOptions(process.argv.slice(2));
     const config = await loadConfig();
     const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const legacyUploadDir = path.resolve(process.cwd(), "uploads");
+    const sourceDirectories = [
+        uploadDir,
+        ...(path.resolve(legacyUploadDir) === path.resolve(uploadDir) ? [] : [legacyUploadDir]),
+    ];
 
     const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
     const prisma = new PrismaClient({ adapter });
@@ -169,8 +174,8 @@ async function main(): Promise<void> {
             });
             if (!user) throw new Error("User not found: " + userId);
 
-            const existing = await prisma.upload.findUnique({
-                where: { userId_contentHash: { userId, contentHash } },
+            const existing = await prisma.upload.findFirst({
+                where: { userId, contentHash, storageArea: "uploads" },
                 select: { id: true, filename: true },
             });
             if (existing) {
@@ -185,14 +190,25 @@ async function main(): Promise<void> {
                 return;
             }
 
-            const relativeSource = await findFileByHash(uploadDir, contentHash);
-            if (!relativeSource) {
+            let sourceDirectory: string | undefined;
+            let relativeSource: string | undefined;
+            for (const directory of sourceDirectories) {
+                relativeSource = await findFileByHash(directory, contentHash);
+                if (relativeSource) {
+                    sourceDirectory = directory;
+                    break;
+                }
+            }
+            if (!relativeSource || !sourceDirectory) {
                 throw new Error(
-                    "No file with SHA-256 " + contentHash + " was found under " + uploadDir,
+                    "No file with SHA-256 " +
+                        contentHash +
+                        " was found under " +
+                        sourceDirectories.join(" or "),
                 );
             }
 
-            const source = resolveUploadPath(uploadDir, relativeSource);
+            const source = resolveUploadPath(sourceDirectory, relativeSource);
             const sourceStats = await stat(source);
             const extension = path.extname(relativeSource).toLowerCase();
             const mimeTypes: Record<string, string> = {
@@ -275,6 +291,7 @@ async function main(): Promise<void> {
                         thumbhash,
                         metadataJson,
                         userId,
+                        storageArea: "uploads",
                     },
                 });
             } catch (error) {
@@ -306,23 +323,29 @@ async function main(): Promise<void> {
             let missing = 0;
             let mismatched = 0;
             let pathMismatches = 0;
-            const hashForAudit = new Map<string, string>();
 
             console.log(
                 "Auditing " +
                     files.length +
-                    " file(s) against " +
-                    uploads.length +
+                    " file(s) in the configured upload directory and " +
+                    legacyFiles.length +
+                    " legacy file(s) against " +
+                    referenced.size +
                     " DB upload(s)...",
             );
 
-            for (const relativeFilename of files) {
-                const normalized = relativeFilename.replaceAll("\\\\", "/");
-                const hash = await sha256File(resolveUploadPath(uploadDir, normalized));
-                hashForAudit.set(normalized, hash);
+            const inspectFiles = [
+                ...files.map((filename) => ({ directory: uploadDir, filename })),
+                ...legacyFiles.map((filename) => ({ directory: legacyUploadDir, filename })),
+            ];
+
+            for (const item of inspectFiles) {
+                const normalized = item.filename.replaceAll("\\", "/");
+                const source = resolveUploadPath(item.directory, normalized);
+                const hash = await sha256File(source);
                 const upload = referenced.get(normalized);
 
-                if (upload) {
+                if (upload && item.directory === uploadDir) {
                     if (upload.contentHash !== hash) {
                         mismatched++;
                         console.error(
@@ -336,6 +359,7 @@ async function main(): Promise<void> {
                                 hash,
                         );
                     }
+
                     const expected = targetFilename(hash, path.extname(normalized).toLowerCase());
                     if (normalized !== expected) {
                         pathMismatches++;
@@ -349,14 +373,16 @@ async function main(): Promise<void> {
                         );
                     }
                 } else {
-                    const matches = byHash.get(hash) ?? [];
+                    const matches = [...referenced.values()].filter(
+                        (candidate) => candidate.contentHash === hash,
+                    );
                     if (matches.length) {
                         const expected = targetFilename(
                             hash,
                             path.extname(normalized).toLowerCase(),
                         );
                         console.log(
-                            "DUPLICATE FILE " +
+                            (item.directory === legacyUploadDir ? "LEGACY DUPLICATE " : "DUPLICATE FILE ") +
                                 normalized +
                                 " sha256=" +
                                 hash +
@@ -367,24 +393,29 @@ async function main(): Promise<void> {
                         );
                     } else {
                         unreferenced++;
-                        console.error("UNREFERENCED " + normalized + " sha256=" + hash);
+                        console.error(
+                            (item.directory === legacyUploadDir ? "LEGACY UNREFERENCED " : "UNREFERENCED ") +
+                                normalized +
+                                " sha256=" +
+                                hash,
+                        );
                     }
                 }
             }
 
-            for (const upload of uploads) {
-                const filename = upload.filename.replaceAll("\\\\", "/");
+            for (const upload of referenced.values()) {
+                const filename = upload.filename.replaceAll("\\", "/");
                 if (!files.includes(filename)) {
                     missing++;
-                    console.error("MISSING FILE " + upload.id + ": " + filename);
+                    console.error("MISSING " + upload.id + ": " + filename);
                 }
             }
 
             console.log(
                 "Audit complete: " +
-                    files.length +
+                    inspectFiles.length +
                     " files, " +
-                    uploads.length +
+                    referenced.size +
                     " DB uploads; " +
                     unreferenced +
                     " unreferenced, " +
@@ -406,15 +437,27 @@ async function main(): Promise<void> {
             let mismatched = 0;
 
             for (const upload of uploads) {
-                if (!upload.contentHash || isLegacyFilename(upload.filename)) continue;
+                if (
+                    upload.storageArea !== "uploads" ||
+                    !upload.contentHash ||
+                    isLegacyFilename(upload.filename)
+                )
+                    continue;
 
                 checked++;
-                let source: string;
-                try {
-                    source = resolveUploadPath(uploadDir, upload.filename);
-                } catch (error) {
-                    mismatched++;
-                    console.error("UNSAFE " + upload.id + ": " + String(error));
+                let source: string | undefined;
+                for (const directory of sourceDirectories) {
+                    try {
+                        const candidate = resolveUploadPath(directory, upload.filename);
+                        await access(candidate);
+                        source = candidate;
+                        break;
+                    } catch {}
+                }
+
+                if (!source) {
+                    missing++;
+                    console.error("MISSING " + upload.id + ": " + upload.filename);
                     continue;
                 }
 
@@ -450,13 +493,15 @@ async function main(): Promise<void> {
             return;
         }
 
-        const legacy = uploads.filter((upload) => isLegacyFilename(upload.filename));
+        const legacy = uploads.filter(
+            (upload) => upload.storageArea === "uploads" && isLegacyFilename(upload.filename),
+        );
         console.log(
             "Found " +
                 legacy.length +
-                " legacy flat upload(s) out of " +
-                uploads.length +
-                " total upload(s).",
+                " legacy flat DB upload(s) out of " +
+                uploads.filter((upload) => upload.storageArea === "uploads").length +
+                " normal upload(s).",
         );
 
         let migrated = 0;
@@ -464,18 +509,20 @@ async function main(): Promise<void> {
         let conflicts = 0;
 
         for (const upload of legacy) {
-            let source: string;
-            try {
-                source = resolveUploadPath(uploadDir, upload.filename);
-            } catch (error) {
-                conflicts++;
-                console.error("UNSAFE " + upload.id + ": " + String(error));
-                continue;
+            let sourceDirectory: string | undefined;
+            let source: string | undefined;
+
+            for (const directory of sourceDirectories) {
+                try {
+                    const candidate = resolveUploadPath(directory, upload.filename);
+                    await access(candidate);
+                    sourceDirectory = directory;
+                    source = candidate;
+                    break;
+                } catch {}
             }
 
-            try {
-                await access(source);
-            } catch {
+            if (!source || !sourceDirectory) {
                 missing++;
                 console.error("MISSING " + upload.id + ": " + upload.filename);
                 continue;
@@ -488,6 +535,8 @@ async function main(): Promise<void> {
 
             console.log(
                 (options.apply ? "MIGRATE " : "WOULD MIGRATE ") +
+                    sourceDirectory +
+                    path.sep +
                     upload.filename +
                     " -> " +
                     destinationFilename,
@@ -532,11 +581,13 @@ async function main(): Promise<void> {
                 data: {
                     filename: destinationFilename,
                     contentHash: actualHash,
+                    storageArea: "uploads",
                 },
             });
 
-            if (options.deleteLegacy || !destinationExists) {
-                await unlink(source).catch(() => undefined);
+            if (options.deleteLegacy || !destinationExists || sourceDirectory !== uploadDir) {
+                if (sourceDirectory !== uploadDir || upload.filename !== destinationFilename)
+                    await unlink(source).catch(() => undefined);
             }
 
             migrated++;
@@ -549,7 +600,6 @@ async function main(): Promise<void> {
                 (missing ? " " + missing + " missing file(s) need attention." : "") +
                 (conflicts ? " " + conflicts + " conflict(s) need attention." : ""),
         );
-
         if (missing || conflicts) process.exitCode = 1;
     } finally {
         await prisma.$disconnect();
