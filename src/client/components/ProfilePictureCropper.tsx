@@ -93,10 +93,14 @@ export function ProfilePictureCropper({
     file,
     onCancel,
     onConfirm,
+    showCircle = true,
+    actionLabel = "Use this picture",
 }: {
     file: File;
     onCancel: () => void;
     onConfirm: (blob: Blob) => void | Promise<void>;
+    showCircle?: boolean;
+    actionLabel?: string;
 }) {
     const stageRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
@@ -432,17 +436,19 @@ export function ProfilePictureCropper({
                             pointerEvents: "none",
                         }}
                     >
-                        <Box
-                            sx={{
-                                position: "absolute",
-                                inset: 0,
-                                border: 2,
-                                borderColor: "rgba(255,255,255,0.95)",
-                                borderRadius: "50%",
-                                boxSizing: "border-box",
-                                pointerEvents: "none",
-                            }}
-                        />
+                        {showCircle ? (
+                            <Box
+                                sx={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    border: 2,
+                                    borderColor: "rgba(255,255,255,0.95)",
+                                    borderRadius: "50%",
+                                    boxSizing: "border-box",
+                                    pointerEvents: "none",
+                                }}
+                            />
+                        ) : null}
                     </Box>
                 ) : null}
 
@@ -550,7 +556,7 @@ export function ProfilePictureCropper({
                     Cancel
                 </Button>
                 <Button variant="contained" onClick={() => void confirm()} disabled={working}>
-                    {working ? "Cropping…" : "Use this picture"}
+                    {working ? "Cropping…" : actionLabel}
                 </Button>
             </Stack>
         </Stack>
