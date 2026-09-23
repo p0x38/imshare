@@ -11,6 +11,7 @@ export interface ServerConfig {
     storage: {
         dataDirectory?: string;
         uploadDirectory: string;
+        avatarDirectory?: string;
         maxFileSize: number;
         cache?: { ttl?: number; useHashedDirectory?: boolean };
     };
@@ -123,6 +124,7 @@ const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     storage: {
         dataDirectory: "data",
+        avatarDirectory: "data/avatars",
         cache: { ttl: 30 * 86_400_000, useHashedDirectory: true },
     },
     site: { description: "Self-hosted image archive and sharing server" },
@@ -265,6 +267,7 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
         storage: {
             ...config.storage,
             dataDirectory: config.storage.dataDirectory ?? DEFAULTS.storage.dataDirectory,
+            avatarDirectory: config.storage.avatarDirectory ?? DEFAULTS.storage.avatarDirectory,
             cache: { ...DEFAULTS.storage.cache, ...config.storage.cache },
         },
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
@@ -312,6 +315,9 @@ function isServerConfig(value: unknown): value is ServerConfig {
         (storage.dataDirectory === undefined ||
             (typeof storage.dataDirectory === "string" && storage.dataDirectory.length > 0)) &&
         typeof storage.uploadDirectory === "string" &&
+        (storage.avatarDirectory === undefined ||
+            (typeof storage.avatarDirectory === "string" && storage.avatarDirectory.length > 0)) &&
+        storage.uploadDirectory.length > 0 &&
         storage.uploadDirectory.length > 0 &&
         (storage.cache === undefined ||
             (isObject(storage.cache) &&
