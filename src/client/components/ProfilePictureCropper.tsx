@@ -10,6 +10,19 @@ interface Point {
     y: number;
 }
 
+type PointQuad = [Point, Point, Point, Point];
+type MatrixRow = [number, number, number, number, number, number, number, number, number];
+type Matrix = [
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+    MatrixRow,
+];
+
 interface ImageInfo {
     width: number;
     height: number;
@@ -30,40 +43,103 @@ function clamp01(value: number): number {
     return Math.min(1, Math.max(0, value));
 }
 
-function solveHomography(source: Point[]): Homography {
-    const target: Point[] = [
+function solveHomography(source: PointQuad): Homography {
+    const target: PointQuad = [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
         { x: 1, y: 1 },
         { x: 0, y: 1 },
     ];
-    const matrix = target.flatMap((point, index) => {
-        const destination = source[index];
-        return [
-            [
-                point.x,
-                point.y,
-                1,
-                0,
-                0,
-                0,
-                -destination.x * point.x,
-                -destination.x * point.y,
-                destination.x,
-            ],
-            [
-                0,
-                0,
-                0,
-                point.x,
-                point.y,
-                1,
-                -destination.y * point.x,
-                -destination.y * point.y,
-                destination.y,
-            ],
-        ];
-    });
+    const matrix: Matrix = [
+        [
+            target[0].x,
+            target[0].y,
+            1,
+            0,
+            0,
+            0,
+            -source[0].x * target[0].x,
+            -source[0].x * target[0].y,
+            source[0].x,
+        ],
+        [
+            0,
+            0,
+            0,
+            target[0].x,
+            target[0].y,
+            1,
+            -source[0].y * target[0].x,
+            -source[0].y * target[0].y,
+            source[0].y,
+        ],
+        [
+            target[1].x,
+            target[1].y,
+            1,
+            0,
+            0,
+            0,
+            -source[1].x * target[1].x,
+            -source[1].x * target[1].y,
+            source[1].x,
+        ],
+        [
+            0,
+            0,
+            0,
+            target[1].x,
+            target[1].y,
+            1,
+            -source[1].y * target[1].x,
+            -source[1].y * target[1].y,
+            source[1].y,
+        ],
+        [
+            target[2].x,
+            target[2].y,
+            1,
+            0,
+            0,
+            0,
+            -source[2].x * target[2].x,
+            -source[2].x * target[2].y,
+            source[2].x,
+        ],
+        [
+            0,
+            0,
+            0,
+            target[2].x,
+            target[2].y,
+            1,
+            -source[2].y * target[2].x,
+            -source[2].y * target[2].y,
+            source[2].y,
+        ],
+        [
+            target[3].x,
+            target[3].y,
+            1,
+            0,
+            0,
+            0,
+            -source[3].x * target[3].x,
+            -source[3].x * target[3].y,
+            source[3].x,
+        ],
+        [
+            0,
+            0,
+            0,
+            target[3].x,
+            target[3].y,
+            1,
+            -source[3].y * target[3].x,
+            -source[3].y * target[3].y,
+            source[3].y,
+        ],
+    ];
 
     for (let column = 0; column < 8; column += 1) {
         let pivot = column;
@@ -72,13 +148,17 @@ function solveHomography(source: Point[]): Homography {
                 pivot = row;
             }
         }
+
         if (Math.abs(matrix[pivot][column]) < 1e-10) {
             throw new Error("The crop points are too close together.");
         }
+
         [matrix[column], matrix[pivot]] = [matrix[pivot], matrix[column]];
 
         const divisor = matrix[column][column];
-        for (let j = column; j < 9; j += 1) matrix[column][j] /= divisor;
+        for (let j = column; j < 9; j += 1) {
+            matrix[column][j] /= divisor;
+        }
 
         for (let row = 0; row < 8; row += 1) {
             if (row === column) continue;
@@ -102,7 +182,7 @@ function solveHomography(source: Point[]): Homography {
     ];
 }
 
-function isValidQuadrilateral(points: Point[]): boolean {
+function isValidQuadrilateral(points: PointQuad): boolean {
     if (points.length !== 4) return false;
     let positive = false;
     let negative = false;
@@ -191,12 +271,16 @@ function warpImage(
             const outputOffset = (y * outputWidth + x) * 4;
 
             for (let channel = 0; channel < 4; channel += 1) {
+                const topLeftValue = sourceData[topLeft + channel] ?? 0;
+                const topRightValue = sourceData[topRight + channel] ?? 0;
+                const bottomLeftValue = sourceData[bottomLeft + channel] ?? 0;
+                const bottomRightValue = sourceData[bottomRight + channel] ?? 0;
                 const top =
-                    sourceData[topLeft + channel] * (1 - xWeight) +
-                    sourceData[topRight + channel] * xWeight;
+                    topLeftValue * (1 - xWeight) +
+                    topRightValue * xWeight;
                 const bottom =
-                    sourceData[bottomLeft + channel] * (1 - xWeight) +
-                    sourceData[bottomRight + channel] * xWeight;
+                    bottomLeftValue * (1 - xWeight) +
+                    bottomRightValue * xWeight;
                 output.data[outputOffset + channel] =
                     top * (1 - yWeight) + bottom * yWeight;
             }
@@ -231,7 +315,7 @@ export function ProfilePictureCropper({
     const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
     const [cropSize, setCropSize] = useState(0);
     const [zoom, setZoom] = useState(1);
-    const [points, setPoints] = useState<Point[]>([
+    const [points, setPoints] = useState<PointQuad>([
         { x: 0.12, y: 0.12 },
         { x: 0.88, y: 0.12 },
         { x: 0.88, y: 0.88 },
@@ -307,7 +391,7 @@ export function ProfilePictureCropper({
     }
 
     function beginDrag(
-        event: React.PointerEvent<HTMLDivElement>,
+        event: React.PointerEvent<HTMLElement>,
         kind: "move" | "point",
         pointIndex?: number,
     ) {
@@ -330,22 +414,28 @@ export function ProfilePictureCropper({
         const dy = (event.clientY - drag.startY) / cropSize;
 
         if (drag.kind === "move") {
-            setPoints(
-                drag.originPoints.map((point) => ({
+                setPoints([
+                ...drag.originPoints.map((point) => ({
                     x: clamp01(point.x + dx),
                     y: clamp01(point.y + dy),
                 })),
-            );
+            ] as PointQuad);
             return;
         }
 
         if (drag.pointIndex === undefined) return;
-        setPoints((current) => {
-            const next = current.map((point) => ({ ...point }));
-            const index = drag.pointIndex!;
+        setPoints(() => {
+            const next: PointQuad = [
+                { ...drag.originPoints[0] },
+                { ...drag.originPoints[1] },
+                { ...drag.originPoints[2] },
+                { ...drag.originPoints[3] },
+            ];
+            const index = drag.pointIndex;
+            const origin = drag.originPoints[index];
             next[index] = {
-                x: clamp01(drag.originPoints[index].x + dx),
-                y: clamp01(drag.originPoints[index].y + dy),
+                x: clamp01(origin.x + dx),
+                y: clamp01(origin.y + dy),
             };
             return next;
         });
@@ -368,7 +458,7 @@ export function ProfilePictureCropper({
         }
         setWorking(true);
         try {
-            const sourcePoints = points.map((point) => ({
+            const toSourcePoint = (point: Point): Point => ({
                 x: Math.min(
                     imageInfo.width,
                     Math.max(
@@ -383,7 +473,13 @@ export function ProfilePictureCropper({
                         (point.y * cropSize - renderInfo.top) / renderInfo.scale,
                     ),
                 ),
-            }));
+            });
+            const sourcePoints: PointQuad = [
+                toSourcePoint(points[0]),
+                toSourcePoint(points[1]),
+                toSourcePoint(points[2]),
+                toSourcePoint(points[3]),
+            ];
             const blob = await warpImage(imageRef.current, sourcePoints, imageInfo);
             await onConfirm(blob);
         } finally {
