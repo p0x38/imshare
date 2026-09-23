@@ -343,7 +343,7 @@ function ProfileSettingsPage() {
         void api<{ data: User }>("/v1/me")
             .then((r) => {
                 setUser(r.data);
-                setAvatarMode(r.data.avatarMode || "initials");
+                setAvatarMode((r.data.avatarMode || "initials").toLowerCase());
                 const value = r.data.avatarValue || "";
                 if (/^https?:\/\//i.test(value)) {
                     setExternalAvatarUrl(value);
@@ -504,7 +504,7 @@ function ProfileSettingsPage() {
                                         </Stack>
                                     </Stack>
                                     <TextField
-                                        label="External avatar URL"
+                                        label="Custom avatar URL"
                                         value={externalAvatarUrl}
                                         onChange={(event) => {
                                             setExternalAvatarUrl(event.target.value);
@@ -512,7 +512,7 @@ function ProfileSettingsPage() {
                                             setAvatarPreviewUrl(null);
                                         }}
                                         type="url"
-                                        helperText="Use an image URL instead of uploading a picture."
+                                        helperText="Use an http(s) image URL, or leave empty to use the uploaded/cropped picture."
                                     />
                                     <Dialog
                                         open={avatarCropFile !== null}

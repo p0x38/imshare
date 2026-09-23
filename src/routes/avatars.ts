@@ -6,8 +6,11 @@ import { openapi, parameter } from "../lib/openapi-route.js";
 
 const MODES = ["default", "initials", "identicon", "gravatar", "custom"] as const;
 type AvatarMode = (typeof MODES)[number];
-function isAvatarMode(value: string): value is AvatarMode {
-    return (MODES as readonly string[]).includes(value);
+function normalizeAvatarMode(value: string | null | undefined): AvatarMode {
+    const normalized = value?.trim().toLowerCase();
+    return (MODES as readonly string[]).includes(normalized ?? "")
+        ? (normalized as AvatarMode)
+        : "initials";
 }
 function escapeXml(value: string): string {
     return value.replace(
@@ -74,22 +77,23 @@ export const avatarRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply
                     .code(404)
                     .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
-            const mode: AvatarMode = isAvatarMode(user.avatarMode) ? user.avatarMode : "initials";
+            const mode = normalizeAvatarMode(user.avatarMode);
             if (mode === "gravatar") {
                 const hash = createHash("md5")
                     .update(user.email.trim().toLowerCase())
                     .digest("hex");
                 return reply.redirect(`https://www.gravatar.com/avatar/${hash}?s=256&d=404`);
             }
-            if (mode === "custom" && user.avatarValue) {
-                if (/^https?:\/\//i.test(user.avatarValue)) return reply.redirect(user.avatarValue);
+            if (mode === "custom" && user.avatarValue?.trim()) {
+                const value = user.avatarValue.trim();
+                if (/^https?:\/\//i.test(value)) return reply.redirect(value);
                 const upload = await prisma.upload.findUnique({
-                    where: { id: user.avatarValue },
+                    where: { id: value },
                     select: { userId: true },
                 });
                 if (upload?.userId === userId)
                     return reply.redirect(
-                        `/v1/posts/image/${encodeURIComponent(user.avatarValue)}?width=256&height=256&fit=cover&format=webp`,
+                        `/v1/posts/image/${encodeURIComponent(value)}?width=256&height=256&fit=cover&format=webp`,
                     );
             }
             reply.header("content-type", "image/svg+xml; charset=utf-8");

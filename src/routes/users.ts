@@ -29,6 +29,12 @@ const RESERVED_HANDLES = new Set([
     "privacy",
     "terms",
 ]);
+function normalizeAvatarMode(value: string | null | undefined) {
+    const normalized = value?.trim().toLowerCase();
+    return ["default", "initials", "identicon", "gravatar", "custom"].includes(normalized ?? "")
+        ? normalized
+        : "initials";
+}
 function isExternalAvatarUrl(value: string): boolean {
     try {
         const url = new URL(value);
@@ -85,7 +91,12 @@ async function publicUser(userId: string) {
         },
     });
     if (!user) return undefined;
-    return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt), badges: userBadges(user) };
+    return {
+        ...user,
+        avatarMode: normalizeAvatarMode(user.avatarMode),
+        avatarUrl: avatarUrl(user.id, user.updatedAt),
+        badges: userBadges(user),
+    };
 }
 async function publicUserByHandle(handle: string) {
     const normalized = normalizeHandle(handle);
@@ -98,7 +109,12 @@ async function publicUserByHandle(handle: string) {
         },
     });
     if (!user) return undefined;
-    return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt), badges: userBadges(user) };
+    return {
+        ...user,
+        avatarMode: normalizeAvatarMode(user.avatarMode),
+        avatarUrl: avatarUrl(user.id, user.updatedAt),
+        badges: userBadges(user),
+    };
 }
 async function resolveUserId(value: string) {
     if (!value.startsWith("@")) return value;
@@ -116,7 +132,12 @@ async function currentUser(userId: string) {
         },
     });
     if (!user) return undefined;
-    return { ...user, avatarUrl: avatarUrl(user.id, user.updatedAt), badges: userBadges(user) };
+    return {
+        ...user,
+        avatarMode: normalizeAvatarMode(user.avatarMode),
+        avatarUrl: avatarUrl(user.id, user.updatedAt),
+        badges: userBadges(user),
+    };
 }
 function handleConflict(reply: FastifyReply) {
     return reply
@@ -241,6 +262,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
             return collection(
                 users.map((user) => ({
                     ...user,
+                    avatarMode: normalizeAvatarMode(user.avatarMode),
                     avatarUrl: avatarUrl(user.id, user.updatedAt),
                     badges: userBadges(user),
                 })),
