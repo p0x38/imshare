@@ -411,7 +411,7 @@ export function ProfilePictureCropper({
                     component="img"
                     ref={imageRef}
                     src={src}
-                    alt="Profile picture crop"
+                    alt="Image crop preview"
                     draggable={false}
                     sx={{
                         display: "block",
@@ -525,7 +525,7 @@ export function ProfilePictureCropper({
                     }}
                     valueLabelDisplay="auto"
                     valueLabelFormat={(value) => `${Math.round(Number(value) * 100)}%`}
-                    aria-label="Avatar crop size"
+                    aria-label="Image crop size"
                     disabled={working || stageSize.width <= 0}
                 />
             </Stack>
@@ -546,9 +546,9 @@ export function ProfilePictureCropper({
             </Stack>
 
             <Typography variant="caption" color="text.secondary">
-                The full image stays visible, the four corner points resize one shared 1:1 crop
-                box, and the circle follows the crop box. The final avatar is saved as a 512×512
-                square.
+                The full image stays visible, and the four corner points resize one shared 1:1 crop
+                box. {showCircle ? "The circle follows the crop box. " : ""}The final image is saved
+                as a 512×512 square.
             </Typography>
 
             <Stack direction="row" justifyContent="flex-end" spacing={1}>
