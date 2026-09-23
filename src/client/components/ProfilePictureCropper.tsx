@@ -1,9 +1,10 @@
 import { Box, Button, Slider, Stack, Typography } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const OUTPUT_SIZE = 512;
+const MAX_RASTER_SIZE = 4096;
 
-interface CropPosition {
+interface Point {
     x: number;
     y: number;
 }
@@ -11,6 +12,201 @@ interface CropPosition {
 interface ImageInfo {
     width: number;
     height: number;
+}
+
+interface DragState {
+    pointerId: number;
+    kind: "move" | "point";
+    pointIndex?: number;
+    startX: number;
+    startY: number;
+    originPoints: Point[];
+}
+
+type Homography = [number, number, number, number, number, number, number, number];
+
+function clamp01(value: number): number {
+    return Math.min(1, Math.max(0, value));
+}
+
+function solveHomography(source: Point[]): Homography {
+    const target: Point[] = [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+    ];
+    const matrix = target.flatMap((point, index) => {
+        const destination = source[index];
+        return [
+            [
+                point.x,
+                point.y,
+                1,
+                0,
+                0,
+                0,
+                -destination.x * point.x,
+                -destination.x * point.y,
+                destination.x,
+            ],
+            [
+                0,
+                0,
+                0,
+                point.x,
+                point.y,
+                1,
+                -destination.y * point.x,
+                -destination.y * point.y,
+                destination.y,
+            ],
+        ];
+    });
+
+    for (let column = 0; column < 8; column += 1) {
+        let pivot = column;
+        for (let row = column + 1; row < 8; row += 1) {
+            if (Math.abs(matrix[row][column]) > Math.abs(matrix[pivot][column])) {
+                pivot = row;
+            }
+        }
+        if (Math.abs(matrix[pivot][column]) < 1e-10) {
+            throw new Error("The crop points are too close together.");
+        }
+        [matrix[column], matrix[pivot]] = [matrix[pivot], matrix[column]];
+
+        const divisor = matrix[column][column];
+        for (let j = column; j < 9; j += 1) matrix[column][j] /= divisor;
+
+        for (let row = 0; row < 8; row += 1) {
+            if (row === column) continue;
+            const factor = matrix[row][column];
+            if (factor === 0) continue;
+            for (let j = column; j < 9; j += 1) {
+                matrix[row][j] -= factor * matrix[column][j];
+            }
+        }
+    }
+
+    return [
+        matrix[0][8],
+        matrix[1][8],
+        matrix[2][8],
+        matrix[3][8],
+        matrix[4][8],
+        matrix[5][8],
+        matrix[6][8],
+        matrix[7][8],
+    ];
+}
+
+function isValidQuadrilateral(points: Point[]): boolean {
+    if (points.length !== 4) return false;
+    let positive = false;
+    let negative = false;
+
+    for (let index = 0; index < 4; index += 1) {
+        const current = points[index];
+        const next = points[(index + 1) % 4];
+        const afterNext = points[(index + 2) % 4];
+        const cross =
+            (next.x - current.x) * (afterNext.y - next.y) -
+            (next.y - current.y) * (afterNext.x - next.x);
+        if (cross > 1e-5) positive = true;
+        if (cross < -1e-5) negative = true;
+    }
+
+    return !(positive && negative);
+}
+
+function warpImage(
+    image: HTMLImageElement,
+    sourcePoints: Point[],
+    imageInfo: ImageInfo,
+): Promise<Blob> {
+    const rasterScale = Math.min(
+        1,
+        MAX_RASTER_SIZE / Math.max(imageInfo.width, imageInfo.height),
+    );
+    const width = Math.max(1, Math.round(imageInfo.width * rasterScale));
+    const height = Math.max(1, Math.round(imageInfo.height * rasterScale));
+
+    const sourceCanvas = document.createElement("canvas");
+    sourceCanvas.width = width;
+    sourceCanvas.height = height;
+    const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+    if (!sourceContext) throw new Error("Unable to create an image canvas.");
+
+    sourceContext.imageSmoothingEnabled = true;
+    sourceContext.imageSmoothingQuality = "high";
+    sourceContext.drawImage(image, 0, 0, width, height);
+    const sourceData = sourceContext.getImageData(0, 0, width, height).data;
+
+    const rasterPoints = sourcePoints.map((point) => ({
+        x: point.x * rasterScale,
+        y: point.y * rasterScale,
+    }));
+    const homography = solveHomography(rasterPoints);
+
+    const outputCanvas = document.createElement("canvas");
+    outputCanvas.width = OUTPUT_SIZE;
+    outputCanvas.height = OUTPUT_SIZE;
+    const outputContext = outputCanvas.getContext("2d");
+    if (!outputContext) throw new Error("Unable to create the output image.");
+
+    const output = outputContext.createImageData(OUTPUT_SIZE, OUTPUT_SIZE);
+
+    for (let y = 0; y < OUTPUT_SIZE; y += 1) {
+        const v = y / (OUTPUT_SIZE - 1);
+        for (let x = 0; x < OUTPUT_SIZE; x += 1) {
+            const u = x / (OUTPUT_SIZE - 1);
+            const denominator = homography[6] * u + homography[7] * v + 1;
+            if (Math.abs(denominator) < 1e-8) continue;
+
+            const sourceX =
+                (homography[0] * u + homography[1] * v + homography[2]) / denominator;
+            const sourceY =
+                (homography[3] * u + homography[4] * v + homography[5]) / denominator;
+
+            const clampedX = Math.min(width - 1, Math.max(0, sourceX));
+            const clampedY = Math.min(height - 1, Math.max(0, sourceY));
+            const x0 = Math.floor(clampedX);
+            const y0 = Math.floor(clampedY);
+            const x1 = Math.min(width - 1, x0 + 1);
+            const y1 = Math.min(height - 1, y0 + 1);
+            const xWeight = clampedX - x0;
+            const yWeight = clampedY - y0;
+
+            const topLeft = (y0 * width + x0) * 4;
+            const topRight = (y0 * width + x1) * 4;
+            const bottomLeft = (y1 * width + x0) * 4;
+            const bottomRight = (y1 * width + x1) * 4;
+            const outputOffset = (y * OUTPUT_SIZE + x) * 4;
+
+            for (let channel = 0; channel < 4; channel += 1) {
+                const top =
+                    sourceData[topLeft + channel] * (1 - xWeight) +
+                    sourceData[topRight + channel] * xWeight;
+                const bottom =
+                    sourceData[bottomLeft + channel] * (1 - xWeight) +
+                    sourceData[bottomRight + channel] * xWeight;
+                output.data[outputOffset + channel] =
+                    top * (1 - yWeight) + bottom * yWeight;
+            }
+        }
+    }
+
+    outputContext.putImageData(output, 0, 0);
+    return new Promise<Blob>((resolve, reject) => {
+        outputCanvas.toBlob(
+            (blob) =>
+                blob
+                    ? resolve(blob)
+                    : reject(new Error("Unable to encode the transformed image.")),
+            "image/png",
+        );
+    });
 }
 
 export function ProfilePictureCropper({
@@ -24,18 +220,17 @@ export function ProfilePictureCropper({
 }) {
     const cropRef = useRef<HTMLDivElement>(null);
     const imageRef = useRef<HTMLImageElement>(null);
-    const dragRef = useRef<{
-        pointerId: number;
-        startX: number;
-        startY: number;
-        originX: number;
-        originY: number;
-    } | null>(null);
+    const dragRef = useRef<DragState | null>(null);
     const [src, setSrc] = useState<string | null>(null);
     const [imageInfo, setImageInfo] = useState<ImageInfo | null>(null);
     const [cropSize, setCropSize] = useState(0);
     const [zoom, setZoom] = useState(1);
-    const [position, setPosition] = useState<CropPosition>({ x: 0, y: 0 });
+    const [points, setPoints] = useState<Point[]>([
+        { x: 0.12, y: 0.12 },
+        { x: 0.88, y: 0.12 },
+        { x: 0.88, y: 0.88 },
+        { x: 0.12, y: 0.88 },
+    ]);
     const [working, setWorking] = useState(false);
 
     useEffect(() => {
@@ -43,7 +238,12 @@ export function ProfilePictureCropper({
         setSrc(next);
         setImageInfo(null);
         setZoom(1);
-        setPosition({ x: 0, y: 0 });
+        setPoints([
+            { x: 0.12, y: 0.12 },
+            { x: 0.88, y: 0.12 },
+            { x: 0.88, y: 0.88 },
+            { x: 0.12, y: 0.88 },
+        ]);
         return () => URL.revokeObjectURL(next);
     }, [file]);
 
@@ -69,147 +269,116 @@ export function ProfilePictureCropper({
         image.src = src;
     }, [src]);
 
-    useEffect(() => {
-        if (!imageInfo || cropSize <= 0) return;
-        const scale = Math.max(
-            cropSize / imageInfo.width,
-            cropSize / imageInfo.height,
-        ) * zoom;
-        const width = imageInfo.width * scale;
-        const height = imageInfo.height * scale;
-        setPosition({
-            x: (cropSize - width) / 2,
-            y: (cropSize - height) / 2,
-        });
-    }, [imageInfo, cropSize]);
-
-    function clamp(next: CropPosition, scale: number): CropPosition {
-        if (!imageInfo || cropSize <= 0) return next;
-        const width = imageInfo.width * scale;
-        const height = imageInfo.height * scale;
-        return {
-            x: Math.min(0, Math.max(cropSize - width, next.x)),
-            y: Math.min(0, Math.max(cropSize - height, next.y)),
-        };
-    }
-
-    function resetCrop() {
-        if (!imageInfo || cropSize <= 0) {
-            setZoom(1);
-            setPosition({ x: 0, y: 0 });
-            return;
-        }
-        const scale = Math.max(
+    const renderInfo = useMemo(() => {
+        if (!imageInfo || cropSize <= 0) return null;
+        const baseScale = Math.max(
             cropSize / imageInfo.width,
             cropSize / imageInfo.height,
         );
+        const scale = baseScale * zoom;
+        return {
+            scale,
+            width: imageInfo.width * scale,
+            height: imageInfo.height * scale,
+            left: (cropSize - imageInfo.width * scale) / 2,
+            top: (cropSize - imageInfo.height * scale) / 2,
+        };
+    }, [cropSize, imageInfo, zoom]);
+
+    function resetCrop() {
         setZoom(1);
-        setPosition({
-            x: (cropSize - imageInfo.width * scale) / 2,
-            y: (cropSize - imageInfo.height * scale) / 2,
-        });
+        setPoints([
+            { x: 0.12, y: 0.12 },
+            { x: 0.88, y: 0.12 },
+            { x: 0.88, y: 0.88 },
+            { x: 0.12, y: 0.88 },
+        ]);
     }
 
     function changeZoom(nextZoom: number) {
         if (nextZoom < 1 || nextZoom > 3) return;
-        if (!imageInfo || cropSize <= 0) {
-            setZoom(nextZoom);
-            return;
-        }
-        const baseScale = Math.max(
-            cropSize / imageInfo.width,
-            cropSize / imageInfo.height,
-        );
-        const oldScale = baseScale * zoom;
-        const newScale = baseScale * nextZoom;
-        if (oldScale !== newScale) {
-            setPosition((current) =>
-                clamp(
-                    {
-                        x:
-                            cropSize / 2 -
-                            ((cropSize / 2 - current.x) / oldScale) * newScale,
-                        y:
-                            cropSize / 2 -
-                            ((cropSize / 2 - current.y) / oldScale) * newScale,
-                    },
-                    newScale,
-                ),
-            );
-        }
         setZoom(nextZoom);
+    }
+
+    function beginDrag(
+        event: React.PointerEvent<HTMLDivElement>,
+        kind: "move" | "point",
+        pointIndex?: number,
+    ) {
+        dragRef.current = {
+            pointerId: event.pointerId,
+            kind,
+            pointIndex,
+            startX: event.clientX,
+            startY: event.clientY,
+            originPoints: points.map((point) => ({ ...point })),
+        };
+        event.currentTarget.setPointerCapture(event.pointerId);
+        event.stopPropagation();
     }
 
     function move(event: React.PointerEvent<HTMLDivElement>) {
         const drag = dragRef.current;
-        if (!drag || event.pointerId !== drag.pointerId || !imageInfo || cropSize <= 0) return;
-        const baseScale = Math.max(
-            cropSize / imageInfo.width,
-            cropSize / imageInfo.height,
-        );
-        setPosition(
-            clamp(
-                {
-                    x: drag.originX + event.clientX - drag.startX,
-                    y: drag.originY + event.clientY - drag.startY,
-                },
-                baseScale * zoom,
-            ),
-        );
+        if (!drag || drag.pointerId !== event.pointerId || cropSize <= 0) return;
+        const dx = (event.clientX - drag.startX) / cropSize;
+        const dy = (event.clientY - drag.startY) / cropSize;
+
+        if (drag.kind === "move") {
+            setPoints(
+                drag.originPoints.map((point) => ({
+                    x: clamp01(point.x + dx),
+                    y: clamp01(point.y + dy),
+                })),
+            );
+            return;
+        }
+
+        if (drag.pointIndex === undefined) return;
+        setPoints((current) => {
+            const next = current.map((point) => ({ ...point }));
+            const index = drag.pointIndex!;
+            next[index] = {
+                x: clamp01(drag.originPoints[index].x + dx),
+                y: clamp01(drag.originPoints[index].y + dy),
+            };
+            return next;
+        });
+    }
+
+    function endDrag(event: React.PointerEvent<HTMLDivElement>) {
+        const drag = dragRef.current;
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        dragRef.current = null;
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+        }
     }
 
     async function confirm() {
-        if (!src || !imageInfo || cropSize <= 0 || working) return;
+        if (!imageRef.current || !imageInfo || !renderInfo || working) return;
+        if (!isValidQuadrilateral(points)) {
+            setWorking(false);
+            return;
+        }
         setWorking(true);
         try {
-            const image =
-                imageRef.current ??
-                (await new Promise<HTMLImageElement>((resolve, reject) => {
-                    const next = new Image();
-                    next.onload = () => resolve(next);
-                    next.onerror = () => reject(new Error("Unable to decode the selected image."));
-                    next.src = src;
-                }));
-            const scale = Math.max(
-                cropSize / imageInfo.width,
-                cropSize / imageInfo.height,
-            ) * zoom;
-            const sourceSize = cropSize / scale;
-            const sourceX = Math.max(
-                0,
-                Math.min(imageInfo.width - sourceSize, -position.x / scale),
-            );
-            const sourceY = Math.max(
-                0,
-                Math.min(imageInfo.height - sourceSize, -position.y / scale),
-            );
-            const canvas = document.createElement("canvas");
-            canvas.width = OUTPUT_SIZE;
-            canvas.height = OUTPUT_SIZE;
-            const context = canvas.getContext("2d");
-            if (!context) throw new Error("Unable to create an image crop.");
-            context.imageSmoothingEnabled = true;
-            context.imageSmoothingQuality = "high";
-            context.drawImage(
-                image,
-                sourceX,
-                sourceY,
-                sourceSize,
-                sourceSize,
-                0,
-                0,
-                OUTPUT_SIZE,
-                OUTPUT_SIZE,
-            );
-            const blob = await new Promise<Blob>((resolve, reject) => {
-                canvas.toBlob(
-                    (value) =>
-                        value
-                            ? resolve(value)
-                            : reject(new Error("Unable to encode the cropped image.")),
-                    "image/png",
-                );
-            });
+            const sourcePoints = points.map((point) => ({
+                x: Math.min(
+                    imageInfo.width,
+                    Math.max(
+                        0,
+                        (point.x * cropSize - renderInfo.left) / renderInfo.scale,
+                    ),
+                ),
+                y: Math.min(
+                    imageInfo.height,
+                    Math.max(
+                        0,
+                        (point.y * cropSize - renderInfo.top) / renderInfo.scale,
+                    ),
+                ),
+            }));
+            const blob = await warpImage(imageRef.current, sourcePoints, imageInfo);
             await onConfirm(blob);
         } finally {
             setWorking(false);
@@ -217,9 +386,7 @@ export function ProfilePictureCropper({
     }
 
     if (!src)
-        return (
-            <Typography color="text.secondary">Loading image…</Typography>
-        );
+        return <Typography color="text.secondary">Loading image…</Typography>;
 
     if (!imageInfo)
         return (
@@ -231,12 +398,23 @@ export function ProfilePictureCropper({
             </Stack>
         );
 
-    const scale = Math.max(
-        cropSize / imageInfo.width,
-        cropSize / imageInfo.height,
-    ) * zoom;
-    const renderedWidth = imageInfo.width * scale;
-    const renderedHeight = imageInfo.height * scale;
+    if (!renderInfo)
+        return <Typography color="text.secondary">Preparing image…</Typography>;
+
+    const displayPoints = points.map((point) => ({
+        x: point.x * cropSize,
+        y: point.y * cropSize,
+    }));
+
+    const path = [
+        `M 0 0 H ${cropSize} V ${cropSize} H 0 Z`,
+        ...displayPoints.map((point, index) =>
+            index === 0
+                ? `M ${point.x} ${point.y}`
+                : `L ${point.x} ${point.y}`,
+        ),
+        "Z",
+    ].join(" ");
 
     return (
         <Stack spacing={2} sx={{ py: 1 }}>
@@ -249,32 +427,16 @@ export function ProfilePictureCropper({
                     aspectRatio: "1 / 1",
                     overflow: "hidden",
                     position: "relative",
-                    bgcolor: "background.default",
+                    bgcolor: "#202020",
                     borderRadius: 2,
                     touchAction: "none",
-                    cursor: "grab",
                     userSelect: "none",
-                    "&:active": { cursor: "grabbing" },
+                    cursor: "grab",
                 }}
-                onPointerDown={(event) => {
-                    dragRef.current = {
-                        pointerId: event.pointerId,
-                        startX: event.clientX,
-                        startY: event.clientY,
-                        originX: position.x,
-                        originY: position.y,
-                    };
-                    event.currentTarget.setPointerCapture(event.pointerId);
-                }}
+                onPointerDown={(event) => beginDrag(event, "move")}
                 onPointerMove={move}
-                onPointerUp={(event) => {
-                    dragRef.current = null;
-                    if (event.currentTarget.hasPointerCapture(event.pointerId))
-                        event.currentTarget.releasePointerCapture(event.pointerId);
-                }}
-                onPointerCancel={() => {
-                    dragRef.current = null;
-                }}
+                onPointerUp={endDrag}
+                onPointerCancel={endDrag}
             >
                 <Box
                     component="img"
@@ -284,33 +446,86 @@ export function ProfilePictureCropper({
                     draggable={false}
                     sx={{
                         position: "absolute",
-                        width: renderedWidth,
-                        height: renderedHeight,
+                        display: "block",
+                        width: renderInfo.width,
+                        height: renderInfo.height,
                         maxWidth: "none",
-                        left: position.x,
-                        top: position.y,
+                        left: renderInfo.left,
+                        top: renderInfo.top,
+                        userSelect: "none",
                     }}
                 />
                 <Box
+                    component="svg"
+                    viewBox={`0 0 ${cropSize} ${cropSize}`}
+                    preserveAspectRatio="none"
+                    aria-hidden
                     sx={{
                         position: "absolute",
                         inset: 0,
+                        width: "100%",
+                        height: "100%",
                         pointerEvents: "none",
-                        border: 2,
-                        borderColor: "primary.main",
-                        boxSizing: "border-box",
                     }}
-                />
+                >
+                    <path
+                        d={path}
+                        fill="rgba(0,0,0,0.35)"
+                        fillRule="evenodd"
+                        pointerEvents="none"
+                    />
+                    <polyline
+                        points={displayPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+                        fill="none"
+                        stroke="white"
+                        strokeWidth={2}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                    <line
+                        x1={displayPoints[3]?.x ?? 0}
+                        y1={displayPoints[3]?.y ?? 0}
+                        x2={displayPoints[0]?.x ?? 0}
+                        y2={displayPoints[0]?.y ?? 0}
+                        stroke="white"
+                        strokeWidth={2}
+                        vectorEffect="non-scaling-stroke"
+                    />
+                </Box>
+                {displayPoints.map((point, index) => (
+                    <Box
+                        key={index}
+                        component="button"
+                        type="button"
+                        aria-label={`Move crop corner ${index + 1}`}
+                        onPointerDown={(event) => beginDrag(event, "point", index)}
+                        sx={{
+                            position: "absolute",
+                            left: point.x,
+                            top: point.y,
+                            width: 24,
+                            height: 24,
+                            transform: "translate(-50%, -50%)",
+                            borderRadius: "50%",
+                            border: 2,
+                            borderColor: "common.white",
+                            bgcolor: "primary.main",
+                            boxShadow: 2,
+                            p: 0,
+                            m: 0,
+                            cursor: "grab",
+                            "&:active": { cursor: "grabbing" },
+                        }}
+                    />
+                ))}
                 <Box
                     sx={{
                         position: "absolute",
-                        inset: "8%",
-                        border: 2,
-                        borderColor: "rgba(255,255,255,0.95)",
+                        inset: "12%",
+                        border: 1,
+                        borderColor: "rgba(255,255,255,0.5)",
                         borderRadius: "50%",
                         boxSizing: "border-box",
                         pointerEvents: "none",
-                        boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.48)",
                     }}
                 />
             </Box>
@@ -337,21 +552,23 @@ export function ProfilePictureCropper({
                 spacing={1}
             >
                 <Typography variant="body2" color="text.secondary">
-                    Drag the image so the important part stays inside the circle.
+                    Drag the four corners to straighten and frame your avatar. Drag inside the
+                    image to move the whole selection.
                 </Typography>
                 <Button size="small" onClick={resetCrop} disabled={working}>
                     Reset
                 </Button>
             </Stack>
             <Typography variant="caption" color="text.secondary">
-                Your avatar is saved as a 512×512 square so it stays sharp when displayed as a circle.
+                The selected quadrilateral is perspective-corrected into a 512×512 square before
+                your avatar is saved.
             </Typography>
             <Stack direction="row" justifyContent="flex-end" spacing={1}>
                 <Button onClick={onCancel} disabled={working}>
                     Cancel
                 </Button>
                 <Button variant="contained" onClick={() => void confirm()} disabled={working}>
-                    {working ? "Cropping…" : "Use this picture"}
+                    {working ? "Transforming…" : "Use this picture"}
                 </Button>
             </Stack>
         </Stack>
