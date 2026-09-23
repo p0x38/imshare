@@ -2,6 +2,7 @@ import { Box, Button, Slider, Stack, Typography } from "@mui/material";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const OUTPUT_SIZE = 512;
+const OUTPUT_ASPECT_RATIO = 1;
 const MAX_RASTER_SIZE = 4096;
 
 interface Point {
@@ -150,17 +151,22 @@ function warpImage(
     const homography = solveHomography(rasterPoints);
 
     const outputCanvas = document.createElement("canvas");
-    outputCanvas.width = OUTPUT_SIZE;
-    outputCanvas.height = OUTPUT_SIZE;
+    const outputWidth = OUTPUT_SIZE;
+    const outputHeight = Math.round(outputWidth / OUTPUT_ASPECT_RATIO);
+    if (outputWidth !== outputHeight) {
+        throw new Error("The avatar transform must use a 1:1 aspect ratio.");
+    }
+    outputCanvas.width = outputWidth;
+    outputCanvas.height = outputHeight;
     const outputContext = outputCanvas.getContext("2d");
     if (!outputContext) throw new Error("Unable to create the output image.");
 
     const output = outputContext.createImageData(OUTPUT_SIZE, OUTPUT_SIZE);
 
-    for (let y = 0; y < OUTPUT_SIZE; y += 1) {
-        const v = y / (OUTPUT_SIZE - 1);
-        for (let x = 0; x < OUTPUT_SIZE; x += 1) {
-            const u = x / (OUTPUT_SIZE - 1);
+    for (let y = 0; y < outputHeight; y += 1) {
+        const v = y / (outputHeight - 1);
+        for (let x = 0; x < outputWidth; x += 1) {
+            const u = x / (outputWidth - 1);
             const denominator = homography[6] * u + homography[7] * v + 1;
             if (Math.abs(denominator) < 1e-8) continue;
 
@@ -182,7 +188,7 @@ function warpImage(
             const topRight = (y0 * width + x1) * 4;
             const bottomLeft = (y1 * width + x0) * 4;
             const bottomRight = (y1 * width + x1) * 4;
-            const outputOffset = (y * OUTPUT_SIZE + x) * 4;
+            const outputOffset = (y * outputWidth + x) * 4;
 
             for (let channel = 0; channel < 4; channel += 1) {
                 const top =
