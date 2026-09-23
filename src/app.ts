@@ -594,54 +594,6 @@ export async function buildApp() {
         return reply.send(createReadStream(source));
     });
 
-    app.get("/avatars/*", async (request, reply) => {
-        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(
-            "\\",
-            "/",
-        );
-        if (!rawPath || rawPath.includes(".."))
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
-
-        const avatarDir = path.resolve(rootDir, config.storage.avatarDirectory ?? "data/avatars");
-        const upload = await prisma.upload.findFirst({
-            where: { filename: rawPath, storageArea: "avatars" },
-            select: { filename: true, mimeType: true, contentHash: true, size: true },
-        });
-        if (!upload)
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
-
-        const source = path.resolve(avatarDir, upload.filename);
-        const relative = path.relative(avatarDir, source);
-        if (relative.startsWith("..") || path.isAbsolute(relative))
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
-
-        const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
-        reply
-            .header("Cache-Control", "public, max-age=31536000, immutable")
-            .header("X-Content-Type-Options", "nosniff")
-            .header("Content-Length", String(upload.size));
-        if (etag) {
-            reply.header("ETag", etag);
-            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
-        }
-        try {
-            await import("node:fs/promises").then(({ access }) => access(source));
-        } catch {
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
-        }
-        reply.type(upload.mimeType);
-        return reply.send(createReadStream(source));
-    });
-
-
     await app.register(metaRoutes);
     await app.register(federationRoutes);
     await app.register(pageRoutes);
