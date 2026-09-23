@@ -271,6 +271,7 @@ model Upload {
   createdAt    DateTime @default(now())
   userId       String
   postId       String?
+  storageArea  String   @default("uploads")
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   post         Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
   comment      Comment?
