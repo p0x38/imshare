@@ -481,7 +481,7 @@ function ProfileSettingsPage() {
                                                 variant="outlined"
                                                 disabled={avatarUploading}
                                             >
-                                                {avatarUploading ? "Uploading…" : "Choose image"}
+                                                {avatarUploading ? "Uploading…" : "Choose & crop picture"}
                                                 <input
                                                     hidden
                                                     type="file"
@@ -522,7 +522,7 @@ function ProfileSettingsPage() {
                                             if (!avatarUploading) setAvatarCropFile(null);
                                         }}
                                     >
-                                        <DialogTitle>Crop profile picture</DialogTitle>
+                                        <DialogTitle>Crop your avatar</DialogTitle>
                                         <DialogContent>
                                             {avatarCropFile ? (
                                                 <ProfilePictureCropper

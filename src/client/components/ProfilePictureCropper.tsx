@@ -93,6 +93,23 @@ export function ProfilePictureCropper({
         };
     }
 
+    function resetCrop() {
+        if (!imageInfo || cropSize <= 0) {
+            setZoom(1);
+            setPosition({ x: 0, y: 0 });
+            return;
+        }
+        const scale = Math.max(
+            cropSize / imageInfo.width,
+            cropSize / imageInfo.height,
+        );
+        setZoom(1);
+        setPosition({
+            x: (cropSize - imageInfo.width * scale) / 2,
+            y: (cropSize - imageInfo.height * scale) / 2,
+        });
+    }
+
     function changeZoom(nextZoom: number) {
         if (nextZoom < 1 || nextZoom > 3) return;
         if (!imageInfo || cropSize <= 0) {
@@ -288,11 +305,12 @@ export function ProfilePictureCropper({
                     sx={{
                         position: "absolute",
                         inset: "8%",
-                        border: 1,
-                        borderColor: "rgba(255,255,255,0.8)",
+                        border: 2,
+                        borderColor: "rgba(255,255,255,0.95)",
                         borderRadius: "50%",
                         boxSizing: "border-box",
                         pointerEvents: "none",
+                        boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.48)",
                     }}
                 />
             </Box>
@@ -312,8 +330,21 @@ export function ProfilePictureCropper({
                     aria-label="Profile picture zoom"
                 />
             </Stack>
-            <Typography variant="body2" color="text.secondary">
-                Drag the image to choose the crop. The saved picture is a 512×512 square.
+            <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                spacing={1}
+            >
+                <Typography variant="body2" color="text.secondary">
+                    Drag the image so the important part stays inside the circle.
+                </Typography>
+                <Button size="small" onClick={resetCrop} disabled={working}>
+                    Reset
+                </Button>
+            </Stack>
+            <Typography variant="caption" color="text.secondary">
+                Your avatar is saved as a 512×512 square so it stays sharp when displayed as a circle.
             </Typography>
             <Stack direction="row" justifyContent="flex-end" spacing={1}>
                 <Button onClick={onCancel} disabled={working}>
