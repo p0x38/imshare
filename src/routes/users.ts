@@ -480,7 +480,7 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 } else if (!isExternalAvatarUrl(nextAvatarValue)) {
                     const upload = await prisma.upload.findFirst({
-                        where: { id: nextAvatarValue, userId },
+                        where: { id: nextAvatarValue, userId, storageArea: "avatars" },
                         select: { id: true },
                     });
                     if (!upload)
