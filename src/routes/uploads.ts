@@ -30,7 +30,7 @@ const IMAGE_EXTENSIONS = new Map(
     Array.from(IMAGE_TYPES.entries(), ([extension, mime]) => [mime, extension]),
 );
 function uploadView(upload: any) {
-    const prefix = upload.storageArea === "avatars" ? "/avatars/" : "/uploads/";
+    const prefix = upload.storageArea === "avatars" ? "/api/v1/avatars/" : "/uploads/";
     return {
         ...upload,
         url: `${prefix}${String(upload.filename).replaceAll("\\", "/")}`,
@@ -380,6 +380,52 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         }
     });
 
+
+    fastify.get("/v1/avatars/*", async (request, reply) => {
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(
+            "\\",
+            "/",
+        );
+        if (!rawPath || rawPath.includes(".."))
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const upload = await prisma.upload.findFirst({
+            where: { filename: rawPath, storageArea: "avatars" },
+            select: { filename: true, mimeType: true, contentHash: true, size: true },
+        });
+        if (!upload)
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const source = path.resolve(avatarDir, upload.filename);
+        const relative = path.relative(avatarDir, source);
+        if (relative.startsWith("..") || path.isAbsolute(relative))
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+        const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
+        reply
+            .header("Cache-Control", "public, max-age=31536000, immutable")
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Length", String(upload.size));
+        if (etag) {
+            reply.header("ETag", etag);
+            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+        }
+        try {
+            await import("node:fs/promises").then(({ access }) => access(source));
+        } catch {
+            return reply
+                .code(404)
+                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
+        }
+        reply.type(upload.mimeType);
+        return reply.send(createReadStream(source));
+    });
 
     fastify.delete("/v1/uploads/:uploadId", async (request, reply) => {
         const user = await requireUser(request, reply);
