@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
+import { uploadStorageDirectory, type UploadStorageArea } from "../lib/upload-storage.js";
 import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { observability } from "../instrumentation.js";
@@ -29,20 +30,27 @@ const IMAGE_EXTENSIONS = new Map(
     Array.from(IMAGE_TYPES.entries(), ([extension, mime]) => [mime, extension]),
 );
 function uploadView(upload: any) {
+    const prefix = upload.storageArea === "avatars" ? "/avatars/" : "/uploads/";
     return {
         ...upload,
-        url: `/uploads/${String(upload.filename).replaceAll("\\", "/")}`,
+        url: `${prefix}${String(upload.filename).replaceAll("\\", "/")}`,
     };
 }
 
 export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
     const config = await loadConfig();
-    const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const uploadDir = uploadStorageDirectory(config, "uploads");
+    const avatarDir = uploadStorageDirectory(config, "avatars");
     await mkdir(uploadDir, { recursive: true });
+    await mkdir(avatarDir, { recursive: true });
     fastify.post("/v1/uploads", async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
-        const multiple = (request.query as Record<string, unknown>).multiple === "true";
+        const query = request.query as Record<string, unknown>;
+        const storageArea: UploadStorageArea =
+            query.area === "avatar" || query.area === "avatars" ? "avatars" : "uploads";
+        const targetDirectory = storageArea === "avatars" ? avatarDir : uploadDir;
+        const multiple = query.multiple === "true";
         const parts = request.parts({
             limits: { files: multiple ? 20 : 1, fileSize: config.storage.maxFileSize, fields: 4 },
         });
@@ -71,7 +79,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "uploading", progress: 0 });
-                const temporaryPath = path.join(uploadDir, `.upload-${uploadId}`);
+                const temporaryPath = path.join(targetDirectory, `.upload-${uploadId}`);
                 try {
                     await pipeline(part.file, createWriteStream(temporaryPath, { flags: "wx" }));
                 } catch (error) {
@@ -210,7 +218,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 });
                 const contentHash = createHash("sha256").update(normalized).digest("hex");
                 const existing = await prisma.upload.findFirst({
-                    where: { userId: user.id, contentHash },
+                    where: { userId: user.id, contentHash, storageArea },
                 });
                 if (existing) {
                     await unlink(temporaryPath).catch(() => undefined);
@@ -230,7 +238,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     contentHash.slice(0, 4),
                     filename,
                 );
-                const destination = path.join(uploadDir, relativeFilename);
+                const destination = path.join(targetDirectory, relativeFilename);
                 await mkdir(path.dirname(destination), { recursive: true });
                 await writeFile(destination, normalized, { flag: "wx" }).catch(
                     (error: NodeJS.ErrnoException) => {
@@ -252,6 +260,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             thumbhash,
                             metadataJson,
                             userId: user.id,
+                            storageArea,
                         },
                     });
                     uploads.push(upload);
@@ -270,7 +279,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 } catch (error) {
                     await unlink(destination).catch(() => undefined);
                     const duplicate = await prisma.upload.findFirst({
-                        where: { userId: user.id, contentHash },
+                        where: { userId: user.id, contentHash, storageArea },
                     });
                     if (duplicate) {
                         uploads.push(duplicate);
@@ -371,6 +380,34 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
         }
     });
 
+    fastify.get("/avatars/*", async (request, reply) => {
+        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll("\\", "/");
+        if (!rawPath || rawPath.includes(".."))
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+        const upload = await prisma.upload.findFirst({
+            where: { filename: rawPath, storageArea: "avatars" },
+            select: { filename: true, mimeType: true, contentHash: true, size: true },
+        });
+        if (!upload)
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+        const source = path.resolve(avatarDir, upload.filename);
+        const relative = path.relative(avatarDir, source);
+        if (relative.startsWith("..") || path.isAbsolute(relative))
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+        try {
+            const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
+            reply.header("Cache-Control", "public, max-age=31536000, immutable").header("X-Content-Type-Options", "nosniff").header("Content-Length", String(upload.size));
+            if (etag) {
+                reply.header("ETag", etag);
+                if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+            }
+            reply.type(upload.mimeType);
+            return reply.send(createReadStream(source));
+        } catch {
+            return reply.code(404).send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
+        }
+    });
+
     fastify.delete("/v1/uploads/:uploadId", async (request, reply) => {
         const user = await requireUser(request, reply);
         if (!user) return;
@@ -389,9 +426,13 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 error: { code: "UPLOAD_IN_USE", message: "Upload is attached to a post." },
             });
         await prisma.upload.delete({ where: { id: uploadId } });
-        const stillReferenced = await prisma.upload.count({ where: { filename: upload.filename } });
-        if (!stillReferenced)
-            await unlink(path.join(uploadDir, upload.filename)).catch(() => undefined);
+        const stillReferenced = await prisma.upload.count({
+            where: { filename: upload.filename, storageArea: upload.storageArea },
+        });
+        if (!stillReferenced) {
+            const directory = upload.storageArea === "avatars" ? avatarDir : uploadDir;
+            await unlink(path.join(directory, upload.filename)).catch(() => undefined);
+        }
         return reply.code(204).send();
     });
 };
