@@ -292,7 +292,7 @@ export function ProfilePictureCropper({
         const observer = new ResizeObserver(update);
         observer.observe(element);
         return () => observer.disconnect();
-    }, []);
+    }, [imageInfo]);
 
     useEffect(() => {
         if (!src) return;
