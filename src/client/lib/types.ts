@@ -46,6 +46,7 @@ export interface Post {
     permalinkKey?: string | null;
     customPostId?: string | null;
     permalink?: string;
+    thumbnailUrl?: string | null;
     author?: Author | null;
     authorName?: string | null;
     viewCount?: number;
