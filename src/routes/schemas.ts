@@ -128,6 +128,7 @@ export const postCreateSchema = {
                 items: { type: "string", minLength: 1, maxLength: 100 },
             },
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
+            thumbnailUploadId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             uploadIds: { type: "array", maxItems: 100, items: { type: "string", minLength: 1 } },
         },
     },
@@ -147,6 +148,7 @@ export const postUpdateSchema = {
             ...originalPostProperties,
             ...permalinkProperties,
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
+            thumbnailUploadId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             ...postLifecycleProperties,
             tags: {
                 type: "array",
