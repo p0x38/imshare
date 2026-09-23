@@ -11,17 +11,7 @@ interface Point {
 }
 
 type PointQuad = [Point, Point, Point, Point];
-type MatrixRow = [number, number, number, number, number, number, number, number, number];
-type Matrix = [
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-    MatrixRow,
-];
+type Matrix = number[][];
 
 interface ImageInfo {
     width: number;
@@ -34,7 +24,28 @@ interface DragState {
     pointIndex?: number;
     startX: number;
     startY: number;
-    originPoints: Point[];
+    originPoints: PointQuad;
+}
+
+function getMatrixValue(matrix: Matrix, row: number, column: number): number {
+    const values = matrix[row];
+    const value = values?.[column];
+    if (value === undefined) throw new Error("Invalid homography matrix index.");
+    return value;
+}
+
+function setMatrixValue(matrix: Matrix, row: number, column: number, value: number): void {
+    const values = matrix[row];
+    if (!values || values[column] === undefined) {
+        throw new Error("Invalid homography matrix index.");
+    }
+    values[column] = value;
+}
+
+function getQuadPoint(points: PointQuad, index: number): Point {
+    const point = points[index];
+    if (!point) throw new Error("Invalid crop point index.");
+    return point;
 }
 
 type Homography = [number, number, number, number, number, number, number, number];
@@ -51,154 +62,86 @@ function solveHomography(source: PointQuad): Homography {
         { x: 0, y: 1 },
     ];
     const matrix: Matrix = [
-        [
-            target[0].x,
-            target[0].y,
-            1,
-            0,
-            0,
-            0,
-            -source[0].x * target[0].x,
-            -source[0].x * target[0].y,
-            source[0].x,
-        ],
-        [
-            0,
-            0,
-            0,
-            target[0].x,
-            target[0].y,
-            1,
-            -source[0].y * target[0].x,
-            -source[0].y * target[0].y,
-            source[0].y,
-        ],
-        [
-            target[1].x,
-            target[1].y,
-            1,
-            0,
-            0,
-            0,
-            -source[1].x * target[1].x,
-            -source[1].x * target[1].y,
-            source[1].x,
-        ],
-        [
-            0,
-            0,
-            0,
-            target[1].x,
-            target[1].y,
-            1,
-            -source[1].y * target[1].x,
-            -source[1].y * target[1].y,
-            source[1].y,
-        ],
-        [
-            target[2].x,
-            target[2].y,
-            1,
-            0,
-            0,
-            0,
-            -source[2].x * target[2].x,
-            -source[2].x * target[2].y,
-            source[2].x,
-        ],
-        [
-            0,
-            0,
-            0,
-            target[2].x,
-            target[2].y,
-            1,
-            -source[2].y * target[2].x,
-            -source[2].y * target[2].y,
-            source[2].y,
-        ],
-        [
-            target[3].x,
-            target[3].y,
-            1,
-            0,
-            0,
-            0,
-            -source[3].x * target[3].x,
-            -source[3].x * target[3].y,
-            source[3].x,
-        ],
-        [
-            0,
-            0,
-            0,
-            target[3].x,
-            target[3].y,
-            1,
-            -source[3].y * target[3].x,
-            -source[3].y * target[3].y,
-            source[3].y,
-        ],
+        [target[0].x, target[0].y, 1, 0, 0, 0, -source[0].x * target[0].x, -source[0].x * target[0].y, source[0].x],
+        [0, 0, 0, target[0].x, target[0].y, 1, -source[0].y * target[0].x, -source[0].y * target[0].y, source[0].y],
+        [target[1].x, target[1].y, 1, 0, 0, 0, -source[1].x * target[1].x, -source[1].x * target[1].y, source[1].x],
+        [0, 0, 0, target[1].x, target[1].y, 1, -source[1].y * target[1].x, -source[1].y * target[1].y, source[1].y],
+        [target[2].x, target[2].y, 1, 0, 0, 0, -source[2].x * target[2].x, -source[2].x * target[2].y, source[2].x],
+        [0, 0, 0, target[2].x, target[2].y, 1, -source[2].y * target[2].x, -source[2].y * target[2].y, source[2].y],
+        [target[3].x, target[3].y, 1, 0, 0, 0, -source[3].x * target[3].x, -source[3].x * target[3].y, source[3].x],
+        [0, 0, 0, target[3].x, target[3].y, 1, -source[3].y * target[3].x, -source[3].y * target[3].y, source[3].y],
     ];
 
     for (let column = 0; column < 8; column += 1) {
         let pivot = column;
         for (let row = column + 1; row < 8; row += 1) {
-            if (Math.abs(matrix[row][column]) > Math.abs(matrix[pivot][column])) {
+            if (
+                Math.abs(getMatrixValue(matrix, row, column)) >
+                Math.abs(getMatrixValue(matrix, pivot, column))
+            ) {
                 pivot = row;
             }
         }
 
-        if (Math.abs(matrix[pivot][column]) < 1e-10) {
+        const pivotValue = getMatrixValue(matrix, pivot, column);
+        if (Math.abs(pivotValue) < 1e-10) {
             throw new Error("The crop points are too close together.");
         }
 
-        [matrix[column], matrix[pivot]] = [matrix[pivot], matrix[column]];
+        [matrix[column], matrix[pivot]] = [matrix[pivot]!, matrix[column]!];
 
-        const divisor = matrix[column][column];
+        const divisor = getMatrixValue(matrix, column, column);
         for (let j = column; j < 9; j += 1) {
-            matrix[column][j] /= divisor;
+            setMatrixValue(
+                matrix,
+                column,
+                j,
+                getMatrixValue(matrix, column, j) / divisor,
+            );
         }
 
         for (let row = 0; row < 8; row += 1) {
             if (row === column) continue;
-            const factor = matrix[row][column];
+            const factor = getMatrixValue(matrix, row, column);
             if (factor === 0) continue;
             for (let j = column; j < 9; j += 1) {
-                matrix[row][j] -= factor * matrix[column][j];
+                setMatrixValue(
+                    matrix,
+                    row,
+                    j,
+                    getMatrixValue(matrix, row, j) -
+                        factor * getMatrixValue(matrix, column, j),
+                );
             }
         }
     }
 
     return [
-        matrix[0][8],
-        matrix[1][8],
-        matrix[2][8],
-        matrix[3][8],
-        matrix[4][8],
-        matrix[5][8],
-        matrix[6][8],
-        matrix[7][8],
+        getMatrixValue(matrix, 0, 8),
+        getMatrixValue(matrix, 1, 8),
+        getMatrixValue(matrix, 2, 8),
+        getMatrixValue(matrix, 3, 8),
+        getMatrixValue(matrix, 4, 8),
+        getMatrixValue(matrix, 5, 8),
+        getMatrixValue(matrix, 6, 8),
+        getMatrixValue(matrix, 7, 8),
     ];
 }
 
 function isValidQuadrilateral(points: PointQuad): boolean {
-    if (points.length !== 4) return false;
-    let positive = false;
-    let negative = false;
+    const [current, next, afterNext, fourth] = points;
+    const crosses = [
+        (next.x - current.x) * (afterNext.y - next.y) -
+            (next.y - current.y) * (afterNext.x - next.x),
+        (afterNext.x - next.x) * (fourth.y - afterNext.y) -
+            (afterNext.y - next.y) * (fourth.x - afterNext.x),
+        (fourth.x - afterNext.x) * (current.y - fourth.y) -
+            (fourth.y - afterNext.y) * (current.x - fourth.x),
+        (current.x - fourth.x) * (next.y - current.y) -
+            (current.y - fourth.y) * (next.x - current.x),
+    ];
 
-    for (let index = 0; index < 4; index += 1) {
-        const current = points[index];
-        const next = points[(index + 1) % 4];
-        const afterNext = points[(index + 2) % 4];
-        const cross =
-            (next.x - current.x) * (afterNext.y - next.y) -
-            (next.y - current.y) * (afterNext.x - next.x);
-        if (cross > 1e-5) positive = true;
-        if (cross < -1e-5) negative = true;
-    }
-
-    return !(positive && negative);
+    return !(crosses.some((cross) => cross > 1e-5) && crosses.some((cross) => cross < -1e-5));
 }
 
 function warpImage(
@@ -224,10 +167,12 @@ function warpImage(
     sourceContext.drawImage(image, 0, 0, width, height);
     const sourceData = sourceContext.getImageData(0, 0, width, height).data;
 
-    const rasterPoints = sourcePoints.map((point) => ({
-        x: point.x * rasterScale,
-        y: point.y * rasterScale,
-    }));
+    const rasterPoints: PointQuad = [
+        { x: sourcePoints[0].x * rasterScale, y: sourcePoints[0].y * rasterScale },
+        { x: sourcePoints[1].x * rasterScale, y: sourcePoints[1].y * rasterScale },
+        { x: sourcePoints[2].x * rasterScale, y: sourcePoints[2].y * rasterScale },
+        { x: sourcePoints[3].x * rasterScale, y: sourcePoints[3].y * rasterScale },
+    ];
     const homography = solveHomography(rasterPoints);
 
     const outputCanvas = document.createElement("canvas");
@@ -401,7 +346,12 @@ export function ProfilePictureCropper({
             pointIndex,
             startX: event.clientX,
             startY: event.clientY,
-            originPoints: points.map((point) => ({ ...point })),
+            originPoints: [
+        { ...points[0] },
+        { ...points[1] },
+        { ...points[2] },
+        { ...points[3] },
+    ],
         };
         event.currentTarget.setPointerCapture(event.pointerId);
         event.stopPropagation();
@@ -415,11 +365,23 @@ export function ProfilePictureCropper({
 
         if (drag.kind === "move") {
                 setPoints([
-                ...drag.originPoints.map((point) => ({
-                    x: clamp01(point.x + dx),
-                    y: clamp01(point.y + dy),
-                })),
-            ] as PointQuad);
+                {
+                    x: clamp01(drag.originPoints[0].x + dx),
+                    y: clamp01(drag.originPoints[0].y + dy),
+                },
+                {
+                    x: clamp01(drag.originPoints[1].x + dx),
+                    y: clamp01(drag.originPoints[1].y + dy),
+                },
+                {
+                    x: clamp01(drag.originPoints[2].x + dx),
+                    y: clamp01(drag.originPoints[2].y + dy),
+                },
+                {
+                    x: clamp01(drag.originPoints[3].x + dx),
+                    y: clamp01(drag.originPoints[3].y + dy),
+                },
+            ]);
             return;
         }
 
@@ -432,8 +394,9 @@ export function ProfilePictureCropper({
                 { ...drag.originPoints[3] },
             ];
             const index = drag.pointIndex;
-            const origin = drag.originPoints[index];
-            next[index] = {
+            const origin = getQuadPoint(drag.originPoints, index);
+            if (index < 0 || index > 3) return next;
+            next[index as 0 | 1 | 2 | 3] = {
                 x: clamp01(origin.x + dx),
                 y: clamp01(origin.y + dy),
             };
