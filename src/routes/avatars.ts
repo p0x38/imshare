@@ -93,7 +93,7 @@ export const avatarRoutes: FastifyPluginAsync = async (fastify) => {
                 });
                 if (upload?.userId === userId)
                     return reply.redirect(
-                        `/v1/posts/image/${encodeURIComponent(value)}?width=256&height=256&fit=cover&format=webp`,
+                        `/api/v1/posts/image/${encodeURIComponent(value)}?width=256&height=256&fit=cover&format=webp`,
                     );
             }
             reply.header("content-type", "image/svg+xml; charset=utf-8");
