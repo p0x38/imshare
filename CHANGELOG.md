@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.5.1](https://github.com/p0x38/imshare/compare/v1.5.0...v1.5.1) (2026-11-10)
+
+### Bug Fixes
+
+* update package manager version and add backup file to .gitignore ([9f44c9e](https://github.com/p0x38/imshare/commit/9f44c9e5b29e9f4b677fa65c239b9e163522444c))
+
 ## [1.5.0](https://github.com/p0x38/imshare/compare/v1.4.2...v1.5.0) (2026-11-10)
 
 ### Features
