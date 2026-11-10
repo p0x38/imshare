@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { Navigation } from "./Navigation";
 import { Footer } from "./Footer";
 import { PageTransition } from "./Motion";
-import { OidcLoginButton } from "./OidcLoginButton";
 import { UploadBox } from "./UploadBox";
 
 export function Page({
@@ -19,14 +18,14 @@ export function Page({
         maxWidth === "full"
             ? "none"
             : maxWidth === "xs"
-            ? 444
-            : maxWidth === "sm"
-              ? 600
-              : maxWidth === "md"
-                ? 900
-                : maxWidth === "lg"
-                  ? 1200
-                  : 1200;
+              ? 444
+              : maxWidth === "sm"
+                ? 600
+                : maxWidth === "md"
+                  ? 900
+                  : maxWidth === "lg"
+                    ? 1200
+                    : 1200;
 
     useEffect(() => {
         if (title) document.title = title;
@@ -62,7 +61,6 @@ export function Page({
                     }}
                 >
                     {children}
-                    {isAccountAuthPage ? <OidcLoginButton /> : null}
                 </Container>
             </PageTransition>
             <Footer />
