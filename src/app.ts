@@ -19,6 +19,7 @@ import { registerOpenApi } from "./lib/openapi.js";
 import { observability } from "./instrumentation.js";
 import { authorizeApiTokenRequest } from "./lib/api-tokens.js";
 import { postPermalink } from "./lib/post-permalink.js";
+import { crawlerMetaContent, resolveCrawlerPolicy } from "./lib/crawler-policy.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -262,8 +263,7 @@ export async function buildApp() {
                 ? undefined
                 : Number(process.hrtime.bigint() - startedAt) / 1_000_000;
 
-        const durationText =
-            durationMs === undefined ? "" : ` in ${durationMs.toFixed(1)}ms`;
+        const durationText = durationMs === undefined ? "" : ` in ${durationMs.toFixed(1)}ms`;
         request.log.info(
             {
                 event: "http.access",
@@ -283,9 +283,11 @@ export async function buildApp() {
         if (!match) return;
         const resource = match[1]!.replace(/^me$/, "users");
         const operation =
-            request.method === "POST" ? "create" :
-            request.method === "DELETE" ? "delete" :
-            "update";
+            request.method === "POST"
+                ? "create"
+                : request.method === "DELETE"
+                  ? "delete"
+                  : "update";
         observability.recordResourceOperation(resource, operation);
     });
 
@@ -340,6 +342,7 @@ export async function buildApp() {
         let metaKeywords = "";
         let metaImage = "";
         let metaType = "website";
+        let crawlerDirectives = "";
         const postMatch = currentPath.match(/^\/posts\/([^/]+)\/?$/);
         const userPermalinkMatch = currentPath.match(/^\/[^/]+\/[^/]+\/?$/);
         if (postMatch) {
@@ -363,20 +366,37 @@ export async function buildApp() {
                         permalinkPattern: true,
                         permalinkIdType: true,
                         permalinkKey: true,
-                        user: { select: { id: true, handle: true, name: true } },
                         tags: { select: { tag: { select: { name: true } } } },
                         uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
+                        allowSearchEngineIndex: true,
+                        allowAiCrawler: true,
+                        allowImageCrawler: true,
+                        allowCustomCrawler: true,
+
+                        user: {
+                            select: {
+                                id: true,
+                                handle: true,
+                                name: true,
+                                allowSearchEngineIndex: true,
+                                allowAiCrawler: true,
+                                allowImageCrawler: true,
+                                allowCustomCrawler: true,
+                            },
+                        },
                     },
                 });
                 if (post) {
                     canonical = `${origin}${postPermalink(post, post.user)}`;
                     metaTitle = post.title?.trim() || config.site.name;
-                    metaDescription = post.description?.trim() || post.title?.trim() || config.site.name;
+                    metaDescription =
+                        post.description?.trim() || post.title?.trim() || config.site.name;
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                     if (post.uploads[0])
                         metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
                     metaType = "article";
+                    crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
                 }
             } catch {
                 // Keep the generic site metadata when the post cannot be loaded.
@@ -388,10 +408,22 @@ export async function buildApp() {
                 select: {
                     name: true,
                     posts: {
-                        where: { post: { status: "published", visibility: "public", hiddenAt: null } },
+                        where: {
+                            post: { status: "published", visibility: "public", hiddenAt: null },
+                        },
                         take: 1,
                         orderBy: { post: { createdAt: "desc" } },
-                        select: { post: { select: { uploads: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } } } } },
+                        select: {
+                            post: {
+                                select: {
+                                    uploads: {
+                                        take: 1,
+                                        orderBy: { createdAt: "asc" },
+                                        select: { id: true },
+                                    },
+                                },
+                            },
+                        },
                     },
                 },
             });
@@ -413,14 +445,22 @@ export async function buildApp() {
                         where: { status: "published", visibility: "public", hiddenAt: null },
                         take: 1,
                         orderBy: { createdAt: "desc" },
-                        select: { uploads: { take: 1, orderBy: { createdAt: "asc" }, select: { id: true } } },
+                        select: {
+                            uploads: {
+                                take: 1,
+                                orderBy: { createdAt: "asc" },
+                                select: { id: true },
+                            },
+                        },
                     },
                 },
             });
             if (category) {
                 canonical = `${origin}${currentPath}`;
                 metaTitle = `${category.name} · ${config.site.name}`;
-                metaDescription = category.description?.trim() || `Posts in ${category.name} on ${config.site.name}`;
+                metaDescription =
+                    category.description?.trim() ||
+                    `Posts in ${category.name} on ${config.site.name}`;
                 if (category.posts[0]?.uploads[0])
                     metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(category.posts[0].uploads[0].id)}`;
             }
@@ -442,8 +482,7 @@ export async function buildApp() {
                 canonical = `${origin}${currentPath}`;
                 metaTitle = user.name?.trim() || config.site.name;
                 metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
-                metaImage =
-                    `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
+                metaImage = `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
             }
         } else if (userPermalinkMatch) {
             const handle = decodeURIComponent(currentPath.split("/")[1] ?? "");
@@ -479,7 +518,8 @@ export async function buildApp() {
             if (post) {
                 canonical = `${origin}${currentPath}`;
                 metaTitle = post.title?.trim() || config.site.name;
-                metaDescription = post.description?.trim() || post.title?.trim() || config.site.name;
+                metaDescription =
+                    post.description?.trim() || post.title?.trim() || config.site.name;
                 metaAuthor = post.user.name;
                 metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                 if (post.uploads[0])
@@ -488,13 +528,25 @@ export async function buildApp() {
             } else {
                 const user = await prisma.user.findFirst({
                     where: { OR: [{ handle }, { id: handle }] },
-                    select: { id: true, name: true, bio: true, updatedAt: true },
+                    select: {
+                        id: true,
+                        name: true,
+                        bio: true,
+                        updatedAt: true,
+                        allowSearchEngineIndex: true,
+                        allowAiCrawler: true,
+                        allowImageCrawler: true,
+                        allowCustomCrawler: true,
+                    },
                 });
+
                 if (user) {
                     canonical = `${origin}${currentPath}`;
                     metaTitle = user.name?.trim() || config.site.name;
                     metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
                     metaImage = `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
+
+                    crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(user));
                 }
             }
         }
@@ -513,13 +565,18 @@ export async function buildApp() {
                 ? `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">`
                 : "",
             `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
+            crawlerDirectives,
         ].join("");
         const isReactPage = /<script type="module" src="\/client\/[^\"]+"><\/script>/i.test(
             payload,
         );
-        let enhanced = payload.includes('property="og:title"')
-            ? payload
-            : payload.replace(/<\/head>/i, `${tags}${analyticsHead(config)}</head>`);
+        let enhanced = payload;
+
+        if (!enhanced.includes('property="og:title"')) {
+            enhanced = enhanced.replace(/<\/head>/i, `${tags}${analyticsHead(config)}</head>`);
+        } else if (crawlerDirectives) {
+            enhanced = enhanced.replace(/<\/head>/i, `${crawlerDirectives}</head>`);
+        }
         if (!isReactPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
                 /<\/head>/i,

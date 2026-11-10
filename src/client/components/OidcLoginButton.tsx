@@ -15,8 +15,8 @@ export function OidcLoginButton() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        void api<{ data: PublicConfig }>("/v1/config")
-            .then(({ data }) => setProviderId(data.auth.oidcProviderId))
+        void api<PublicConfig>("/v1/config")
+            .then((config) => setProviderId(config.auth.oidcProviderId))
             .catch(() => setProviderId(null));
     }, []);
 

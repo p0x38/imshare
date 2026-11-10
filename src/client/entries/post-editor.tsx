@@ -38,6 +38,41 @@ type PostVisibility = "public" | "unlisted" | "private";
 type PermalinkPattern = "user" | "posts";
 type PermalinkIdType = "normalizedTitle" | "internalId" | "creationDate" | "custom";
 
+type CrawlerOverride = "inherit" | "allow" | "deny";
+
+const crawlerOptions = [
+    {
+        key: "allowSearchEngineIndex",
+        label: "Web search crawlers",
+    },
+    {
+        key: "allowAiCrawler",
+        label: "AI crawlers",
+    },
+    {
+        key: "allowImageCrawler",
+        label: "Image crawlers",
+    },
+    {
+        key: "allowCustomCrawler",
+        label: "Custom crawlers",
+    },
+] as const;
+
+type CrawlerField = (typeof crawlerOptions)[number]["key"];
+
+function toCrawlerOverride(value: boolean | null | undefined): CrawlerOverride {
+    if (value === true) return "allow";
+    if (value === false) return "deny";
+    return "inherit";
+}
+
+function fromCrawlerOverride(value: CrawlerOverride): boolean | null {
+    if (value === "allow") return true;
+    if (value === "deny") return false;
+    return null;
+}
+
 function PostEditor() {
     const editing = location.pathname.includes("/edit/");
     const postId = editing
@@ -74,6 +109,23 @@ function PostEditor() {
     const [thumbnailUploadId, setThumbnailUploadId] = useState<string | null>(null);
     const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
     const [thumbnailUploading, setThumbnailUploading] = useState(false);
+    const [crawlerOverrides, setCrawlerOverrides] = useState<Record<CrawlerField, CrawlerOverride>>(
+        {
+            allowSearchEngineIndex: "inherit",
+            allowAiCrawler: "inherit",
+            allowImageCrawler: "inherit",
+            allowCustomCrawler: "inherit",
+        },
+    );
+
+    function crawlerPolicyValues() {
+        return {
+            allowSearchEngineIndex: fromCrawlerOverride(crawlerOverrides.allowSearchEngineIndex),
+            allowAiCrawler: fromCrawlerOverride(crawlerOverrides.allowAiCrawler),
+            allowImageCrawler: fromCrawlerOverride(crawlerOverrides.allowImageCrawler),
+            allowCustomCrawler: fromCrawlerOverride(crawlerOverrides.allowCustomCrawler),
+        };
+    }
 
     useEffect(() => {
         const uploadId = new URLSearchParams(location.search).get("uploadId");
@@ -101,6 +153,12 @@ function PostEditor() {
                         value.originalCreatedAt ? value.originalCreatedAt.slice(0, 16) : "",
                     );
                     setAllowDownload(value.allowDownload !== false);
+                    setCrawlerOverrides({
+                        allowSearchEngineIndex: toCrawlerOverride(value.allowSearchEngineIndex),
+                        allowAiCrawler: toCrawlerOverride(value.allowAiCrawler),
+                        allowImageCrawler: toCrawlerOverride(value.allowImageCrawler),
+                        allowCustomCrawler: toCrawlerOverride(value.allowCustomCrawler),
+                    });
                     setStatus(value.status === "draft" ? "draft" : "published");
                     setVisibility(
                         value.visibility === "private" || value.visibility === "unlisted"
@@ -128,7 +186,9 @@ function PostEditor() {
                     setCategoryId(value.category?.id ?? "");
                     setThumbnailUploadId(value.thumbnailUploadId ?? null);
                     setThumbnailPreviewUrl(
-                        value.thumbnailUrl ? new URL(value.thumbnailUrl, window.location.origin).href : null,
+                        value.thumbnailUrl
+                            ? new URL(value.thumbnailUrl, window.location.origin).href
+                            : null,
                     );
                 }
             })
@@ -147,11 +207,7 @@ function PostEditor() {
             customPostId: permalinkIdType === "custom" ? customPostId.trim() || null : null,
         };
     }
-    async function createPost(
-        uploadIds: string[],
-        postTitle: string,
-        forceStatus?: PostStatus,
-    ) {
+    async function createPost(uploadIds: string[], postTitle: string, forceStatus?: PostStatus) {
         const response = await api<{ data: Post }>("/v1/posts", {
             method: "POST",
             body: JSON.stringify({
@@ -163,6 +219,7 @@ function PostEditor() {
                 originalCreatedAt: originalCreatedAtValue(),
                 ...permalinkValues(),
                 allowDownload,
+                ...crawlerPolicyValues(),
                 status: forceStatus ?? status,
                 visibility,
                 isNSFW,
@@ -244,6 +301,7 @@ function PostEditor() {
                         originalCreatedAt: originalCreatedAtValue(),
                         ...permalinkValues(),
                         allowDownload,
+                        ...crawlerPolicyValues(),
                         status,
                         visibility,
                         isNSFW,
@@ -251,7 +309,10 @@ function PostEditor() {
                             contentWarningType === "none" ? null : contentWarningType,
                         contentWarning: contentWarning.trim() || null,
                         uploadIds: uploadIds.length ? uploadIds : undefined,
-                        tags: tags.split(",").map((value) => value.trim()).filter(Boolean),
+                        tags: tags
+                            .split(",")
+                            .map((value) => value.trim())
+                            .filter(Boolean),
                         categoryId: categoryId || null,
                         thumbnailUploadId,
                     }),
@@ -260,8 +321,7 @@ function PostEditor() {
                 return;
             }
 
-            if (!uploadIds.length)
-                throw new Error("Choose an image from the upload box first.");
+            if (!uploadIds.length) throw new Error("Choose an image from the upload box first.");
 
             const created = await createPost(uploadIds, title.trim() || "Untitled");
             location.href = mergeIntoMultiPost
@@ -366,10 +426,17 @@ function PostEditor() {
                                         }}
                                     />
                                 ) : (
-                                    <Stack spacing={1} alignItems="center" sx={{ p: 3, textAlign: "center" }}>
-                                        <Typography fontWeight={600}>Drop an image here or choose one</Typography>
+                                    <Stack
+                                        spacing={1}
+                                        alignItems="center"
+                                        sx={{ p: 3, textAlign: "center" }}
+                                    >
+                                        <Typography fontWeight={600}>
+                                            Drop an image here or choose one
+                                        </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            The same four-point 1:1 crop box used for profile pictures.
+                                            The same four-point 1:1 crop box used for profile
+                                            pictures.
                                         </Typography>
                                     </Stack>
                                 )}
@@ -377,7 +444,12 @@ function PostEditor() {
                                     component="label"
                                     variant={thumbnailPreviewUrl ? "outlined" : "contained"}
                                     disabled={thumbnailUploading}
-                                    sx={{ position: "absolute", bottom: 12, left: "50%", transform: "translateX(-50%)" }}
+                                    sx={{
+                                        position: "absolute",
+                                        bottom: 12,
+                                        left: "50%",
+                                        transform: "translateX(-50%)",
+                                    }}
                                 >
                                     {thumbnailPreviewUrl ? "Replace thumbnail" : "Choose thumbnail"}
                                     <input
@@ -392,7 +464,12 @@ function PostEditor() {
                                 </Button>
                             </Card>
                             {thumbnailPreviewUrl ? (
-                                <Button color="inherit" size="small" onClick={clearThumbnail} disabled={thumbnailUploading}>
+                                <Button
+                                    color="inherit"
+                                    size="small"
+                                    onClick={clearThumbnail}
+                                    disabled={thumbnailUploading}
+                                >
                                     Remove custom thumbnail
                                 </Button>
                             ) : null}
@@ -446,6 +523,47 @@ function PostEditor() {
                             }
                             label="Allow downloads"
                         />
+                        <Card variant="outlined">
+                            <CardContent>
+                                <Stack spacing={2}>
+                                    <Typography variant="h6" component="h2">
+                                        Crawler access
+                                    </Typography>
+
+                                    <Typography variant="body2" color="text.secondary">
+                                        Choose which crawlers may access this post. Inherited
+                                        settings follow your account defaults.
+                                    </Typography>
+
+                                    {crawlerOptions.map(({ key, label }) => (
+                                        <FormControl fullWidth key={key}>
+                                            <InputLabel id={`${key}-label`}>{label}</InputLabel>
+
+                                            <Select
+                                                labelId={`${key}-label`}
+                                                value={crawlerOverrides[key]}
+                                                label={label}
+                                                onChange={(event) => {
+                                                    setCrawlerOverrides((current) => ({
+                                                        ...current,
+                                                        [key]: event.target
+                                                            .value as CrawlerOverride,
+                                                    }));
+                                                }}
+                                            >
+                                                <MenuItem value="inherit">
+                                                    Use account default
+                                                </MenuItem>
+
+                                                <MenuItem value="allow">Allow</MenuItem>
+
+                                                <MenuItem value="deny">Deny</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    ))}
+                                </Stack>
+                            </CardContent>
+                        </Card>
                         <FormControl fullWidth>
                             <InputLabel id="post-status-label">Status</InputLabel>
                             <Select

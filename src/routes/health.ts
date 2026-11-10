@@ -17,7 +17,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify) => {
                 summary: "Check service health",
                 description:
                     "Returns a lightweight health response without checking backing services.",
-                responseExamples: { "200": { status: "ok" } },
+                responseExamples: { "200": { api: "v1", version: packageJson.version } },
             }),
         },
         async () => ({ status: "ok" }),

@@ -132,6 +132,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 categoryId?: string | null;
                 thumbnailUploadId?: string | null;
                 uploadIds?: string[];
+                allowSearchEngineIndex?: boolean | null;
+                allowAiCrawler?: boolean | null;
+                allowImageCrawler?: boolean | null;
+                allowCustomCrawler?: boolean | null;
             };
             if (!body.title.trim())
                 return reply
@@ -193,6 +197,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                             : null,
                         ...permalink,
                         allowDownload: body.allowDownload ?? true,
+                        allowSearchEngineIndex: body.allowSearchEngineIndex ?? null,
+                        allowAiCrawler: body.allowAiCrawler ?? null,
+                        allowImageCrawler: body.allowImageCrawler ?? null,
+                        allowCustomCrawler: body.allowCustomCrawler ?? null,
                         ...lifecycle,
                         categoryId: body.categoryId,
                         thumbnailUploadId,
@@ -339,7 +347,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 body.tags !== undefined && body.tagMode !== "subtraction"
                     ? await findTags(body.tags)
                     : undefined;
-            const tagNames = body.tags?.map((tag) => tag.trim().toLowerCase()).filter(Boolean) ?? [];
+            const tagNames =
+                body.tags?.map((tag) => tag.trim().toLowerCase()).filter(Boolean) ?? [];
 
             await prisma.$transaction(async (tx) => {
                 for (const post of posts) {
@@ -403,7 +412,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                                         .filter(
                                                             (tag) =>
                                                                 !post.tags.some(
-                                                                    (current) => current.tagId === tag.id,
+                                                                    (current) =>
+                                                                        current.tagId === tag.id,
                                                                 ),
                                                         )
                                                         .map((tag) => ({ tagId: tag.id })),
@@ -419,13 +429,17 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                                                       },
                                                                       select: { id: true },
                                                                   })
-                                                                  .then((items) => items.map((item) => item.id)),
+                                                                  .then((items) =>
+                                                                      items.map((item) => item.id),
+                                                                  ),
                                                           },
                                                       },
                                                   }
                                                 : {
                                                       deleteMany: {},
-                                                      create: (tags ?? []).map((tag) => ({ tagId: tag.id })),
+                                                      create: (tags ?? []).map((tag) => ({
+                                                          tagId: tag.id,
+                                                      })),
                                                   },
                                   }
                                 : {}),
@@ -518,7 +532,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             const [keeper, ...merged] = posts;
             if (!keeper)
                 return reply.code(400).send({
-                    error: { code: "INVALID_MERGE", message: "At least one post is required to merge." },
+                    error: {
+                        code: "INVALID_MERGE",
+                        message: "At least one post is required to merge.",
+                    },
                 });
 
             const uploadIds = posts.flatMap((post) => post.uploads.map((upload) => upload.id));
@@ -551,7 +568,6 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             return ok(postView(result));
         },
     );
-
 
     fastify.post("/v1/posts/:postId/split", async (request, reply) => {
         const user = await requireUser(request, reply);
@@ -617,6 +633,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         originalCreator: existing.originalCreator,
                         originalCreatedAt: existing.originalCreatedAt,
                         allowDownload: existing.allowDownload,
+                        allowSearchEngineIndex: existing.allowSearchEngineIndex,
+                        allowAiCrawler: existing.allowAiCrawler,
+                        allowImageCrawler: existing.allowImageCrawler,
+                        allowCustomCrawler: existing.allowCustomCrawler,
                         status: existing.status,
                         visibility: existing.visibility,
                         publishedAt: existing.publishedAt,
@@ -713,6 +733,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 permalinkIdType?: string;
                 customPostId?: string | null;
                 allowDownload?: boolean;
+                allowSearchEngineIndex?: boolean | null;
+                allowAiCrawler?: boolean | null;
+                allowImageCrawler?: boolean | null;
+                allowCustomCrawler?: boolean | null;
                 status?: string;
                 visibility?: string;
                 scheduledAt?: string | null;
@@ -802,6 +826,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         caption: existing.caption,
                         sourceUrl: existing.sourceUrl,
                         allowDownload: existing.allowDownload,
+                        allowSearchEngineIndex: existing.allowSearchEngineIndex,
+                        allowAiCrawler: existing.allowAiCrawler,
+                        allowImageCrawler: existing.allowImageCrawler,
+                        allowCustomCrawler: existing.allowCustomCrawler,
                         categoryId: existing.categoryId,
                         tagsJson: JSON.stringify(existing.tags.map((tag) => tag.tagId)),
                         contentWarning: existing.contentWarning,
@@ -828,6 +856,10 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                                   ? new Date(body.originalCreatedAt)
                                   : null,
                         allowDownload: body.allowDownload,
+                        allowSearchEngineIndex: body.allowSearchEngineIndex,
+                        allowAiCrawler: body.allowAiCrawler,
+                        allowImageCrawler: body.allowImageCrawler,
+                        allowCustomCrawler: body.allowCustomCrawler,
                         categoryId: body.categoryId,
                         thumbnailUploadId:
                             body.thumbnailUploadId === undefined

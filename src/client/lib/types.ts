@@ -33,13 +33,26 @@ export interface Post {
     originalCreator?: string | null;
     originalCreatedAt?: string | null;
     allowDownload?: boolean;
+    allowSearchEngineIndex?: boolean | null;
+    allowAiCrawler?: boolean | null;
+    allowImageCrawler?: boolean | null;
+    allowCustomCrawler?: boolean | null;
     status?: string;
     visibility?: string;
     publishedAt?: string | null;
     scheduledAt?: string | null;
     hiddenAt?: string | null;
     isNSFW?: boolean;
-    contentWarningType?: "none" | "sexual" | "violence" | "gore" | "drugs" | "flashing" | "spoilers" | "other" | null;
+    contentWarningType?:
+        | "none"
+        | "sexual"
+        | "violence"
+        | "gore"
+        | "drugs"
+        | "flashing"
+        | "spoilers"
+        | "other"
+        | null;
     contentWarning?: string | null;
     permalinkPattern?: "user" | "posts";
     permalinkIdType?: "normalizedTitle" | "internalId" | "creationDate" | "custom";

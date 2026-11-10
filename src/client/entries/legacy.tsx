@@ -29,6 +29,7 @@ import { LoadingState } from "../components/States";
 import { SearchAutocomplete } from "../components/AutocompleteFields";
 import { ProfilePictureCropper } from "../components/ProfilePictureCropper";
 import { api } from "../lib/api";
+import { OidcLoginButton } from "../components/OidcLoginButton";
 import type { Post, User } from "../lib/types";
 
 type RouteKind =
@@ -174,6 +175,7 @@ function AuthPage({ register }: { register: boolean }) {
                         </Stack>
                     </CardContent>
                 </Card>
+                <OidcLoginButton />
                 <Typography>
                     {register ? (
                         <>
@@ -371,21 +373,20 @@ function ProfileSettingsPage() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const response = await api<{ data: { id: string; url: string } }>("/v1/uploads?area=avatar", {
-                method: "POST",
-                body: formData,
-            });
+            const response = await api<{ data: { id: string; url: string } }>(
+                "/v1/uploads?area=avatar",
+                {
+                    method: "POST",
+                    body: formData,
+                },
+            );
             setAvatarUploadId(response.data.id);
             setExternalAvatarUrl("");
             setAvatarMode("custom");
             setAvatarPreviewUrl(response.data.url);
             setAvatarCropFile(null);
         } catch (cause) {
-            setError(
-                cause instanceof Error
-                    ? cause.message
-                    : "Unable to upload profile picture.",
-            );
+            setError(cause instanceof Error ? cause.message : "Unable to upload profile picture.");
         } finally {
             setAvatarUploading(false);
         }
@@ -481,7 +482,9 @@ function ProfileSettingsPage() {
                                                 variant="outlined"
                                                 disabled={avatarUploading}
                                             >
-                                                {avatarUploading ? "Uploading…" : "Choose & crop picture"}
+                                                {avatarUploading
+                                                    ? "Uploading…"
+                                                    : "Choose & crop picture"}
                                                 <input
                                                     hidden
                                                     type="file"
@@ -530,9 +533,13 @@ function ProfileSettingsPage() {
                                                     onCancel={() => setAvatarCropFile(null)}
                                                     onConfirm={(blob) =>
                                                         handleAvatarFile(
-                                                            new File([blob], "profile-picture.png", {
-                                                                type: "image/png",
-                                                            }),
+                                                            new File(
+                                                                [blob],
+                                                                "profile-picture.png",
+                                                                {
+                                                                    type: "image/png",
+                                                                },
+                                                            ),
                                                         )
                                                     }
                                                 />
@@ -542,7 +549,8 @@ function ProfileSettingsPage() {
                                 </Stack>
                             ) : (
                                 <Typography variant="body2" color="text.secondary">
-                                    Switch Avatar mode to Custom to upload and crop a profile picture.
+                                    Switch Avatar mode to Custom to upload and crop a profile
+                                    picture.
                                 </Typography>
                             )}
                             <TextField
@@ -611,8 +619,10 @@ function EntityListPage({ taxonomy }: { taxonomy: "users" | "tags" | "categories
                             const count = Number(
                                 (item._count as { posts?: number } | undefined)?.posts ?? 0,
                             );
-                            const bannerUrl = typeof item.bannerUrl === "string" ? item.bannerUrl : null;
-                            const avatarUrl = typeof item.avatarUrl === "string" ? item.avatarUrl : null;
+                            const bannerUrl =
+                                typeof item.bannerUrl === "string" ? item.bannerUrl : null;
+                            const avatarUrl =
+                                typeof item.avatarUrl === "string" ? item.avatarUrl : null;
                             return (
                                 <Card key={id} variant="outlined" sx={{ overflow: "hidden" }}>
                                     <CardActionArea
@@ -624,11 +634,20 @@ function EntityListPage({ taxonomy }: { taxonomy: "users" | "tags" | "categories
                                                 component="img"
                                                 src={bannerUrl}
                                                 alt=""
-                                                sx={{ display: "block", width: "100%", height: 120, objectFit: "cover" }}
+                                                sx={{
+                                                    display: "block",
+                                                    width: "100%",
+                                                    height: 120,
+                                                    objectFit: "cover",
+                                                }}
                                             />
                                         ) : null}
                                         <CardContent>
-                                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                            <Stack
+                                                direction="row"
+                                                spacing={1.5}
+                                                alignItems="center"
+                                            >
                                                 {taxonomy === "users" ? (
                                                     <Avatar src={avatarUrl ?? undefined}>
                                                         {name.charAt(0).toUpperCase()}
@@ -636,7 +655,10 @@ function EntityListPage({ taxonomy }: { taxonomy: "users" | "tags" | "categories
                                                 ) : null}
                                                 <Box>
                                                     <Typography variant="h6">{name}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
+                                                    <Typography
+                                                        variant="body2"
+                                                        color="text.secondary"
+                                                    >
                                                         {count} post{count === 1 ? "" : "s"}
                                                     </Typography>
                                                 </Box>
@@ -803,7 +825,12 @@ function EntityPage({ taxonomy, id }: { taxonomy: "users" | "tags" | "categories
                             component="img"
                             src={bannerUrl}
                             alt=""
-                            sx={{ display: "block", width: "100%", height: { xs: 140, sm: 220 }, objectFit: "cover" }}
+                            sx={{
+                                display: "block",
+                                width: "100%",
+                                height: { xs: 140, sm: 220 },
+                                objectFit: "cover",
+                            }}
                         />
                     ) : null}
                     <CardContent>
@@ -824,7 +851,8 @@ function EntityPage({ taxonomy, id }: { taxonomy: "users" | "tags" | "categories
                                 Not yet created
                             </Typography>
                             <Typography color="text.secondary">
-                                It seems no posts are created for this {taxonomy === "tags" ? "tag" : "category"} yet.
+                                It seems no posts are created for this{" "}
+                                {taxonomy === "tags" ? "tag" : "category"} yet.
                             </Typography>
                         </CardContent>
                     </Card>

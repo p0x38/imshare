@@ -34,8 +34,19 @@ const preferenceSchema = {
         defaultPostVisibility: { type: "string" as const, enum: ["public", "unlisted", "private"] },
         defaultAllowDownload: { type: "boolean" as const },
         defaultContentWarning: { type: "string" as const, maxLength: 500, nullable: true },
-        interestedTags: { type: "array" as const, items: { type: "string" as const, minLength: 1, maxLength: 100 }, maxItems: 100 },
-        interestedCategoryIds: { type: "array" as const, items: { type: "string" as const, minLength: 1 }, maxItems: 100 },
+        interestedTags: {
+            type: "array" as const,
+            items: { type: "string" as const, minLength: 1, maxLength: 100 },
+            maxItems: 100,
+        },
+        interestedCategoryIds: {
+            type: "array" as const,
+            items: { type: "string" as const, minLength: 1 },
+            maxItems: 100,
+        },
+        allowAiCrawler: { type: "boolean" as const },
+        allowImageCrawler: { type: "boolean" as const },
+        allowCustomCrawler: { type: "boolean" as const },
     },
 };
 
@@ -213,6 +224,9 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     defaultContentWarning: true,
                     interestedTagsJson: true,
                     interestedCategoryIdsJson: true,
+                    allowAiCrawler: true,
+                    allowImageCrawler: true,
+                    allowCustomCrawler: true,
                 },
             });
             return ok({
@@ -291,63 +305,56 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 "showFollowings",
                 "allowSearchEngineIndex",
                 "defaultAllowDownload",
+                "allowAiCrawler",
+                "allowImageCrawler",
+                "allowCustomCrawler",
             ] as const;
             for (const key of booleanKeys)
                 if (body[key] !== undefined && typeof body[key] !== "boolean")
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_PREFERENCE",
-                                message: `${key} must be a boolean.`,
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_PREFERENCE",
+                            message: `${key} must be a boolean.`,
+                        },
+                    });
             const visibility = body.defaultPostVisibility;
             if (
                 visibility !== undefined &&
                 !["public", "unlisted", "private"].includes(String(visibility))
             )
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_PREFERENCE",
-                            message: "Invalid default post visibility.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PREFERENCE",
+                        message: "Invalid default post visibility.",
+                    },
+                });
             const categoryId = body.defaultCategoryId;
             if (categoryId !== undefined && categoryId !== null && typeof categoryId !== "string")
-                return reply
-                    .code(400)
-                    .send({
-                        error: { code: "INVALID_PREFERENCE", message: "Invalid default category." },
-                    });
+                return reply.code(400).send({
+                    error: { code: "INVALID_PREFERENCE", message: "Invalid default category." },
+                });
             if (
                 typeof body.defaultContentWarning === "string" &&
                 body.defaultContentWarning.length > 500
             )
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_PREFERENCE",
-                            message: "Default content warning is too long.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PREFERENCE",
+                        message: "Default content warning is too long.",
+                    },
+                });
             if (categoryId) {
                 const category = await prisma.category.findUnique({
                     where: { id: categoryId },
                     select: { id: true },
                 });
                 if (!category)
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "CATEGORY_NOT_FOUND",
-                                message: "Default category not found.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "CATEGORY_NOT_FOUND",
+                            message: "Default category not found.",
+                        },
+                    });
             }
             const updated = await prisma.user.update({
                 where: { id: user.id },
@@ -372,16 +379,20 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                         : {}),
                     ...(interestedTags !== undefined
                         ? {
-                              interestedTagsJson: JSON.stringify(
-                                  [...new Set((interestedTags as string[]).map((tag) => tag.trim()).filter(Boolean))],
-                              ),
+                              interestedTagsJson: JSON.stringify([
+                                  ...new Set(
+                                      (interestedTags as string[])
+                                          .map((tag) => tag.trim())
+                                          .filter(Boolean),
+                                  ),
+                              ]),
                           }
                         : {}),
                     ...(interestedCategoryIds !== undefined
                         ? {
-                              interestedCategoryIdsJson: JSON.stringify(
-                                  [...new Set(interestedCategoryIds as string[])],
-                              ),
+                              interestedCategoryIdsJson: JSON.stringify([
+                                  ...new Set(interestedCategoryIds as string[]),
+                              ]),
                           }
                         : {}),
                 },
@@ -401,6 +412,9 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     defaultContentWarning: true,
                     interestedTagsJson: true,
                     interestedCategoryIdsJson: true,
+                    allowAiCrawler: true,
+                    allowImageCrawler: true,
+                    allowCustomCrawler: true,
                 },
             });
             return ok({

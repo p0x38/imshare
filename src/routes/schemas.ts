@@ -67,6 +67,20 @@ export const userUpdateSchema = {
         },
     },
 } as const;
+const crawlerOverrideProperties = {
+    allowSearchEngineIndex: {
+        anyOf: [{ type: "boolean" }, { type: "null" }],
+    },
+    allowAiCrawler: {
+        anyOf: [{ type: "boolean" }, { type: "null" }],
+    },
+    allowImageCrawler: {
+        anyOf: [{ type: "boolean" }, { type: "null" }],
+    },
+    allowCustomCrawler: {
+        anyOf: [{ type: "boolean" }, { type: "null" }],
+    },
+};
 const postLifecycleProperties = {
     status: { type: "string", enum: ["draft", "published"] },
     visibility: { type: "string", enum: ["public", "unlisted", "private"] },
@@ -121,6 +135,7 @@ export const postCreateSchema = {
             ...originalPostProperties,
             ...permalinkProperties,
             allowDownload: { type: "boolean" },
+            ...crawlerOverrideProperties,
             ...postLifecycleProperties,
             tags: {
                 type: "array",
@@ -149,6 +164,7 @@ export const postUpdateSchema = {
             ...permalinkProperties,
             categoryId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
             thumbnailUploadId: { anyOf: [{ type: "string", minLength: 1 }, { type: "null" }] },
+            ...crawlerOverrideProperties,
             ...postLifecycleProperties,
             tags: {
                 type: "array",

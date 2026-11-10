@@ -15,10 +15,7 @@ const lifecycleProperties = {
         .nullable()
         .optional()
         .meta({ description: "Optional time at which the post should become active." }),
-    isNSFW: z
-        .boolean()
-        .optional()
-        .meta({ description: "Marks the post as not safe for work." }),
+    isNSFW: z.boolean().optional().meta({ description: "Marks the post as not safe for work." }),
     contentWarningType: z
         .enum(["none", "sexual", "violence", "gore", "drugs", "flashing", "spoilers", "other"])
         .nullable()
@@ -30,6 +27,24 @@ const lifecycleProperties = {
         .nullable()
         .optional()
         .meta({ description: "Optional custom content warning shown with the post." }),
+};
+
+const crawlerOverrideProperties = {
+    allowSearchEngineIndex: z.boolean().nullable().optional().meta({
+        description: "Override web search crawler access. Null inherits the owner's setting.",
+    }),
+
+    allowAiCrawler: z.boolean().nullable().optional().meta({
+        description: "Override AI crawler access. Null inherits the owner's setting.",
+    }),
+
+    allowImageCrawler: z.boolean().nullable().optional().meta({
+        description: "Override image crawler access. Null inherits the owner's setting.",
+    }),
+
+    allowCustomCrawler: z.boolean().nullable().optional().meta({
+        description: "Override custom crawler access. Null inherits the owner's setting.",
+    }),
 };
 
 const originalPostProperties = {
@@ -99,6 +114,7 @@ export const postCreateInput = z
             .boolean()
             .optional()
             .meta({ description: "Whether viewers may download attached files." }),
+        ...crawlerOverrideProperties,
         ...lifecycleProperties,
         tags: z
             .array(z.string().min(1).max(100))
@@ -167,6 +183,7 @@ export const postUpdateInput = z
         categoryId: z.string().min(1).nullable().optional().meta({
             description: "Replacement category identifier, or null to remove the category.",
         }),
+        ...crawlerOverrideProperties,
         ...lifecycleProperties,
         tags: z
             .array(z.string().min(1).max(100))
@@ -193,23 +210,18 @@ export const postBatchUpdateInput = z
             .max(100)
             .optional()
             .meta({ description: "Tags to apply according to tagMode." }),
-        tagMode: z
-            .enum(["replace", "addition", "subtraction"])
-            .optional()
-            .default("replace")
-            .meta({
-                description:
-                    "How the supplied tags should be applied: replace the current set, add to it, or remove matching tags.",
-            }),
+        tagMode: z.enum(["replace", "addition", "subtraction"]).optional().default("replace").meta({
+            description:
+                "How the supplied tags should be applied: replace the current set, add to it, or remove matching tags.",
+        }),
         categoryId: z.string().min(1).nullable().optional().meta({
-            description: "Category identifier applied to every selected post, or null to remove it.",
+            description:
+                "Category identifier applied to every selected post, or null to remove it.",
         }),
     })
     .meta({
-        description:
-            "Applies shared metadata and publication settings to multiple owned posts.",
+        description: "Applies shared metadata and publication settings to multiple owned posts.",
     });
-
 
 export const postMergeInput = z
     .object({

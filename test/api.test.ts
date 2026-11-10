@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 import path from "node:path";
 import { afterAll, expect, test } from "vitest";
+import packageJson from "../package.json" with { type: "json" };
 
 const root = process.cwd();
 const databasePath = path.join(root, "test-api.db");
@@ -72,7 +73,12 @@ test("health, readiness, and version routes are publicly available", async () =>
         expect(ready.json()).toMatchObject({ status: "ready" });
         const version = await app.inject({ method: "GET", url: "/api/v1/version" });
         expect(version.statusCode).toBe(200);
-        expect(version.json()).toMatchObject({ data: { api: "v1", version: "1.0.0" } });
+        expect(version.json()).toMatchObject({
+            data: {
+                api: "v1",
+                version: packageJson.version,
+            },
+        });
     } finally {
         await app.close();
     }
@@ -249,7 +255,6 @@ test("dedicated HTML error pages are served", async () => {
     }
 });
 
-
 test("Bearer API tokens authenticate external API requests and enforce permissions", async () => {
     const app = await buildApp();
     const { generateApiToken } = await import("../src/lib/api-tokens.js");
@@ -307,7 +312,6 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
         await app.close();
     }
 });
-
 
 test("recommendations return public posts for anonymous visitors", async () => {
     const app = await buildApp();
@@ -396,8 +400,12 @@ test("post page views are recorded separately from post reads", async () => {
             url: `/api/v1/posts/${postId}/view`,
         });
         expect(view.statusCode).toBe(200);
-        expect(view.json()).toEqual({
-            data: { recorded: true, viewCount: 1 },
+        expect(view.json()).toMatchObject({
+            data: {
+                recorded: true,
+                viewCount: 1,
+            },
+            endpoint: `/api/v1/posts/${postId}/view`,
         });
 
         const secondRead = await app.inject({
@@ -523,11 +531,14 @@ test("personalized recommendations rank recent likes, views, and interests", asy
         });
         categoryId = category.id;
 
-        const createPost = async (title: string, options: {
-            tags?: string[];
-            categoryId?: string | null;
-            views?: number;
-        }) => {
+        const createPost = async (
+            title: string,
+            options: {
+                tags?: string[];
+                categoryId?: string | null;
+                views?: number;
+            },
+        ) => {
             const post = await prisma.post.create({
                 data: {
                     id: `${suffix}-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,

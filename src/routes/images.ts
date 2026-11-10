@@ -9,9 +9,16 @@ import { prisma } from "../lib/auth.js";
 import { loadConfig } from "../lib/config.js";
 import { uploadStorageDirectory } from "../lib/upload-storage.js";
 import { queueThumbnailGeneration } from "../lib/thumbnails.js";
-import { cacheMaxAgeSeconds, ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "../lib/cache.js";
+import {
+    cacheMaxAgeSeconds,
+    ensureCacheDirectory,
+    getCacheSettings,
+    readCacheFile,
+    resolveCachePath,
+} from "../lib/cache.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
 import { observability } from "../instrumentation.js";
+import { resolveCrawlerPolicy } from "../lib/crawler-policy.js";
 
 const MAX_DIMENSION = 4096;
 const MIN_DIMENSION = 16;
@@ -127,16 +134,18 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 select: { thumbhash: true },
             });
             if (!upload?.thumbhash)
-                return reply
-                    .code(404)
-                    .send({
-                        error: {
-                            code: "THUMBHASH_NOT_FOUND",
-                            message: "Image placeholder is not available.",
-                        },
-                    });
+                return reply.code(404).send({
+                    error: {
+                        code: "THUMBHASH_NOT_FOUND",
+                        message: "Image placeholder is not available.",
+                    },
+                });
             try {
-                const cachePath = resolveCachePath(cacheDir, `${uploadId}-thumbhash.png`, cacheSettings.useHashedDirectory);
+                const cachePath = resolveCachePath(
+                    cacheDir,
+                    `${uploadId}-thumbhash.png`,
+                    cacheSettings.useHashedDirectory,
+                );
                 try {
                     const cached = await readCacheFile(cachePath, cacheSettings.ttl);
                     if (!cached) throw new Error("CACHE_MISS");
@@ -154,24 +163,24 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     .png()
                     .toBuffer();
                 await mkdir(path.dirname(cachePath), { recursive: true });
-                await writeFile(cachePath, output, { flag: "wx" }).then(() => {
-                    observability.recordCacheWrite("placeholder", output.byteLength);
-                }).catch(() => {
-                    observability.recordCacheError("placeholder");
-                });
+                await writeFile(cachePath, output, { flag: "wx" })
+                    .then(() => {
+                        observability.recordCacheWrite("placeholder", output.byteLength);
+                    })
+                    .catch(() => {
+                        observability.recordCacheError("placeholder");
+                    });
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 observability.recordImageServed();
                 return reply.type("image/png").send(output);
             } catch {
-                return reply
-                    .code(500)
-                    .send({
-                        error: {
-                            code: "THUMBHASH_FAILED",
-                            message: "The image placeholder could not be generated.",
-                        },
-                    });
+                return reply.code(500).send({
+                    error: {
+                        code: "THUMBHASH_FAILED",
+                        message: "The image placeholder could not be generated.",
+                    },
+                });
             }
         },
     );
@@ -200,16 +209,55 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             const query = request.query as Record<string, unknown>;
             const upload = await prisma.upload.findUnique({
                 where: { id: uploadId },
-                include: { post: { select: { allowDownload: true, userId: true } } },
+                include: {
+                    user: {
+                        select: {
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                        },
+                    },
+                    post: {
+                        select: {
+                            allowDownload: true,
+                            userId: true,
+
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+
+                            user: {
+                                select: {
+                                    allowSearchEngineIndex: true,
+                                    allowAiCrawler: true,
+                                    allowImageCrawler: true,
+                                    allowCustomCrawler: true,
+                                },
+                            },
+                        },
+                    },
+                },
             });
             if (!upload)
                 return reply
                     .code(404)
                     .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
-            const sourceDirectory = upload.storageArea === "avatars"
-            ? uploadStorageDirectory(config, "avatars")
-            : uploadDir;
-        const source = path.resolve(sourceDirectory, upload.filename);
+
+            const crawlerOwner = upload.post?.user ?? upload.user;
+
+            const crawlerPolicy = resolveCrawlerPolicy(crawlerOwner, upload.post);
+
+            if (!crawlerPolicy.image) {
+                reply.header("X-Robots-Tag", "noindex");
+            }
+
+            const sourceDirectory =
+                upload.storageArea === "avatars"
+                    ? uploadStorageDirectory(config, "avatars")
+                    : uploadDir;
+            const source = path.resolve(sourceDirectory, upload.filename);
             const relative = path.relative(sourceDirectory, source);
             if (relative.startsWith("..") || path.isAbsolute(relative))
                 return reply
@@ -239,14 +287,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             }
             const transformed = width !== undefined || height !== undefined || format !== undefined;
             if (query.download === "true" && upload.post && !upload.post.allowDownload)
-                return reply
-                    .code(403)
-                    .send({
-                        error: {
-                            code: "DOWNLOAD_DISABLED",
-                            message: "The creator has disabled downloads for this image.",
-                        },
-                    });
+                return reply.code(403).send({
+                    error: {
+                        code: "DOWNLOAD_DISABLED",
+                        message: "The creator has disabled downloads for this image.",
+                    },
+                });
             if (!transformed) {
                 const output = await readFile(source);
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
@@ -296,13 +342,15 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 } else reply.type(upload.mimeType);
                 const output = await pipeline.toBuffer();
                 await mkdir(path.dirname(cached), { recursive: true });
-                await writeFile(cached, output, { flag: "wx" }).then(() => {
-                    observability.recordCacheWrite("image", output.byteLength);
-                }).catch(async (error) => {
-                    if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
-                    observability.recordCacheError("image");
-                    throw error;
-                });
+                await writeFile(cached, output, { flag: "wx" })
+                    .then(() => {
+                        observability.recordCacheWrite("image", output.byteLength);
+                    })
+                    .catch(async (error) => {
+                        if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
+                        observability.recordCacheError("image");
+                        throw error;
+                    });
                 observability.recordImageProcessing(
                     Number(process.hrtime.bigint() - processingStartedAt) / 1_000_000_000,
                     "transform",
@@ -315,14 +363,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             } catch (error) {
                 observability.recordImageProcessingError("transform");
                 request.log.error(error);
-                return reply
-                    .code(415)
-                    .send({
-                        error: {
-                            code: "IMAGE_PROCESSING_FAILED",
-                            message: "The image could not be processed.",
-                        },
-                    });
+                return reply.code(415).send({
+                    error: {
+                        code: "IMAGE_PROCESSING_FAILED",
+                        message: "The image could not be processed.",
+                    },
+                });
             }
         },
     );

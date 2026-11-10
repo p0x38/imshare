@@ -44,6 +44,7 @@ export function Navigation() {
     const { t } = useTranslation();
     const { mode, toggle } = useColorMode();
     const [user, setUser] = useState<User | null>(null);
+    const [authLoading, setAuthLoading] = useState(true);
     const [unreadNotifications, setUnreadNotifications] = useState(0);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [accountMenuAnchor, setAccountMenuAnchor] = useState<HTMLElement | null>(null);
@@ -58,6 +59,8 @@ export function Navigation() {
             if (userResult.status === "fulfilled") setUser(userResult.value.data);
             if (notificationResult.status === "fulfilled")
                 setUnreadNotifications(notificationResult.value.data.count);
+
+            setAuthLoading(false);
         });
         return () => {
             active = false;
@@ -214,32 +217,58 @@ export function Navigation() {
                         transformOrigin={{ vertical: "top", horizontal: "right" }}
                         slotProps={{ paper: { sx: { minWidth: 220, mt: 1 } } }}
                     >
-                        <MenuItem disabled sx={{ opacity: "1 !important", fontWeight: 600 }}>
-                            {displayName}
-                        </MenuItem>
-                        <MenuItem onClick={() => goTo("/dashboard/")}>Dashboard</MenuItem>
-                        <MenuItem onClick={() => goTo("/dashboard/settings/")}>Settings</MenuItem>
-                        {user?.handle ? (
-                            <MenuItem
-                                onClick={() => goTo(`/users/@${encodeURIComponent(user.handle!)}`)}
-                            >
-                                Profile
+                        {authLoading ? <MenuItem disabled>{t("common.loading")}</MenuItem> : null}
+
+                        {user ? (
+                            <MenuItem disabled sx={{ opacity: "1 !important", fontWeight: 600 }}>
+                                {displayName}
                             </MenuItem>
                         ) : null}
-                        <MenuItem onClick={() => goTo("/account/")}>Account</MenuItem>
-                        <MenuItem onClick={() => goTo("/notifications/")}>
-                            Notifications
-                            {unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
-                        </MenuItem>
-                        {canAccessAdmin ? (
-                            <MenuItem onClick={() => goTo("/admin/")}>
-                                {t("admin.administration")}
+
+                        {user ? (
+                            <>
+                                <MenuItem onClick={() => goTo("/dashboard/")}>Dashboard</MenuItem>
+                                <MenuItem onClick={() => goTo("/dashboard/settings/")}>
+                                    Settings
+                                </MenuItem>
+                                {user.handle ? (
+                                    <MenuItem
+                                        onClick={() =>
+                                            goTo(`/users/@${encodeURIComponent(user.handle!)}`)
+                                        }
+                                    >
+                                        Profile
+                                    </MenuItem>
+                                ) : null}
+                                <MenuItem onClick={() => goTo("/account/")}>Account</MenuItem>
+                                <MenuItem onClick={() => goTo("/notifications/")}>
+                                    Notifications
+                                    {unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
+                                </MenuItem>
+                                {canAccessAdmin ? (
+                                    <MenuItem onClick={() => goTo("/admin/")}>
+                                        {t("admin.administration")}
+                                    </MenuItem>
+                                ) : null}
+                            </>
+                        ) : null}
+
+                        {!authLoading && !user ? (
+                            <MenuItem onClick={() => goTo("/account/login/")}>Log in</MenuItem>
+                        ) : null}
+
+                        {!authLoading && !user ? (
+                            <MenuItem onClick={() => goTo("/account/register/")}>
+                                Create account
                             </MenuItem>
                         ) : null}
-                        <MenuItem onClick={() => void logout()}>
-                            <Logout fontSize="small" sx={{ mr: 1 }} />
-                            Log out
-                        </MenuItem>
+
+                        {user ? (
+                            <MenuItem onClick={() => void logout()}>
+                                <Logout fontSize="small" sx={{ mr: 1 }} />
+                                Log out
+                            </MenuItem>
+                        ) : null}
                     </MuiMenu>
                 </Stack>
             </Toolbar>

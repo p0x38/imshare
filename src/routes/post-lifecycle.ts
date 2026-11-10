@@ -42,6 +42,10 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                 visibility?: string;
                 scheduledAt?: string | null;
                 contentWarning?: string | null;
+                allowSearchEngineIndex?: boolean | null;
+                allowAiCrawler?: boolean | null;
+                allowImageCrawler?: boolean | null;
+                allowCustomCrawler?: boolean | null;
             };
             const post = await prisma.post.findUnique({ where: { id: postId } });
             if (!post)
@@ -90,6 +94,10 @@ export const postLifecycleRoutes: FastifyPluginAsync = async (fastify) => {
                             ? post.contentWarning
                             : body.contentWarning,
                     hiddenAt: status === "published" ? null : post.hiddenAt,
+                    allowSearchEngineIndex: body.allowSearchEngineIndex,
+                    allowAiCrawler: body.allowAiCrawler,
+                    allowImageCrawler: body.allowImageCrawler,
+                    allowCustomCrawler: body.allowCustomCrawler,
                 },
             });
             return ok(updated);

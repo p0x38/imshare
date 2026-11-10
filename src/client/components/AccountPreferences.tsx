@@ -33,6 +33,9 @@ interface Preferences {
     showFollowers: boolean;
     showFollowings: boolean;
     allowSearchEngineIndex: boolean;
+    allowAiCrawler: boolean;
+    allowImageCrawler: boolean;
+    allowCustomCrawler: boolean;
     defaultCategoryId: string | null;
     defaultPostVisibility: "public" | "unlisted" | "private";
     defaultAllowDownload: boolean;
@@ -159,7 +162,36 @@ export function AccountPreferences() {
                                     }
                                 />
                             }
-                            label={t("accountUi.indexProfile")}
+                            label={t("accountUi.allowSearchEngineCrawler")}
+                        />
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={preferences.allowAiCrawler}
+                                    onChange={(e) => set("allowAiCrawler", e.target.checked)}
+                                />
+                            }
+                            label={t("accountUi.allowAiCrawler")}
+                        />
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={preferences.allowImageCrawler}
+                                    onChange={(e) => set("allowImageCrawler", e.target.checked)}
+                                />
+                            }
+                            label={t("accountUi.allowImageCrawler")}
+                        />
+
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    checked={preferences.allowCustomCrawler}
+                                    onChange={(e) => set("allowCustomCrawler", e.target.checked)}
+                                />
+                            }
+                            label={t("accountUi.allowCustomCrawler")}
                         />
                         <Box sx={{ pt: 1 }}>
                             <Typography variant="subtitle1">
