@@ -79,7 +79,7 @@
         "@emotion/react": "^11.14.0",
         "@emotion/styled": "^11.14.0",
         "@fastify/cookie": "^11.1.5",
-        "@fastify/multipart": "^10.1.1",
+        "@fastify/multipart": "^10.1.8",
         "@fastify/static": "^10.1.4",
         "@fastify/swagger": "^9.7.0",
         "@fastify/swagger-ui": "^6.1.3",
