@@ -153,7 +153,9 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     const federation = config.federation;
     const requireFederation = async (reply: any) => {
         if (federation?.enabled !== false) return true;
-        reply.code(404).send({ error: { code: "FEDERATION_DISABLED", message: "Federation is disabled." } });
+        reply
+            .code(404)
+            .send({ error: { code: "FEDERATION_DISABLED", message: "Federation is disabled." } });
         return false;
     };
 
@@ -310,7 +312,15 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.post("/federation/actors/:handle/inbox", async (request, reply) => {
-        if (federation?.incomingEnabled === false) return reply.code(404).send({ error: { code: "FEDERATION_INCOMING_DISABLED", message: "Incoming federation is disabled." } });
+        if (federation?.incomingEnabled === false)
+            return reply
+                .code(404)
+                .send({
+                    error: {
+                        code: "FEDERATION_INCOMING_DISABLED",
+                        message: "Incoming federation is disabled.",
+                    },
+                });
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
@@ -369,7 +379,15 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
     });
 
     fastify.post("/federation/deliver", async (request, reply) => {
-        if (federation?.outgoingEnabled === false) return reply.code(404).send({ error: { code: "FEDERATION_OUTGOING_DISABLED", message: "Outgoing federation is disabled." } });
+        if (federation?.outgoingEnabled === false)
+            return reply
+                .code(404)
+                .send({
+                    error: {
+                        code: "FEDERATION_OUTGOING_DISABLED",
+                        message: "Outgoing federation is disabled.",
+                    },
+                });
         const session = await import("../lib/api.js").then(({ getSession }) =>
             getSession(request as FastifyRequest),
         );

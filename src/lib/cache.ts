@@ -89,7 +89,9 @@ export async function pruneCacheDirectory(
         const entryPath = path.join(cacheDirectory, entry.name);
         if (entry.isDirectory()) {
             removed += await pruneCacheDirectory(entryPath, ttl, now);
-            try { await rmdir(entryPath); } catch {}
+            try {
+                await rmdir(entryPath);
+            } catch {}
             continue;
         }
         if (!entry.isFile()) continue;

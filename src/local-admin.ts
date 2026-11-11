@@ -1,4 +1,9 @@
-import { request as httpRequest, createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+    request as httpRequest,
+    createServer,
+    type IncomingMessage,
+    type ServerResponse,
+} from "node:http";
 import type { Server as HttpServer } from "node:http";
 import { loadConfigSync } from "./lib/config.js";
 
@@ -43,8 +48,7 @@ export function startLocalAdminProxy(): HttpServer | null {
         upstream.on("error", (error) => {
             if (!response.headersSent)
                 response.writeHead(502, { "content-type": "text/plain; charset=utf-8" });
-            if (!response.writableEnded)
-                response.end(`Local admin proxy error: ${error.message}`);
+            if (!response.writableEnded) response.end(`Local admin proxy error: ${error.message}`);
         });
         incoming.on("aborted", () => upstream.destroy());
         incoming.pipe(upstream);

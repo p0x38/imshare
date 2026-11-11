@@ -156,7 +156,8 @@ function AdminPostsPage() {
                         color="primary"
                     />
                     <Typography variant="body2" color="text.secondary">
-                        Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total} posts
+                        Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of{" "}
+                        {total} posts
                     </Typography>
                 </Stack>
             ) : null}

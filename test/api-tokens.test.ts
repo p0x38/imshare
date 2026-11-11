@@ -19,10 +19,12 @@ describe("API token helpers", () => {
     });
 
     test("permission parsing normalizes supported actions", () => {
-        expect(parsePermissions({
-            posts: ["read", "read", "write", "invalid"],
-            uploads: ["write"],
-        })).toEqual({
+        expect(
+            parsePermissions({
+                posts: ["read", "read", "write", "invalid"],
+                uploads: ["write"],
+            }),
+        ).toEqual({
             posts: ["read", "write"],
             uploads: ["write"],
         });

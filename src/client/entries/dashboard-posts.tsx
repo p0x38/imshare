@@ -99,7 +99,9 @@ function DashboardPostsPage() {
     const [batchNSFW, setBatchNSFW] = useState("");
     const [batchWarningType, setBatchWarningType] = useState("");
     const [batchTags, setBatchTags] = useState("");
-    const [batchTagMode, setBatchTagMode] = useState<"replace" | "addition" | "subtraction">("replace");
+    const [batchTagMode, setBatchTagMode] = useState<"replace" | "addition" | "subtraction">(
+        "replace",
+    );
     const [revisionsOpen, setRevisionsOpen] = useState(false);
     const [revisions, setRevisions] = useState<PostRevision[]>([]);
     const [revisionsLoading, setRevisionsLoading] = useState(false);
@@ -117,7 +119,8 @@ function DashboardPostsPage() {
     const allPostIds = posts?.map((post) => post.id) ?? [];
     const allSelected = allPostIds.length > 0 && selectedPostIds.length === allPostIds.length;
     const partiallySelected = selectedPostIds.length > 0 && !allSelected;
-    const canCombineSelected = selectedDraftIds.length >= 2 && selectedDraftIds.length === selectedPosts.length;
+    const canCombineSelected =
+        selectedDraftIds.length >= 2 && selectedDraftIds.length === selectedPosts.length;
     const loadPosts = useCallback(
         async (targetPage: number) => {
             setError("");
@@ -165,9 +168,7 @@ function DashboardPostsPage() {
 
     function togglePost(postId: string) {
         setSelectedPostIds((current) =>
-            current.includes(postId)
-                ? current.filter((id) => id !== postId)
-                : [...current, postId],
+            current.includes(postId) ? current.filter((id) => id !== postId) : [...current, postId],
         );
     }
 
@@ -211,9 +212,7 @@ function DashboardPostsPage() {
             setPosts((current) =>
                 current
                     ? current.map((post) =>
-                          post.id === renamePost.id
-                              ? { ...post, ...response.data, title }
-                              : post,
+                          post.id === renamePost.id ? { ...post, ...response.data, title } : post,
                       )
                     : current,
             );
@@ -247,11 +246,15 @@ function DashboardPostsPage() {
         if (batchStatus) payload.status = batchStatus;
         if (batchAllowDownload) payload.allowDownload = batchAllowDownload === "true";
         if (batchNSFW) payload.isNSFW = batchNSFW === "true";
-        if (batchWarningType) payload.contentWarningType = batchWarningType === "none" ? null : batchWarningType;
+        if (batchWarningType)
+            payload.contentWarningType = batchWarningType === "none" ? null : batchWarningType;
         if (batchClearContentWarning) payload.contentWarning = null;
         else if (batchContentWarning.trim()) payload.contentWarning = batchContentWarning.trim();
         if (batchTags.trim()) {
-            payload.tags = batchTags.split(",").map((value) => value.trim()).filter(Boolean);
+            payload.tags = batchTags
+                .split(",")
+                .map((value) => value.trim())
+                .filter(Boolean);
             payload.tagMode = batchTagMode;
         }
 
@@ -271,14 +274,20 @@ function DashboardPostsPage() {
             setBatchEditOpen(false);
             await loadPosts(page);
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to batch edit selected posts.");
+            setError(
+                cause instanceof Error ? cause.message : "Unable to batch edit selected posts.",
+            );
         } finally {
             setBatchEditing(false);
         }
     }
 
     async function deletePost(post: Post) {
-        if (!window.confirm("Delete \"" + (post.title || post.id) + "\" permanently? This cannot be undone."))
+        if (
+            !window.confirm(
+                'Delete "' + (post.title || post.id) + '" permanently? This cannot be undone.',
+            )
+        )
             return;
         setError("");
         try {
@@ -331,7 +340,10 @@ function DashboardPostsPage() {
             setSelectedPostIds([]);
             setPosts((current) =>
                 current
-                    ? [response.data, ...current.filter((post) => !selectedDraftIds.includes(post.id))]
+                    ? [
+                          response.data,
+                          ...current.filter((post) => !selectedDraftIds.includes(post.id)),
+                      ]
                     : current,
             );
         } catch (cause) {
@@ -367,7 +379,6 @@ function DashboardPostsPage() {
             setDeleting(false);
         }
     }
-
 
     function openPostMenu(event: React.MouseEvent<HTMLElement>, post: Post) {
         event.preventDefault();
@@ -463,7 +474,8 @@ function DashboardPostsPage() {
                         {t("dashboardPosts.newPost")}
                     </Button>
                 </Stack>
-                {error ? <Alert severity="error">{error}</Alert> : null}                {posts && posts.length > 0 ? (
+                {error ? <Alert severity="error">{error}</Alert> : null}{" "}
+                {posts && posts.length > 0 ? (
                     <Stack
                         direction={{ xs: "column", sm: "row" }}
                         spacing={1}
@@ -480,7 +492,11 @@ function DashboardPostsPage() {
                                     inputProps={{ "aria-label": "Select all posts" }}
                                 />
                             }
-                            label={selectedPostIds.length ? `${selectedPostIds.length} selected` : "Select all posts"}
+                            label={
+                                selectedPostIds.length
+                                    ? `${selectedPostIds.length} selected`
+                                    : "Select all posts"
+                            }
                         />
                         <Button
                             variant="outlined"
@@ -489,11 +505,11 @@ function DashboardPostsPage() {
                             aria-haspopup="menu"
                             aria-expanded={Boolean(actionsAnchor) ? "true" : undefined}
                         >
-                            Actions{selectedPostIds.length ? " (" + selectedPostIds.length + ")" : ""}
+                            Actions
+                            {selectedPostIds.length ? " (" + selectedPostIds.length + ")" : ""}
                         </Button>
                     </Stack>
                 ) : null}
-
                 {posts === null && !error ? (
                     <LoadingState label={t("dashboardPosts.loading")} />
                 ) : null}
@@ -552,204 +568,235 @@ function DashboardPostsPage() {
                                                     <MoreVertIcon />
                                                 </IconButton>
 
-                                            <Box sx={{ px: 1, pt: 1, display: "flex", alignItems: "center" }}>
-                                                <Checkbox
-                                                    checked={selectedPostIds.includes(post.id)}
-                                                    onChange={() => togglePost(post.id)}
-                                                    inputProps={{ "aria-label": `Select post ${post.title || post.id}` }}
-                                                />
-                                                {post.status === "draft" ? (
-                                                    <Typography component="span" variant="caption" color="text.secondary">
-                                                        Draft
-                                                    </Typography>
-                                                ) : null}
-                                            </Box>
-                                            <CardActionArea
-                                                component="a"
-                                                href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
-                                            >
-                                                {post.thumbnailUrl || post.uploads?.[0] ? (
-                                                    <CardMedia
-                                                        component="img"
-                                                        image={imageUrl(
-                                                            post.thumbnailUrl || post.uploads?.[0]?.url || "",
-                                                        )}
-                                                        alt={post.title || ""}
-                                                        loading="lazy"
-                                                        sx={{
-                                                            aspectRatio: "1 / 1",
-                                                            objectFit: "cover",
+                                                <Box
+                                                    sx={{
+                                                        px: 1,
+                                                        pt: 1,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                    }}
+                                                >
+                                                    <Checkbox
+                                                        checked={selectedPostIds.includes(post.id)}
+                                                        onChange={() => togglePost(post.id)}
+                                                        inputProps={{
+                                                            "aria-label": `Select post ${post.title || post.id}`,
                                                         }}
                                                     />
-                                                ) : null}
-                                                <CardContent>
-                                                    {(post.tags?.length || post.isNSFW || post.contentWarningType && post.contentWarningType !== "none" || post.contentWarning) ? (
-                                                        <Stack
-                                                            direction="row"
-                                                            spacing={0.5}
-                                                            useFlexGap
-                                                            flexWrap="wrap"
-                                                            sx={{ mb: 0.75 }}
-                                                        >
-                                                            {post.isNSFW ? (
-                                                                <Chip
-                                                                    size="small"
-                                                                    label="NSFW"
-                                                                    variant="outlined"
-                                                                />
-                                                            ) : null}
-                                                            {post.contentWarningType &&
-                                                            post.contentWarningType !== "none" ? (
-                                                                <Chip
-                                                                    size="small"
-                                                                    label={
-                                                                        post.contentWarningType === "flashing"
-                                                                            ? "Flashing"
-                                                                            : post.contentWarningType.charAt(0).toUpperCase() +
-                                                                              post.contentWarningType.slice(1)
-                                                                    }
-                                                                    variant="outlined"
-                                                                />
-                                                            ) : null}
-                                                            {post.contentWarning ? (
-                                                                <Chip
-                                                                    size="small"
-                                                                    label={post.contentWarning}
-                                                                    variant="outlined"
-                                                                    title={post.contentWarning}
-                                                                    sx={{ maxWidth: 220 }}
-                                                                />
-                                                            ) : null}
-                                                            {post.tags?.map((tag) => {
-                                                                const name = tag.tag?.name ?? tag.name;
-                                                                return name ? (
-                                                                    <Chip
-                                                                        key={tag.tag?.id ?? tag.id ?? name}
-                                                                        size="small"
-                                                                        label={name}
-                                                                        variant="outlined"
-                                                                    />
-                                                                ) : null;
-                                                            })}
-                                                        </Stack>
-                                                    ) : null}
-                                                    <Typography variant="subtitle1" noWrap>
-                                                        {post.title || t("common.untitled")}
-                                                        {" · "}
-                                                        {post.author?.name ||
-                                                            post.author?.username ||
-                                                            post.authorName ||
-                                                            t("common.unknownAuthor")}
-                                                    </Typography>
-                                                    <Stack
-                                                        direction="row"
-                                                        spacing={0.75}
-                                                        alignItems="center"
-                                                        color="text.secondary"
-                                                        sx={{ minWidth: 0 }}
-                                                    >
-                                                        <Typography variant="body2" noWrap>
-                                                            {post.createdAt
-                                                                ? new Date(
-                                                                      post.createdAt,
-                                                                  ).toLocaleDateString()
-                                                                : ""}
-                                                        </Typography>
+                                                    {post.status === "draft" ? (
                                                         <Typography
                                                             component="span"
-                                                            variant="body2"
-                                                            aria-hidden="true"
+                                                            variant="caption"
+                                                            color="text.secondary"
                                                         >
-                                                            ·
+                                                            Draft
                                                         </Typography>
-                                                        <Tooltip title="Views">
+                                                    ) : null}
+                                                </Box>
+                                                <CardActionArea
+                                                    component="a"
+                                                    href={`/dashboard/posts/${encodeURIComponent(post.id)}/`}
+                                                >
+                                                    {post.thumbnailUrl || post.uploads?.[0] ? (
+                                                        <CardMedia
+                                                            component="img"
+                                                            image={imageUrl(
+                                                                post.thumbnailUrl ||
+                                                                    post.uploads?.[0]?.url ||
+                                                                    "",
+                                                            )}
+                                                            alt={post.title || ""}
+                                                            loading="lazy"
+                                                            sx={{
+                                                                aspectRatio: "1 / 1",
+                                                                objectFit: "cover",
+                                                            }}
+                                                        />
+                                                    ) : null}
+                                                    <CardContent>
+                                                        {post.tags?.length ||
+                                                        post.isNSFW ||
+                                                        (post.contentWarningType &&
+                                                            post.contentWarningType !== "none") ||
+                                                        post.contentWarning ? (
                                                             <Stack
                                                                 direction="row"
-                                                                spacing={0.25}
-                                                                alignItems="center"
+                                                                spacing={0.5}
+                                                                useFlexGap
+                                                                flexWrap="wrap"
+                                                                sx={{ mb: 0.75 }}
                                                             >
-                                                                <VisibilityOutlinedIcon
-                                                                    sx={{ fontSize: 15 }}
-                                                                />
-                                                                <Typography
-                                                                    component="span"
-                                                                    variant="caption"
-                                                                >
-                                                                    {post.viewCount ?? 0}
-                                                                </Typography>
+                                                                {post.isNSFW ? (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label="NSFW"
+                                                                        variant="outlined"
+                                                                    />
+                                                                ) : null}
+                                                                {post.contentWarningType &&
+                                                                post.contentWarningType !==
+                                                                    "none" ? (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={
+                                                                            post.contentWarningType ===
+                                                                            "flashing"
+                                                                                ? "Flashing"
+                                                                                : post.contentWarningType
+                                                                                      .charAt(0)
+                                                                                      .toUpperCase() +
+                                                                                  post.contentWarningType.slice(
+                                                                                      1,
+                                                                                  )
+                                                                        }
+                                                                        variant="outlined"
+                                                                    />
+                                                                ) : null}
+                                                                {post.contentWarning ? (
+                                                                    <Chip
+                                                                        size="small"
+                                                                        label={post.contentWarning}
+                                                                        variant="outlined"
+                                                                        title={post.contentWarning}
+                                                                        sx={{ maxWidth: 220 }}
+                                                                    />
+                                                                ) : null}
+                                                                {post.tags?.map((tag) => {
+                                                                    const name =
+                                                                        tag.tag?.name ?? tag.name;
+                                                                    return name ? (
+                                                                        <Chip
+                                                                            key={
+                                                                                tag.tag?.id ??
+                                                                                tag.id ??
+                                                                                name
+                                                                            }
+                                                                            size="small"
+                                                                            label={name}
+                                                                            variant="outlined"
+                                                                        />
+                                                                    ) : null;
+                                                                })}
                                                             </Stack>
-                                                        </Tooltip>
-                                                        <Tooltip title="Comments">
-                                                            <Stack
-                                                                direction="row"
-                                                                spacing={0.25}
-                                                                alignItems="center"
+                                                        ) : null}
+                                                        <Typography variant="subtitle1" noWrap>
+                                                            {post.title || t("common.untitled")}
+                                                            {" · "}
+                                                            {post.author?.name ||
+                                                                post.author?.username ||
+                                                                post.authorName ||
+                                                                t("common.unknownAuthor")}
+                                                        </Typography>
+                                                        <Stack
+                                                            direction="row"
+                                                            spacing={0.75}
+                                                            alignItems="center"
+                                                            color="text.secondary"
+                                                            sx={{ minWidth: 0 }}
+                                                        >
+                                                            <Typography variant="body2" noWrap>
+                                                                {post.createdAt
+                                                                    ? new Date(
+                                                                          post.createdAt,
+                                                                      ).toLocaleDateString()
+                                                                    : ""}
+                                                            </Typography>
+                                                            <Typography
+                                                                component="span"
+                                                                variant="body2"
+                                                                aria-hidden="true"
                                                             >
-                                                                <ChatBubbleOutlineIcon
-                                                                    sx={{ fontSize: 15 }}
-                                                                />
-                                                                <Typography
-                                                                    component="span"
-                                                                    variant="caption"
+                                                                ·
+                                                            </Typography>
+                                                            <Tooltip title="Views">
+                                                                <Stack
+                                                                    direction="row"
+                                                                    spacing={0.25}
+                                                                    alignItems="center"
                                                                 >
-                                                                    {post.commentCount ?? 0}
-                                                                </Typography>
-                                                            </Stack>
-                                                        </Tooltip>
-                                                        <Tooltip title="Likes">
-                                                            <Stack
-                                                                direction="row"
-                                                                spacing={0.25}
-                                                                alignItems="center"
-                                                            >
-                                                                <ThumbUpAltOutlinedIcon
-                                                                    sx={{ fontSize: 15 }}
-                                                                />
-                                                                <Typography
-                                                                    component="span"
-                                                                    variant="caption"
+                                                                    <VisibilityOutlinedIcon
+                                                                        sx={{ fontSize: 15 }}
+                                                                    />
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                    >
+                                                                        {post.viewCount ?? 0}
+                                                                    </Typography>
+                                                                </Stack>
+                                                            </Tooltip>
+                                                            <Tooltip title="Comments">
+                                                                <Stack
+                                                                    direction="row"
+                                                                    spacing={0.25}
+                                                                    alignItems="center"
                                                                 >
-                                                                    {post.reactions?.like ?? 0}
-                                                                </Typography>
-                                                            </Stack>
-                                                        </Tooltip>
-                                                        <Tooltip title="Favorites">
-                                                            <Stack
-                                                                direction="row"
-                                                                spacing={0.25}
-                                                                alignItems="center"
-                                                            >
-                                                                <FavoriteBorderIcon
-                                                                    sx={{ fontSize: 15 }}
-                                                                />
-                                                                <Typography
-                                                                    component="span"
-                                                                    variant="caption"
+                                                                    <ChatBubbleOutlineIcon
+                                                                        sx={{ fontSize: 15 }}
+                                                                    />
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                    >
+                                                                        {post.commentCount ?? 0}
+                                                                    </Typography>
+                                                                </Stack>
+                                                            </Tooltip>
+                                                            <Tooltip title="Likes">
+                                                                <Stack
+                                                                    direction="row"
+                                                                    spacing={0.25}
+                                                                    alignItems="center"
                                                                 >
-                                                                    {post.reactions?.favorite ?? 0}
-                                                                </Typography>
-                                                            </Stack>
-                                                        </Tooltip>
-                                                        <Tooltip title="Saves">
-                                                            <Stack
-                                                                direction="row"
-                                                                spacing={0.25}
-                                                                alignItems="center"
-                                                            >
-                                                                <BookmarkBorderIcon
-                                                                    sx={{ fontSize: 15 }}
-                                                                />
-                                                                <Typography
-                                                                    component="span"
-                                                                    variant="caption"
+                                                                    <ThumbUpAltOutlinedIcon
+                                                                        sx={{ fontSize: 15 }}
+                                                                    />
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                    >
+                                                                        {post.reactions?.like ?? 0}
+                                                                    </Typography>
+                                                                </Stack>
+                                                            </Tooltip>
+                                                            <Tooltip title="Favorites">
+                                                                <Stack
+                                                                    direction="row"
+                                                                    spacing={0.25}
+                                                                    alignItems="center"
                                                                 >
-                                                                    {post.reactions?.save ?? 0}
-                                                                </Typography>
-                                                            </Stack>
-                                                        </Tooltip>
-                                                    </Stack>
-                                                </CardContent>
-                                            </CardActionArea>
+                                                                    <FavoriteBorderIcon
+                                                                        sx={{ fontSize: 15 }}
+                                                                    />
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                    >
+                                                                        {post.reactions?.favorite ??
+                                                                            0}
+                                                                    </Typography>
+                                                                </Stack>
+                                                            </Tooltip>
+                                                            <Tooltip title="Saves">
+                                                                <Stack
+                                                                    direction="row"
+                                                                    spacing={0.25}
+                                                                    alignItems="center"
+                                                                >
+                                                                    <BookmarkBorderIcon
+                                                                        sx={{ fontSize: 15 }}
+                                                                    />
+                                                                    <Typography
+                                                                        component="span"
+                                                                        variant="caption"
+                                                                    >
+                                                                        {post.reactions?.save ?? 0}
+                                                                    </Typography>
+                                                                </Stack>
+                                                            </Tooltip>
+                                                        </Stack>
+                                                    </CardContent>
+                                                </CardActionArea>
                                             </Box>
                                         </Card>
                                     ))}
@@ -784,343 +831,369 @@ function DashboardPostsPage() {
                             showLastButton
                         />
                         <Typography variant="body2" color="text.secondary">
-                            Showing {(page - 1) * 100 + 1}–{Math.min(page * 100, total)} of {total} posts
+                            Showing {(page - 1) * 100 + 1}–{Math.min(page * 100, total)} of {total}{" "}
+                            posts
                         </Typography>
                     </Stack>
                 ) : null}
             </Stack>
-        <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closePostMenu}>
-            <MenuItem
-                onClick={() => {
-                    if (menuPost) void deletePost(menuPost);
-                    closePostMenu();
-                }}
-            >
-                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-                Delete
-            </MenuItem>
-            <MenuItem onClick={() => { if (menuPost) openQuickRename(menuPost); }}>
-                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                Quick Rename
-            </MenuItem>
-            <MenuItem
-                onClick={() => {
-                    if (menuPost)
-                        window.location.href =
-                            "/dashboard/posts/" + encodeURIComponent(menuPost.id) + "/edit/";
-                    closePostMenu();
-                }}
-            >
-                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                Edit
-            </MenuItem>
-            <MenuItem
-                onClick={() => {
-                    if (menuPost) window.location.href = postPublicUrl(menuPost);
-                    closePostMenu();
-                }}
-            >
-                <VisibilityOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                View
-            </MenuItem>
-            {menuPost?.uploads?.[0] ? (
+            <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={closePostMenu}>
                 <MenuItem
-                    component="a"
-                    href={postOriginalUrl(menuPost) ?? undefined}
-                    onClick={closePostMenu}
-                >
-                    <DownloadOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                    Download Original
-                </MenuItem>
-            ) : null}
-            <MenuItem onClick={() => { if (menuPost) void copyPostUrl(menuPost); }}>
-                <ContentCopyOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                Copy URL
-            </MenuItem>
-            <MenuItem onClick={() => { if (menuPost) void openRevisions(menuPost); }}>
-                <HistoryOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                Version History
-            </MenuItem>
-            {menuPost?.status === "draft" ? (
-                <MenuItem onClick={openConvertDialog} disabled={drafts.length < 2}>
-                    Convert to multi-post
-                </MenuItem>
-            ) : null}
-            {menuPost?.uploads && menuPost.uploads.length > 1 ? (
-                <MenuItem onClick={() => void splitPost(menuPost)} disabled={splitBusy}>
-                    {splitBusy ? "Splitting…" : "Split to single posts"}
-                </MenuItem>
-            ) : null}
-        </Menu>
-        <Menu
-            anchorEl={actionsAnchor}
-            open={Boolean(actionsAnchor)}
-            onClose={closeActionsMenu}
-        >
-            <MenuItem
-                disabled={!selectedPostIds.length || deleting}
-                onClick={() => {
-                    closeActionsMenu();
-                    void deleteSelected();
-                }}
-            >
-                <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-                Batch Delete
-            </MenuItem>
-            <MenuItem disabled={!selectedPostIds.length || batchEditing} onClick={openBatchEdit}>
-                <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
-                Batch Edit
-            </MenuItem>
-            <MenuItem
-                disabled={!canCombineSelected || merging}
-                onClick={() => {
-                    closeActionsMenu();
-                    void combineSelected();
-                }}
-            >
-                Combine selected
-            </MenuItem>
-        </Menu>
-        <Dialog
-            open={batchEditOpen}
-            onClose={() => (batchEditing ? null : setBatchEditOpen(false))}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle>Batch Edit</DialogTitle>
-            <DialogContent>
-                <Stack spacing={2} sx={{ pt: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        Changes apply to {selectedPostIds.length} selected posts. Leave fields unchanged to keep their current values.
-                    </Typography>
-                    <TextField
-                        select
-                        label="Visibility"
-                        value={batchVisibility}
-                        onChange={(event) => setBatchVisibility(event.target.value)}
-                        fullWidth
-                    >
-                        <MenuItem value="">No change</MenuItem>
-                        <MenuItem value="public">Public</MenuItem>
-                        <MenuItem value="unlisted">Unlisted</MenuItem>
-                        <MenuItem value="private">Private</MenuItem>
-                    </TextField>
-                    <TextField
-                        select
-                        label="Status"
-                        value={batchStatus}
-                        onChange={(event) => setBatchStatus(event.target.value)}
-                        fullWidth
-                    >
-                        <MenuItem value="">No change</MenuItem>
-                        <MenuItem value="draft">Draft</MenuItem>
-                        <MenuItem value="published">Published</MenuItem>
-                    </TextField>
-                    <TextField
-                        select
-                        label="Downloads"
-                        value={batchAllowDownload}
-                        onChange={(event) => setBatchAllowDownload(event.target.value)}
-                        fullWidth
-                    >
-                        <MenuItem value="">No change</MenuItem>
-                        <MenuItem value="true">Allow downloads</MenuItem>
-                        <MenuItem value="false">Disable downloads</MenuItem>
-                    </TextField>
-                    <TextField
-                        select
-                        label="Is content NSFW?"
-                        value={batchNSFW}
-                        onChange={(event) => setBatchNSFW(event.target.value)}
-                        fullWidth
-                    >
-                        <MenuItem value="">No change</MenuItem>
-                        <MenuItem value="true">Yes</MenuItem>
-                        <MenuItem value="false">No</MenuItem>
-                    </TextField>
-                    <TextField
-                        select
-                        label="Type of Content Warning"
-                        value={batchWarningType}
-                        onChange={(event) => setBatchWarningType(event.target.value)}
-                        fullWidth
-                    >
-                        <MenuItem value="">No change</MenuItem>
-                        <MenuItem value="none">None</MenuItem>
-                        <MenuItem value="sexual">Sexual content</MenuItem>
-                        <MenuItem value="violence">Violence</MenuItem>
-                        <MenuItem value="gore">Gore</MenuItem>
-                        <MenuItem value="drugs">Drugs</MenuItem>
-                        <MenuItem value="flashing">Flashing lights</MenuItem>
-                        <MenuItem value="spoilers">Spoilers</MenuItem>
-                        <MenuItem value="other">Other</MenuItem>
-                    </TextField>
-                    <TextField
-                        label="Content warning"
-                        value={batchContentWarning}
-                        onChange={(event) => setBatchContentWarning(event.target.value)}
-                        placeholder="Leave blank to keep the current warning"
-                        fullWidth
-                    />
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={batchClearContentWarning}
-                                onChange={(event) =>
-                                    setBatchClearContentWarning(event.target.checked)
-                                }
-                            />
-                        }
-                        label="Clear content warnings"
-                    />
-                    <TextField
-                        select
-                        label="Tag operation"
-                        value={batchTagMode}
-                        onChange={(event) =>
-                            setBatchTagMode(
-                                event.target.value as "replace" | "addition" | "subtraction",
-                            )
-                        }
-                        fullWidth
-                    >
-                        <MenuItem value="replace">Replace</MenuItem>
-                        <MenuItem value="addition">Addition</MenuItem>
-                        <MenuItem value="subtraction">Subtraction</MenuItem>
-                    </TextField>
-                    <TagAutocomplete
-                        value={batchTags}
-                        onChange={setBatchTags}
-                        helperText={
-                            batchTagMode === "replace"
-                                ? "Replace all existing tags with these tags."
-                                : batchTagMode === "addition"
-                                  ? "Add these tags and keep existing tags."
-                                  : "Remove these tags from selected posts."
-                        }
-                    />
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={() => setBatchEditOpen(false)} disabled={batchEditing}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={() => void applyBatchEdit()}
-                    disabled={batchEditing || !selectedPostIds.length}
-                >
-                    {batchEditing ? "Applying…" : "Apply changes"}
-                </Button>
-            </DialogActions>
-        </Dialog>
-        <Dialog
-            open={renameOpen}
-            onClose={() => (renaming ? null : setRenameOpen(false))}
-            fullWidth
-            maxWidth="sm"
-        >
-            <DialogTitle>Quick Rename</DialogTitle>
-            <DialogContent>
-                <TextField
-                    autoFocus
-                    label="Post title"
-                    value={renameTitle}
-                    onChange={(event) => setRenameTitle(event.target.value)}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                            event.preventDefault();
-                            void submitQuickRename();
-                        }
+                    onClick={() => {
+                        if (menuPost) void deletePost(menuPost);
+                        closePostMenu();
                     }}
-                    fullWidth
-                    inputProps={{ maxLength: 500 }}
-                    sx={{ mt: 1 }}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={() => setRenameOpen(false)} disabled={renaming}>
-                    Cancel
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={() => void submitQuickRename()}
-                    disabled={renaming || !renameTitle.trim()}
                 >
-                    {renaming ? "Renaming…" : "Rename"}
-                </Button>
-            </DialogActions>
-        </Dialog>
-        <Dialog open={revisionsOpen} onClose={() => setRevisionsOpen(false)} fullWidth maxWidth="md">
-            <DialogTitle>Version History</DialogTitle>
-            <DialogContent>
-                {revisionsLoading ? (
-                    <LoadingState label="Loading versions…" />
-                ) : revisions.length ? (
-                    <Stack spacing={1.5} sx={{ pt: 1 }}>
-                        {revisions.map((revision, index) => (
-                            <Card key={revision.id} variant="outlined">
-                                <CardContent>
-                                    <Stack spacing={0.5}>
-                                        <Typography variant="subtitle1">
-                                            Version {revisions.length - index}: {revision.title || "Untitled"}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {new Date(revision.createdAt).toLocaleString()}
-                                        </Typography>
-                                        {revision.description ? (
-                                            <Typography variant="body2">{revision.description}</Typography>
-                                        ) : null}
-                                    </Stack>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </Stack>
-                ) : (
-                    <Typography color="text.secondary" sx={{ py: 2 }}>
-                        No saved versions yet.
-                    </Typography>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={() => setRevisionsOpen(false)}>Close</Button>
-            </DialogActions>
-        </Dialog>
-        <Dialog open={convertOpen} onClose={() => setConvertOpen(false)} fullWidth maxWidth="sm">
-            <DialogTitle>Convert to multi-post</DialogTitle>
-            <DialogContent>
-                <Stack spacing={0.5}>
-                    {drafts.map((draft) => (
+                    <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                    Delete
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        if (menuPost) openQuickRename(menuPost);
+                    }}
+                >
+                    <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Quick Rename
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        if (menuPost)
+                            window.location.href =
+                                "/dashboard/posts/" + encodeURIComponent(menuPost.id) + "/edit/";
+                        closePostMenu();
+                    }}
+                >
+                    <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Edit
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        if (menuPost) window.location.href = postPublicUrl(menuPost);
+                        closePostMenu();
+                    }}
+                >
+                    <VisibilityOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    View
+                </MenuItem>
+                {menuPost?.uploads?.[0] ? (
+                    <MenuItem
+                        component="a"
+                        href={postOriginalUrl(menuPost) ?? undefined}
+                        onClick={closePostMenu}
+                    >
+                        <DownloadOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                        Download Original
+                    </MenuItem>
+                ) : null}
+                <MenuItem
+                    onClick={() => {
+                        if (menuPost) void copyPostUrl(menuPost);
+                    }}
+                >
+                    <ContentCopyOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Copy URL
+                </MenuItem>
+                <MenuItem
+                    onClick={() => {
+                        if (menuPost) void openRevisions(menuPost);
+                    }}
+                >
+                    <HistoryOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Version History
+                </MenuItem>
+                {menuPost?.status === "draft" ? (
+                    <MenuItem onClick={openConvertDialog} disabled={drafts.length < 2}>
+                        Convert to multi-post
+                    </MenuItem>
+                ) : null}
+                {menuPost?.uploads && menuPost.uploads.length > 1 ? (
+                    <MenuItem onClick={() => void splitPost(menuPost)} disabled={splitBusy}>
+                        {splitBusy ? "Splitting…" : "Split to single posts"}
+                    </MenuItem>
+                ) : null}
+            </Menu>
+            <Menu anchorEl={actionsAnchor} open={Boolean(actionsAnchor)} onClose={closeActionsMenu}>
+                <MenuItem
+                    disabled={!selectedPostIds.length || deleting}
+                    onClick={() => {
+                        closeActionsMenu();
+                        void deleteSelected();
+                    }}
+                >
+                    <DeleteOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+                    Batch Delete
+                </MenuItem>
+                <MenuItem
+                    disabled={!selectedPostIds.length || batchEditing}
+                    onClick={openBatchEdit}
+                >
+                    <EditOutlinedIcon fontSize="small" sx={{ mr: 1 }} />
+                    Batch Edit
+                </MenuItem>
+                <MenuItem
+                    disabled={!canCombineSelected || merging}
+                    onClick={() => {
+                        closeActionsMenu();
+                        void combineSelected();
+                    }}
+                >
+                    Combine selected
+                </MenuItem>
+            </Menu>
+            <Dialog
+                open={batchEditOpen}
+                onClose={() => (batchEditing ? null : setBatchEditOpen(false))}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Batch Edit</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ pt: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Changes apply to {selectedPostIds.length} selected posts. Leave fields
+                            unchanged to keep their current values.
+                        </Typography>
+                        <TextField
+                            select
+                            label="Visibility"
+                            value={batchVisibility}
+                            onChange={(event) => setBatchVisibility(event.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">No change</MenuItem>
+                            <MenuItem value="public">Public</MenuItem>
+                            <MenuItem value="unlisted">Unlisted</MenuItem>
+                            <MenuItem value="private">Private</MenuItem>
+                        </TextField>
+                        <TextField
+                            select
+                            label="Status"
+                            value={batchStatus}
+                            onChange={(event) => setBatchStatus(event.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">No change</MenuItem>
+                            <MenuItem value="draft">Draft</MenuItem>
+                            <MenuItem value="published">Published</MenuItem>
+                        </TextField>
+                        <TextField
+                            select
+                            label="Downloads"
+                            value={batchAllowDownload}
+                            onChange={(event) => setBatchAllowDownload(event.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">No change</MenuItem>
+                            <MenuItem value="true">Allow downloads</MenuItem>
+                            <MenuItem value="false">Disable downloads</MenuItem>
+                        </TextField>
+                        <TextField
+                            select
+                            label="Is content NSFW?"
+                            value={batchNSFW}
+                            onChange={(event) => setBatchNSFW(event.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">No change</MenuItem>
+                            <MenuItem value="true">Yes</MenuItem>
+                            <MenuItem value="false">No</MenuItem>
+                        </TextField>
+                        <TextField
+                            select
+                            label="Type of Content Warning"
+                            value={batchWarningType}
+                            onChange={(event) => setBatchWarningType(event.target.value)}
+                            fullWidth
+                        >
+                            <MenuItem value="">No change</MenuItem>
+                            <MenuItem value="none">None</MenuItem>
+                            <MenuItem value="sexual">Sexual content</MenuItem>
+                            <MenuItem value="violence">Violence</MenuItem>
+                            <MenuItem value="gore">Gore</MenuItem>
+                            <MenuItem value="drugs">Drugs</MenuItem>
+                            <MenuItem value="flashing">Flashing lights</MenuItem>
+                            <MenuItem value="spoilers">Spoilers</MenuItem>
+                            <MenuItem value="other">Other</MenuItem>
+                        </TextField>
+                        <TextField
+                            label="Content warning"
+                            value={batchContentWarning}
+                            onChange={(event) => setBatchContentWarning(event.target.value)}
+                            placeholder="Leave blank to keep the current warning"
+                            fullWidth
+                        />
                         <FormControlLabel
-                            key={draft.id}
                             control={
                                 <Checkbox
-                                    checked={convertSelection.includes(draft.id)}
-                                    onChange={() =>
-                                        setConvertSelection((current) =>
-                                            current.includes(draft.id)
-                                                ? current.filter((id) => id !== draft.id)
-                                                : [...current, draft.id],
-                                        )
+                                    checked={batchClearContentWarning}
+                                    onChange={(event) =>
+                                        setBatchClearContentWarning(event.target.checked)
                                     }
                                 />
                             }
-                            label={draft.title || t("common.untitled")}
+                            label="Clear content warnings"
                         />
-                    ))}
-                </Stack>
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={() => setConvertOpen(false)}>Cancel</Button>
-                <Button
-                    variant="contained"
-                    disabled={convertSelection.length < 2 || merging}
-                    onClick={() => void convertToMultiPost()}
-                >
-                    {merging ? "Converting…" : "Convert"}
-                </Button>
-            </DialogActions>
-        </Dialog>
+                        <TextField
+                            select
+                            label="Tag operation"
+                            value={batchTagMode}
+                            onChange={(event) =>
+                                setBatchTagMode(
+                                    event.target.value as "replace" | "addition" | "subtraction",
+                                )
+                            }
+                            fullWidth
+                        >
+                            <MenuItem value="replace">Replace</MenuItem>
+                            <MenuItem value="addition">Addition</MenuItem>
+                            <MenuItem value="subtraction">Subtraction</MenuItem>
+                        </TextField>
+                        <TagAutocomplete
+                            value={batchTags}
+                            onChange={setBatchTags}
+                            helperText={
+                                batchTagMode === "replace"
+                                    ? "Replace all existing tags with these tags."
+                                    : batchTagMode === "addition"
+                                      ? "Add these tags and keep existing tags."
+                                      : "Remove these tags from selected posts."
+                            }
+                        />
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBatchEditOpen(false)} disabled={batchEditing}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void applyBatchEdit()}
+                        disabled={batchEditing || !selectedPostIds.length}
+                    >
+                        {batchEditing ? "Applying…" : "Apply changes"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={renameOpen}
+                onClose={() => (renaming ? null : setRenameOpen(false))}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Quick Rename</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        label="Post title"
+                        value={renameTitle}
+                        onChange={(event) => setRenameTitle(event.target.value)}
+                        onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                                event.preventDefault();
+                                void submitQuickRename();
+                            }
+                        }}
+                        fullWidth
+                        inputProps={{ maxLength: 500 }}
+                        sx={{ mt: 1 }}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRenameOpen(false)} disabled={renaming}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => void submitQuickRename()}
+                        disabled={renaming || !renameTitle.trim()}
+                    >
+                        {renaming ? "Renaming…" : "Rename"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={revisionsOpen}
+                onClose={() => setRevisionsOpen(false)}
+                fullWidth
+                maxWidth="md"
+            >
+                <DialogTitle>Version History</DialogTitle>
+                <DialogContent>
+                    {revisionsLoading ? (
+                        <LoadingState label="Loading versions…" />
+                    ) : revisions.length ? (
+                        <Stack spacing={1.5} sx={{ pt: 1 }}>
+                            {revisions.map((revision, index) => (
+                                <Card key={revision.id} variant="outlined">
+                                    <CardContent>
+                                        <Stack spacing={0.5}>
+                                            <Typography variant="subtitle1">
+                                                Version {revisions.length - index}:{" "}
+                                                {revision.title || "Untitled"}
+                                            </Typography>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {new Date(revision.createdAt).toLocaleString()}
+                                            </Typography>
+                                            {revision.description ? (
+                                                <Typography variant="body2">
+                                                    {revision.description}
+                                                </Typography>
+                                            ) : null}
+                                        </Stack>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </Stack>
+                    ) : (
+                        <Typography color="text.secondary" sx={{ py: 2 }}>
+                            No saved versions yet.
+                        </Typography>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRevisionsOpen(false)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+            <Dialog
+                open={convertOpen}
+                onClose={() => setConvertOpen(false)}
+                fullWidth
+                maxWidth="sm"
+            >
+                <DialogTitle>Convert to multi-post</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={0.5}>
+                        {drafts.map((draft) => (
+                            <FormControlLabel
+                                key={draft.id}
+                                control={
+                                    <Checkbox
+                                        checked={convertSelection.includes(draft.id)}
+                                        onChange={() =>
+                                            setConvertSelection((current) =>
+                                                current.includes(draft.id)
+                                                    ? current.filter((id) => id !== draft.id)
+                                                    : [...current, draft.id],
+                                            )
+                                        }
+                                    />
+                                }
+                                label={draft.title || t("common.untitled")}
+                            />
+                        ))}
+                    </Stack>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConvertOpen(false)}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        disabled={convertSelection.length < 2 || merging}
+                        onClick={() => void convertToMultiPost()}
+                    >
+                        {merging ? "Converting…" : "Convert"}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Page>
     );
 }

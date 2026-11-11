@@ -75,14 +75,17 @@ export function AccountPreferences() {
     if (!preferences) return error ? <Alert severity="error">{error}</Alert> : null;
     const set = <K extends keyof Preferences>(key: K, value: Preferences[K]) =>
         setPreferences((current) => (current ? { ...current, [key]: value } : current));
+
     async function save() {
         setSaving(true);
         setError("");
+
         try {
             const response = await api<{ data: Preferences }>("/v1/me/preferences", {
                 method: "PATCH",
                 body: JSON.stringify(preferences),
             });
+
             setPreferences(response.data);
         } catch (cause) {
             setError(

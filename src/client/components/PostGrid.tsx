@@ -38,10 +38,9 @@ const densitySettings: Record<
     spacious: { columns: 3, gap: { xs: 1.5, sm: 2.5 } },
 };
 
-export function usePostGridDensity(storageKey = DENSITY_KEY): [
-    PostGridDensity,
-    (value: PostGridDensity) => void,
-] {
+export function usePostGridDensity(
+    storageKey = DENSITY_KEY,
+): [PostGridDensity, (value: PostGridDensity) => void] {
     const [density, setDensity] = useState<PostGridDensity>(() => {
         const value = localStorage.getItem(storageKey);
         return value === "compact" || value === "spacious" ? value : "comfortable";
@@ -95,7 +94,11 @@ export function PostGrid({
         <Box
             sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", sm: `repeat(${Math.min(columns, 3)}, minmax(0, 1fr))`, md: `repeat(${columns}, minmax(0, 1fr))` },
+                gridTemplateColumns: {
+                    xs: "repeat(2, minmax(0, 1fr))",
+                    sm: `repeat(${Math.min(columns, 3)}, minmax(0, 1fr))`,
+                    md: `repeat(${columns}, minmax(0, 1fr))`,
+                },
                 gap,
             }}
         >
@@ -127,7 +130,9 @@ export function PostGrid({
                             {post.thumbnailUrl || post.uploads?.[0] ? (
                                 <CardMedia
                                     component="img"
-                                    image={imageUrl(post.thumbnailUrl || post.uploads?.[0]?.url || "")}
+                                    image={imageUrl(
+                                        post.thumbnailUrl || post.uploads?.[0]?.url || "",
+                                    )}
                                     alt={post.title || ""}
                                     loading="lazy"
                                     sx={{

@@ -334,16 +334,25 @@ function isServerConfig(value: unknown): value is ServerConfig {
         typeof site.name === "string" &&
         typeof site.version === "string" &&
         (site.description === undefined || typeof site.description === "string") &&
-        (admin === undefined || (isObject(admin) && (admin.local === undefined || (isObject(admin.local) &&
-            (admin.local.enabled === undefined || typeof admin.local.enabled === "boolean") &&
-            (admin.local.host === undefined || admin.local.host === "127.0.0.1") &&
-            (admin.local.port === undefined || (typeof admin.local.port === "number" && Number.isInteger(admin.local.port) && admin.local.port > 0 && admin.local.port <= 65535)) &&
-            (admin.local.port === undefined || admin.local.port !== server.port))))) &&
         (admin === undefined ||
             (isObject(admin) &&
                 (admin.local === undefined ||
                     (isObject(admin.local) &&
-                        (admin.local.enabled === undefined || typeof admin.local.enabled === "boolean") &&
+                        (admin.local.enabled === undefined ||
+                            typeof admin.local.enabled === "boolean") &&
+                        (admin.local.host === undefined || admin.local.host === "127.0.0.1") &&
+                        (admin.local.port === undefined ||
+                            (typeof admin.local.port === "number" &&
+                                Number.isInteger(admin.local.port) &&
+                                admin.local.port > 0 &&
+                                admin.local.port <= 65535)) &&
+                        (admin.local.port === undefined || admin.local.port !== server.port))))) &&
+        (admin === undefined ||
+            (isObject(admin) &&
+                (admin.local === undefined ||
+                    (isObject(admin.local) &&
+                        (admin.local.enabled === undefined ||
+                            typeof admin.local.enabled === "boolean") &&
                         (admin.local.host === undefined ||
                             admin.local.host === "127.0.0.1" ||
                             admin.local.host === "localhost" ||
@@ -391,20 +400,36 @@ function isServerConfig(value: unknown): value is ServerConfig {
         (federation === undefined ||
             (isObject(federation) &&
                 (federation.enabled === undefined || typeof federation.enabled === "boolean") &&
-                (federation.incomingEnabled === undefined || typeof federation.incomingEnabled === "boolean") &&
-                (federation.outgoingEnabled === undefined || typeof federation.outgoingEnabled === "boolean") &&
-                (federation.publicDiscovery === undefined || typeof federation.publicDiscovery === "boolean") &&
-                (federation.sharedInboxEnabled === undefined || typeof federation.sharedInboxEnabled === "boolean") &&
-                (federation.deliveryTimeoutMs === undefined || (typeof federation.deliveryTimeoutMs === "number" && Number.isFinite(federation.deliveryTimeoutMs) && federation.deliveryTimeoutMs > 0)) &&
-                (federation.remoteFetchTimeoutMs === undefined || (typeof federation.remoteFetchTimeoutMs === "number" && Number.isFinite(federation.remoteFetchTimeoutMs) && federation.remoteFetchTimeoutMs > 0)))) &&
+                (federation.incomingEnabled === undefined ||
+                    typeof federation.incomingEnabled === "boolean") &&
+                (federation.outgoingEnabled === undefined ||
+                    typeof federation.outgoingEnabled === "boolean") &&
+                (federation.publicDiscovery === undefined ||
+                    typeof federation.publicDiscovery === "boolean") &&
+                (federation.sharedInboxEnabled === undefined ||
+                    typeof federation.sharedInboxEnabled === "boolean") &&
+                (federation.deliveryTimeoutMs === undefined ||
+                    (typeof federation.deliveryTimeoutMs === "number" &&
+                        Number.isFinite(federation.deliveryTimeoutMs) &&
+                        federation.deliveryTimeoutMs > 0)) &&
+                (federation.remoteFetchTimeoutMs === undefined ||
+                    (typeof federation.remoteFetchTimeoutMs === "number" &&
+                        Number.isFinite(federation.remoteFetchTimeoutMs) &&
+                        federation.remoteFetchTimeoutMs > 0)))) &&
         (p2p === undefined ||
             (isObject(p2p) &&
                 (p2p.enabled === undefined || typeof p2p.enabled === "boolean") &&
                 (p2p.incomingEnabled === undefined || typeof p2p.incomingEnabled === "boolean") &&
                 (p2p.outgoingEnabled === undefined || typeof p2p.outgoingEnabled === "boolean") &&
                 (p2p.signalingUrl === undefined || typeof p2p.signalingUrl === "string") &&
-                (p2p.discovery === undefined || p2p.discovery === "manual" || p2p.discovery === "signaling") &&
-                (p2p.iceServers === undefined || (Array.isArray(p2p.iceServers) && p2p.iceServers.every((server) => typeof server === "string" && server.length > 0))))) &&
+                (p2p.discovery === undefined ||
+                    p2p.discovery === "manual" ||
+                    p2p.discovery === "signaling") &&
+                (p2p.iceServers === undefined ||
+                    (Array.isArray(p2p.iceServers) &&
+                        p2p.iceServers.every(
+                            (server) => typeof server === "string" && server.length > 0,
+                        ))))) &&
         (observability === undefined ||
             (isObject(observability) &&
                 (observability.enabled === undefined ||

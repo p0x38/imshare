@@ -26,9 +26,7 @@ export function validateGifMetadata(metadata: AnimatedImageMetadata): void {
             `GIF frame dimensions exceed the ${MAX_GIF_FRAME_WIDTH}x${MAX_GIF_FRAME_HEIGHT} limit.`,
         );
     if (!Number.isSafeInteger(pages) || pages < 1 || pages > MAX_GIF_FRAMES)
-        throw new Error(
-            `GIF contains too many frames. The maximum is ${MAX_GIF_FRAMES}.`,
-        );
+        throw new Error(`GIF contains too many frames. The maximum is ${MAX_GIF_FRAMES}.`);
 
     const totalPixels = width * pageHeight * pages;
     if (!Number.isSafeInteger(totalPixels) || totalPixels > MAX_GIF_TOTAL_PIXELS)

@@ -569,10 +569,7 @@ function createMetricHandles(
         "Upload processing duration in seconds.",
         "s",
     );
-    const uploadErrors = counter(
-        "imshare_upload_errors_total",
-        "Total failed upload operations.",
-    );
+    const uploadErrors = counter("imshare_upload_errors_total", "Total failed upload operations.");
     const imageServed = counter("imshare_images_served_total", "Total image responses served.");
     const imageTransformations = counter(
         "imshare_image_transformations_total",
@@ -589,7 +586,10 @@ function createMetricHandles(
     );
     const cacheHits = counter("imshare_cache_hits_total", "Total cache hits.");
     const cacheMisses = counter("imshare_cache_misses_total", "Total cache misses.");
-    const cacheStale = counter("imshare_cache_stale_total", "Total stale cache entries encountered.");
+    const cacheStale = counter(
+        "imshare_cache_stale_total",
+        "Total stale cache entries encountered.",
+    );
     const cacheWrites = counter("imshare_cache_writes_total", "Total cache entries written.");
     const cacheWriteBytes = counter(
         "imshare_cache_write_bytes_total",
@@ -597,7 +597,10 @@ function createMetricHandles(
         "By",
     );
     const cacheErrors = counter("imshare_cache_errors_total", "Total cache read/write errors.");
-    const cachePruned = counter("imshare_cache_pruned_total", "Total expired cache entries removed.");
+    const cachePruned = counter(
+        "imshare_cache_pruned_total",
+        "Total expired cache entries removed.",
+    );
     const realtimeConnections = meter.createUpDownCounter("imshare_realtime_connections", {
         description: "Number of active realtime connections.",
     });
@@ -629,10 +632,7 @@ function createMetricHandles(
         "Database query duration in seconds.",
         "s",
     );
-    const databaseErrors = counter(
-        "imshare_db_errors_total",
-        "Total database query errors.",
-    );
+    const databaseErrors = counter("imshare_db_errors_total", "Total database query errors.");
 
     // Materialize zero-valued counters so they are visible from startup in
     // Prometheus /metrics and through the OTLP metric exporter.

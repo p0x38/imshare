@@ -2,7 +2,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { rgbaToThumbHash } from "thumbhash";
-import { ensureCacheDirectory, getCacheSettings, readCacheFile, resolveCachePath } from "./cache.js";
+import {
+    ensureCacheDirectory,
+    getCacheSettings,
+    readCacheFile,
+    resolveCachePath,
+} from "./cache.js";
 import { observability } from "../instrumentation.js";
 
 const SIZES = [320, 640, 1280] as const;
@@ -38,21 +43,27 @@ export async function generateThumbnails(source: string, uploadId: string): Prom
         await Promise.all(
             SIZES.map(async (width) => {
                 const key = `${uploadId}-${width}xauto-inside.webp`;
-                const destination = resolveCachePath(cacheDir, key, cacheSettings.useHashedDirectory);
+                const destination = resolveCachePath(
+                    cacheDir,
+                    key,
+                    cacheSettings.useHashedDirectory,
+                );
                 if (await readCacheFile(destination, cacheSettings.ttl)) return;
                 await mkdir(path.dirname(destination), { recursive: true });
                 const output = await sharp(source)
                     .resize({ width, fit: "inside", withoutEnlargement: true })
                     .webp()
                     .toBuffer();
-                await writeFile(destination, output, { flag: "wx" }).then(() => {
-                    observability.recordCacheWrite("thumbnail", output.byteLength);
-                }).catch((error: unknown) => {
-                    if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
-                        observability.recordCacheError("thumbnail");
-                        throw error;
-                    }
-                });
+                await writeFile(destination, output, { flag: "wx" })
+                    .then(() => {
+                        observability.recordCacheWrite("thumbnail", output.byteLength);
+                    })
+                    .catch((error: unknown) => {
+                        if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+                            observability.recordCacheError("thumbnail");
+                            throw error;
+                        }
+                    });
             }),
         );
         observability.recordImageProcessing(

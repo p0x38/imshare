@@ -311,24 +311,22 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(400)
                     .send({ error: { code: "INVALID_HANDLE", message: handleError } });
             try {
-                return reply
-                    .code(201)
-                    .send(
-                        ok(
-                            await prisma.user.create({
-                                data: {
-                                    id: randomUUID(),
-                                    name: body.name.trim(),
-                                    handle,
-                                    email: body.email.trim(),
-                                    image: body.image,
-                                    bio: body.bio?.trim() || undefined,
-                                    websiteUrl: body.websiteUrl?.trim() || undefined,
-                                    githubUrl: body.githubUrl?.trim() || undefined,
-                                },
-                            }),
-                        ),
-                    );
+                return reply.code(201).send(
+                    ok(
+                        await prisma.user.create({
+                            data: {
+                                id: randomUUID(),
+                                name: body.name.trim(),
+                                handle,
+                                email: body.email.trim(),
+                                image: body.image,
+                                bio: body.bio?.trim() || undefined,
+                                websiteUrl: body.websiteUrl?.trim() || undefined,
+                                githubUrl: body.githubUrl?.trim() || undefined,
+                            },
+                        }),
+                    ),
+                );
             } catch (error) {
                 if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")
                     return handleConflict(reply);
@@ -417,11 +415,9 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
             if (!me) return;
             const { userId } = request.params as { userId: string };
             if (me.id !== userId)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You cannot modify this user." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You cannot modify this user." },
+                });
             const body = request.body as {
                 name?: string;
                 handle?: string | null;
@@ -446,11 +442,9 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     body.avatarMode,
                 )
             )
-                return reply
-                    .code(400)
-                    .send({
-                        error: { code: "INVALID_AVATAR_MODE", message: "Unsupported avatar mode." },
-                    });
+                return reply.code(400).send({
+                    error: { code: "INVALID_AVATAR_MODE", message: "Unsupported avatar mode." },
+                });
             let nextAvatarValue: string | null | undefined = body.avatarValue;
 
             if (body.avatarMode !== undefined || body.avatarValue !== undefined) {
@@ -475,7 +469,8 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     return reply.code(400).send({
                         error: {
                             code: "CUSTOM_AVATAR_REQUIRED",
-                            message: "Custom avatar mode requires an image upload or an http(s) avatar URL.",
+                            message:
+                                "Custom avatar mode requires an image upload or an http(s) avatar URL.",
                         },
                     });
                 } else if (!isExternalAvatarUrl(nextAvatarValue)) {
@@ -487,7 +482,8 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                         return reply.code(400).send({
                             error: {
                                 code: "INVALID_AVATAR_VALUE",
-                                message: "Custom avatar upload was not found or is not owned by this user.",
+                                message:
+                                    "Custom avatar upload was not found or is not owned by this user.",
                             },
                         });
                 }
@@ -549,11 +545,9 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
             if (!me) return;
             const { userId } = request.params as { userId: string };
             if (me.id !== userId)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You cannot delete this user." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You cannot delete this user." },
+                });
             await prisma.user.delete({ where: { id: userId } });
             return reply.code(204).send();
         },

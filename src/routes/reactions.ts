@@ -122,14 +122,12 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!user) return;
             const { postId, type } = request.params as { postId: string; type: string };
             if (!isReactionType(type))
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_REACTION",
-                            message: "Supported reactions are like, favorite, and save.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_REACTION",
+                        message: "Supported reactions are like, favorite, and save.",
+                    },
+                });
             const post = await prisma.post.findUnique({
                 where: { id: postId },
                 select: { id: true, userId: true, title: true },
@@ -189,14 +187,12 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
             if (!user) return;
             const { postId, type } = request.params as { postId: string; type: string };
             if (!isReactionType(type))
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_REACTION",
-                            message: "Supported reactions are like, favorite, and save.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_REACTION",
+                        message: "Supported reactions are like, favorite, and save.",
+                    },
+                });
             const post = await prisma.post.findUnique({
                 where: { id: postId },
                 select: { id: true },

@@ -1,4 +1,13 @@
-import { Alert, Button, Card, CardContent, Pagination, Stack, TextField, Typography } from "@mui/material";
+import {
+    Alert,
+    Button,
+    Card,
+    CardContent,
+    Pagination,
+    Stack,
+    TextField,
+    Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
@@ -35,7 +44,10 @@ function TaxonomyPage() {
     const [error, setError] = useState("");
     async function load() {
         try {
-            const response = await api<{ data?: TaxonomyItem[]; pagination?: { totalPages?: number } }>(`${endpoint}?page=${page}&limit=100`);
+            const response = await api<{
+                data?: TaxonomyItem[];
+                pagination?: { totalPages?: number };
+            }>(`${endpoint}?page=${page}&limit=100`);
             setItems(response.data || []);
             setTotalPages(response.pagination?.totalPages ?? 1);
         } catch (cause) {
@@ -130,7 +142,17 @@ function TaxonomyPage() {
                     ))}
                 </Stack>
             </Stack>
-            {totalPages > 1 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
+            {totalPages > 1 ? (
+                <Stack alignItems="center" sx={{ pt: 1 }}>
+                    <Pagination
+                        count={totalPages}
+                        page={page}
+                        onChange={(_, value) => setPage(value)}
+                        showFirstButton
+                        showLastButton
+                    />
+                </Stack>
+            ) : null}
         </Page>
     );
 }

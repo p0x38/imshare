@@ -150,14 +150,12 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
             if (!result.visible)
-                return reply
-                    .code(403)
-                    .send({
-                        error: {
-                            code: "FOLLOWERS_HIDDEN",
-                            message: "This user does not allow others to see their followers.",
-                        },
-                    });
+                return reply.code(403).send({
+                    error: {
+                        code: "FOLLOWERS_HIDDEN",
+                        message: "This user does not allow others to see their followers.",
+                    },
+                });
             const q = request.query as Record<string, unknown>;
             const page = Math.max(1, Number(q.page) || 1);
             const limit = Math.min(100, Math.max(1, Number(q.limit) || 20));
@@ -220,14 +218,12 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
             if (!result.visible)
-                return reply
-                    .code(403)
-                    .send({
-                        error: {
-                            code: "FOLLOWING_HIDDEN",
-                            message: "This user does not allow others to see who they follow.",
-                        },
-                    });
+                return reply.code(403).send({
+                    error: {
+                        code: "FOLLOWING_HIDDEN",
+                        message: "This user does not allow others to see who they follow.",
+                    },
+                });
             const q = request.query as Record<string, unknown>;
             const page = Math.max(1, Number(q.page) || 1);
             const limit = Math.min(100, Math.max(1, Number(q.limit) || 20));
@@ -294,23 +290,19 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
             if (target.id === me.id)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "CANNOT_FOLLOW_SELF",
-                            message: "You cannot follow yourself.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "CANNOT_FOLLOW_SELF",
+                        message: "You cannot follow yourself.",
+                    },
+                });
             if (!target.isPublic)
-                return reply
-                    .code(403)
-                    .send({
-                        error: {
-                            code: "PROFILE_PRIVATE",
-                            message: "This profile does not accept follows.",
-                        },
-                    });
+                return reply.code(403).send({
+                    error: {
+                        code: "PROFILE_PRIVATE",
+                        message: "This profile does not accept follows.",
+                    },
+                });
             const existing = await prisma.follow.findUnique({
                 where: { followerId_followingId: { followerId: me.id, followingId: target.id } },
                 select: { status: true },
@@ -418,14 +410,12 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                 data: { status: "approved" },
             });
             if (!result.count)
-                return reply
-                    .code(404)
-                    .send({
-                        error: {
-                            code: "FOLLOW_REQUEST_NOT_FOUND",
-                            message: "Follow request not found.",
-                        },
-                    });
+                return reply.code(404).send({
+                    error: {
+                        code: "FOLLOW_REQUEST_NOT_FOUND",
+                        message: "Follow request not found.",
+                    },
+                });
             return ok({ approved: true });
         },
     );
@@ -454,14 +444,12 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
                 where: { followerId: value, followingId: me.id, status: "pending" },
             });
             if (!result.count)
-                return reply
-                    .code(404)
-                    .send({
-                        error: {
-                            code: "FOLLOW_REQUEST_NOT_FOUND",
-                            message: "Follow request not found.",
-                        },
-                    });
+                return reply.code(404).send({
+                    error: {
+                        code: "FOLLOW_REQUEST_NOT_FOUND",
+                        message: "Follow request not found.",
+                    },
+                });
             return ok({ rejected: true });
         },
     );

@@ -177,12 +177,14 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                 },
             });
             if (!category)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
-                    });
-            return ok({ ...category, bannerUrl: taxonomyBannerUrl(category.posts[0]?.uploads[0]?.id), posts: undefined });
+                return reply.code(404).send({
+                    error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
+                });
+            return ok({
+                ...category,
+                bannerUrl: taxonomyBannerUrl(category.posts[0]?.uploads[0]?.id),
+                posts: undefined,
+            });
         },
     );
 
@@ -263,11 +265,9 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
             try {
                 await prisma.category.delete({ where: { id: categoryId } });
             } catch {
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "CATEGORY_NOT_FOUND", message: "Category not found." },
+                });
             }
             return reply.code(204).send();
         },

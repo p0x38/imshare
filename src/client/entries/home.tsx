@@ -182,5 +182,5 @@ if (root)
     createRoot(root).render(
         <App>
             <HomePage />
-        </App>
+        </App>,
     );

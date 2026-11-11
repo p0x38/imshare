@@ -39,12 +39,7 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function copyPoints(points: PointQuad): PointQuad {
-    return [
-        { ...points[0] },
-        { ...points[1] },
-        { ...points[2] },
-        { ...points[3] },
-    ];
+    return [{ ...points[0] }, { ...points[1] }, { ...points[2] }, { ...points[3] }];
 }
 
 function pointsToPixels(points: PointQuad, width: number, height: number): PointQuad {
@@ -74,10 +69,7 @@ function constrainSquare(points: PointQuad, width: number, height: number): Poin
 
     const left = points[0].x * width;
     const top = points[0].y * height;
-    const size = Math.min(
-        points[1].x * width - left,
-        points[3].y * height - top,
-    );
+    const size = Math.min(points[1].x * width - left, points[3].y * height - top);
     const maxSize = Math.min(width - left, height - top);
     const nextSize = clamp(size, MIN_CROP_PIXELS, maxSize);
 
@@ -153,9 +145,7 @@ export function ProfilePictureCropper({
 
     useEffect(() => {
         if (stageSize.width <= 0 || stageSize.height <= 0) return;
-        setPoints((current) =>
-            constrainSquare(current, stageSize.width, stageSize.height),
-        );
+        setPoints((current) => constrainSquare(current, stageSize.width, stageSize.height));
     }, [stageSize]);
 
     const cropFraction = useMemo(() => {
@@ -233,17 +223,17 @@ export function ProfilePictureCropper({
                 break;
             case 1:
                 fixed = { x: left, y: bottom };
-                candidateSize = Math.max((right + dx) - fixed.x, fixed.y - (top + dy));
+                candidateSize = Math.max(right + dx - fixed.x, fixed.y - (top + dy));
                 maxSize = Math.min(width - fixed.x, fixed.y);
                 break;
             case 2:
                 fixed = { x: left, y: top };
-                candidateSize = Math.max((right + dx) - fixed.x, (bottom + dy) - fixed.y);
+                candidateSize = Math.max(right + dx - fixed.x, bottom + dy - fixed.y);
                 maxSize = Math.min(width - fixed.x, height - fixed.y);
                 break;
             case 3:
                 fixed = { x: right, y: top };
-                candidateSize = Math.max(fixed.x - (left + dx), (bottom + dy) - fixed.y);
+                candidateSize = Math.max(fixed.x - (left + dx), bottom + dy - fixed.y);
                 maxSize = Math.min(fixed.x, height - fixed.y);
                 break;
         }
@@ -477,9 +467,7 @@ export function ProfilePictureCropper({
                                   p: 0,
                                   m: 0,
                                   cursor:
-                                      index === 0 || index === 2
-                                          ? "nwse-resize"
-                                          : "nesw-resize",
+                                      index === 0 || index === 2 ? "nwse-resize" : "nesw-resize",
                                   touchAction: "none",
                               }}
                           />
@@ -502,9 +490,7 @@ export function ProfilePictureCropper({
                     max={1}
                     step={0.01}
                     onChange={(_, value) => {
-                        const next = Array.isArray(value)
-                            ? value[0] ?? cropFraction
-                            : value;
+                        const next = Array.isArray(value) ? (value[0] ?? cropFraction) : value;
                         if (typeof next !== "number") return;
 
                         const currentSize = cropSize;
@@ -530,12 +516,7 @@ export function ProfilePictureCropper({
                 />
             </Stack>
 
-            <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                spacing={1}
-            >
+            <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
                 <Typography variant="body2" color="text.secondary">
                     Drag the square to move it. Drag any of the four points to resize the square
                     while preserving its exact 1:1 aspect ratio.

@@ -32,7 +32,10 @@ const commentBody = {
     required: ["body"],
     properties: {
         body: { type: "string", minLength: 1, maxLength: 5000, description: "Comment text." },
-        uploadId: { type: "string", description: "Optional image upload to attach to the comment." },
+        uploadId: {
+            type: "string",
+            description: "Optional image upload to attach to the comment.",
+        },
     },
 } satisfies OpenApiSchema;
 
@@ -137,7 +140,13 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                 : new Set<string>();
             const uploads = comments.some((comment) => comment.uploadId)
                 ? await prisma.upload.findMany({
-                      where: { id: { in: comments.flatMap((comment) => comment.uploadId ? [comment.uploadId] : []) } },
+                      where: {
+                          id: {
+                              in: comments.flatMap((comment) =>
+                                  comment.uploadId ? [comment.uploadId] : [],
+                              ),
+                          },
+                      },
                       select: { id: true, originalName: true, mimeType: true },
                   })
                 : [];
@@ -189,14 +198,12 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
             const text = body.body?.trim() ?? "";
             const uploadId = body.uploadId?.trim() || null;
             if ((!text && !uploadId) || text.length > 5000)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_COMMENT",
-                            message: "Comment must contain text or an image.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_COMMENT",
+                        message: "Comment must contain text or an image.",
+                    },
+                });
             let upload = null;
             if (uploadId) {
                 upload = await prisma.upload.findUnique({
@@ -213,7 +220,10 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     });
                 if (upload.postId)
                     return reply.code(409).send({
-                        error: { code: "UPLOAD_IN_USE", message: "Image upload is already attached to a post." },
+                        error: {
+                            code: "UPLOAD_IN_USE",
+                            message: "Image upload is already attached to a post.",
+                        },
                     });
             }
             const post = await prisma.post.findUnique({
@@ -246,9 +256,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     postId,
                     commentId: comment.id,
                 });
-            return reply
-                .code(201)
-                .send(ok({ ...view(comment, comment.upload), liked: false }));
+            return reply.code(201).send(ok({ ...view(comment, comment.upload), liked: false }));
         },
     );
 
@@ -288,21 +296,17 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "COMMENT_NOT_FOUND", message: "Comment not found." } });
             if (comment.userId !== user.id)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You do not own this comment." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You do not own this comment." },
+                });
             const text = (request.body as { body?: string }).body?.trim() ?? "";
             if (!text || text.length > 5000)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_COMMENT",
-                            message: "Comment must contain 1–5000 characters.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_COMMENT",
+                        message: "Comment must contain 1–5000 characters.",
+                    },
+                });
             return ok(
                 await commentView(
                     (
@@ -349,11 +353,9 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                     .code(404)
                     .send({ error: { code: "COMMENT_NOT_FOUND", message: "Comment not found." } });
             if (comment.userId !== user.id && comment.post.userId !== user.id)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You cannot remove this comment." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You cannot remove this comment." },
+                });
             await prisma.comment.delete({ where: { id: commentId } });
             return reply.code(204).send();
         },

@@ -132,7 +132,10 @@ function TextCard({ text }: { text: Post }) {
         if (busy) return;
         setBusy("share");
         setError("");
-        const url = new URL(text.permalink || `/texts/${encodeURIComponent(text.id)}/`, window.location.origin).href;
+        const url = new URL(
+            text.permalink || `/texts/${encodeURIComponent(text.id)}/`,
+            window.location.origin,
+        ).href;
         try {
             if (navigator.share) {
                 await navigator.share({
@@ -162,7 +165,9 @@ function TextCard({ text }: { text: Post }) {
 
     const openReply = () => {
         if (busy) return;
-        window.location.assign(`${text.permalink || `/texts/${encodeURIComponent(text.id)}/`}#replies`);
+        window.location.assign(
+            `${text.permalink || `/texts/${encodeURIComponent(text.id)}/`}#replies`,
+        );
     };
 
     const authorHref = text.author?.id

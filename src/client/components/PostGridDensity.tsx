@@ -29,9 +29,7 @@ function readDensity(storageKey: string): PostGridDensity {
     return isPostGridDensity(value) ? value : "comfortable";
 }
 
-export function usePostGridDensity(
-    storageKey = POST_GRID_DENSITY_STORAGE_KEY,
-): {
+export function usePostGridDensity(storageKey = POST_GRID_DENSITY_STORAGE_KEY): {
     density: PostGridDensity;
     setDensity: (density: PostGridDensity) => void;
 } {

@@ -225,7 +225,17 @@ function AdminUsersPage() {
                     </Card>
                 ))}
             </Stack>
-            {total > 100 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={Math.ceil(total / 100)} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
+            {total > 100 ? (
+                <Stack alignItems="center" sx={{ pt: 1 }}>
+                    <Pagination
+                        count={Math.ceil(total / 100)}
+                        page={page}
+                        onChange={(_, value) => setPage(value)}
+                        showFirstButton
+                        showLastButton
+                    />
+                </Stack>
+            ) : null}
             <Dialog
                 open={Boolean(target && action)}
                 onClose={() => !busy && setAction(null)}

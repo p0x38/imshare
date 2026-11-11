@@ -46,13 +46,15 @@ export function parsePermissions(value: unknown): ApiTokenPermissions | null {
         if (!resource || resource.length > 64) return null;
         if (!Array.isArray(actions)) return null;
 
-        const normalized = [...new Set(
-            actions.filter(
-                (action): action is ApiTokenAction =>
-                    typeof action === "string" &&
-                    (API_TOKEN_ACTIONS as readonly string[]).includes(action),
+        const normalized = [
+            ...new Set(
+                actions.filter(
+                    (action): action is ApiTokenAction =>
+                        typeof action === "string" &&
+                        (API_TOKEN_ACTIONS as readonly string[]).includes(action),
+                ),
             ),
-        )];
+        ];
 
         if (!normalized.length) continue;
         result[resource] = normalized;
@@ -160,8 +162,7 @@ export async function getApiToken(request: FastifyRequest): Promise<ApiTokenAuth
     if (tokenContexts.has(request)) return tokenContexts.get(request) ?? null;
 
     const authorization = request.headers.authorization;
-    const token =
-        typeof authorization === "string" ? authorization.replace(/^Bearer\s+/i, "") : "";
+    const token = typeof authorization === "string" ? authorization.replace(/^Bearer\s+/i, "") : "";
     if (!token) {
         tokenContexts.set(request, null);
         return null;

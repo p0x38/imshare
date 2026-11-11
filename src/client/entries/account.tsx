@@ -85,10 +85,13 @@ function AccountPage() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const response = await api<{ data: { id: string; url: string } }>("/v1/uploads?area=avatar", {
-                method: "POST",
-                body: formData,
-            });
+            const response = await api<{ data: { id: string; url: string } }>(
+                "/v1/uploads?area=avatar",
+                {
+                    method: "POST",
+                    body: formData,
+                },
+            );
             const upload = response.data;
             setAvatarMode("custom");
             setAvatarValue(upload.id);
@@ -347,9 +350,13 @@ function AccountPage() {
                                                     onCancel={() => setAvatarCropFile(null)}
                                                     onConfirm={async (blob) => {
                                                         const uploaded = await uploadAvatar(
-                                                            new File([blob], "profile-picture.png", {
-                                                                type: "image/png",
-                                                            }),
+                                                            new File(
+                                                                [blob],
+                                                                "profile-picture.png",
+                                                                {
+                                                                    type: "image/png",
+                                                                },
+                                                            ),
                                                         );
                                                         if (uploaded) setAvatarCropFile(null);
                                                     }}

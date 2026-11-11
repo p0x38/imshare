@@ -55,7 +55,13 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                             where: { post: publicPostWhere },
                             take: 1,
                             orderBy: { post: { createdAt: "desc" } },
-                            include: { post: { include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } } } },
+                            include: {
+                                post: {
+                                    include: {
+                                        uploads: { take: 1, orderBy: { createdAt: "asc" } },
+                                    },
+                                },
+                            },
                         },
                     },
                 }),
@@ -113,7 +119,11 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                         where: { post: publicPostWhere },
                         take: 1,
                         orderBy: { post: { createdAt: "desc" } },
-                        include: { post: { include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } } } },
+                        include: {
+                            post: {
+                                include: { uploads: { take: 1, orderBy: { createdAt: "asc" } } },
+                            },
+                        },
                     },
                 },
             });
@@ -150,15 +160,13 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
             const user = await requireUser(request, reply);
             if (!user) return;
             const body = request.body as { name: string; slug: string };
-            return reply
-                .code(201)
-                .send(
-                    ok(
-                        await prisma.tag.create({
-                            data: { name: body.name.trim(), slug: body.slug },
-                        }),
-                    ),
-                );
+            return reply.code(201).send(
+                ok(
+                    await prisma.tag.create({
+                        data: { name: body.name.trim(), slug: body.slug },
+                    }),
+                ),
+            );
         },
     );
 

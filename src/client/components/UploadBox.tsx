@@ -1,11 +1,4 @@
-import {
-    Alert,
-    Box,
-    LinearProgress,
-    Paper,
-    Stack,
-    Typography,
-} from "@mui/material";
+import { Alert, Box, LinearProgress, Paper, Stack, Typography } from "@mui/material";
 import { CloudUpload } from "@mui/icons-material";
 import { useRef, useState } from "react";
 import { api, apiUrl } from "../lib/api";
@@ -28,20 +21,14 @@ const ACCEPTED_IMAGE_EXTENSIONS = [
     ".bmp",
     ".avif",
 ] as const;
-const ACCEPT_ATTRIBUTE = [
-    ...ACCEPTED_IMAGE_EXTENSIONS,
-    ...ACCEPTED_IMAGE_TYPES,
-].join(", ");
+const ACCEPT_ATTRIBUTE = [...ACCEPTED_IMAGE_EXTENSIONS, ...ACCEPTED_IMAGE_TYPES].join(", ");
 
 interface UploadedFile {
     id: string;
     originalName?: string | null;
 }
 
-function uploadSingle(
-    file: File,
-    onProgress: (progress: number) => void,
-): Promise<UploadedFile> {
+function uploadSingle(file: File, onProgress: (progress: number) => void): Promise<UploadedFile> {
     return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", apiUrl("/v1/uploads"));
@@ -54,7 +41,11 @@ function uploadSingle(
                 try {
                     resolve(JSON.parse(xhr.responseText).data as UploadedFile);
                 } catch {
-                    reject(new Error(`Failed to upload "${file.name}": the server returned an invalid response.`));
+                    reject(
+                        new Error(
+                            `Failed to upload "${file.name}": the server returned an invalid response.`,
+                        ),
+                    );
                 }
                 return;
             }
@@ -101,14 +92,11 @@ export function UploadBox() {
         }
 
         const rejected = candidates.filter(
-            (file) => !ACCEPTED_IMAGE_TYPES.includes(
-                file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
-            ),
+            (file) =>
+                !ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number]),
         );
-        const selected = candidates.filter(
-            (file) => ACCEPTED_IMAGE_TYPES.includes(
-                file.type as (typeof ACCEPTED_IMAGE_TYPES)[number],
-            ),
+        const selected = candidates.filter((file) =>
+            ACCEPTED_IMAGE_TYPES.includes(file.type as (typeof ACCEPTED_IMAGE_TYPES)[number]),
         );
         if (rejected.length > 0) {
             setError(
@@ -155,7 +143,10 @@ export function UploadBox() {
                     body: JSON.stringify({ uploadIds: uploaded.map((upload) => upload.id) }),
                 });
             } catch (cause) {
-                const reason = cause instanceof Error ? cause.message : "the server returned an unknown error.";
+                const reason =
+                    cause instanceof Error
+                        ? cause.message
+                        : "the server returned an unknown error.";
                 throw new Error(
                     `Failed to create draft posts from ${uploaded.length} uploaded files: ${reason}`,
                 );

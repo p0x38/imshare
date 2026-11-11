@@ -66,7 +66,14 @@ function AdminReportsPage() {
         >
             <Stack direction="row" spacing={2} alignItems="center">
                 <Typography>Filter</Typography>
-                <Select size="small" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }}>
+                <Select
+                    size="small"
+                    value={status}
+                    onChange={(e) => {
+                        setStatus(e.target.value);
+                        setPage(1);
+                    }}
+                >
                     <MenuItem value="open">Open</MenuItem>
                     <MenuItem value="resolved">Resolved</MenuItem>
                     <MenuItem value="dismissed">Dismissed</MenuItem>
@@ -117,7 +124,17 @@ function AdminReportsPage() {
                     </Card>
                 ))}
             </Stack>
-            {total > 100 ? <Stack alignItems="center" sx={{ pt: 1 }}><Pagination count={Math.ceil(total / 100)} page={page} onChange={(_, value) => setPage(value)} showFirstButton showLastButton /></Stack> : null}
+            {total > 100 ? (
+                <Stack alignItems="center" sx={{ pt: 1 }}>
+                    <Pagination
+                        count={Math.ceil(total / 100)}
+                        page={page}
+                        onChange={(_, value) => setPage(value)}
+                        showFirstButton
+                        showLastButton
+                    />
+                </Stack>
+            ) : null}
         </AdminLayout>
     );
 }

@@ -35,9 +35,7 @@
             "label": "imshare: typecheck",
             "type": "shell",
             "command": "pnpm typecheck",
-            "problemMatcher": [
-                "$tsc"
-            ],
+            "problemMatcher": ["$tsc"],
             "group": {
                 "kind": "test",
                 "isDefault": true
@@ -55,9 +53,7 @@
             "command": "pnpm test",
             "problemMatcher": [],
             "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: db generate"
-            ]
+            "dependsOn": ["imshare: db generate"]
         },
         {
             "label": "imshare: test watch",
@@ -71,9 +67,7 @@
                 "group": "imshare"
             },
             "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: db generate"
-            ]
+            "dependsOn": ["imshare: db generate"]
         },
         {
             "label": "imshare: test coverage",
@@ -81,9 +75,7 @@
             "command": "pnpm test:coverage",
             "problemMatcher": [],
             "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: db generate"
-            ]
+            "dependsOn": ["imshare: db generate"]
         },
         {
             "label": "imshare: test integration",
@@ -91,9 +83,7 @@
             "command": "pnpm test:integration",
             "problemMatcher": [],
             "dependsOrder": "sequence",
-            "dependsOn": [
-                "imshare: db generate"
-            ]
+            "dependsOn": ["imshare: db generate"]
         },
         {
             "label": "imshare: test browser",
@@ -187,9 +177,7 @@
             "label": "imshare: build",
             "type": "shell",
             "command": "pnpm build",
-            "problemMatcher": [
-                "$tsc"
-            ],
+            "problemMatcher": ["$tsc"],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -199,9 +187,7 @@
             "label": "imshare: build client",
             "type": "shell",
             "command": "pnpm build:client",
-            "problemMatcher": [
-                "$tsc"
-            ],
+            "problemMatcher": ["$tsc"],
             "group": "build"
         },
         {

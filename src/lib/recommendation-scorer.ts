@@ -131,11 +131,7 @@ function tokenSimilarity(a: string | null | undefined, b: string | null | undefi
 }
 
 function tagSet(post: RecommendationPost): Set<string> {
-    return new Set(
-        post.tags
-            .map(({ tag }) => normalizeText(tag.name, 200))
-            .filter(Boolean),
-    );
+    return new Set(post.tags.map(({ tag }) => normalizeText(tag.name, 200)).filter(Boolean));
 }
 
 function tagSimilarity(left: RecommendationPost, right: RecommendationPost): number {
@@ -159,8 +155,7 @@ function authorSimilarity(left: RecommendationPost, right: RecommendationPost): 
         normalizeText(left.user.handle, 200) === normalizeText(right.user.handle, 200)
     )
         return 1;
-    if (left.user.name && right.user.name)
-        return tokenSimilarity(left.user.name, right.user.name);
+    if (left.user.name && right.user.name) return tokenSimilarity(left.user.name, right.user.name);
     return 0;
 }
 
@@ -199,9 +194,7 @@ function sourceAffinity(candidate: RecommendationPost, sources: RecommendationPo
 
 function interestedTagScore(candidate: RecommendationPost, interestedTags: string[]): number {
     if (!interestedTags.length) return 0;
-    const interests = new Set(
-        interestedTags.map((tag) => normalizeText(tag, 200)).filter(Boolean),
-    );
+    const interests = new Set(interestedTags.map((tag) => normalizeText(tag, 200)).filter(Boolean));
     if (!interests.size) return 0;
 
     const candidateTags = tagSet(candidate);
@@ -222,13 +215,13 @@ function authorAffinityScore(candidate: RecommendationPost, sources: Recommendat
     return Math.max(...sources.map((source) => authorSimilarity(source, candidate)));
 }
 
-function contentTypeAffinityScore(candidate: RecommendationPost, sources: RecommendationPost[]): number {
+function contentTypeAffinityScore(
+    candidate: RecommendationPost,
+    sources: RecommendationPost[],
+): number {
     if (!candidate.contentType || !sources.length) return 0;
     return Math.max(
-        ...sources.map(
-            (source) =>
-                source.contentType === candidate.contentType ? 1 : 0,
-        ),
+        ...sources.map((source) => (source.contentType === candidate.contentType ? 1 : 0)),
     );
 }
 
@@ -242,11 +235,7 @@ export function scoreTrending(metrics: TrendingMetrics): number {
     const likes = Math.log1p(Math.max(metrics.likes, 0));
     const favorites = Math.log1p(Math.max(metrics.favorites, 0));
     const comments = Math.log1p(Math.max(metrics.comments, 0));
-    const engaged =
-        views * 0.3 +
-        likes * 1.15 +
-        favorites * 1.5 +
-        comments * 0.8;
+    const engaged = views * 0.3 + likes * 1.15 + favorites * 1.5 + comments * 0.8;
     const engagement = Math.min(engaged / 14, 1);
     return engagement * 0.8 + recencyScore(metrics.createdAt) * 0.2;
 }
@@ -259,18 +248,15 @@ export function scorePersonalizedRecommendation(
     const recentViewedPosts = sourceAffinity(candidate, profile.viewedPosts);
     const recentLikedPosts = sourceAffinity(candidate, profile.likedPosts);
     const interestedTags = interestedTagScore(candidate, profile.interestedTags);
-    const interestedCategories = interestedCategoryScore(
-        candidate,
-        profile.interestedCategoryIds,
-    );
-    const authorAffinity = authorAffinityScore(
-        candidate,
-        [...profile.likedPosts, ...profile.viewedPosts],
-    );
-    const contentType = contentTypeAffinityScore(
-        candidate,
-        [...profile.likedPosts, ...profile.viewedPosts],
-    );
+    const interestedCategories = interestedCategoryScore(candidate, profile.interestedCategoryIds);
+    const authorAffinity = authorAffinityScore(candidate, [
+        ...profile.likedPosts,
+        ...profile.viewedPosts,
+    ]);
+    const contentType = contentTypeAffinityScore(candidate, [
+        ...profile.likedPosts,
+        ...profile.viewedPosts,
+    ]);
     const recency = recencyScore(candidate.createdAt);
 
     const weighted = [
@@ -288,8 +274,7 @@ export function scorePersonalizedRecommendation(
     const total =
         totalWeight === 0
             ? 0
-            : (weighted.reduce((sum, [value, weight]) => sum + value * weight, 0) /
-                  totalWeight) *
+            : (weighted.reduce((sum, [value, weight]) => sum + value * weight, 0) / totalWeight) *
               RECOMMENDATION_SCORE_MULTIPLIER;
 
     return {
@@ -323,23 +308,19 @@ export function scoreRecommendation(
     candidate: RecommendationPost,
 ): RelatedPostScore {
     const tags = tagSimilarity(source, candidate);
-    const category =
-        source.categoryId && source.categoryId === candidate.categoryId ? 1 : 0;
-    const contentType =
-        (source.contentType ?? "") === (candidate.contentType ?? "") ? 1 : 0;
+    const category = source.categoryId && source.categoryId === candidate.categoryId ? 1 : 0;
+    const contentType = (source.contentType ?? "") === (candidate.contentType ?? "") ? 1 : 0;
     const author = authorSimilarity(source, candidate);
     const title = tokenSimilarity(source.title, candidate.title);
     const description = tokenSimilarity(source.description, candidate.description);
     const recency = recencyScore(candidate.createdAt);
-    const engagement =
-        Math.min(
-            (
-                Math.log1p(candidate._count.views) * 0.45 +
-                Math.log1p(candidate._count.reactions ?? 0) * 1.5 +
-                Math.log1p(candidate._count.comments) * 1.25
-            ) / 12,
-            1,
-        );
+    const engagement = Math.min(
+        (Math.log1p(candidate._count.views) * 0.45 +
+            Math.log1p(candidate._count.reactions ?? 0) * 1.5 +
+            Math.log1p(candidate._count.comments) * 1.25) /
+            12,
+        1,
+    );
 
     const total =
         title * 18 +

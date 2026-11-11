@@ -74,41 +74,35 @@ export const profileLinkRoutes: FastifyPluginAsync = async (fastify) => {
             const label = body.label?.trim();
             const url = body.url ? normalizeUrl(body.url.trim()) : undefined;
             if (!label || label.length > 100 || !url)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_PROFILE_LINK",
-                            message: "A label and an HTTP(S) URL are required.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PROFILE_LINK",
+                        message: "A label and an HTTP(S) URL are required.",
+                    },
+                });
             const count = await prisma.profileLink.count({ where: { userId: user.id } });
             if (count >= 20)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "TOO_MANY_PROFILE_LINKS",
-                            message: "A profile can have at most 20 links.",
+                return reply.code(400).send({
+                    error: {
+                        code: "TOO_MANY_PROFILE_LINKS",
+                        message: "A profile can have at most 20 links.",
+                    },
+                });
+            return reply.code(201).send(
+                ok(
+                    await prisma.profileLink.create({
+                        data: {
+                            userId: user.id,
+                            label,
+                            url,
+                            position: Math.max(
+                                0,
+                                Math.min(999, Math.trunc(body.position ?? count)),
+                            ),
                         },
-                    });
-            return reply
-                .code(201)
-                .send(
-                    ok(
-                        await prisma.profileLink.create({
-                            data: {
-                                userId: user.id,
-                                label,
-                                url,
-                                position: Math.max(
-                                    0,
-                                    Math.min(999, Math.trunc(body.position ?? count)),
-                                ),
-                            },
-                        }),
-                    ),
-                );
+                    }),
+                ),
+            );
         },
     );
 
@@ -137,29 +131,23 @@ export const profileLinkRoutes: FastifyPluginAsync = async (fastify) => {
             const { linkId } = request.params as { linkId: string };
             const link = await prisma.profileLink.findUnique({ where: { id: linkId } });
             if (!link)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "LINK_NOT_FOUND", message: "Profile link not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "LINK_NOT_FOUND", message: "Profile link not found." },
+                });
             if (link.userId !== user.id)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You do not own this profile link." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You do not own this profile link." },
+                });
             const body = request.body as { label?: string; url?: string; position?: number };
             const label = body.label === undefined ? link.label : body.label.trim();
             const url = body.url === undefined ? link.url : normalizeUrl(body.url.trim());
             if (!label || label.length > 100 || !url)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_PROFILE_LINK",
-                            message: "A label and an HTTP(S) URL are required.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_PROFILE_LINK",
+                        message: "A label and an HTTP(S) URL are required.",
+                    },
+                });
             return ok(
                 await prisma.profileLink.update({
                     where: { id: linkId },
@@ -198,17 +186,13 @@ export const profileLinkRoutes: FastifyPluginAsync = async (fastify) => {
             const { linkId } = request.params as { linkId: string };
             const link = await prisma.profileLink.findUnique({ where: { id: linkId } });
             if (!link)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "LINK_NOT_FOUND", message: "Profile link not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "LINK_NOT_FOUND", message: "Profile link not found." },
+                });
             if (link.userId !== user.id)
-                return reply
-                    .code(403)
-                    .send({
-                        error: { code: "FORBIDDEN", message: "You do not own this profile link." },
-                    });
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You do not own this profile link." },
+                });
             await prisma.profileLink.delete({ where: { id: linkId } });
             return reply.code(204).send();
         },

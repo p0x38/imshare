@@ -1,4 +1,14 @@
-import { Alert, Button, Card, CardContent, Chip, Divider, Stack, TextField, Typography } from "@mui/material";
+import {
+    Alert,
+    Button,
+    Card,
+    CardContent,
+    Chip,
+    Divider,
+    Stack,
+    TextField,
+    Typography,
+} from "@mui/material";
 import { useEffect, useState } from "react";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
@@ -41,9 +51,17 @@ function TextPage() {
             </Page>
         );
     const share = async () => {
-        const url = new URL(text.permalink || `/texts/${encodeURIComponent(text.id)}/`, window.location.origin).href;
+        const url = new URL(
+            text.permalink || `/texts/${encodeURIComponent(text.id)}/`,
+            window.location.origin,
+        ).href;
         try {
-            if (navigator.share) await navigator.share({ title: text.title || "imshare text", text: text.textContent || "", url });
+            if (navigator.share)
+                await navigator.share({
+                    title: text.title || "imshare text",
+                    text: text.textContent || "",
+                    url,
+                });
             else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(url);
             else window.prompt("Copy this link:", url);
         } catch (cause) {
@@ -99,10 +117,16 @@ function TextPage() {
                                 {text.textContent}
                             </Typography>
                             <Stack direction="row" spacing={1}>
-                                <Button startIcon={<ShareOutlinedIcon />} onClick={() => void share()}>
+                                <Button
+                                    startIcon={<ShareOutlinedIcon />}
+                                    onClick={() => void share()}
+                                >
                                     Share
                                 </Button>
-                                <Button startIcon={<ChatBubbleOutlineIcon />} onClick={() => document.getElementById("reply-box")?.focus()}>
+                                <Button
+                                    startIcon={<ChatBubbleOutlineIcon />}
+                                    onClick={() => document.getElementById("reply-box")?.focus()}
+                                >
                                     Reply
                                 </Button>
                             </Stack>

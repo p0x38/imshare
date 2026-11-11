@@ -57,9 +57,13 @@ async function main(): Promise<void> {
         }
 
         const result = await migrateDirectory(source, cacheDirectory, settings.useHashedDirectory);
-        console.log(`Migrated ${result.moved} cache entr${result.moved === 1 ? "y" : "ies"} from ${source}`);
+        console.log(
+            `Migrated ${result.moved} cache entr${result.moved === 1 ? "y" : "ies"} from ${source}`,
+        );
         if (result.skipped)
-            console.log(`Skipped ${result.skipped} existing entr${result.skipped === 1 ? "y" : "ies"}`);
+            console.log(
+                `Skipped ${result.skipped} existing entr${result.skipped === 1 ? "y" : "ies"}`,
+            );
 
         try {
             if (!(await readdir(source)).length) await rmdir(source);

@@ -122,23 +122,19 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
                 ? body.googleTagManagerContainerId.trim()
                 : "";
         if (ga && !/^G-[A-Z0-9]+$/i.test(ga))
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_GA_ID",
-                        message: "Invalid Google Analytics measurement ID.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_GA_ID",
+                    message: "Invalid Google Analytics measurement ID.",
+                },
+            });
         if (gtm && !/^GTM-[A-Z0-9]+$/i.test(gtm))
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_GTM_ID",
-                        message: "Invalid Google Tag Manager container ID.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_GTM_ID",
+                    message: "Invalid Google Tag Manager container ID.",
+                },
+            });
         await updateConfig((config) => ({
             ...config,
             analytics: {
@@ -190,23 +186,19 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
                     ? body.analytics.googleTagManagerContainerId.trim()
                     : "";
             if (ga && !/^G-[A-Z0-9]+$/i.test(ga))
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_GA_ID",
-                            message: "Invalid Google Analytics measurement ID.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_GA_ID",
+                        message: "Invalid Google Analytics measurement ID.",
+                    },
+                });
             if (gtm && !/^GTM-[A-Z0-9]+$/i.test(gtm))
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_GTM_ID",
-                            message: "Invalid Google Tag Manager container ID.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_GTM_ID",
+                        message: "Invalid Google Tag Manager container ID.",
+                    },
+                });
         }
         const updated = await updateConfig((config) => ({
             ...config,
@@ -400,11 +392,9 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
             body.visibility !== undefined &&
             !["public", "unlisted", "private"].includes(String(body.visibility))
         )
-            return reply
-                .code(400)
-                .send({
-                    error: { code: "INVALID_VISIBILITY", message: "Invalid post visibility." },
-                });
+            return reply.code(400).send({
+                error: { code: "INVALID_VISIBILITY", message: "Invalid post visibility." },
+            });
         await prisma.postRevision.create({
             data: {
                 postId,
@@ -513,11 +503,9 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
         const { reportId } = request.params as { reportId: string };
         const body = request.body as { status?: unknown };
         if (!["open", "resolved", "dismissed"].includes(String(body.status)))
-            return reply
-                .code(400)
-                .send({
-                    error: { code: "INVALID_REPORT_STATUS", message: "Invalid report status." },
-                });
+            return reply.code(400).send({
+                error: { code: "INVALID_REPORT_STATUS", message: "Invalid report status." },
+            });
         return ok(
             await prisma.report.update({
                 where: { id: reportId },
@@ -530,11 +518,9 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
         if (!actor) return;
         const { userId } = request.params as { userId: string };
         if (actor.id === userId)
-            return reply
-                .code(400)
-                .send({
-                    error: { code: "CANNOT_KICK_SELF", message: "You cannot kick yourself." },
-                });
+            return reply.code(400).send({
+                error: { code: "CANNOT_KICK_SELF", message: "You cannot kick yourself." },
+            });
         const [actorUser, target] = await Promise.all([
             prisma.user.findUnique({ where: { id: actor.id }, select: { role: true } }),
             prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true } }),
@@ -581,24 +567,20 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
         const body = request.body as { reason?: string; durationHours?: unknown };
         const reason = typeof body.reason === "string" ? body.reason.trim() : "";
         if (!reason || reason.length > 500)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_BAN_REASON",
-                        message: "A ban reason between 1 and 500 characters is required.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_BAN_REASON",
+                    message: "A ban reason between 1 and 500 characters is required.",
+                },
+            });
         const bannedUntil = parseDuration(body.durationHours);
         if (bannedUntil === null)
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_BAN_DURATION",
-                        message: "Ban duration must be between 0 and 8760 hours.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_BAN_DURATION",
+                    message: "Ban duration must be between 0 and 8760 hours.",
+                },
+            });
         const now = new Date();
         await prisma.$transaction([
             prisma.user.update({
@@ -631,11 +613,9 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
                 .code(404)
                 .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
         if (actor.id === userId)
-            return reply
-                .code(400)
-                .send({
-                    error: { code: "CANNOT_UNBAN_SELF", message: "You cannot unban yourself." },
-                });
+            return reply.code(400).send({
+                error: { code: "CANNOT_UNBAN_SELF", message: "You cannot unban yourself." },
+            });
         const actorUser = await prisma.user.findUnique({
             where: { id: actor.id },
             select: { role: true },
@@ -697,23 +677,19 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
         const { userId } = request.params as { userId: string };
         const body = request.body as { role?: unknown };
         if (!["user", "moderator", "admin"].includes(String(body.role)))
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "INVALID_ROLE",
-                        message: "Role must be user, moderator, or admin.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_ROLE",
+                    message: "Role must be user, moderator, or admin.",
+                },
+            });
         if (actor.id === userId && body.role !== "admin")
-            return reply
-                .code(400)
-                .send({
-                    error: {
-                        code: "CANNOT_DEMOTE_SELF",
-                        message: "You cannot remove your own administrator role.",
-                    },
-                });
+            return reply.code(400).send({
+                error: {
+                    code: "CANNOT_DEMOTE_SELF",
+                    message: "You cannot remove your own administrator role.",
+                },
+            });
         const target = await prisma.user.findUnique({
             where: { id: userId },
             select: { id: true, role: true },

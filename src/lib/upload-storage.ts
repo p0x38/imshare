@@ -8,8 +8,6 @@ export function uploadStorageDirectory(
     area: UploadStorageArea = "uploads",
 ): string {
     const configured =
-        area === "avatars"
-            ? config.storage.avatarDirectory
-            : config.storage.uploadDirectory;
+        area === "avatars" ? config.storage.avatarDirectory : config.storage.uploadDirectory;
     return path.resolve(process.cwd(), configured ?? "data/uploads");
 }

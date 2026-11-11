@@ -71,7 +71,10 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
         void api<{ data: RelationshipUser[]; totalPages?: number }>(
             `/v1/users/${encodeURIComponent(value)}/${kind}?limit=50&page=${page}`,
         )
-            .then((response) => { setItems(response.data ?? []); setTotalPages(response.totalPages ?? 1); })
+            .then((response) => {
+                setItems(response.data ?? []);
+                setTotalPages(response.totalPages ?? 1);
+            })
             .catch((cause) =>
                 setError(cause instanceof Error ? cause.message : `Unable to load ${kind}.`),
             )
@@ -126,7 +129,15 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
                     </Box>
                 ))}
             </List>
-            {totalPages > 1 ? <Stack alignItems="center" sx={{ p: 2 }}><Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} /></Stack> : null}
+            {totalPages > 1 ? (
+                <Stack alignItems="center" sx={{ p: 2 }}>
+                    <Pagination
+                        count={totalPages}
+                        page={page}
+                        onChange={(_, value) => setPage(value)}
+                    />
+                </Stack>
+            ) : null}
         </Card>
     );
 }
@@ -149,10 +160,12 @@ function ProfilePage() {
             );
             setProfile(profileResponse.data);
             if (profileResponse.data.stats.posts > 0) {
-                const postsResponse = await api<{ data: Post[]; pagination?: { totalPages?: number } }>(
-                    `/v1/users/${encodeURIComponent(value)}/posts?limit=48&page=${postsPage}`,
-                );
-                setPosts(postsResponse.data); setPostsTotalPages(postsResponse.pagination?.totalPages ?? 1);
+                const postsResponse = await api<{
+                    data: Post[];
+                    pagination?: { totalPages?: number };
+                }>(`/v1/users/${encodeURIComponent(value)}/posts?limit=48&page=${postsPage}`);
+                setPosts(postsResponse.data);
+                setPostsTotalPages(postsResponse.pagination?.totalPages ?? 1);
             } else setPosts([]);
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : "Unable to load profile.");
@@ -342,7 +355,13 @@ function ProfilePage() {
                                 <PostGrid posts={imagePosts} />
                             </Stack>
                         ) : null}
-                        {postsTotalPages > 1 ? <Pagination count={postsTotalPages} page={postsPage} onChange={(_, value) => setPostsPage(value)} /> : null}
+                        {postsTotalPages > 1 ? (
+                            <Pagination
+                                count={postsTotalPages}
+                                page={postsPage}
+                                onChange={(_, value) => setPostsPage(value)}
+                            />
+                        ) : null}
                         {texts.length ? (
                             <Stack spacing={1.5}>
                                 <Typography variant="h5" component="h2">

@@ -268,7 +268,11 @@ function PostActions({ post }: { post: Post }) {
                                 <ThumbUpAltOutlinedIcon />
                             </IconButton>
                         </Tooltip>
-                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ lineHeight: 1.2 }}
+                        >
                             {t("postUi.likes")}
                         </Typography>
                     </Stack>
@@ -283,7 +287,11 @@ function PostActions({ post }: { post: Post }) {
                                 <FavoriteBorderIcon />
                             </IconButton>
                         </Tooltip>
-                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ lineHeight: 1.2 }}
+                        >
                             {t("postUi.favorites")}
                         </Typography>
                     </Stack>
@@ -298,7 +306,11 @@ function PostActions({ post }: { post: Post }) {
                                 <BookmarkBorderIcon />
                             </IconButton>
                         </Tooltip>
-                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                        <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ lineHeight: 1.2 }}
+                        >
                             {t("postUi.saves")}
                         </Typography>
                     </Stack>
@@ -723,13 +735,7 @@ function Comments({ postId }: { postId: string }) {
     );
 }
 
-export function PostPage({
-    postId,
-    permalinkKey,
-}: {
-    postId?: string;
-    permalinkKey?: string;
-}) {
+export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkKey?: string }) {
     const identifier = postId ?? permalinkKey;
     const endpoint = postId
         ? `/v1/posts/${encodeURIComponent(postId)}`

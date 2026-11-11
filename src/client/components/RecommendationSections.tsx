@@ -12,7 +12,15 @@ async function loadPosts(path: string) {
     const response = await api<PostsResponse>(path);
     return response.data || [];
 }
-function RecommendationSection({ title, posts, density }: { title: string; posts: Post[]; density: PostGridDensity }) {
+function RecommendationSection({
+    title,
+    posts,
+    density,
+}: {
+    title: string;
+    posts: Post[];
+    density: PostGridDensity;
+}) {
     const visiblePosts = posts.filter((post) => post.contentType !== "text");
     if (!visiblePosts.length) return null;
     return (
@@ -26,7 +34,15 @@ function RecommendationSection({ title, posts, density }: { title: string; posts
         </AnimatedItem>
     );
 }
-export function RecommendationSections({ postId, density: densityProp, storageKey }: { postId: string; density?: PostGridDensity; storageKey?: string }) {
+export function RecommendationSections({
+    postId,
+    density: densityProp,
+    storageKey,
+}: {
+    postId: string;
+    density?: PostGridDensity;
+    storageKey?: string;
+}) {
     const { t } = useTranslation();
     const [related, setRelated] = useState<Post[]>([]);
     const [recommended, setRecommended] = useState<Post[]>([]);
@@ -64,13 +80,21 @@ export function RecommendationSections({ postId, density: densityProp, storageKe
         <Box sx={{ mt: { xs: 1, sm: 2 } }}>
             <Stack spacing={{ xs: 3, sm: 4 }}>
                 {error ? <Alert severity="info">{error}</Alert> : null}
-                <RecommendationSection title={t("recommendations.related")} posts={related} density={density} />
+                <RecommendationSection
+                    title={t("recommendations.related")}
+                    posts={related}
+                    density={density}
+                />
                 <RecommendationSection
                     title={t("recommendations.recommended")}
                     posts={recommended}
                     density={density}
                 />
-                <RecommendationSection title={t("recommendations.trending")} posts={trending} density={density} />
+                <RecommendationSection
+                    title={t("recommendations.trending")}
+                    posts={trending}
+                    density={density}
+                />
             </Stack>
         </Box>
     );
