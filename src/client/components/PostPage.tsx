@@ -239,7 +239,7 @@ function PostActions({ post }: { post: Post }) {
 
     return (
         <>
-            <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={1}>
+            <Stack direction="row" justifyContent="center" alignItems="center" spacing={1}>
                 {reportMessage ? (
                     <Alert
                         severity={
@@ -257,13 +257,13 @@ function PostActions({ post }: { post: Post }) {
                     direction="row"
                     sx={{ border: 1, borderColor: "divider", borderRadius: 1, overflow: "hidden" }}
                 >
-                    <Stack alignItems="center" sx={{ minWidth: 58, px: 0.5 }}>
+                    <Stack alignItems="center" sx={{ width: 64 }}>
                         <Tooltip title={t("postUi.like")}>
                             <IconButton
                                 aria-label={t("postUi.like")}
                                 disabled={busy !== "" && busy !== "like"}
                                 onClick={() => void toggle("like")}
-                                sx={buttonSx()}
+                                sx={{ ...buttonSx(), width: "100%" }}
                             >
                                 <ThumbUpAltOutlinedIcon />
                             </IconButton>
@@ -276,13 +276,16 @@ function PostActions({ post }: { post: Post }) {
                             {t("postUi.likes")}
                         </Typography>
                     </Stack>
-                    <Stack alignItems="center" sx={{ minWidth: 68, px: 0.5 }}>
+                    <Stack
+                        alignItems="center"
+                        sx={{ width: 72, borderLeft: 1, borderColor: "divider" }}
+                    >
                         <Tooltip title={t("postUi.favorite")}>
                             <IconButton
                                 aria-label={t("postUi.favorite")}
                                 disabled={busy !== "" && busy !== "favorite"}
                                 onClick={() => void toggle("favorite")}
-                                sx={buttonSx(true)}
+                                sx={{ ...buttonSx(), width: "100%" }}
                             >
                                 <FavoriteBorderIcon />
                             </IconButton>
@@ -295,13 +298,16 @@ function PostActions({ post }: { post: Post }) {
                             {t("postUi.favorites")}
                         </Typography>
                     </Stack>
-                    <Stack alignItems="center" sx={{ minWidth: 58, px: 0.5 }}>
+                    <Stack
+                        alignItems="center"
+                        sx={{ width: 64, borderLeft: 1, borderColor: "divider" }}
+                    >
                         <Tooltip title={t("postUi.save")}>
                             <IconButton
                                 aria-label={t("postUi.save")}
                                 disabled={busy !== "" && busy !== "save"}
                                 onClick={() => void toggle("save")}
-                                sx={buttonSx(true)}
+                                sx={{ ...buttonSx(), width: "100%" }}
                             >
                                 <BookmarkBorderIcon />
                             </IconButton>
@@ -500,13 +506,7 @@ function CommentItem({
         }
     };
     return (
-        <Card
-            variant="outlined"
-            sx={{
-                transition: reducedMotion ? "none" : "transform 160ms ease, box-shadow 160ms ease",
-                "&:hover": reducedMotion ? {} : { transform: "translateY(-2px)", boxShadow: 2 },
-            }}
-        >
+        <Card variant="outlined">
             <CardContent>
                 <Stack spacing={1.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
@@ -886,10 +886,7 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
               ]
             : []),
     ];
-    const cardSx = {
-        transition: reducedMotion ? "none" : "transform 180ms ease, box-shadow 180ms ease",
-        "&:hover": reducedMotion ? {} : { transform: "translateY(-2px)", boxShadow: 2 },
-    };
+    const cardSx = {};
 
     return (
         <Page maxWidth="full">
