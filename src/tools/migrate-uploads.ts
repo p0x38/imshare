@@ -1,9 +1,8 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, copyFile, mkdir, readFile, readdir, stat, unlink } from "node:fs/promises";
 import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
-import { env } from "../lib/env.js";
+import type { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import sharp from "sharp";
@@ -151,8 +150,7 @@ async function main(): Promise<void> {
         ...(path.resolve(legacyUploadDir) === path.resolve(uploadDir) ? [] : [legacyUploadDir]),
     ];
 
-    const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
-    const prisma = new PrismaClient({ adapter });
+    const prisma = createPrismaClient();
 
     try {
         const uploads = await prisma.upload.findMany({
@@ -384,7 +382,9 @@ async function main(): Promise<void> {
                             path.extname(normalized).toLowerCase(),
                         );
                         console.log(
-                            (item.directory === legacyUploadDir ? "LEGACY DUPLICATE " : "DUPLICATE FILE ") +
+                            (item.directory === legacyUploadDir
+                                ? "LEGACY DUPLICATE "
+                                : "DUPLICATE FILE ") +
                                 normalized +
                                 " sha256=" +
                                 hash +
@@ -396,7 +396,9 @@ async function main(): Promise<void> {
                     } else {
                         unreferenced++;
                         console.error(
-                            (item.directory === legacyUploadDir ? "LEGACY UNREFERENCED " : "UNREFERENCED ") +
+                            (item.directory === legacyUploadDir
+                                ? "LEGACY UNREFERENCED "
+                                : "UNREFERENCED ") +
                                 normalized +
                                 " sha256=" +
                                 hash,

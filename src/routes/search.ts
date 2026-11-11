@@ -2,6 +2,8 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
 import { collection, parseOrder, parsePagination } from "../lib/api.js";
+import { env } from "../lib/env.js";
+import { searchMeilisearchPosts } from "../lib/meilisearch.js";
 import { postInclude, postView } from "./_shared.js";
 
 function parseDate(value: unknown): Date | undefined {
@@ -44,15 +46,26 @@ export const searchRoutes: FastifyPluginAsync = async (fastify) => {
         if (type === "posts" || type === "texts" || type === "all") {
             const { conditions } = publicPostConditions(term);
             if (term) {
-                const searchQuery = buildSearchQuery(term);
-                const matches = await prisma.$queryRaw<{ postId: string }[]>`
-                    SELECT "postId"
-                    FROM "post_search"
-                    WHERE "post_search" MATCH ${searchQuery}
-                    ORDER BY bm25("post_search")
-                    LIMIT 1000
-                `;
-                conditions.push({ id: { in: matches.map((match) => match.postId) } });
+                const meilisearchMatches = await searchMeilisearchPosts(term);
+                if (meilisearchMatches) {
+                    conditions.push({ id: { in: meilisearchMatches } });
+                } else if (env.databaseProvider === "postgresql") {
+                    conditions.push({
+                        OR: ["title", "description", "caption", "textContent"].map((field) => ({
+                            [field]: { contains: term, mode: "insensitive" },
+                        })),
+                    });
+                } else {
+                    const searchQuery = buildSearchQuery(term);
+                    const matches = await prisma.$queryRaw<{ postId: string }[]>`
+                        SELECT "postId"
+                        FROM "post_search"
+                        WHERE "post_search" MATCH ${searchQuery}
+                        ORDER BY bm25("post_search")
+                        LIMIT 1000
+                    `;
+                    conditions.push({ id: { in: matches.map((match) => match.postId) } });
+                }
             }
             if (typeof q.user === "string" && q.user) conditions.push({ userId: q.user });
             if (typeof q.category === "string" && q.category)

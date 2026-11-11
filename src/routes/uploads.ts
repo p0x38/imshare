@@ -12,10 +12,7 @@ import { uploadStorageDirectory, type UploadStorageArea } from "../lib/upload-st
 import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { observability } from "../instrumentation.js";
-import {
-    GIF_SHARP_PIXEL_LIMIT,
-    validateGifMetadata,
-} from "../lib/gif-security.js";
+import { GIF_SHARP_PIXEL_LIMIT, validateGifMetadata } from "../lib/gif-security.js";
 
 const IMAGE_TYPES = new Map([
     [".jpg", "image/jpeg"],
@@ -51,8 +48,14 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
             query.area === "avatar" || query.area === "avatars" ? "avatars" : "uploads";
         const targetDirectory = storageArea === "avatars" ? avatarDir : uploadDir;
         const multiple = query.multiple === "true";
+        const postyBirb = query.client === "postybirb";
         const parts = request.parts({
-            limits: { files: multiple ? 20 : 1, fileSize: config.storage.maxFileSize, fields: 4 },
+            limits: {
+                files: multiple ? 20 : 1,
+                fileSize: config.storage.maxFileSize,
+                fields: postyBirb ? 128 : 4,
+                ...(postyBirb ? { fieldSize: 64 * 1024 } : {}),
+            },
         });
         const uploads: any[] = [];
         try {
@@ -118,7 +121,8 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 }
                 broadcastUploadStatus(user.id, { uploadId, status: "processing", progress: 100 });
                 const content = await readFile(temporaryPath);
-                const isGif = content.subarray(0, 6).toString("ascii") === "GIF87a" ||
+                const isGif =
+                    content.subarray(0, 6).toString("ascii") === "GIF87a" ||
                     content.subarray(0, 6).toString("ascii") === "GIF89a";
                 let metadata;
                 try {
@@ -302,22 +306,23 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
             }
         } catch (error) {
             request.log.error(error);
-            return reply
-                .code(500)
-                .send({
-                    error: {
-                        code: "UPLOAD_FAILED",
-                        message: "Upload processing failed" +
-                            (uploads.length === 0 ? "." : ". One or more files could not be processed."),
-                    },
-                });
+            return reply.code(500).send({
+                error: {
+                    code: "UPLOAD_FAILED",
+                    message:
+                        "Upload processing failed" +
+                        (uploads.length === 0
+                            ? "."
+                            : ". One or more files could not be processed."),
+                },
+            });
         }
         if (!uploads.length)
             return reply
                 .code(400)
                 .send({ error: { code: "NO_FILE", message: "An image file is required." } });
         return reply
-            .code(201)
+            .code(postyBirb ? 200 : 201)
             .send(ok(multiple ? uploads.map(uploadView) : uploadView(uploads[0])));
     });
     fastify.get("/v1/uploads/:uploadId", async (request, reply) => {
@@ -379,7 +384,6 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
             });
         }
     });
-
 
     fastify.get("/v1/avatars/*", async (request, reply) => {
         const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(

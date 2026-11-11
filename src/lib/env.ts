@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+export type DatabaseProvider = "sqlite" | "postgresql";
+
 function required(name: string): string {
     const value = process.env[name];
     if (!value) {
@@ -23,7 +25,13 @@ function optionalPort(name: string): number | undefined {
     return port;
 }
 
+const databaseProvider = optional("DATABASE_PROVIDER") ?? "sqlite";
+if (databaseProvider !== "sqlite" && databaseProvider !== "postgresql")
+    throw new Error("DATABASE_PROVIDER must be either sqlite or postgresql.");
+const selectedDatabaseProvider = databaseProvider as DatabaseProvider;
+
 export const env = {
+    databaseProvider: selectedDatabaseProvider,
     databaseUrl: required("DATABASE_URL"),
     betterAuthSecret: required("BETTER_AUTH_SECRET"),
     smtp: {
@@ -38,5 +46,10 @@ export const env = {
         publicKey: optional("VAPID_PUBLIC_KEY"),
         privateKey: optional("VAPID_PRIVATE_KEY"),
         subject: optional("VAPID_SUBJECT"),
+    },
+    meilisearch: {
+        url: optional("MEILISEARCH_URL"),
+        apiKey: optional("MEILISEARCH_API_KEY"),
+        indexUid: optional("MEILISEARCH_INDEX_UID") ?? "imshare_posts",
     },
 };

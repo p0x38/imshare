@@ -1,18 +1,14 @@
 import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import sharp from "sharp";
 
-import { env } from "../lib/env.js";
+import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
-import {
-    GIF_SHARP_PIXEL_LIMIT,
-    validateGifMetadata,
-} from "../lib/gif-security.js";
+import { GIF_SHARP_PIXEL_LIMIT, validateGifMetadata } from "../lib/gif-security.js";
 
 const IMAGE_EXTENSIONS = new Map<string, string>([
     ["image/jpeg", ".jpg"],
@@ -117,7 +113,9 @@ function resolveUser(prisma: PrismaClient, value: string) {
 }
 
 async function collectDirectoryFiles(directory: string, recursive: boolean): Promise<string[]> {
-    const entries = await (await import("node:fs/promises")).readdir(directory, {
+    const entries = await (
+        await import("node:fs/promises")
+    ).readdir(directory, {
         withFileTypes: true,
     });
     const files: string[] = [];
@@ -145,8 +143,7 @@ function isSupportedSource(source: string): boolean {
 async function prepareImage(source: string): Promise<PreparedImage> {
     const original = await sharp(source).metadata();
 
-    if (!original.width || !original.height)
-        throw new Error("Unable to read image dimensions.");
+    if (!original.width || !original.height) throw new Error("Unable to read image dimensions.");
 
     const isGif = original.format === "gif";
     if (isGif) validateGifMetadata(original);
@@ -156,10 +153,7 @@ async function prepareImage(source: string): Promise<PreparedImage> {
         ...(isGif ? { limitInputPixels: GIF_SHARP_PIXEL_LIMIT } : {}),
     };
 
-    const normalized = await sharp(source, sharpOptions)
-        .rotate()
-        .toColorspace("srgb")
-        .toBuffer();
+    const normalized = await sharp(source, sharpOptions).rotate().toColorspace("srgb").toBuffer();
     const metadata = await sharp(normalized, sharpOptions).metadata();
     const mimeType = metadata.mediaType;
     const extension = mimeType ? IMAGE_EXTENSIONS.get(mimeType) : undefined;
@@ -251,11 +245,7 @@ async function preflight(
             );
             prepared.push({ source, image });
         } catch (error) {
-            errors.push(
-                source +
-                    ": " +
-                    (error instanceof Error ? error.message : String(error)),
-            );
+            errors.push(source + ": " + (error instanceof Error ? error.message : String(error)));
         }
     }
 
@@ -268,11 +258,7 @@ async function preflight(
         );
     }
 
-    console.log(
-        "Preflight check passed: " +
-            prepared.length +
-            " image(s) are ready to import.",
-    );
+    console.log("Preflight check passed: " + prepared.length + " image(s) are ready to import.");
     return prepared;
 }
 
@@ -302,9 +288,7 @@ async function createDraft(
     });
 
     if (existing?.postId) {
-        throw new Error(
-            `The image is already attached to post ${existing.postId} for this user.`,
-        );
+        throw new Error(`The image is already attached to post ${existing.postId} for this user.`);
     }
 
     let uploadId = existing?.id;
@@ -395,10 +379,7 @@ async function createDraft(
             return tx.post.update({
                 where: { id: post.id },
                 data: {
-                    permalinkKey: permalinkBase(
-                        post,
-                        "internalId" as PermalinkIdType,
-                    ),
+                    permalinkKey: permalinkBase(post, "internalId" as PermalinkIdType),
                 },
                 select: { id: true },
             });
@@ -424,8 +405,7 @@ async function main(): Promise<void> {
     const supportedFiles = sourceFiles.filter(isSupportedSource);
     const ignoredFiles = sourceFiles.filter((file) => !isSupportedSource(file));
 
-    if (!supportedFiles.length)
-        throw new Error("No supported image files were found.");
+    if (!supportedFiles.length) throw new Error("No supported image files were found.");
 
     if (ignoredFiles.length) {
         console.warn(
@@ -434,8 +414,7 @@ async function main(): Promise<void> {
         );
     }
 
-    const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
-    const prisma = new PrismaClient({ adapter });
+    const prisma = createPrismaClient();
 
     try {
         const user = await resolveUser(prisma, options.user);

@@ -1,11 +1,11 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, stat, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from "@prisma/client";
+import type { PrismaClient } from "@prisma/client";
 import sharp from "sharp";
 
-import { env } from "../lib/env.js";
+import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 
@@ -87,7 +87,7 @@ function parseOptions(argv: string[]): Options {
                     "      nested/",
                     "        image3.webp",
                     "",
-                    "The root list.json contains an array of post metadata objects. Use \"files\" for multi-image posts.",
+                    'The root list.json contains an array of post metadata objects. Use "files" for multi-image posts.',
                     "",
                     "Example list.json:",
                     "  [",
@@ -127,8 +127,7 @@ function parseOptions(argv: string[]): Options {
     if (!user) throw new Error("--user is required.");
     if (options.deleteSource && !options.apply)
         throw new Error("--delete-source requires --apply.");
-    if (options.check && options.apply)
-        throw new Error("--check cannot be combined with --apply.");
+    if (options.check && options.apply) throw new Error("--check cannot be combined with --apply.");
 
     return { ...options, directory, user };
 }
@@ -165,11 +164,7 @@ function cleanStringList(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
 
     return [
-        ...new Set(
-            value
-                .map(cleanString)
-                .filter((item): item is string => item !== undefined),
-        ),
+        ...new Set(value.map(cleanString).filter((item): item is string => item !== undefined)),
     ];
 }
 
@@ -238,17 +233,14 @@ function parseListMetadata(raw: string): ImportMetadata[] {
               : [];
         const name = cleanString(record.name);
 
-        if (files.length === 0)
-            throw new Error("list.json entry " + index + " is missing files.");
+        if (files.length === 0) throw new Error("list.json entry " + index + " is missing files.");
         if (!name) throw new Error("list.json entry " + index + " is missing name.");
 
         if (
             record.tags !== undefined &&
             record.tags !== null &&
             (!Array.isArray(record.tags) ||
-                record.tags.some(
-                    (item) => typeof item !== "string" || !item.trim(),
-                ))
+                record.tags.some((item) => typeof item !== "string" || !item.trim()))
         ) {
             throw new Error("list.json entry " + index + " has invalid tags.");
         }
@@ -257,9 +249,7 @@ function parseListMetadata(raw: string): ImportMetadata[] {
             record.categories !== undefined &&
             record.categories !== null &&
             (!Array.isArray(record.categories) ||
-                record.categories.some(
-                    (item) => typeof item !== "string" || !item.trim(),
-                ))
+                record.categories.some((item) => typeof item !== "string" || !item.trim()))
         ) {
             throw new Error("list.json entry " + index + " has invalid categories.");
         }
@@ -273,10 +263,7 @@ function parseListMetadata(raw: string): ImportMetadata[] {
             throw new Error("list.json entry " + index + " has invalid visibility.");
         }
 
-        if (
-            record.allowDownload !== undefined &&
-            typeof record.allowDownload !== "boolean"
-        ) {
+        if (record.allowDownload !== undefined && typeof record.allowDownload !== "boolean") {
             throw new Error("list.json entry " + index + " has invalid allowDownload.");
         }
 
@@ -291,8 +278,7 @@ function parseListMetadata(raw: string): ImportMetadata[] {
             categories: cleanStringList(record.categories),
             caption: record.caption as string | null | undefined,
             visibility: normalizeVisibility(record.visibility),
-            allowDownload:
-                typeof record.allowDownload === "boolean" ? record.allowDownload : true,
+            allowDownload: typeof record.allowDownload === "boolean" ? record.allowDownload : true,
             contentWarning: record.contentWarning as string | null | undefined,
         };
     });
@@ -313,10 +299,7 @@ async function checkManifest(
 
             if (referencedFiles.has(key)) {
                 errors.push(
-                    manifestEntry +
-                        ': file is referenced more than once: "' +
-                        relativeFile +
-                        '"',
+                    manifestEntry + ': file is referenced more than once: "' + relativeFile + '"',
                 );
                 continue;
             }
@@ -348,10 +331,7 @@ async function checkManifest(
                 const metadata = await sharp(source, { animated: true }).metadata();
                 if (!metadata.width || !metadata.height) {
                     errors.push(
-                        manifestEntry +
-                            ': unable to read image dimensions: "' +
-                            relativeFile +
-                            '"',
+                        manifestEntry + ': unable to read image dimensions: "' + relativeFile + '"',
                     );
                 }
             } catch (error) {
@@ -379,10 +359,7 @@ async function checkManifest(
                 try {
                     const url = new URL(originalUrl);
                     if (url.protocol !== "http:" && url.protocol !== "https:") {
-                        errors.push(
-                            manifestEntry +
-                                ": originalUrl must use http or https.",
-                        );
+                        errors.push(manifestEntry + ": originalUrl must use http or https.");
                     }
                 } catch {
                     errors.push(manifestEntry + ": originalUrl is not a valid URL.");
@@ -394,28 +371,21 @@ async function checkManifest(
             ["tags", metadata.tags],
             ["categories", metadata.categories],
         ] as const) {
-            if (
-                value !== undefined &&
-                value.some((item) => !item.trim())
-            ) {
-                errors.push(
-                    manifestEntry +
-                        ": " +
-                        field +
-                        " must contain only non-empty strings.",
-                );
+            if (value !== undefined && value.some((item) => !item.trim())) {
+                errors.push(manifestEntry + ": " + field + " must contain only non-empty strings.");
             }
         }
 
-        if (metadata.visibility !== undefined &&
+        if (
+            metadata.visibility !== undefined &&
             metadata.visibility !== "public" &&
             metadata.visibility !== "unlisted" &&
-            metadata.visibility !== "private") {
+            metadata.visibility !== "private"
+        ) {
             errors.push(manifestEntry + ": invalid visibility.");
         }
 
-        if (metadata.allowDownload !== undefined &&
-            typeof metadata.allowDownload !== "boolean") {
+        if (metadata.allowDownload !== undefined && typeof metadata.allowDownload !== "boolean") {
             errors.push(manifestEntry + ": allowDownload must be a boolean.");
         }
     }
@@ -454,8 +424,7 @@ async function resolveUser(prisma: PrismaClient, value: string) {
 async function normalizeImage(source: string): Promise<PreparedImage> {
     const original = await sharp(source, { animated: true }).metadata();
 
-    if (!original.width || !original.height)
-        throw new Error("Unable to read image dimensions.");
+    if (!original.width || !original.height) throw new Error("Unable to read image dimensions.");
 
     const normalized = await sharp(source, { animated: true })
         .rotate()
@@ -533,8 +502,11 @@ async function importList(
 
     for (const metadata of metadataEntries) {
         const relativeFiles = metadata.files.map(normalizeRelative);
-        const duplicateFile = relativeFiles.find((file, index) =>
-            relativeFiles.findIndex((candidate) => candidate.toLowerCase() === file.toLowerCase()) !== index,
+        const duplicateFile = relativeFiles.find(
+            (file, index) =>
+                relativeFiles.findIndex(
+                    (candidate) => candidate.toLowerCase() === file.toLowerCase(),
+                ) !== index,
         );
 
         if (duplicateFile) {
@@ -614,7 +586,7 @@ async function importList(
 
             if (categories.length > 1) {
                 console.warn(
-                    'WARN ' +
+                    "WARN " +
                         relativeFiles.join(", ") +
                         ': imshare supports one category per post; using "' +
                         categories[0] +
@@ -658,8 +630,7 @@ async function importList(
                     const storedHash = createHash("sha256").update(stored).digest("hex");
                     if (storedHash !== file.prepared.contentHash)
                         throw new Error(
-                            "Destination image failed SHA-256 verification: " +
-                                file.relativeFile,
+                            "Destination image failed SHA-256 verification: " + file.relativeFile,
                         );
 
                     await prisma.upload.create({
@@ -845,20 +816,13 @@ async function main(): Promise<void> {
         return;
     }
 
-    const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
-    const prisma = new PrismaClient({ adapter });
+    const prisma = createPrismaClient();
 
     try {
         const user = await resolveUser(prisma, options.user);
         if (!user) throw new Error("User not found: " + options.user);
 
-        const result = await importList(
-            prisma,
-            sourceDirectory,
-            uploadDirectory,
-            user.id,
-            options,
-        );
+        const result = await importList(prisma, sourceDirectory, uploadDirectory, user.id, options);
 
         console.log(
             "Migration complete: " +

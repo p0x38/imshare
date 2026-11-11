@@ -1,8 +1,7 @@
 import { access, copyFile, mkdir, unlink } from "node:fs/promises";
 import path from "node:path";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
-import { env } from "../lib/env.js";
+import type { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { uploadStorageDirectory } from "../lib/upload-storage.js";
 
@@ -35,8 +34,7 @@ function parseOptions(argv: string[]): Options {
         }
     }
 
-    if (deleteLegacy && !apply)
-        throw new Error("--delete-legacy requires --apply.");
+    if (deleteLegacy && !apply) throw new Error("--delete-legacy requires --apply.");
 
     return { apply, deleteLegacy };
 }
@@ -58,8 +56,7 @@ async function main(): Promise<void> {
 
     await mkdir(avatarDirectory, { recursive: true });
 
-    const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
-    const prisma = new PrismaClient({ adapter });
+    const prisma = createPrismaClient();
 
     try {
         const avatars = await prisma.user.findMany({
@@ -109,10 +106,7 @@ async function main(): Promise<void> {
             if (upload.storageArea !== "uploads") {
                 invalid++;
                 console.error(
-                    "UNSUPPORTED STORAGE AREA " +
-                        upload.id +
-                        ": " +
-                        String(upload.storageArea),
+                    "UNSUPPORTED STORAGE AREA " + upload.id + ": " + String(upload.storageArea),
                 );
                 continue;
             }

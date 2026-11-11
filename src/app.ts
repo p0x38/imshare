@@ -9,6 +9,7 @@ import { loadConfig } from "./lib/config.js";
 import { renderErrorPage } from "./client/lib/error-page.js";
 import { RateLimiter } from "./lib/rate-limit.js";
 import { isSameOriginRequest } from "./lib/csrf.js";
+import { getSession } from "./lib/api.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
 import { federationRoutes } from "./routes/federation.js";
@@ -20,6 +21,11 @@ import { observability } from "./instrumentation.js";
 import { authorizeApiTokenRequest } from "./lib/api-tokens.js";
 import { postPermalink } from "./lib/post-permalink.js";
 import { crawlerMetaContent, resolveCrawlerPolicy } from "./lib/crawler-policy.js";
+import {
+    removeMeilisearchUserPosts,
+    syncMeilisearchPosts,
+    syncMeilisearchUserPosts,
+} from "./lib/meilisearch.js";
 
 const logger = process.stdout.isTTY
     ? {
@@ -40,6 +46,41 @@ function escapeAttribute(value: string) {
         /[&<>"']/g,
         (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
     );
+}
+
+function postIdsForSearchSync(request: FastifyRequest, payload: unknown): string[] {
+    const pathname = request.url.split("?", 1)[0] ?? "/";
+    if (!/^\/api\/v1\/(?:posts|texts|admin\/posts)(?:\/|$)/.test(pathname)) return [];
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return [];
+
+    const ids = new Set<string>();
+    const add = (value: unknown) => {
+        if (typeof value === "string" && value) ids.add(value);
+    };
+    const params = request.params as Record<string, unknown> | undefined;
+    add(params?.postId);
+    add(params?.textId);
+
+    const body = request.body as Record<string, unknown> | undefined;
+    if (Array.isArray(body?.postIds)) body.postIds.forEach(add);
+
+    if (typeof payload === "string") {
+        try {
+            const envelope = JSON.parse(payload) as { data?: unknown };
+            if (Array.isArray(envelope.data)) {
+                for (const post of envelope.data) {
+                    if (post && typeof post === "object") add((post as Record<string, unknown>).id);
+                }
+            } else if (envelope.data && typeof envelope.data === "object") {
+                const data = envelope.data as Record<string, unknown>;
+                add(data.id);
+                if (Array.isArray(data.postIds)) data.postIds.forEach(add);
+            }
+        } catch {
+            return [...ids];
+        }
+    }
+    return [...ids];
 }
 
 function escapeMeta(value: string | null | undefined) {
@@ -369,6 +410,26 @@ export async function buildApp() {
         reply.header("X-Frame-Options", "SAMEORIGIN");
         reply.header("Referrer-Policy", "strict-origin-when-cross-origin");
         reply.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+        if (reply.statusCode >= 200 && reply.statusCode < 300) {
+            const postIds = postIdsForSearchSync(request, payload);
+            if (postIds.length) await syncMeilisearchPosts(postIds);
+
+            const pathname = request.url.split("?", 1)[0] ?? "/";
+            if (pathname === "/api/v1/me/preferences") {
+                const session = await getSession(request);
+                if (session) await syncMeilisearchUserPosts(session.user.id);
+            }
+            const userAction = pathname.match(/^\/api\/v1\/admin\/users\/([^/]+)\/(?:ban|unban)$/);
+            if (userAction) await syncMeilisearchUserPosts(decodeURIComponent(userAction[1]!));
+
+            const userRoute = pathname.match(/^\/api\/v1\/users\/([^/]+)$/);
+            if (userRoute) {
+                const userId = decodeURIComponent(userRoute[1]!);
+                if (request.method === "DELETE") await removeMeilisearchUserPosts(userId);
+                else if (["PATCH", "PUT"].includes(request.method))
+                    await syncMeilisearchUserPosts(userId);
+            }
+        }
         const contentType = reply.getHeader("content-type");
         if (
             (request.headers.accept ?? "").includes("text/html") &&

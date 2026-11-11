@@ -13,6 +13,7 @@ const databaseFiles = [
     `${databasePath}-shm`,
 ];
 
+process.env.DATABASE_PROVIDER = "sqlite";
 process.env.DATABASE_URL = "file:./test-api.db";
 process.env.BETTER_AUTH_SECRET = "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
 process.env.IMSHARE_CONFIG = path.join(root, "test", "config.imshare");
@@ -298,7 +299,10 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
             name: "test client",
             tokenPrefix: generated.prefix,
             tokenHash: generated.hash,
-            permissionsJson: JSON.stringify({ me: ["read"] }),
+            permissionsJson: JSON.stringify({
+                me: ["read"],
+                uploads: ["write", "delete"],
+            }),
             userId: user.id,
         },
     });
@@ -335,6 +339,61 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
         expect(invalid.json()).toMatchObject({
             error: { code: "INVALID_API_TOKEN" },
         });
+
+        const uploadWithoutFile = await app.inject({
+            method: "POST",
+            url: "/api/v1/uploads",
+            headers: {
+                authorization: `Bearer ${generated.token}`,
+                "content-type": "multipart/form-data; boundary=empty-upload",
+            },
+            payload: "--empty-upload--\r\n",
+        });
+        expect(uploadWithoutFile.statusCode).toBe(400);
+        expect(uploadWithoutFile.json()).toMatchObject({
+            error: { code: "NO_FILE" },
+        });
+
+        const sharp = (await import("sharp")).default;
+        const image = await sharp({
+            create: {
+                width: 1,
+                height: 1,
+                channels: 3,
+                background: { r: 32, g: 96, b: 160 },
+            },
+        })
+            .png()
+            .toBuffer();
+        const boundary = "imshare-upload-test";
+        const multipart = Buffer.concat([
+            Buffer.from(
+                `--${boundary}\r\nContent-Disposition: form-data; name="title"\r\n\r\nPostyBirb test\r\n--${boundary}\r\nContent-Disposition: form-data; name="description"\r\n\r\nTest description\r\n--${boundary}\r\nContent-Disposition: form-data; name="tags"\r\n\r\ntest,upload\r\n--${boundary}\r\nContent-Disposition: form-data; name="rating"\r\n\r\nGENERAL\r\n--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="pixel.png"\r\nContent-Type: image/png\r\n\r\n`,
+            ),
+            image,
+            Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]);
+        const postyBirbUpload = await app.inject({
+            method: "POST",
+            url: "/api/v1/uploads?multiple=true&client=postybirb",
+            headers: {
+                authorization: `Bearer ${generated.token}`,
+                "content-type": `multipart/form-data; boundary=${boundary}`,
+            },
+            payload: multipart,
+        });
+        const uploadedImages = postyBirbUpload.json().data as
+            { id: string; url: string }[] | undefined;
+        if (uploadedImages?.[0]?.id) {
+            const cleanup = await app.inject({
+                method: "DELETE",
+                url: `/api/v1/uploads/${uploadedImages[0].id}`,
+                headers: { authorization: `Bearer ${generated.token}` },
+            });
+            expect(cleanup.statusCode).toBe(204);
+        }
+        expect(postyBirbUpload.statusCode).toBe(200);
+        expect(uploadedImages?.[0]?.url).toMatch(/^\/uploads\//);
     } finally {
         await prisma.apiToken.deleteMany({ where: { userId } });
         await prisma.user.delete({ where: { id: userId } });

@@ -1,17 +1,15 @@
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import { PrismaClient } from "@prisma/client";
 import { betterAuth } from "better-auth";
 import { createAuthMiddleware } from "better-auth/api";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { twoFactor } from "better-auth/plugins";
 
 import { env } from "./env.js";
+import { createPrismaClient } from "./database.js";
 import { loadConfigSync, resolveBaseUrl } from "./config.js";
 import { createOpenIdPlugin } from "./openid.js";
 import { createMailService } from "./mail.js";
 
-const adapter = new PrismaBetterSqlite3({ url: env.databaseUrl });
-export const prisma = new PrismaClient({ adapter });
+export const prisma = createPrismaClient();
 const config = loadConfigSync();
 const baseUrl = resolveBaseUrl(config);
 const localAdminConfig = config.admin?.local;
@@ -47,7 +45,7 @@ function sendAuthEmail(task: Promise<void>, type: string): void {
 }
 
 export const auth = betterAuth({
-    database: prismaAdapter(prisma, { provider: "sqlite" }),
+    database: prismaAdapter(prisma, { provider: env.databaseProvider }),
     secret: env.betterAuthSecret,
     baseURL: {
         allowedHosts: [new URL(baseUrl).host, "localhost:*", "127.0.0.1:*"],

@@ -106,7 +106,7 @@ Post reaction types are `like`, `favorite`, and `save`.
 
 ## Uploads & Images
 
-- `POST /v1/uploads` — multipart image upload; supports JPG/JPEG, PNG, GIF, WebP, BMP, AVIF and optional multi-upload mode.
+- `POST /v1/uploads` — authenticated multipart image upload; send one image in the `file` field. API tokens need the `uploads: write` permission. Supports JPG/JPEG, PNG, GIF, WebP, BMP, AVIF and optional multi-upload mode; the uploaded URL is returned as `data.url`. Add `client=postybirb` for PostyBirb Custom Website compatibility (accepts metadata fields and returns HTTP 200).
 - `GET /v1/uploads/{uploadId}` — upload metadata for an owned upload.
 - `DELETE /v1/uploads/{uploadId}` — delete an unused owned upload; attached uploads return `409`.
 - `GET /v1/posts/image/{uploadId}` — public image delivery with optional resize and format conversion.

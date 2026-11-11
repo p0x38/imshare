@@ -105,6 +105,17 @@
 - [x] CSRF protection
 - [ ] Automated dependency updates
 
+## Database providers (P3: structural change)
+
+- [x] SQLite as the current default (Prisma + `better-sqlite3`)
+- [ ] Evaluate PostgreSQL as the first alternative provider
+    - [x] Add provider-specific Prisma schema, adapter, configuration, and initial migration
+    - [x] Avoid SQLite-only FTS5 SQL when PostgreSQL is selected
+    - [x] Document PostgreSQL setup in `docs/postgresql.md`
+    - [ ] Run provider-specific integration tests against a PostgreSQL server
+    - [ ] Document production backup and upgrade procedures
+- [ ] Decide whether MySQL/MariaDB should be supported
+
 ## Testing and quality
 
 - [x] Vitest unit/API test suite
@@ -165,7 +176,7 @@
 - [x] React dashboard settings page
 - [ ] Complete migration of remaining dashboard management pages to React
 
-## Search
+## Search (P2: optional search service)
 
 - [x] Full-text search
 - [x] Search filters
@@ -175,19 +186,20 @@
     - [x] Date
     - [x] MIME type
 - [x] Tag autocomplete
-- [ ] Add an optional Meilisearch backend while retaining SQLite FTS5 as the default
-    - [ ] Keep the Meilisearch URL and API key server-side
-    - [ ] Add full reindexing and incremental create/update/delete synchronization
-    - [ ] Cover fallback behavior, indexing failures, and setup documentation
+- [x] Add an optional Meilisearch backend while retaining SQLite FTS5 as the default
+    - [x] Keep the Meilisearch URL and API key server-side
+    - [x] Add full reindexing and incremental create/update/delete synchronization
+    - [x] Fall back to SQLite FTS5 when Meilisearch is unconfigured or unavailable
+    - [ ] Test indexing-write failures and recovery
+    - [x] Document setup and reindexing in `docs/meilisearch.md`
 
-## Uploaders
+## Uploaders (P1: near-term client compatibility)
 
-- [ ] Document and verify PostyBirb compatibility
-- [ ] Document and verify ShareX compatibility
-- [ ] Define a generic uploader setup guide for other clients
-- [ ] Test multipart fields, API-token permissions, and response formats
-
-## Federation
+- [x] Support PostyBirb Custom Website uploads with token auth and compatible multipart handling
+- [x] Add a ShareX `.sxcu` template and setup guide
+- [x] Document the generic upload endpoint, token scope, and response URL
+- [x] Test that upload tokens are accepted and unrelated scopes remain denied
+- [x] Add an end-to-end multipart image-upload and response-format test
 
 ## Moderation / safety
 

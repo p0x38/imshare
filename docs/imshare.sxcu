@@ -1,0 +1,13 @@
+{
+    "Version": "17.0.0",
+    "Name": "imshare",
+    "DestinationType": "ImageUploader",
+    "RequestMethod": "POST",
+    "RequestURL": "https://your-imshare.example/api/v1/uploads",
+    "Headers": {
+        "Authorization": "Bearer YOUR_IMSHARE_API_TOKEN"
+    },
+    "Body": "MultipartFormData",
+    "FileFormName": "file",
+    "URL": "{json:data.url}"
+}

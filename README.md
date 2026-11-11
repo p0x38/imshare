@@ -1,6 +1,6 @@
 # imshare
 
-Self-hosted image archive and sharing server built with TypeScript, Fastify, Prisma, SQLite, Better Auth, and a small static frontend.
+Self-hosted image archive and sharing server built with TypeScript, Fastify, Prisma, SQLite by default (optional PostgreSQL), Better Auth, and a small static frontend.
 
 ## Features
 
@@ -16,7 +16,8 @@ Self-hosted image archive and sharing server built with TypeScript, Fastify, Pri
 
 - Node.js 24.x
 - pnpm 11.x
-- SQLite
+- SQLite (default)
+- PostgreSQL (optional; see [PostgreSQL setup](docs/postgresql.md))
 
 The repository declares Node.js `>=24` and uses pnpm `11.25.0`. The current application version is `1.4.2`.
 
@@ -34,7 +35,7 @@ Create the environment file from `.env.example` and set a strong `BETTER_AUTH_SE
 cp .env.example .env
 ```
 
-The example environment file configures a local SQLite database at `file:./dev.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret.
+The example environment file configures a local SQLite database at `file:./dev.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret. PostgreSQL can be selected with `DATABASE_PROVIDER=postgresql`; see [PostgreSQL setup](docs/postgresql.md).
 
 Generate the Prisma client and create/apply the development database schema:
 
@@ -140,21 +141,21 @@ pnpm start
 
 Use the repository scripts instead of invoking the underlying tools directly:
 
-| Task | Command | Purpose |
-| --- | --- | --- |
-| Install dependencies | `pnpm install` | Install the locked dependency set |
-| Start server | `pnpm dev` | Run the Fastify server with file watching |
-| Start client | `pnpm dev:client` | Run the Vite client development server |
-| Generate Prisma Client | `pnpm db:generate` | Regenerate Prisma Client after schema changes |
-| Apply development migrations | `pnpm db:migrate` | Create/apply Prisma development migrations |
-| Validate Prisma schema | `pnpm db:validate` | Validate the Prisma schema and configuration |
-| Build client | `pnpm build:client` | Type-check and bundle the React/Vite client |
-| Build application | `pnpm build` | Generate Prisma Client, build client, and compile server |
-| Start production build | `pnpm start` | Start the compiled server |
-| Export OpenAPI | `pnpm openapi:export` | Generate the OpenAPI specification |
-| Migrate uploads | `pnpm migrate:uploads` | Run the upload migration utility |
-| Migrate cache | `pnpm migrate:cache` | Run the cache migration utility |
-| Service unavailable page | `pnpm serve:unavailable` | Serve the maintenance/unavailable response |
+| Task                         | Command                  | Purpose                                                  |
+| ---------------------------- | ------------------------ | -------------------------------------------------------- |
+| Install dependencies         | `pnpm install`           | Install the locked dependency set                        |
+| Start server                 | `pnpm dev`               | Run the Fastify server with file watching                |
+| Start client                 | `pnpm dev:client`        | Run the Vite client development server                   |
+| Generate Prisma Client       | `pnpm db:generate`       | Regenerate Prisma Client after schema changes            |
+| Apply development migrations | `pnpm db:migrate`        | Create/apply Prisma development migrations               |
+| Validate Prisma schema       | `pnpm db:validate`       | Validate the Prisma schema and configuration             |
+| Build client                 | `pnpm build:client`      | Type-check and bundle the React/Vite client              |
+| Build application            | `pnpm build`             | Generate Prisma Client, build client, and compile server |
+| Start production build       | `pnpm start`             | Start the compiled server                                |
+| Export OpenAPI               | `pnpm openapi:export`    | Generate the OpenAPI specification                       |
+| Migrate uploads              | `pnpm migrate:uploads`   | Run the upload migration utility                         |
+| Migrate cache                | `pnpm migrate:cache`     | Run the cache migration utility                          |
+| Service unavailable page     | `pnpm serve:unavailable` | Serve the maintenance/unavailable response               |
 
 For a deployed database, apply committed migrations with:
 
