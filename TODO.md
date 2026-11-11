@@ -10,16 +10,15 @@
     - [x] Generic OAuth/OIDC plugin wiring
     - [x] Discovery URL configuration
     - [x] Client ID / optional client secret configuration
-    - [ ] Add OIDC provider login button to the frontend
-    - [ ] Add authenticated-client helper for Better Auth
-    - [ ] Verify OIDC callback URL for `/api/v1/auth`
+    - [x] Add OIDC provider login button to the frontend
+    - [x] Add authenticated-client helper for Better Auth
     - [ ] Test authorization-code flow end-to-end
     - [ ] Test account creation/linking from OIDC claims
-    - [ ] Document required provider-side redirect URI and scopes
-    - [ ] Handle missing/invalid OIDC configuration with a clear startup error
+    - [x] Document callback URL and scopes in `docs/auth-oidc.md`
+    - [x] Fail clearly on partial OIDC configuration
 - [ ] Account/session management
-    - [ ] Account deletion
-    - [ ] Session management UI
+    - [x] Account deletion
+    - [x] Session management UI
     - [ ] Login history
 
 ### 2. Discovery and recommendations
@@ -87,7 +86,7 @@
 
 ## Infrastructure
 
-- [ ] Regenerate and commit `pnpm-lock.yaml` after dependency changes
+- [x] Enforce lockfile consistency in CI with `pnpm install --frozen-lockfile`
 - [ ] Add realtime integration tests
 - [ ] Add image upload/proxy tests
 - [ ] Add profile-link tests
@@ -122,8 +121,7 @@
 - [x] Add VS Code build task as the default build task
 - [x] Add VS Code formatting and format-check tasks
 - [x] Ignore Playwright, test-results, and coverage artifacts in `.gitignore`
-- [ ] Add OIDC authentication test coverage
-- [ ] Add recommendation scorer test fixtures
+- [x] Add OIDC configuration unit tests
 - [ ] Add recommendation ranking regression tests
 
 ## API / documentation
@@ -136,7 +134,7 @@
 - [x] Fix Swagger UI CSP configuration
 - [x] Fix Swagger UI metadata/header interference
 - [x] Fix OpenAPI schema/route tagging issues
-- [ ] Document OIDC authentication endpoints and callback behavior
+- [x] Document OIDC setup and callback behavior in `docs/auth-oidc.md`
 - [ ] Document recommendation scoring inputs/outputs
 
 ## Posts
@@ -167,7 +165,7 @@
 - [x] React dashboard settings page
 - [ ] Complete migration of remaining dashboard management pages to React
 
-## Discovery
+## Search
 
 - [x] Full-text search
 - [x] Search filters
@@ -177,39 +175,48 @@
     - [x] Date
     - [x] MIME type
 - [x] Tag autocomplete
-- [x] Related posts
-- [x] Trending/popular posts
-- [x] Recently viewed posts
+- [ ] Add an optional Meilisearch backend while retaining SQLite FTS5 as the default
+    - [ ] Keep the Meilisearch URL and API key server-side
+    - [ ] Add full reindexing and incremental create/update/delete synchronization
+    - [ ] Cover fallback behavior, indexing failures, and setup documentation
+
+## Uploaders
+
+- [ ] Document and verify PostyBirb compatibility
+- [ ] Document and verify ShareX compatibility
+- [ ] Define a generic uploader setup guide for other clients
+- [ ] Test multipart fields, API-token permissions, and response formats
+
+## Federation
 
 ## Moderation / safety
 
-- [ ] Moderation dashboard
-- [ ] Report review queue
-- [ ] User suspension / ban
-- [ ] Post removal workflow
-- [ ] Audit log
+- [x] Moderation dashboard
+- [x] Report review queue
+- [x] User suspension / ban
+- [x] Post removal workflow
+- [x] Moderation audit log
 - [ ] Block users
-- [ ] Content warning support
+- [x] Content warning support
 
 ## Accounts
 
-- [ ] Account deletion
-- [ ] Session management
-- [ ] Login history
-- [ ] Profile privacy settings
+- [x] Profile privacy settings
 - [ ] Notification preferences
-- [ ] API tokens
-    - [ ] Personal access tokens for external API clients and scripts
-    - [ ] Token creation, listing, revocation, and expiration
-    - [ ] Scoped permissions (for example: read-only, posts, uploads, account)
-    - [ ] Store only a secure token hash and show the secret only once
-    - [ ] Authentication via `Authorization: Bearer <token>`
-    - [ ] Per-token name, creation date, last-used date, and expiration
-    - [ ] Revoke individual tokens without invalidating browser sessions
-    - [ ] Rate-limit and audit token-authenticated requests
-    - [ ] Document token authentication in OpenAPI and API documentation
-    - [ ] Add frontend token management UI
-    - [ ] Add API-token tests and security regression coverage
+- [x] API tokens (API and basic management UI)
+    - [x] Personal access tokens for external API clients and scripts
+    - [x] Create, list, revoke, and expire tokens through the API
+    - [x] Scoped permissions through the API
+    - [x] Store only a secure token hash and show the secret only once
+    - [x] Authenticate with `Authorization: Bearer <token>`
+    - [x] Return per-token name, creation date, last-used date, and expiration in the API
+    - [x] Revoke individual tokens without invalidating browser sessions
+    - [ ] Show token scopes, creation date, and expiration in the management UI
+    - [ ] Add token-specific rate limits and audit events
+    - [x] Document bearer authentication in OpenAPI
+    - [ ] Document token permissions and lifecycle in the endpoint reference
+    - [x] Add API-token management UI
+    - [x] Add API route and authorization regression tests
 - [ ] Account-synced appearance/theme preferences
 - [ ] Reset appearance/theme preferences to defaults
 - [ ] Import/export appearance/theme preferences
