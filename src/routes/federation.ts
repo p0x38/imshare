@@ -3,6 +3,7 @@ import { loadConfig, resolveBaseUrl } from "../lib/config.js";
 import { prisma } from "../lib/auth.js";
 import {
     addFollower,
+    assertFederationActivityActor,
     deliverActivity,
     getOrCreateActorKey,
     removeFollower,
@@ -108,32 +109,25 @@ async function localActor(baseUrl: string, handle: string) {
 }
 
 async function handleActivity(
-    baseUrl: string,
     activity: Record<string, unknown>,
     recipientUserId: string,
+    verifiedActor: {
+        id?: string;
+        inbox?: string;
+        endpoints?: { sharedInbox?: string };
+    },
 ) {
+    assertFederationActivityActor(activity, verifiedActor.id ?? "");
     const type = activity.type;
-    const actor = firstString(activity.actor);
-    if (!actor || actor === "[object Object]") throw new Error("Activity actor is required.");
+    const actor = activity.actor;
 
     if (type === "Follow") {
-        const followerInbox =
-            typeof activity.actor === "object" && activity.actor !== null
-                ? firstString((activity.actor as Record<string, unknown>).inbox)
-                : undefined;
-        const actorData = (await (
-            await fetch(actor, {
-                headers: { accept: "application/activity+json, application/ld+json" },
-                redirect: "error",
-                signal: AbortSignal.timeout(10_000),
-            })
-        ).json()) as { inbox?: string; endpoints?: { sharedInbox?: string } };
-        const inbox = followerInbox ?? actorData.inbox;
+        const inbox = verifiedActor.inbox;
         if (!inbox) throw new Error("Follower actor has no inbox.");
         await addFollower(recipientUserId, {
             actorId: actor,
             inbox,
-            sharedInbox: actorData.endpoints?.sharedInbox,
+            sharedInbox: verifiedActor.endpoints?.sharedInbox,
         });
         return;
     }
@@ -343,7 +337,7 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
             );
             const verified = await verifyFederationRequest(webRequest, rawBody);
             const activity = JSON.parse(rawBody) as Record<string, unknown>;
-            await handleActivity(baseUrl, activity, local.user.id);
+            await handleActivity(activity, local.user.id, verified.actor);
             await storeIncomingActivity(activity);
             if (activity.type === "Follow" && typeof activity.actor === "string") {
                 const accept = {
@@ -353,16 +347,9 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
                     actor: local.actor,
                     object: activity,
                 };
-                const followerResponse = (await (
-                    await fetch(verified.actor.id ?? verified.keyId, {
-                        headers: { accept: "application/activity+json" },
-                        redirect: "error",
-                        signal: AbortSignal.timeout(10_000),
-                    })
-                ).json()) as { inbox?: string };
-                if (followerResponse.inbox)
+                if (verified.actor.inbox)
                     await deliverActivity({
-                        inbox: followerResponse.inbox,
+                        inbox: verified.actor.inbox,
                         actorUrl: local.actor,
                         activity: accept,
                         privateKeyPem: local.key.privateKeyPem,

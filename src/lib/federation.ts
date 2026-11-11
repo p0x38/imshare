@@ -1,5 +1,10 @@
 import { createHash, createSign, createVerify, generateKeyPairSync } from "node:crypto";
+import { lookup as dnsLookup } from "node:dns/promises";
+import type { LookupAddress } from "node:dns";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import http from "node:http";
+import https from "node:https";
+import { isIP, type LookupFunction } from "node:net";
 import path from "node:path";
 import { loadConfigSync } from "./config.js";
 
@@ -51,7 +56,162 @@ interface RemoteActor {
     };
 }
 
+interface FederationHttpResponse {
+    status: number;
+    ok: boolean;
+    body: Buffer;
+}
+
 const cache = new Map<string, ActorKey>();
+
+function isPublicIp(address: string): boolean {
+    const version = isIP(address);
+    if (version === 4) {
+        const parts = address.split(".").map(Number);
+        const value =
+            ((parts[0] ?? 0) << 24) |
+            ((parts[1] ?? 0) << 16) |
+            ((parts[2] ?? 0) << 8) |
+            (parts[3] ?? 0);
+        const blockedRanges: [number, number][] = [
+            [0x00000000, 8],
+            [0x0a000000, 8],
+            [0x64400000, 10],
+            [0x7f000000, 8],
+            [0xa9fe0000, 16],
+            [0xac100000, 12],
+            [0xc0000000, 24],
+            [0xc0000200, 24],
+            [0xc0586300, 24],
+            [0xc0a80000, 16],
+            [0xc6120000, 15],
+            [0xc6336400, 24],
+            [0xcb007100, 24],
+            [0xe0000000, 4],
+            [0xf0000000, 4],
+        ];
+        return !blockedRanges.some(([network, prefix]) => {
+            const mask = (0xffffffff << (32 - prefix)) >>> 0;
+            return ((value >>> 0) & mask) >>> 0 === network;
+        });
+    }
+
+    if (version === 6) {
+        const [firstGroup, secondGroup] = address.split(":");
+        const first = Number.parseInt(firstGroup ?? "0", 16);
+        const second = Number.parseInt(secondGroup ?? "0", 16);
+        return (
+            first >= 0x2000 &&
+            first <= 0x3fff &&
+            !(first === 0x2001 && second <= 0x01ff) &&
+            first !== 0x2002 &&
+            !(first === 0x3fff && second <= 0x0fff)
+        );
+    }
+
+    return false;
+}
+
+async function requestFederationUrl(
+    rawUrl: string,
+    options: {
+        method: string;
+        headers?: HeadersInit;
+        body?: string;
+        timeoutMs: number;
+    },
+): Promise<FederationHttpResponse> {
+    let url: URL;
+    try {
+        url = new URL(rawUrl);
+    } catch {
+        throw new Error("Federation URL is invalid.");
+    }
+    if (
+        (url.protocol !== "http:" && url.protocol !== "https:") ||
+        url.username ||
+        url.password ||
+        !url.hostname
+    )
+        throw new Error("Federation URL must be an HTTP(S) URL without credentials.");
+    if (process.env.NODE_ENV === "production" && url.protocol !== "https:")
+        throw new Error("Remote federation requires HTTPS.");
+
+    const signal = AbortSignal.timeout(options.timeoutMs);
+    signal.throwIfAborted();
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const literalFamily = isIP(hostname);
+    const addresses: LookupAddress[] = literalFamily
+        ? [{ address: hostname, family: literalFamily }]
+        : await new Promise<LookupAddress[]>((resolve, reject) => {
+              const onAbort = () => reject(signal.reason);
+              signal.addEventListener("abort", onAbort, { once: true });
+              dnsLookup(hostname, { all: true, verbatim: true }).then(
+                  (resolved) => {
+                      signal.removeEventListener("abort", onAbort);
+                      resolve(resolved);
+                  },
+                  (error: unknown) => {
+                      signal.removeEventListener("abort", onAbort);
+                      reject(error);
+                  },
+              );
+          });
+    signal.throwIfAborted();
+    if (addresses.length === 0 || addresses.some(({ address }) => !isPublicIp(address)))
+        throw new Error("Federation URL must resolve only to public IP addresses.");
+
+    const transport = url.protocol === "https:" ? https : http;
+    const headers = Object.fromEntries(new Headers(options.headers).entries());
+    const requestOptions: http.RequestOptions = {
+        method: options.method,
+        headers,
+        lookup: ((_hostname, lookupOptions, callback) => {
+            const candidates =
+                lookupOptions.family === 4 || lookupOptions.family === 6
+                    ? addresses.filter(({ family }) => family === lookupOptions.family)
+                    : addresses;
+            const available = candidates.length > 0 ? candidates : addresses;
+            if (lookupOptions.all) {
+                callback(null, available);
+                return;
+            }
+            const selected = available[0]!;
+            callback(null, selected.address, selected.family);
+        }) satisfies LookupFunction,
+    };
+
+    return new Promise((resolve, reject) => {
+        const request = transport.request(url, requestOptions, (response) => {
+            const chunks: Buffer[] = [];
+            let size = 0;
+            response.on("data", (chunk: Buffer | string) => {
+                const data = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+                size += data.length;
+                if (size > 1_048_576) {
+                    request.destroy(new Error("Federation response exceeds the size limit."));
+                    return;
+                }
+                chunks.push(data);
+            });
+            response.on("end", () => {
+                signal.removeEventListener("abort", onAbort);
+                resolve({
+                    status: response.statusCode ?? 502,
+                    ok: (response.statusCode ?? 500) >= 200 && (response.statusCode ?? 500) < 300,
+                    body: Buffer.concat(chunks),
+                });
+            });
+            response.on("error", reject);
+        });
+        const onAbort = () => request.destroy(signal.reason);
+        signal.addEventListener("abort", onAbort, { once: true });
+        if (signal.aborted) onAbort();
+        request.on("close", () => signal.removeEventListener("abort", onAbort));
+        request.on("error", reject);
+        request.end(options.body);
+    });
+}
 
 async function readJson<T>(file: string, fallback: T): Promise<T> {
     try {
@@ -196,24 +356,18 @@ function actorUrlFromKeyId(keyId: string): string | null {
 }
 
 async function fetchRemoteActor(actorUrl: string): Promise<RemoteActor> {
-    let parsed: URL;
-    try {
-        parsed = new URL(actorUrl);
-    } catch {
-        throw new Error("Remote actor URL is invalid.");
-    }
-    if (parsed.protocol !== "https:" && process.env.NODE_ENV === "production")
-        throw new Error("Remote federation requires HTTPS.");
-    if (["localhost", "127.0.0.1", "::1"].includes(parsed.hostname))
-        throw new Error("Remote actor must not resolve to a local host.");
-
-    const response = await fetch(parsed, {
+    const response = await requestFederationUrl(actorUrl, {
+        method: "GET",
         headers: { accept: "application/activity+json, application/ld+json" },
-        redirect: "error",
-        signal: AbortSignal.timeout(federationTimeoutMs()),
+        timeoutMs: federationTimeoutMs(),
     });
     if (!response.ok) throw new Error(`Remote actor returned HTTP ${response.status}.`);
-    const actor = (await response.json()) as RemoteActor;
+    let actor: RemoteActor;
+    try {
+        actor = JSON.parse(response.body.toString("utf8")) as RemoteActor;
+    } catch {
+        throw new Error("Remote actor returned invalid JSON.");
+    }
     if (
         typeof actor.id !== "string" ||
         actor.id !== actorUrl ||
@@ -223,9 +377,18 @@ async function fetchRemoteActor(actorUrl: string): Promise<RemoteActor> {
     return actor;
 }
 
+export function assertFederationActivityActor(
+    activity: Record<string, unknown>,
+    verifiedActorId: string,
+): asserts activity is Record<string, unknown> & { actor: string } {
+    if (typeof activity.actor !== "string" || activity.actor !== verifiedActorId)
+        throw new Error("Federation activity actor does not match the verified signer.");
+}
+
 export async function verifyFederationRequest(
     request: Request,
     body: string,
+    loadActor: (actorUrl: string) => Promise<RemoteActor> = fetchRemoteActor,
 ): Promise<{ actor: RemoteActor; keyId: string }> {
     const signatureHeader = request.headers.get("signature");
     if (!signatureHeader) throw new Error("Federation signature is required.");
@@ -244,7 +407,7 @@ export async function verifyFederationRequest(
 
     const actorUrl = actorUrlFromKeyId(fields.keyId);
     if (!actorUrl) throw new Error("Federation key ID is invalid.");
-    const actor = await fetchRemoteActor(actorUrl);
+    const actor = await loadActor(actorUrl);
     const keyId = actor.publicKey?.id;
     const owner = actor.publicKey?.owner;
     const publicKeyPem = actor.publicKey?.publicKeyPem;
@@ -308,12 +471,11 @@ export async function deliverActivity(options: {
         keyId,
         options.privateKeyPem,
     );
-    const response = await fetch(options.inbox, {
+    const response = await requestFederationUrl(options.inbox, {
         method: "POST",
         headers,
         body,
-        redirect: "error",
-        signal: AbortSignal.timeout(deliveryTimeoutMs()),
+        timeoutMs: deliveryTimeoutMs(),
     });
     return { ok: response.ok, status: response.status };
 }
