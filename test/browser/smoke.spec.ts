@@ -30,6 +30,51 @@ test.describe("public frontend", () => {
         await expect(skeletons).toBeHidden({ timeout: 3_000 });
     });
 
+    test("posts page offers the new post FAB to signed-in users", async ({ page }) => {
+        await page.route("**/api/v1/me", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: { id: "test-user", name: "Test User" } }),
+            });
+        });
+        await page.route("**/api/v1/search?type=posts&*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }),
+            });
+        });
+
+        await page.goto("/posts/");
+
+        await expect(page.getByRole("link", { name: "New post" })).toHaveAttribute(
+            "href",
+            "/posts/new/",
+        );
+    });
+
+    test("posts page hides the new post FAB from signed-out users", async ({ page }) => {
+        await page.route("**/api/v1/me", async (route) => {
+            await route.fulfill({
+                status: 401,
+                contentType: "application/json",
+                body: JSON.stringify({ error: { code: "UNAUTHORIZED" } }),
+            });
+        });
+        await page.route("**/api/v1/search?type=posts&*", async (route) => {
+            await route.fulfill({
+                status: 200,
+                contentType: "application/json",
+                body: JSON.stringify({ data: [], pagination: { page: 1, totalPages: 1 } }),
+            });
+        });
+
+        await page.goto("/posts/");
+
+        await expect(page.getByRole("link", { name: "New post" })).toHaveCount(0);
+    });
+
     test("home page loads personalized and trending feeds", async ({ page }) => {
         await page.route("**/api/v1/recommendations?*", async (route) => {
             await route.fulfill({
@@ -69,7 +114,10 @@ test.describe("public frontend", () => {
             await route.fulfill({
                 status: 200,
                 contentType: "application/json",
-                body: JSON.stringify({ data: [], pagination: { page: 1, total: 0, totalPages: 0 } }),
+                body: JSON.stringify({
+                    data: [],
+                    pagination: { page: 1, total: 0, totalPages: 0 },
+                }),
             });
         });
         await page.goto("/");
@@ -187,9 +235,7 @@ test.describe("public frontend", () => {
         await page.goto("/account/");
         await page.getByRole("tab", { name: "Settings" }).click();
         await page.getByRole("tab", { name: "Recommendations" }).click();
-        await expect(
-            page.getByRole("combobox", { name: "Recommendation topics" }),
-        ).toBeVisible();
+        await expect(page.getByRole("combobox", { name: "Recommendation topics" })).toBeVisible();
         await expect(page.getByLabel("Tags")).toBeVisible();
     });
 

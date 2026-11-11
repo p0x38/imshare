@@ -1,4 +1,14 @@
-import { Button, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import {
+    Button,
+    Fab,
+    Portal,
+    Stack,
+    TextField,
+    ToggleButton,
+    ToggleButtonGroup,
+    Typography,
+} from "@mui/material";
 import { useCallback, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { useTranslation } from "react-i18next";
@@ -22,6 +32,7 @@ function PostsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [density, setDensity] = usePostGridDensity();
+    const [canCreatePost, setCanCreatePost] = useState(false);
     const load = useCallback(async () => {
         setLoading(true);
         setError("");
@@ -47,12 +58,45 @@ function PostsPage() {
     useEffect(() => {
         void load();
     }, [load]);
+    useEffect(() => {
+        let active = true;
+        void api<{ data: unknown }>("/v1/me")
+            .then(() => {
+                if (active) setCanCreatePost(true);
+            })
+            .catch(() => {
+                if (active) setCanCreatePost(false);
+            });
+        return () => {
+            active = false;
+        };
+    }, []);
     function submit(event: React.FormEvent) {
         event.preventDefault();
         setPage(1);
     }
     return (
         <Page>
+            {canCreatePost ? (
+                <Portal>
+                    <Fab
+                        component="a"
+                        href="/posts/new/"
+                        variant="extended"
+                        color="primary"
+                        aria-label={t("dashboardPosts.newPost")}
+                        sx={{
+                            position: "fixed",
+                            right: { xs: 2, sm: 3 },
+                            bottom: "calc(env(safe-area-inset-bottom) + 24px)",
+                            zIndex: (theme) => theme.zIndex.fab,
+                        }}
+                    >
+                        <Add sx={{ mr: 1 }} />
+                        {t("dashboardPosts.newPost")}
+                    </Fab>
+                </Portal>
+            ) : null}
             <Stack spacing={2}>
                 <Typography variant="h4" component="h1">
                     {t("postsPage.title")}
@@ -87,7 +131,9 @@ function PostsPage() {
                         size="small"
                         exclusive
                         value={density}
-                        onChange={(_, value) => { if (value) setDensity(value); }}
+                        onChange={(_, value) => {
+                            if (value) setDensity(value);
+                        }}
                         aria-label={t("postsPage.gridDensity")}
                     >
                         <ToggleButton value="spacious">{t("postsPage.threeByThree")}</ToggleButton>

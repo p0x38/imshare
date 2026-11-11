@@ -69,6 +69,7 @@
 - [x] Better empty states
 - [x] Better loading states
 - [x] Confirm-before-destructive-action dialogs
+- [x] Floating action button for posts page
 - [ ] Make the animation preference control all shared motion components
 - [ ] Make ripple/theme preferences apply consistently to all interactive components
 - [ ] Persist theme preferences to the authenticated account
