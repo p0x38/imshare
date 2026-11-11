@@ -1,6 +1,12 @@
 import { generateKeyPairSync } from "node:crypto";
 import { afterEach, expect, test, vi } from "vitest";
-import { sha256Base64, signFederationRequest, verifyFederationRequest } from "../src/lib/federation.js";
+import {
+    assertFederationActivityActor,
+    deliverActivity,
+    sha256Base64,
+    signFederationRequest,
+    verifyFederationRequest,
+} from "../src/lib/federation.js";
 
 afterEach(() => {
     vi.restoreAllMocks();
@@ -76,13 +82,12 @@ test("verifyFederationRequest accepts a valid signed request and matching actor 
         },
     };
 
-    vi.stubGlobal(
-        "fetch",
-        vi.fn(async () => new Response(JSON.stringify(actor), { status: 200 })),
-    );
-
     await expect(
-        verifyFederationRequest(new Request(inboxUrl, { method: "POST", headers, body }), body),
+        verifyFederationRequest(
+            new Request(inboxUrl, { method: "POST", headers, body }),
+            body,
+            async () => actor,
+        ),
     ).resolves.toEqual({
         actor,
         keyId: actorUrl + "#main-key",
@@ -139,4 +144,32 @@ test("verifyFederationRequest rejects signatures with an unsupported algorithm",
             body,
         ),
     ).rejects.toThrow("Invalid federation signature.");
+});
+
+test("assertFederationActivityActor requires the activity actor to match the verified signer", () => {
+    const actor = "https://remote.example/users/alice";
+    expect(() => assertFederationActivityActor({ actor }, actor)).not.toThrow();
+    expect(() =>
+        assertFederationActivityActor({ actor }, "https://remote.example/users/bob"),
+    ).toThrow("Federation activity actor does not match the verified signer.");
+    expect(() => assertFederationActivityActor({ actor: { id: actor } }, actor)).toThrow(
+        "Federation activity actor does not match the verified signer.",
+    );
+});
+
+test.each([
+    "http://127.0.0.1/inbox",
+    "http://[::1]/inbox",
+    "http://169.254.169.254/",
+    "http://localhost/inbox",
+])("deliverActivity rejects private federation destinations (%s)", async (inbox) => {
+    const pair = createKeyPair();
+    await expect(
+        deliverActivity({
+            inbox,
+            actorUrl: "https://local.example/federation/actors/alice",
+            activity: { type: "Create" },
+            privateKeyPem: pair.privateKey,
+        }),
+    ).rejects.toThrow("Federation URL must resolve only to public IP addresses.");
 });
