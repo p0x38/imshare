@@ -188,8 +188,8 @@ importers:
         specifier: ^9.7.0
         version: 9.8.1(supports-color@5.5.0)
       '@fastify/swagger-ui':
-        specifier: ^5.0.1
-        version: 5.2.6
+        specifier: ^6.1.3
+        version: 6.1.3
       '@fastify/view':
         specifier: ^12.0.1
         version: 12.0.1
@@ -890,11 +890,8 @@ packages:
   '@fastify/static@10.1.4':
     resolution: {integrity: sha512-YWYmXV0c3t/3DDyV32kRXJTgTY16FOkqtQ4mmBjbkWeukGR5n+Sr+7ppknNpS7hiRPrLU9zcySZZ1nLJVHTZkg==}
 
-  '@fastify/static@9.3.0':
-    resolution: {integrity: sha512-9YMYRpCOtMBrqKYWcqiw7ykOrn4D0jogHpJrFS0KGeSuOwzKMM5/mjj7B0CFLVoQ6htqKYw//Zs7APn9DBq05w==}
-
-  '@fastify/swagger-ui@5.2.6':
-    resolution: {integrity: sha512-OMnms0O5s9wb6wis/K5nlrAMLsgUbr1GA8uphM41IasWe3AFdgxz6r/3bA9HTxlDNUYc2FGGKeqMp3ntxmSiNA==}
+  '@fastify/swagger-ui@6.1.3':
+    resolution: {integrity: sha512-gEV0wqNx9yBqTUAw0TOpVQRtHPxehk91rVRRTDrWVbi1FnV0R4Vb6qh7jYlqoEiL1/qSix/dhHzmeUbKbgrAGg==}
 
   '@fastify/swagger@9.8.1':
     resolution: {integrity: sha512-VpHMnqZTY8iBZYJE8WWkbKPrXIYWy2rDfIf5qLr6DzZSpQYZ+KxQVcJFiq/AMlvNwI4gCBd66++iUlxXXGT0IQ==}
@@ -2575,10 +2572,6 @@ packages:
 
   confbox@0.3.1:
     resolution: {integrity: sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA==}
-
-  content-disposition@1.1.0:
-    resolution: {integrity: sha512-5jRCH9Z/+DRP7rkvY83B+yGIGX96OYdJmzngqnw2SBSxqCFPd0w2km3s5iawpGX8krnwSGmF0FW5Nhr0Hfai3g==}
-    engines: {node: '>=18'}
 
   content-disposition@3.0.0:
     resolution: {integrity: sha512-ZH/0Xs9rMIFWCOmGdmS9eHBTF62qqQYNz4nVjQhkdIO/a0fCP4UIM3mRz/wiqL0L14YgAz/1xio4OaSY4+ON/A==}
@@ -4999,19 +4992,10 @@ snapshots:
       fastq: 1.20.3
       glob: 13.0.7
 
-  '@fastify/static@9.3.0':
+  '@fastify/swagger-ui@6.1.3':
     dependencies:
-      '@fastify/accept-negotiator': 2.1.0
-      '@fastify/send': 4.1.1
-      content-disposition: 1.1.0
+      '@fastify/static': 10.1.4
       fastify-plugin: 6.0.0
-      fastq: 1.20.3
-      glob: 13.0.7
-
-  '@fastify/swagger-ui@5.2.6':
-    dependencies:
-      '@fastify/static': 9.3.0
-      fastify-plugin: 5.1.0
       openapi-types: 12.1.3
       rfdc: 1.4.1
       yaml: 2.9.1
@@ -6687,8 +6671,6 @@ snapshots:
   confbox@0.2.4: {}
 
   confbox@0.3.1: {}
-
-  content-disposition@1.1.0: {}
 
   content-disposition@3.0.0: {}
 
