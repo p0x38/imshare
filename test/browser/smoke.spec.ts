@@ -74,7 +74,7 @@ test.describe("public frontend", () => {
         });
         await page.goto("/");
         await expect(page.getByRole("heading", { name: "Recommended for you" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Trending" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Trending", exact: true })).toBeVisible();
         await expect(page.getByText("Recommended post")).toBeVisible();
         await expect(page.getByText("Trending post")).toBeVisible();
     });
@@ -87,7 +87,7 @@ test.describe("public frontend", () => {
             );
         });
         await page.goto("/");
-        const motion = page.locator("main:has(> h1)").first().locator("..");
+        const motion = page.locator("main").first().locator("..");
         await expect(motion).toBeVisible();
         await expect
             .poll(async () => motion.evaluate((element) => getComputedStyle(element).willChange))
@@ -187,7 +187,9 @@ test.describe("public frontend", () => {
         await page.goto("/account/");
         await page.getByRole("tab", { name: "Settings" }).click();
         await page.getByRole("tab", { name: "Recommendations" }).click();
-        await expect(page.getByText("Recommendation topics")).toBeVisible();
+        await expect(
+            page.getByRole("combobox", { name: "Recommendation topics" }),
+        ).toBeVisible();
         await expect(page.getByLabel("Tags")).toBeVisible();
     });
 
