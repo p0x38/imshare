@@ -128,10 +128,9 @@ test("verifyFederationRequest rejects signatures with an unsupported algorithm",
         "https://remote.example/users/alice#main-key",
         pair.privateKey,
     );
-    const signature = headers.get("signature")!.replace(
-        'algorithm="hs2019"',
-        'algorithm="rsa-sha1"',
-    );
+    const signature = headers
+        .get("signature")!
+        .replace('algorithm="hs2019"', 'algorithm="rsa-sha1"');
     headers.set("signature", signature);
 
     await expect(
@@ -158,9 +157,22 @@ test("assertFederationActivityActor requires the activity actor to match the ver
 });
 
 test.each([
+    // IPv4
     "http://127.0.0.1/inbox",
-    "http://[::1]/inbox",
+    "http://10.0.0.1/inbox",
+    "http://172.16.0.1/inbox",
+    "http://192.168.1.1/inbox",
     "http://169.254.169.254/",
+    "http://100.64.0.1/inbox",
+    "http://224.0.0.1/inbox",
+
+    // IPv6
+    "http://[::1]/inbox",
+    "http://[fc00::1]/inbox",
+    "http://[fe80::1]/inbox",
+    "http://[2001:db8::1]/inbox",
+
+    // Hostnames
     "http://localhost/inbox",
 ])("deliverActivity rejects private federation destinations (%s)", async (inbox) => {
     const pair = createKeyPair();

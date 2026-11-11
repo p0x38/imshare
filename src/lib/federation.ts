@@ -7,6 +7,7 @@ import https from "node:https";
 import { isIP, type LookupFunction } from "node:net";
 import path from "node:path";
 import { loadConfigSync } from "./config.js";
+import ipaddr from "ipaddr.js";
 
 const DATA_DIR = path.resolve(process.cwd(), "data", "federation");
 const KEYS_FILE = path.join(DATA_DIR, "keys.json");
@@ -65,51 +66,11 @@ interface FederationHttpResponse {
 const cache = new Map<string, ActorKey>();
 
 function isPublicIp(address: string): boolean {
-    const version = isIP(address);
-    if (version === 4) {
-        const parts = address.split(".").map(Number);
-        const value =
-            ((parts[0] ?? 0) << 24) |
-            ((parts[1] ?? 0) << 16) |
-            ((parts[2] ?? 0) << 8) |
-            (parts[3] ?? 0);
-        const blockedRanges: [number, number][] = [
-            [0x00000000, 8],
-            [0x0a000000, 8],
-            [0x64400000, 10],
-            [0x7f000000, 8],
-            [0xa9fe0000, 16],
-            [0xac100000, 12],
-            [0xc0000000, 24],
-            [0xc0000200, 24],
-            [0xc0586300, 24],
-            [0xc0a80000, 16],
-            [0xc6120000, 15],
-            [0xc6336400, 24],
-            [0xcb007100, 24],
-            [0xe0000000, 4],
-            [0xf0000000, 4],
-        ];
-        return !blockedRanges.some(([network, prefix]) => {
-            const mask = (0xffffffff << (32 - prefix)) >>> 0;
-            return ((value >>> 0) & mask) >>> 0 === network;
-        });
-    }
+    if (isIP(address) === 0) return false;
 
-    if (version === 6) {
-        const [firstGroup, secondGroup] = address.split(":");
-        const first = Number.parseInt(firstGroup ?? "0", 16);
-        const second = Number.parseInt(secondGroup ?? "0", 16);
-        return (
-            first >= 0x2000 &&
-            first <= 0x3fff &&
-            !(first === 0x2001 && second <= 0x01ff) &&
-            first !== 0x2002 &&
-            !(first === 0x3fff && second <= 0x0fff)
-        );
-    }
+    const parsed = ipaddr.parse(address);
 
-    return false;
+    return parsed.range() === "unicast";
 }
 
 async function requestFederationUrl(
