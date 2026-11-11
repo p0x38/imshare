@@ -94,8 +94,12 @@ export async function buildApp() {
     });
     const viewLimiter = new RateLimiter(75, 60_000);
     const highVolumeImageLimiter = new RateLimiter(12_500, 60_000);
+    const publicUploadReadLimiter = new RateLimiter(12_500, 60_000);
     const uploadDailyLimiter = new RateLimiter(950, 86_400_000);
     const uploadBurstLimiter = new RateLimiter(20, 120_000);
+    const authMutationLimiter = new RateLimiter(30, 60_000);
+    const federationInboxLimiter = new RateLimiter(300, 60_000);
+    const apiMutationLimiter = new RateLimiter(300, 60_000);
     const rateLimitingEnabled = process.env.NODE_ENV !== "test";
     const requestStarted = new WeakMap<FastifyRequest, bigint>();
     const rootDir = process.cwd();
@@ -148,6 +152,59 @@ export async function buildApp() {
             });
         }
         const pathname = request.url.split("?", 1)[0] ?? "/";
+        const method = request.method;
+        const applyRateLimit = (
+            limiter: RateLimiter,
+            limit: number,
+            scope: string,
+            message: string,
+        ) => {
+            const result = limiter.consume(key);
+            reply
+                .header("X-RateLimit-Limit", String(limit))
+                .header("X-RateLimit-Remaining", String(result.remaining));
+            if (!rateLimitingEnabled || result.allowed) return false;
+            observability.recordRateLimitHit(scope);
+            reply
+                .code(429)
+                .header("Retry-After", String(result.retryAfter))
+                .send({ error: { code: "RATE_LIMITED", message } });
+            return true;
+        };
+        if (
+            method === "POST" &&
+            pathname.startsWith("/api/v1/auth/") &&
+            applyRateLimit(
+                authMutationLimiter,
+                30,
+                "auth_mutation",
+                "Too many authentication requests. Try again later.",
+            )
+        )
+            return reply;
+        if (
+            method === "POST" &&
+            /^\/federation\/actors\/[^/]+\/inbox$/.test(pathname) &&
+            applyRateLimit(
+                federationInboxLimiter,
+                300,
+                "federation_inbox",
+                "Too many incoming federation activities. Try again later.",
+            )
+        )
+            return reply;
+        if (
+            (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") &&
+            pathname.startsWith("/api/v1/") &&
+            pathname !== "/api/v1/uploads" &&
+            applyRateLimit(
+                apiMutationLimiter,
+                300,
+                "api_mutation",
+                "Too many API requests. Try again later.",
+            )
+        )
+            return reply;
         if (request.method === "POST" && pathname === "/api/v1/uploads") {
             const daily = uploadDailyLimiter.consume(key);
             const burst = uploadBurstLimiter.consume(key);
@@ -186,23 +243,30 @@ export async function buildApp() {
 
             return;
         }
-        if (request.method === "GET" && pathname.startsWith("/api/v1/posts/image/")) {
-            const result = highVolumeImageLimiter.consume(key);
-            reply
-                .header("X-RateLimit-Limit", "12500")
-                .header("X-RateLimit-Remaining", String(result.remaining));
-            if (rateLimitingEnabled && !result.allowed) {
-                observability.recordRateLimitHit("api_image_get");
-                return reply
-                    .code(429)
-                    .header("Retry-After", String(result.retryAfter))
-                    .send({
-                        error: {
-                            code: "RATE_LIMITED",
-                            message: "Too many image requests. Try again later.",
-                        },
-                    });
-            }
+        if (
+            (method === "GET" || method === "HEAD") &&
+            pathname.startsWith("/api/v1/posts/image/")
+        ) {
+            if (
+                applyRateLimit(
+                    highVolumeImageLimiter,
+                    12_500,
+                    "api_image_get",
+                    "Too many image requests. Try again later.",
+                )
+            )
+                return reply;
+        } else if (
+            (method === "GET" || method === "HEAD") &&
+            pathname.startsWith("/uploads/") &&
+            applyRateLimit(
+                publicUploadReadLimiter,
+                12_500,
+                "public_upload_read",
+                "Too many image requests. Try again later.",
+            )
+        ) {
+            return reply;
         } else if (
             request.method === "GET" &&
             pathname.startsWith("/api/v1/") &&
@@ -228,8 +292,12 @@ export async function buildApp() {
         }
         viewLimiter.prune();
         highVolumeImageLimiter.prune();
+        publicUploadReadLimiter.prune();
         uploadDailyLimiter.prune();
         uploadBurstLimiter.prune();
+        authMutationLimiter.prune();
+        federationInboxLimiter.prune();
+        apiMutationLimiter.prune();
     });
 
     app.addHook("onRequest", async (request, reply) => {

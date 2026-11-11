@@ -349,6 +349,10 @@
                     {
                         "question": "Do the upload limits apply to each account?",
                         "answer": "The upload limiter is keyed by client IP address, so multiple accounts sharing the same public IP can be affected by the same limit."
+                    },
+                    {
+                        "question": "Are there rate limits for authentication and API requests?",
+                        "answer": "Authentication changes are limited to 30 requests per minute, other API changes to 300 requests per minute, and incoming federation activities to 300 requests per minute per client IP. Public image and upload reads are also rate limited."
                     }
                 ]
             },

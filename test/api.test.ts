@@ -151,6 +151,35 @@ test("state-changing requests reject foreign origins", async () => {
     }
 });
 
+test("authentication requests are rate limited per client IP", async () => {
+    const originalNodeEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+    const app = await buildApp();
+    try {
+        let statusCode = 0;
+        let limit: string | undefined;
+        let retryAfter: string | undefined;
+        for (let request = 0; request < 31; request++) {
+            const response = await app.inject({
+                method: "POST",
+                url: "/api/v1/auth/sign-in/email",
+                headers: { origin: "http://127.0.0.1:5454" },
+                payload: { email: "missing@example.test", password: "invalid" },
+            });
+            statusCode = response.statusCode;
+            limit = response.headers["x-ratelimit-limit"];
+            retryAfter = response.headers["retry-after"];
+        }
+        expect(statusCode).toBe(429);
+        expect(limit).toBe("30");
+        expect(retryAfter).toBeTruthy();
+    } finally {
+        await app.close();
+        if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = originalNodeEnv;
+    }
+}, 30_000);
+
 test("image route rejects invalid transformation parameters", async () => {
     const app = await buildApp();
     try {
