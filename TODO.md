@@ -2,7 +2,7 @@
 
 ## Current roadmap
 
-### 1. Authentication
+### Authentication
 
 - [x] Better Auth integration
 - [x] Email/password authentication
@@ -21,7 +21,7 @@
     - [x] Session management UI
     - [ ] Login history
 
-### 2. Discovery and recommendations
+### Discovery and recommendations
 
 - [x] Related posts
 - [x] Multi-signal related-post scorer
@@ -177,7 +177,7 @@
 - [x] React dashboard settings page
 - [ ] Complete migration of remaining dashboard management pages to React
 
-## Search (P2: optional search service)
+## Search
 
 - [x] Full-text search
 - [x] Search filters
@@ -194,7 +194,7 @@
     - [ ] Test indexing-write failures and recovery
     - [x] Document setup and reindexing in `docs/meilisearch.md`
 
-## Uploaders (P1: near-term client compatibility)
+## Uploaders
 
 - [x] Support PostyBirb Custom Website uploads with token auth and compatible multipart handling
 - [x] Add a ShareX `.sxcu` template and setup guide
@@ -247,3 +247,5 @@
 - [ ] Add performance regression tests
 - [ ] Define a shared design-token layer for spacing, motion, and accent colors
 - [ ] Keep theme preferences independent from page-specific styling
+
+## Code security / quality
