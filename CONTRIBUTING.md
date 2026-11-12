@@ -187,9 +187,14 @@ Prefer small, logically separated commits. Use conventional commit-style prefixe
 - `feat:` — new functionality
 - `fix:` — bug fix
 - `docs:` — documentation
+- `style:` — formatting code styles
 - `refactor:` — code restructuring without behavior changes
+- `perf:` — improvement of code performance & speed
 - `test:` — tests
+- `build:` — Build management related
+- `ci:` — CI/CD workflows
 - `chore:` — maintenance/tooling
+- `revert:` — reverting past commit
 
 ## Security issues
 
