@@ -300,16 +300,11 @@ async function createDraft(
         destination = await targetFilename(uploadDirectory, image);
         await mkdir(path.dirname(destination), { recursive: true });
 
-        let destinationExists = true;
         try {
-            await access(destination);
-        } catch {
-            destinationExists = false;
-        }
-
-        if (!destinationExists) {
             await writeFile(destination, image.normalized, { flag: "wx" });
             createdDestination = true;
+        } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
         }
 
         const stored = await readFile(destination);
