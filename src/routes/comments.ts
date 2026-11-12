@@ -92,7 +92,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/posts/:postId/comments",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "List post comments",
                 description:
                     "Returns comments for a post in chronological order, including whether the current viewer liked each comment.",
@@ -167,7 +167,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/posts/:postId/comments",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "Create a comment",
                 description: "Creates a comment on a post for the authenticated user.",
                 operationId: "createPostComment",
@@ -267,7 +267,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/comments/:commentId",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "Edit a comment",
                 description: "Updates the authenticated user's comment.",
                 operationId: "updateComment",
@@ -331,7 +331,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/comments/:commentId",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "Delete a comment",
                 description:
                     "Deletes a comment owned by the authenticated user or by the owner of its post.",
@@ -371,7 +371,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/comments/:commentId/like",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "Like a comment",
                 description:
                     "Creates the authenticated user's like reaction on a comment. Repeating the operation is idempotent.",
@@ -410,7 +410,7 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/comments/:commentId/like",
         {
             schema: openapi({
-                tags: "Comments",
+                tags: "Social",
                 summary: "Unlike a comment",
                 description: "Removes the authenticated user's like reaction from a comment.",
                 operationId: "unlikeComment",

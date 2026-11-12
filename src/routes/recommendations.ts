@@ -24,7 +24,7 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/recommendations",
         {
             schema: openapi({
-                tags: "Recommendations",
+                tags: "Social",
                 summary: "Get recommendations",
                 description:
                     "Returns paginated public post recommendations. Authenticated sessions use reacted post tags and categories as preferences and exclude the authenticated user's own posts.",

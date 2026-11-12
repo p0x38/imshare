@@ -50,6 +50,27 @@ const tags: OpenApiTag[] = [
         name: "Posts",
         description: "Post creation, retrieval, categorization, tagging, reactions, and comments.",
     },
+    {
+        name: "Metadata",
+        description: "Public client configurations.",
+    },
+    {
+        name: "Images",
+        description: "Endpoint for post images.",
+    },
+    {
+        name: "Profile Links",
+        description:
+            "Endpoint for listing Profile links and manages your own profile links configuration.",
+    },
+    {
+        name: "Reports",
+        description: "Endpoint for managing user reports you've made.",
+    },
+    {
+        name: "Search",
+        description: "Endpoint for searching the instance.",
+    },
     { name: "Tags", description: "Post tag management and discovery." },
     { name: "Categories", description: "Post category management and discovery." },
     { name: "Uploads", description: "Image upload lifecycle and image delivery." },

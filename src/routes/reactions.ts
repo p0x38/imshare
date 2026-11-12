@@ -48,7 +48,7 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/posts/:postId/reactions",
         {
             schema: openapi({
-                tags: "Reactions",
+                tags: "Social",
                 summary: "Get post reactions",
                 description:
                     "Returns reaction counts and, when authenticated, the current user's active reactions.",
@@ -89,7 +89,7 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/posts/:postId/:type",
         {
             schema: openapi({
-                tags: "Reactions",
+                tags: "Social",
                 summary: "Add post reaction",
                 description:
                     "Activates one of the supported reactions for the authenticated user. The operation is idempotent.",
@@ -159,7 +159,7 @@ export const reactionRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/posts/:postId/:type",
         {
             schema: openapi({
-                tags: "Reactions",
+                tags: "Social",
                 summary: "Remove post reaction",
                 description:
                     "Removes the selected reaction for the authenticated user. The operation is idempotent.",

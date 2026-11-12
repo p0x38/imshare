@@ -13,7 +13,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/health",
         {
             schema: openapi({
-                tags: "Health",
+                tags: "System",
                 summary: "Check service health",
                 description:
                     "Returns a lightweight health response without checking backing services.",
@@ -27,7 +27,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/ready",
         {
             schema: openapi({
-                tags: "Health",
+                tags: "System",
                 summary: "Check service readiness",
                 description:
                     "Checks whether the database is reachable. Returns 503 when the service is not ready.",
@@ -58,7 +58,7 @@ export const healthRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/version",
         {
             schema: openapi({
-                tags: "Health",
+                tags: "System",
                 summary: "Get API version",
                 description: "Returns the API version and the running imshare version.",
                 responseExamples: { "200": { data: { api: "v1", version: "1.0.0" } } },

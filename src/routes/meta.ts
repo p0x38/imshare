@@ -31,7 +31,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         "/sitemap.xml",
         {
             schema: openapi({
-                tags: "Metadata",
+                tags: "Public Endpoint",
                 summary: "Get sitemap",
                 description: "Generates the XML sitemap for public site resources.",
                 operationId: "getSitemap",
@@ -157,7 +157,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         "/robots.txt",
         {
             schema: openapi({
-                tags: "Metadata",
+                tags: "Public Endpoint",
                 summary: "Get robots.txt",
                 description: "Returns crawler-specific directives for public users and posts.",
                 operationId: "getRobotsTxt",

@@ -128,7 +128,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/users/:userId/followers",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "List a user's followers",
                 description:
                     "Lists approved followers when the profile owner allows followers to be visible.",
@@ -196,7 +196,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/users/:userId/following",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "List users followed by a user",
                 description:
                     "Lists approved following relationships when the profile owner allows following lists to be visible.",
@@ -264,7 +264,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/users/:userId/follow",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "Follow a user",
                 description:
                     "Creates a follow relationship or follow request for the authenticated user.",
@@ -320,7 +320,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/users/:userId/follow",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "Unfollow a user",
                 description: "Removes the authenticated user's follow relationship with a user.",
                 operationId: "unfollowUser",
@@ -352,7 +352,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/me/follow-requests",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "List follow requests",
                 description: "Lists pending follow requests received by the authenticated user.",
                 operationId: "listFollowRequests",
@@ -388,7 +388,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/me/follow-requests/:userId/approve",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "Approve a follow request",
                 description: "Approves a pending follow request from a user.",
                 operationId: "approveFollowRequest",
@@ -423,7 +423,7 @@ export const followRoutes: FastifyPluginAsync = async (fastify) => {
         "/v1/me/follow-requests/:userId",
         {
             schema: openapi({
-                tags: "Follows",
+                tags: "Social",
                 summary: "Reject a follow request",
                 description: "Rejects a pending follow request from a user.",
                 operationId: "rejectFollowRequest",
