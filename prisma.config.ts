@@ -9,14 +9,19 @@ export default defineConfig({
     schema:
         databaseProvider === "postgresql"
             ? "prisma/postgresql/schema.prisma"
-            : "prisma/schema.prisma",
+            : "prisma/sqlite/schema.prisma",
     migrations: {
         path:
             databaseProvider === "postgresql"
                 ? "prisma/postgresql/migrations"
-                : "prisma/migrations",
+                : "prisma/sqlite/migrations",
     },
     datasource: {
         url: env("DATABASE_URL"),
+        ...(databaseProvider === "postgresql"
+            ? {
+                  shadowDatabaseUrl: env("SHADOW_DATABASE_URL"),
+              }
+            : {}),
     },
 });
