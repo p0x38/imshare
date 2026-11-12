@@ -7,7 +7,7 @@ import { getOpenIdProviderId } from "./openid.js";
 export type RegistrationMode = "disabled" | "open" | "token" | "approval";
 
 export interface ServerConfig {
-    server: { host: string; port: number };
+    server: { host: string; port: number; reverseProxied?: boolean; trustedProxies?: string[] };
     storage: {
         dataDirectory?: string;
         uploadDirectory: string;
@@ -264,6 +264,11 @@ function parseConfig(content: string): ServerConfig {
 function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
+        server: {
+            ...config.server,
+            reverseProxied: config.server.reverseProxied ?? false,
+            trustedProxies: config.server.trustedProxies ?? ["127.0.0.1", "::1"],
+        },
         storage: {
             ...config.storage,
             dataDirectory: config.storage.dataDirectory ?? DEFAULTS.storage.dataDirectory,
@@ -311,6 +316,13 @@ function isServerConfig(value: unknown): value is ServerConfig {
         Number.isInteger(server.port) &&
         server.port > 0 &&
         server.port <= 65535 &&
+        (server.reverseProxied === undefined || typeof server.reverseProxied === "boolean") &&
+        (server.trustedProxies === undefined ||
+            (Array.isArray(server.trustedProxies) &&
+                server.trustedProxies.length > 0 &&
+                server.trustedProxies.every(
+                    (proxy) => typeof proxy === "string" && proxy.trim().length > 0,
+                ))) &&
         isObject(storage) &&
         (storage.dataDirectory === undefined ||
             (typeof storage.dataDirectory === "string" && storage.dataDirectory.length > 0)) &&

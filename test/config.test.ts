@@ -178,3 +178,24 @@ p2p {
 `),
     ).toThrow(/Invalid server configuration/);
 });
+
+test("reverse proxy settings default to disabled", () => {
+    const config = validateConfigText(requiredConfig);
+
+    expect(config.server.reverseProxied).toBe(false);
+    expect(config.server.trustedProxies).toEqual(["127.0.0.1", "::1"]);
+});
+
+test("validateConfigText accepts reverse proxy settings", () => {
+    const config = validateConfigText(
+        requiredConfig.replace(
+            "port = 5454",
+            `port = 5454
+    reverseProxied = true
+    trustedProxies = ["127.0.0.1"]`,
+        ),
+    );
+
+    expect(config.server.reverseProxied).toBe(true);
+    expect(config.server.trustedProxies).toEqual(["127.0.0.1"]);
+});

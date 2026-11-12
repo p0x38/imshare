@@ -126,6 +126,16 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     "500": { description: "Placeholder generation failed." },
                 },
             }),
+            config: {
+                rateLimit: {
+                    max: 12_500,
+                    timeWindow: "1 minute",
+                    groupId: "public-image-reads",
+                    onExceeded: () => {
+                        observability.recordRateLimitHit("api_image_get");
+                    },
+                },
+            },
         },
         async (request, reply) => {
             const { uploadId } = request.params as { uploadId: string };
@@ -203,6 +213,16 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     "415": { description: "Image processing failed." },
                 },
             }),
+            config: {
+                rateLimit: {
+                    max: 12_500,
+                    timeWindow: "1 minute",
+                    groupId: "public-image-reads",
+                    onExceeded: () => {
+                        observability.recordRateLimitHit("api_image_get");
+                    },
+                },
+            },
         },
         async (request, reply) => {
             const { uploadId } = request.params as { uploadId: string };

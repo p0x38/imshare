@@ -26,6 +26,7 @@ import {
     syncMeilisearchPosts,
     syncMeilisearchUserPosts,
 } from "./lib/meilisearch.js";
+import fastifyRateLimit from "@fastify/rate-limit";
 
 const logger = process.stdout.isTTY
     ? {
@@ -131,11 +132,32 @@ export async function buildApp() {
     const config = await loadConfig();
     const app = Fastify({
         logger,
+
+        trustProxy: config.server.reverseProxied ? config.server.trustedProxies : false,
+
         logController: new LogController({ disableRequestLogging: true }),
         ajv: {
             plugins: [(ajv) => ajv.addKeyword({ keyword: "example", valid: true })],
         },
     });
+
+    await app.register(fastifyRateLimit, {
+        global: true,
+        max: 1_000,
+        timeWindow: "1 minute",
+
+        errorResponseBuilder: (_request, context) => ({
+            error: {
+                code: "RATE_LIMIT_EXCEEDED",
+                message: `Rate limit exceeded. Try again in ${context.after}.`,
+            },
+        }),
+
+        onExceeded: () => {
+            observability.recordRateLimitHit("global");
+        },
+    });
+
     const viewLimiter = new RateLimiter(75, 60_000);
     const highVolumeImageLimiter = new RateLimiter(12_500, 60_000);
     const publicUploadReadLimiter = new RateLimiter(12_500, 60_000);
@@ -741,51 +763,65 @@ export async function buildApp() {
     await registerOpenApi(app, config);
     await app.register(authRoutes, { prefix: "/api" });
     await app.register(apiRoutes, { prefix: "/api" });
-    app.get("/uploads/*", async (request, reply) => {
-        const rawPath = String((request.params as Record<string, unknown>)["*"] ?? "").replaceAll(
-            "\\",
-            "/",
-        );
-        if (!rawPath || rawPath.includes(".."))
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+    app.get(
+        "/uploads/*",
+        {
+            config: {
+                rateLimit: {
+                    max: 12_500,
+                    timeWindow: "1 minute",
+                    groupId: "public-upload-reads",
+                    onExceeded: () => {
+                        observability.recordRateLimitHit("public_upload_read");
+                    },
+                },
+            },
+        },
+        async (request, reply) => {
+            const rawPath = String(
+                (request.params as Record<string, unknown>)["*"] ?? "",
+            ).replaceAll("\\", "/");
+            if (!rawPath || rawPath.includes(".."))
+                return reply
+                    .code(404)
+                    .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
-        const upload = await prisma.upload.findFirst({
-            where: { filename: rawPath, storageArea: "uploads" },
-            select: { filename: true, mimeType: true, contentHash: true, size: true },
-        });
-        if (!upload)
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            const upload = await prisma.upload.findFirst({
+                where: { filename: rawPath, storageArea: "uploads" },
+                select: { filename: true, mimeType: true, contentHash: true, size: true },
+            });
+            if (!upload)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
-        const source = path.resolve(uploadDir, upload.filename);
-        const relative = path.relative(uploadDir, source);
-        if (relative.startsWith("..") || path.isAbsolute(relative))
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            const source = path.resolve(uploadDir, upload.filename);
+            const relative = path.relative(uploadDir, source);
+            if (relative.startsWith("..") || path.isAbsolute(relative))
+                return reply
+                    .code(404)
+                    .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
-        const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
-        reply
-            .header("Cache-Control", "public, max-age=31536000, immutable")
-            .header("X-Content-Type-Options", "nosniff")
-            .header("Content-Length", String(upload.size));
-        if (etag) {
-            reply.header("ETag", etag);
-            if (request.headers["if-none-match"] === etag) return reply.code(304).send();
-        }
-        try {
-            await import("node:fs/promises").then(({ access }) => access(source));
-        } catch {
-            return reply
-                .code(404)
-                .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
-        }
-        reply.type(upload.mimeType);
-        return reply.send(createReadStream(source));
-    });
+            const etag = upload.contentHash ? `"${upload.contentHash}"` : undefined;
+            reply
+                .header("Cache-Control", "public, max-age=31536000, immutable")
+                .header("X-Content-Type-Options", "nosniff")
+                .header("Content-Length", String(upload.size));
+            if (etag) {
+                reply.header("ETag", etag);
+                if (request.headers["if-none-match"] === etag) return reply.code(304).send();
+            }
+            try {
+                await import("node:fs/promises").then(({ access }) => access(source));
+            } catch {
+                return reply
+                    .code(404)
+                    .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image file not found." } });
+            }
+            reply.type(upload.mimeType);
+            return reply.send(createReadStream(source));
+        },
+    );
 
     await app.register(metaRoutes);
     await app.register(federationRoutes);
