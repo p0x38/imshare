@@ -48,3 +48,4 @@ playwright-report/
 test-results/
 cache/
 dev.db.backup-20261111
+dev.db.before-avatar-decorations.bak
