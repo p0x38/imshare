@@ -7,11 +7,13 @@ import {
     permissionsAllow,
     serializePermissions,
     validateTokenName,
+    type ApiTokenPermissions,
 } from "../src/lib/api-tokens.js";
 
 describe("API token helpers", () => {
     test("generates a prefixed token and only stores its hash", () => {
         const generated = generateApiToken();
+
         expect(generated.token).toMatch(/^ims_[A-Za-z0-9_-]+$/);
         expect(generated.prefix).toBe(generated.token.slice(0, 12));
         expect(generated.hash).toBe(hashApiToken(generated.token));
@@ -31,14 +33,21 @@ describe("API token helpers", () => {
     });
 
     test("permission matching supports resource and wildcard grants", () => {
-        const permissions = { posts: ["read"] as const, "*": ["delete"] as const };
+        const permissions: ApiTokenPermissions = {
+            posts: ["read"],
+            "*": ["delete"],
+        };
+
         expect(permissionsAllow(permissions, "posts", "read")).toBe(true);
         expect(permissionsAllow(permissions, "uploads", "read")).toBe(false);
         expect(permissionsAllow(permissions, "uploads", "delete")).toBe(true);
     });
 
     test("permission serialization round-trips", () => {
-        const permissions = { posts: ["read", "write"] as const };
+        const permissions: ApiTokenPermissions = {
+            posts: ["read", "write"],
+        };
+
         expect(deserializePermissions(serializePermissions(permissions))).toEqual(permissions);
     });
 

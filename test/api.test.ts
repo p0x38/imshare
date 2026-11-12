@@ -168,8 +168,12 @@ test("authentication requests are rate limited per client IP", async () => {
                 payload: { email: "missing@example.test", password: "invalid" },
             });
             statusCode = response.statusCode;
-            limit = response.headers["x-ratelimit-limit"];
-            retryAfter = response.headers["retry-after"];
+            
+            const limitHeader = response.headers["x-ratelimit-limit"];
+            const retryAfterHeader = response.headers["retry-after"];
+
+            limit = limitHeader === undefined ? undefined : String(limitHeader);
+            retryAfter = retryAfterHeader === undefined ? undefined : String(retryAfterHeader);
         }
         expect(statusCode).toBe(429);
         expect(limit).toBe("30");

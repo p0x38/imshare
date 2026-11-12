@@ -1,4 +1,3 @@
-import type { LightMyRequestOptions } from "fastify";
 import { expect, test } from "vitest";
 
 import { buildApp } from "../src/app.js";
@@ -7,6 +6,7 @@ import { getRegistrationToken } from "../src/lib/registration-token.js";
 
 test("API integration: authentication, users, posts, tags, categories, and search", async () => {
     const app = await buildApp();
+
     const email = "integration@example.test";
     const secondEmail = "integration-second@example.test";
     let cookie = "";
@@ -14,7 +14,14 @@ test("API integration: authentication, users, posts, tags, categories, and searc
     let postId = "";
     let categoryId = "";
 
-    const request = (options: LightMyRequestOptions) =>
+    type RequestOptions = {
+        method: string;
+        url: string;
+        headers?: Record<string, string>;
+        payload?: Record<string, unknown>;
+    };
+
+    const request = (options: RequestOptions) =>
         app.inject({
             ...options,
             headers: {

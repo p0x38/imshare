@@ -114,7 +114,9 @@ test("exploration can promote a lower-ranked candidate", () => {
         { post: post({ id: "low" }), score: 2 },
     ];
     const result = applyRecommendationExploration(items, 1, () => 0.99);
-    expect(result[0].post.id).not.toBe("high");
+    
+    expect(result).toHaveLength(3);
+    expect(result[0]?.post.id).not.toBe("high");
 });
 
 test("recommendation score jitter stays bounded", () => {
