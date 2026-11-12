@@ -41,10 +41,26 @@ export function resolveCachePath(
     key: string,
     useHashedDirectory = true,
 ): string {
-    if (!useHashedDirectory) return path.join(cacheDirectory, key);
+    const root = path.resolve(cacheDirectory);
+
+    if (!useHashedDirectory) {
+        const target = path.resolve(root, key);
+        const relative = path.relative(root, target);
+
+        if (
+            !relative ||
+            relative === ".." ||
+            relative.startsWith(`..${path.sep}`) ||
+            path.isAbsolute(relative)
+        )
+            throw new Error("Cache key escapes the cache directory.");
+
+        return target;
+    }
+
     const hash = hashCacheKey(key);
     const extension = path.extname(key);
-    return path.join(cacheDirectory, hash.slice(0, 2), hash.slice(0, 4), `${hash}${extension}`);
+    return path.join(root, hash.slice(0, 2), hash.slice(0, 4), `${hash}${extension}`);
 }
 
 export async function readCacheFile(
