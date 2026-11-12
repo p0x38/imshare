@@ -82,6 +82,7 @@
         "@emotion/styled": "^11.14.1",
         "@fastify/cookie": "^11.1.5",
         "@fastify/multipart": "^10.1.8",
+        "@fastify/rate-limit": "^11.2.2",
         "@fastify/static": "^10.1.10",
         "@fastify/swagger": "^9.9.3",
         "@fastify/swagger-ui": "^6.1.3",
