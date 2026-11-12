@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, stat, unlink, rmdir } from "node:fs/promises";
+import { mkdir, open as openFile, readdir, stat, unlink, rmdir } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 import type { ServerConfig } from "./config.js";
 import { loadConfigSync } from "./config.js";
@@ -68,20 +69,33 @@ export async function readCacheFile(
     ttl: number,
     now = Date.now(),
 ): Promise<Buffer | undefined> {
+    let handle: FileHandle | undefined;
+
     try {
-        const information = await stat(filePath);
+        handle = await openFile(filePath, "r");
+        const information = await handle.stat();
+
         if (now - information.mtimeMs > ttl) {
-            await unlink(filePath);
+            await handle.close();
+            handle = undefined;
+
+            await unlink(filePath).catch(() => undefined);
+
             observability.recordCacheStale("file");
             observability.recordCacheMiss("file");
             return undefined;
         }
-        const data = await readFile(filePath);
+
+        const data = await handle.readFile();
         observability.recordCacheHit("file");
         return data;
     } catch {
         observability.recordCacheMiss("file");
         return undefined;
+    } finally {
+        if (handle) {
+            await handle.close().catch(() => undefined);
+        }
     }
 }
 
