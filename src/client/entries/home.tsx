@@ -8,6 +8,7 @@ import { PostGrid, postGridPostLimits, usePostGridDensity } from "../components/
 import { TextList } from "../components/TextList";
 import { ErrorState, SkeletonGrid } from "../components/States";
 import { api } from "../lib/api";
+import SeasonalEventBanner from "../components/SeasonalEventBanner";
 import type { Post } from "../lib/types";
 
 function imagePostsOnly(posts: Post[]) {
@@ -96,6 +97,7 @@ function HomePage() {
 
     return (
         <Page maxWidth="full">
+            <SeasonalEventBanner />
             <Stack
                 direction={{ xs: "column", sm: "row" }}
                 justifyContent="space-between"
