@@ -8,7 +8,11 @@ import sharp from "sharp";
 import { prisma } from "../lib/auth.js";
 import { ok, requireUser } from "../lib/api.js";
 import { loadConfig } from "../lib/config.js";
-import { uploadStorageDirectory, type UploadStorageArea } from "../lib/upload-storage.js";
+import {
+    resolveUploadStoragePath,
+    uploadStorageDirectory,
+    type UploadStorageArea,
+} from "../lib/upload-storage.js";
 import { broadcastUploadStatus } from "../lib/realtime.js";
 import { generateThumbHash, queueThumbnailGeneration } from "../lib/thumbnails.js";
 import { observability } from "../instrumentation.js";
@@ -389,9 +393,8 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },
             });
 
-        const source = path.resolve(uploadDir, upload.filename);
-        const relative = path.relative(uploadDir, source);
-        if (relative.startsWith("..") || path.isAbsolute(relative))
+        const source = resolveUploadStoragePath(avatarDir, upload.filename);
+        if (!source)
             return reply.code(404).send({
                 error: { code: "IMAGE_NOT_FOUND", message: "Image not found." },
             });
@@ -434,9 +437,8 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 .code(404)
                 .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
-        const source = path.resolve(avatarDir, upload.filename);
-        const relative = path.relative(avatarDir, source);
-        if (relative.startsWith("..") || path.isAbsolute(relative))
+        const source = resolveUploadStoragePath(uploadDir, upload.filename);
+        if (!source)
             return reply
                 .code(404)
                 .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
