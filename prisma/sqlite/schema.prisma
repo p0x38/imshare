@@ -70,6 +70,8 @@ model User {
   pushSubscriptions         PushSubscription[]
   apiTokens                 ApiToken[]
   defaultCategory           Category?          @relation("userDefaultCategory", fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+  equippedAvatarDecorationId String? @map("equipped_avatar_decoration_id")
+  avatarDecorations UserAvatarDecoration[]
 
   @@index([defaultCategoryId])
   @@index([registrationStatus, createdAt])
@@ -472,4 +474,29 @@ model ModerationLog {
   @@index([createdAt])
   @@index([targetUserId, createdAt])
   @@map("moderation_log")
+}
+
+model AvatarDecoration {
+    id String @id
+    name String
+    description String?
+    imageUrl String? @map("image_url")
+    eventId String? @map("event_id")
+    createdAt DateTime @default(now()) @map("created_at")
+    owners UserAvatarDecoration[]
+
+    @@map("avatar_decoration")
+}
+
+model UserAvatarDecoration {
+    userId String @map("user_id")
+    decorationId String @map("decoration_id")
+    obtainedAt DateTime @default(now()) @map("obtained_at")
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    decoration AvatarDecoration @relation(fields: [decorationId], references: [id], onDelete: Cascade)
+    settingsJson String @default("{}") @map("settings_json")
+
+    @@id([userId, decorationId])
+    @@index([decorationId])
+    @@map("user_avatar_decoration")
 }
