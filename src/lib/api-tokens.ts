@@ -41,9 +41,11 @@ export function parsePermissions(value: unknown): ApiTokenPermissions | null {
     const entries = Object.entries(value);
     if (entries.length > MAX_PERMISSION_KEYS) return null;
 
-    const result: ApiTokenPermissions = {};
+    const result = Object.create(null) as ApiTokenPermissions;
+
     for (const [resource, actions] of entries) {
         if (!resource || resource.length > 64) return null;
+        if (["__proto__", "constructor", "prototype"].includes(resource)) return null;
         if (!Array.isArray(actions)) return null;
 
         const normalized = [
