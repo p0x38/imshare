@@ -1,6 +1,6 @@
 {
     "Version": "17.0.0",
-    "Name": "imshare",
+    "Name": "ImShare",
     "DestinationType": "ImageUploader",
     "RequestMethod": "POST",
     "RequestURL": "https://your-imshare.example/api/v1/uploads",

@@ -1,5 +1,11 @@
 # External uploaders
 
+## Table of Contents
+
+- [ShareX](#sharex)
+- [PostyBirb](#postybirb)
+- [Other clients](#other-clients)
+
 ## ShareX
 
 Import [`imshare.sxcu`](imshare.sxcu) from ShareX's custom uploader settings. Replace the request URL with your imshare host and set the `Authorization` header to a personal API token with the `uploads: write` permission.
