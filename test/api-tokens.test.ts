@@ -62,4 +62,10 @@ describe("API token helpers", () => {
         expect(validateTokenName("")).toBeNull();
         expect(validateTokenName("x".repeat(101))).toBeNull();
     });
+
+    test("rejects prototype-sensitive permission names", () => {
+        expect(parsePermissions(JSON.parse('{"__proto__":["read"]}'))).toBeNull();
+        expect(parsePermissions(JSON.parse('{"constructor":["read"]}'))).toBeNull();
+        expect(parsePermissions(JSON.parse('{"prototype":["read"]}'))).toBeNull();
+    });
 });
