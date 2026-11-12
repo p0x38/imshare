@@ -249,3 +249,7 @@
 - [ ] Keep theme preferences independent from page-specific styling
 
 ## Code security / quality
+
+## Configuration DSL
+
+- [ ] Add validator and formatter for .imshare DSL
