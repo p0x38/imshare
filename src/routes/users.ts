@@ -283,6 +283,11 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     description: "Creates a user record for the authenticated requester.",
                     operationId: "createUser",
                     security: [{ cookieAuth: [] }],
+                    requestExample: {
+                        name: "Example User",
+                        email: "user@example.com",
+                        bio: "Example profile!",
+                    },
                     responses: {
                         "201": { description: "User created." },
                         "400": { $ref: "#/components/responses/BadRequest" },
@@ -400,6 +405,12 @@ export const userRoutes: FastifyPluginAsync = async (fastify) => {
                     operationId: "updateUser",
                     parameters: [userId],
                     security: [{ cookieAuth: [] }],
+                    requestExample: {
+                        name: "Example User",
+                        bio: "Updated profile",
+                        avatarMode: "initials",
+                        accentColor: "#7c4dff",
+                    },
                     responses: {
                         "200": { description: "Updated user." },
                         "400": { $ref: "#/components/responses/BadRequest" },

@@ -132,6 +132,9 @@ export async function buildApp() {
     const app = Fastify({
         logger,
         logController: new LogController({ disableRequestLogging: true }),
+        ajv: {
+            plugins: [(ajv) => ajv.addKeyword({ keyword: "example", valid: true })],
+        },
     });
     const viewLimiter = new RateLimiter(75, 60_000);
     const highVolumeImageLimiter = new RateLimiter(12_500, 60_000);

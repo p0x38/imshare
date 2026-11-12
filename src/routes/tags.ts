@@ -149,6 +149,10 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                     description: "Creates a tag for the authenticated user.",
                     operationId: "createTag",
                     security: [{ cookieAuth: [] }],
+                    requestExample: {
+                        name: "Example Tag",
+                        slug: "example-tag",
+                    },
                     responses: {
                         "201": { description: "Tag created." },
                         "401": { $ref: "#/components/responses/Unauthorized" },
@@ -229,6 +233,10 @@ export const tagRoutes: FastifyPluginAsync = async (fastify) => {
                     operationId: "updateTag",
                     parameters: [tagId],
                     security: [{ cookieAuth: [] }],
+                    requestExample: {
+                        name: "Updated Tag",
+                        slug: "updated-tag",
+                    },
                     responses: {
                         "200": { description: "Updated tag." },
                         "401": { $ref: "#/components/responses/Unauthorized" },

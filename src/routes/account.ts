@@ -59,6 +59,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 summary: "Get creator analytics",
                 description: "Returns analytics for posts owned by the authenticated user.",
                 operationId: "getMyAnalytics",
+                security: [{ cookieAuth: [] }],
                 parameters: [
                     parameter.query(
                         "days",
@@ -197,6 +198,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 description:
                     "Returns privacy and default-post preferences for the authenticated user.",
                 operationId: "getMyPreferences",
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": { description: "Current account preferences." },
                     "401": { $ref: "#/components/responses/Unauthorized" },
@@ -250,6 +252,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     required: true,
                     description: "Preferences to update. All properties are optional.",
                 }),
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": { description: "Updated account preferences." },
                     "400": { $ref: "#/components/responses/BadRequest" },
@@ -435,6 +438,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                     "Returns authenticated sessions for the current user, including whether each session is current.",
                 operationId: "listMySessions",
                 parameters: pagination,
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": { description: "Paginated session collection." },
                     "401": { $ref: "#/components/responses/Unauthorized" },
@@ -501,6 +505,7 @@ export const accountRoutes: FastifyPluginAsync = async (fastify) => {
                 description: "Revokes one session owned by the authenticated user.",
                 operationId: "revokeMySession",
                 parameters: [sessionId],
+                security: [{ cookieAuth: [] }],
                 responses: {
                     "200": { description: "Session revoked." },
                     "401": { $ref: "#/components/responses/Unauthorized" },

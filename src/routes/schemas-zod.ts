@@ -139,7 +139,21 @@ export const postCreateInput = z
             .optional()
             .meta({ description: "Identifiers of unused uploads to attach to the post." }),
     })
-    .meta({ description: "Fields accepted when creating a post or text." });
+    .meta({
+        description: "Fields accepted when creating a post or text.",
+        example: {
+            title: "Example post",
+            description: "An example description.",
+            caption: "Example caption",
+            sourceUrl: "https://example.com/source",
+            originalCreator: "Original Creator",
+            originalCreatedAt: "2025-01-15T12:00:00.000Z",
+            allowDownload: true,
+            tags: ["example"],
+            categoryId: "category-id",
+            uploadIds: ["upload-id"],
+        },
+    });
 
 export const postUpdateInput = z
     .object({
@@ -191,7 +205,16 @@ export const postUpdateInput = z
             .optional()
             .meta({ description: "Replacement set of tags." }),
     })
-    .meta({ description: "One or more post fields to update. At least one field is required." });
+    .meta({
+        description: "One or more post fields to update. At least one field is required.",
+        example: {
+            title: "Updated title",
+            originalCreator: "Original Creator",
+            originalCreatedAt: "2025-01-15T12:00:00.000Z",
+            description: "Updated description",
+            allowDownload: false,
+        },
+    });
 
 export const postBatchUpdateInput = z
     .object({

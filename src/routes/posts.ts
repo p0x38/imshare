@@ -12,12 +12,6 @@ import {
 import { findTags, postInclude, postView } from "./_shared.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
 import {
-    postCategorySchema,
-    postCreateSchema,
-    postTagSchema,
-    postUpdateSchema,
-} from "./schemas.js";
-import {
     postBatchDeleteBodyJsonSchema,
     postBatchUpdateBodyJsonSchema,
     postBatchUploadBodyJsonSchema,
@@ -25,6 +19,7 @@ import {
     postMergeBodyJsonSchema,
     postUpdateBodyJsonSchema,
 } from "./schemas-zod.js";
+import { openapi } from "../lib/openapi-route.js";
 
 function publicPostWhere() {
     return {
@@ -76,37 +71,57 @@ function permalinkData(body: {
 }
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
-    fastify.get("/v1/posts", async (request) => {
-        const q = request.query as Record<string, unknown>;
-        const p = parsePagination(q);
-        const session = await getSession(request);
-        const isOwnListing = typeof q.user === "string" && q.user === session?.user.id;
-        const where: Record<string, unknown> = isOwnListing ? {} : publicPostWhere();
-        if (typeof q.user === "string") where.userId = q.user;
-        if (typeof q.category === "string") where.categoryId = q.category;
-        if (typeof q.tag === "string") where.tags = { some: { tag: { slug: q.tag } } };
-        if (typeof q.search === "string")
-            where.OR = [
-                { title: { contains: q.search } },
-                { description: { contains: q.search } },
-                { caption: { contains: q.search } },
-            ];
-        const [items, total] = await Promise.all([
-            prisma.post.findMany({
-                where: where as never,
-                include: postInclude,
-                skip: p.skip,
-                take: p.limit,
-                orderBy: { createdAt: parseOrder(q.order) },
+    fastify.get(
+        "/v1/posts",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "List posts",
+                description:
+                    "Returns public posts as a paginated collection. Search matches title, description, and caption. Supports page, limit, user, tag, category, search, and order query parameters.",
             }),
-            prisma.post.count({ where: where as never }),
-        ]);
-        return collection(items.map(postView), p.page, p.limit, total);
-    });
+        },
+        async (request) => {
+            const q = request.query as Record<string, unknown>;
+            const p = parsePagination(q);
+            const session = await getSession(request);
+            const isOwnListing = typeof q.user === "string" && q.user === session?.user.id;
+            const where: Record<string, unknown> = isOwnListing ? {} : publicPostWhere();
+            if (typeof q.user === "string") where.userId = q.user;
+            if (typeof q.category === "string") where.categoryId = q.category;
+            if (typeof q.tag === "string") where.tags = { some: { tag: { slug: q.tag } } };
+            if (typeof q.search === "string")
+                where.OR = [
+                    { title: { contains: q.search } },
+                    { description: { contains: q.search } },
+                    { caption: { contains: q.search } },
+                ];
+            const [items, total] = await Promise.all([
+                prisma.post.findMany({
+                    where: where as never,
+                    include: postInclude,
+                    skip: p.skip,
+                    take: p.limit,
+                    orderBy: { createdAt: parseOrder(q.order) },
+                }),
+                prisma.post.count({ where: where as never }),
+            ]);
+            return collection(items.map(postView), p.page, p.limit, total);
+        },
+    );
 
     fastify.post(
         "/v1/posts",
-        { schema: { body: postCreateBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Create post",
+                    description: "Creates a post for the authenticated user.",
+                },
+                { body: postCreateBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -230,7 +245,16 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.post(
         "/v1/posts/batch",
-        { schema: { body: postBatchUploadBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Create posts from uploads",
+                    description: "Creates one draft image post for each uploaded image.",
+                },
+                { body: postBatchUploadBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -306,7 +330,17 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.patch(
         "/v1/posts/batch",
-        { schema: { body: postBatchUpdateBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Update multiple posts",
+                    description:
+                        "Updates shared metadata, tags, categories, and publication settings for multiple posts owned by the authenticated user.",
+                },
+                { body: postBatchUpdateBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -458,7 +492,16 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.delete(
         "/v1/posts/batch",
-        { schema: { body: postBatchDeleteBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Delete multiple posts",
+                    description: "Deletes multiple posts owned by the authenticated user.",
+                },
+                { body: postBatchDeleteBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -487,7 +530,17 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.post(
         "/v1/posts/merge",
-        { schema: { body: postMergeBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Merge posts",
+                    description:
+                        "Combines multiple image draft posts owned by the authenticated user into one post, merging their uploads and tags.",
+                },
+                { body: postMergeBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -569,143 +622,183 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         },
     );
 
-    fastify.post("/v1/posts/:postId/split", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
+    fastify.post(
+        "/v1/posts/:postId/split",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Split post",
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
 
-        const { postId } = request.params as { postId: string };
-        const existing = await prisma.post.findUnique({
-            where: { id: postId },
-            include: {
-                tags: { select: { tagId: true } },
-                uploads: { orderBy: { createdAt: "asc" } },
-            },
-        });
-
-        if (!existing)
-            return reply.code(404).send({
-                error: { code: "POST_NOT_FOUND", message: "Post not found." },
-            });
-
-        if (existing.userId !== user.id)
-            return reply.code(403).send({
-                error: { code: "FORBIDDEN", message: "You do not own this post." },
-            });
-
-        if (existing.contentType !== "image" || existing.uploads.length < 2)
-            return reply.code(400).send({
-                error: {
-                    code: "INVALID_SPLIT",
-                    message: "Only multi-image posts can be split.",
+            const { postId } = request.params as { postId: string };
+            const existing = await prisma.post.findUnique({
+                where: { id: postId },
+                include: {
+                    tags: { select: { tagId: true } },
+                    uploads: { orderBy: { createdAt: "asc" } },
                 },
             });
 
-        const [firstUpload, ...additionalUploads] = existing.uploads;
-        if (!firstUpload)
-            return reply.code(400).send({
-                error: {
-                    code: "INVALID_SPLIT",
-                    message: "The post does not contain an image to keep.",
-                },
-            });
+            if (!existing)
+                return reply.code(404).send({
+                    error: { code: "POST_NOT_FOUND", message: "Post not found." },
+                });
 
-        const result = await prisma.$transaction(async (tx) => {
-            const updated = await tx.post.update({
-                where: { id: existing.id },
-                data: {
-                    uploads: {
-                        set: [{ id: firstUpload.id }],
+            if (existing.userId !== user.id)
+                return reply.code(403).send({
+                    error: { code: "FORBIDDEN", message: "You do not own this post." },
+                });
+
+            if (existing.contentType !== "image" || existing.uploads.length < 2)
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_SPLIT",
+                        message: "Only multi-image posts can be split.",
                     },
-                },
-                include: postInclude,
-            });
+                });
 
-            const createdPosts = [];
-            for (const upload of additionalUploads) {
-                const created = await tx.post.create({
+            const [firstUpload, ...additionalUploads] = existing.uploads;
+            if (!firstUpload)
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_SPLIT",
+                        message: "The post does not contain an image to keep.",
+                    },
+                });
+
+            const result = await prisma.$transaction(async (tx) => {
+                const updated = await tx.post.update({
+                    where: { id: existing.id },
                     data: {
-                        title: existing.title,
-                        contentType: "image",
-                        textContent: null,
-                        description: existing.description,
-                        caption: existing.caption,
-                        sourceUrl: existing.sourceUrl,
-                        originalCreator: existing.originalCreator,
-                        originalCreatedAt: existing.originalCreatedAt,
-                        allowDownload: existing.allowDownload,
-                        allowSearchEngineIndex: existing.allowSearchEngineIndex,
-                        allowAiCrawler: existing.allowAiCrawler,
-                        allowImageCrawler: existing.allowImageCrawler,
-                        allowCustomCrawler: existing.allowCustomCrawler,
-                        status: existing.status,
-                        visibility: existing.visibility,
-                        publishedAt: existing.publishedAt,
-                        scheduledAt: existing.scheduledAt,
-                        hiddenAt: existing.hiddenAt,
-                        isNSFW: existing.isNSFW,
-                        contentWarningType: existing.contentWarningType,
-                        contentWarning: existing.contentWarning,
-                        permalinkPattern: existing.permalinkPattern,
-                        permalinkIdType: "internalId",
-                        customPostId: null,
-                        userId: existing.userId,
-                        categoryId: existing.categoryId,
-                        tags: {
-                            create: existing.tags.map(({ tagId }) => ({ tagId })),
-                        },
                         uploads: {
-                            connect: [{ id: upload.id }],
+                            set: [{ id: firstUpload.id }],
                         },
                     },
                     include: postInclude,
                 });
 
-                createdPosts.push(
-                    await tx.post.update({
-                        where: { id: created.id },
+                const createdPosts = [];
+                for (const upload of additionalUploads) {
+                    const created = await tx.post.create({
                         data: {
-                            permalinkKey: permalinkBase(created, "internalId"),
+                            title: existing.title,
+                            contentType: "image",
+                            textContent: null,
+                            description: existing.description,
+                            caption: existing.caption,
+                            sourceUrl: existing.sourceUrl,
+                            originalCreator: existing.originalCreator,
+                            originalCreatedAt: existing.originalCreatedAt,
+                            allowDownload: existing.allowDownload,
+                            allowSearchEngineIndex: existing.allowSearchEngineIndex,
+                            allowAiCrawler: existing.allowAiCrawler,
+                            allowImageCrawler: existing.allowImageCrawler,
+                            allowCustomCrawler: existing.allowCustomCrawler,
+                            status: existing.status,
+                            visibility: existing.visibility,
+                            publishedAt: existing.publishedAt,
+                            scheduledAt: existing.scheduledAt,
+                            hiddenAt: existing.hiddenAt,
+                            isNSFW: existing.isNSFW,
+                            contentWarningType: existing.contentWarningType,
+                            contentWarning: existing.contentWarning,
+                            permalinkPattern: existing.permalinkPattern,
+                            permalinkIdType: "internalId",
+                            customPostId: null,
+                            userId: existing.userId,
+                            categoryId: existing.categoryId,
+                            tags: {
+                                create: existing.tags.map(({ tagId }) => ({ tagId })),
+                            },
+                            uploads: {
+                                connect: [{ id: upload.id }],
+                            },
                         },
                         include: postInclude,
-                    }),
-                );
-            }
+                    });
 
-            return [updated, ...createdPosts];
-        });
+                    createdPosts.push(
+                        await tx.post.update({
+                            where: { id: created.id },
+                            data: {
+                                permalinkKey: permalinkBase(created, "internalId"),
+                            },
+                            include: postInclude,
+                        }),
+                    );
+                }
 
-        return ok(result.map(postView));
-    });
+                return [updated, ...createdPosts];
+            });
 
-    fastify.get("/v1/posts/:postId", async (request, reply) => {
-        const { postId } = request.params as { postId: string };
-        const session = await getSession(request);
-        const post = await prisma.post.findUnique({ where: { id: postId }, include: postInclude });
-        if (!post)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        const owner = post.userId === session?.user.id;
-        const publicVisible =
-            post.status === "published" &&
-            post.visibility === "public" &&
-            !post.hiddenAt &&
-            (!post.scheduledAt || post.scheduledAt <= new Date());
-        const unlistedVisible =
-            post.status === "published" &&
-            post.visibility === "unlisted" &&
-            !post.hiddenAt &&
-            (!post.scheduledAt || post.scheduledAt <= new Date());
-        if (!owner && !publicVisible && !unlistedVisible)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        return ok(postView(post));
-    });
+            return ok(result.map(postView));
+        },
+    );
+
+    fastify.get(
+        "/v1/posts/:postId",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Get post",
+                description:
+                    "Returns the public representation of a post, including original creator and original creation date metadata when provided.",
+            }),
+        },
+        async (request, reply) => {
+            const { postId } = request.params as { postId: string };
+            const session = await getSession(request);
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                include: postInclude,
+            });
+            if (!post)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            const owner = post.userId === session?.user.id;
+            const publicVisible =
+                post.status === "published" &&
+                post.visibility === "public" &&
+                !post.hiddenAt &&
+                (!post.scheduledAt || post.scheduledAt <= new Date());
+            const unlistedVisible =
+                post.status === "published" &&
+                post.visibility === "unlisted" &&
+                !post.hiddenAt &&
+                (!post.scheduledAt || post.scheduledAt <= new Date());
+            if (!owner && !publicVisible && !unlistedVisible)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            return ok(postView(post));
+        },
+    );
 
     fastify.patch(
         "/v1/posts/:postId",
-        { schema: { body: postUpdateBodyJsonSchema } },
+        {
+            schema: openapi(
+                {
+                    tags: "Posts",
+                    summary: "Update post",
+                    description:
+                        "Updates a post owned by the authenticated user. originalCreator may be used to set or clear the credited original author/creator, and originalCreatedAt may be used to set or clear the original content creation time. Both are optional and nullable.",
+                    requestExample: {
+                        title: "Updated title",
+                        originalCreator: "Original Creator",
+                        originalCreatedAt: "2025-01-15T12:00:00.000Z",
+                        description: "Updated description",
+                        allowDownload: false,
+                    },
+                },
+                { body: postUpdateBodyJsonSchema },
+            ),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -878,110 +971,188 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         },
     );
 
-    fastify.delete("/v1/posts/:postId", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
-        const { postId } = request.params as { postId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { userId: true },
-        });
-        if (!post)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id)
-            return reply
-                .code(403)
-                .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-        await prisma.post.delete({ where: { id: postId } });
-        return reply.code(204).send();
-    });
+    fastify.delete(
+        "/v1/posts/:postId",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Delete post",
+                description:
+                    "Deletes a post owned by the authenticated user. Returns 204 on success.",
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+            const { postId } = request.params as { postId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: { userId: true },
+            });
+            if (!post)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            if (post.userId !== user.id)
+                return reply
+                    .code(403)
+                    .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
+            await prisma.post.delete({ where: { id: postId } });
+            return reply.code(204).send();
+        },
+    );
 
-    fastify.get("/v1/posts/:postId/tags", async (request, reply) => {
-        const { postId } = request.params as { postId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { id: true, visibility: true, status: true, hiddenAt: true },
-        });
-        if (!post || post.status !== "published" || post.visibility === "private" || post.hiddenAt)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        const tags = await prisma.postTag.findMany({
-            where: { postId },
-            include: { tag: true },
-            orderBy: { tag: { name: "asc" } },
-        });
-        return ok(tags.map(({ tag }) => tag));
-    });
+    fastify.get(
+        "/v1/posts/:postId/tags",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "List post tags",
+                description: "Returns the tags attached to a public post.",
+            }),
+        },
+        async (request, reply) => {
+            const { postId } = request.params as { postId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: { id: true, visibility: true, status: true, hiddenAt: true },
+            });
+            if (
+                !post ||
+                post.status !== "published" ||
+                post.visibility === "private" ||
+                post.hiddenAt
+            )
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            const tags = await prisma.postTag.findMany({
+                where: { postId },
+                include: { tag: true },
+                orderBy: { tag: { name: "asc" } },
+            });
+            return ok(tags.map(({ tag }) => tag));
+        },
+    );
 
-    fastify.post("/v1/posts/:postId/tags", { schema: postTagSchema }, async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
-        const { postId } = request.params as { postId: string };
-        const body = request.body as { tagId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { userId: true },
-        });
-        if (!post)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id)
-            return reply
-                .code(403)
-                .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-        const tag = await prisma.tag.findUnique({ where: { id: body.tagId } });
-        if (!tag)
-            return reply
-                .code(404)
-                .send({ error: { code: "TAG_NOT_FOUND", message: "Tag not found." } });
-        await prisma.postTag.upsert({
-            where: { postId_tagId: { postId, tagId: tag.id } },
-            update: {},
-            create: { postId, tagId: tag.id },
-        });
-        return ok(tag);
-    });
+    fastify.post(
+        "/v1/posts/:postId/tags",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Add post tag",
+                description:
+                    "Adds a tag to a post owned by the authenticated user. Existing associations are upserted.",
+                requestExample: { tagId: "tag-id" },
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+            const { postId } = request.params as { postId: string };
+            const body = request.body as { tagId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: { userId: true },
+            });
+            if (!post)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            if (post.userId !== user.id)
+                return reply
+                    .code(403)
+                    .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
+            const tag = await prisma.tag.findUnique({ where: { id: body.tagId } });
+            if (!tag)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "TAG_NOT_FOUND", message: "Tag not found." } });
+            await prisma.postTag.upsert({
+                where: { postId_tagId: { postId, tagId: tag.id } },
+                update: {},
+                create: { postId, tagId: tag.id },
+            });
+            return ok(tag);
+        },
+    );
 
-    fastify.delete("/v1/posts/:postId/tags/:tagId", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
-        const { postId, tagId } = request.params as { postId: string; tagId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { userId: true },
-        });
-        if (!post)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id)
-            return reply
-                .code(403)
-                .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-        await prisma.postTag.deleteMany({ where: { postId, tagId } });
-        return reply.code(204).send();
-    });
+    fastify.delete(
+        "/v1/posts/:postId/tags/:tagId",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Remove post tag",
+                description:
+                    "Removes a tag from a post owned by the authenticated user. Returns 204 on success.",
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+            const { postId, tagId } = request.params as { postId: string; tagId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: { userId: true },
+            });
+            if (!post)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            if (post.userId !== user.id)
+                return reply
+                    .code(403)
+                    .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
+            await prisma.postTag.deleteMany({ where: { postId, tagId } });
+            return reply.code(204).send();
+        },
+    );
 
-    fastify.get("/v1/posts/:postId/category", async (request, reply) => {
-        const { postId } = request.params as { postId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { id: true, visibility: true, status: true, hiddenAt: true, category: true },
-        });
-        if (!post || post.status !== "published" || post.visibility === "private" || post.hiddenAt)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        return ok(post.category);
-    });
+    fastify.get(
+        "/v1/posts/:postId/category",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Get post category",
+                description:
+                    "Returns the category attached to a public post, or null when no category is assigned.",
+            }),
+        },
+        async (request, reply) => {
+            const { postId } = request.params as { postId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: {
+                    id: true,
+                    visibility: true,
+                    status: true,
+                    hiddenAt: true,
+                    category: true,
+                },
+            });
+            if (
+                !post ||
+                post.status !== "published" ||
+                post.visibility === "private" ||
+                post.hiddenAt
+            )
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            return ok(post.category);
+        },
+    );
 
     fastify.put(
         "/v1/posts/:postId/category",
-        { schema: postCategorySchema },
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Set post category",
+                description: "Sets the category for a post owned by the authenticated user.",
+                requestExample: { categoryId: "category-id" },
+            }),
+        },
         async (request, reply) => {
             const user = await requireUser(request, reply);
             if (!user) return;
@@ -1017,23 +1188,34 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
         },
     );
 
-    fastify.delete("/v1/posts/:postId/category", async (request, reply) => {
-        const user = await requireUser(request, reply);
-        if (!user) return;
-        const { postId } = request.params as { postId: string };
-        const post = await prisma.post.findUnique({
-            where: { id: postId },
-            select: { userId: true },
-        });
-        if (!post)
-            return reply
-                .code(404)
-                .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
-        if (post.userId !== user.id)
-            return reply
-                .code(403)
-                .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
-        await prisma.post.update({ where: { id: postId }, data: { categoryId: null } });
-        return reply.code(204).send();
-    });
+    fastify.delete(
+        "/v1/posts/:postId/category",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Clear post category",
+                description:
+                    "Removes the category from a post owned by the authenticated user. Returns 204 on success.",
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+            const { postId } = request.params as { postId: string };
+            const post = await prisma.post.findUnique({
+                where: { id: postId },
+                select: { userId: true },
+            });
+            if (!post)
+                return reply
+                    .code(404)
+                    .send({ error: { code: "POST_NOT_FOUND", message: "Post not found." } });
+            if (post.userId !== user.id)
+                return reply
+                    .code(403)
+                    .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
+            await prisma.post.update({ where: { id: postId }, data: { categoryId: null } });
+            return reply.code(204).send();
+        },
+    );
 };

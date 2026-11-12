@@ -46,6 +46,10 @@ export const emojiRoutes: FastifyPluginAsync = async (fastify) => {
                     "Creates a custom emoji from an image upload owned by the authenticated user.",
                 operationId: "createEmoji",
                 requestBody: request.json(emojiBody, true),
+                requestExample: {
+                    name: "cool_emoji",
+                    imageUrl: "https://example.com/v1/posts/image/upload-id",
+                },
                 security: [{ cookieAuth: [] }],
                 responses: {
                     "201": { description: "Custom emoji created." },

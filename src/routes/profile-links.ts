@@ -58,6 +58,7 @@ export const profileLinkRoutes: FastifyPluginAsync = async (fastify) => {
                 summary: "Create a profile link",
                 description: "Adds a profile link to the authenticated user's profile.",
                 operationId: "createProfileLink",
+                requestExample: { label: "GitHub", url: "https://github.com/example" },
                 requestBody: request.json(linkBody, true),
                 security: [{ cookieAuth: [] }],
                 responses: {
@@ -114,6 +115,7 @@ export const profileLinkRoutes: FastifyPluginAsync = async (fastify) => {
                 summary: "Update a profile link",
                 operationId: "updateProfileLink",
                 parameters: [linkId],
+                requestExample: { label: "GitHub", url: "https://github.com/example" },
                 requestBody: request.json(linkBody, true),
                 security: [{ cookieAuth: [] }],
                 responses: {

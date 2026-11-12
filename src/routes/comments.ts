@@ -172,6 +172,9 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                 description: "Creates a comment on a post for the authenticated user.",
                 operationId: "createPostComment",
                 parameters: [postId],
+                requestExample: {
+                    body: "Lorem Ipsum",
+                },
                 requestBody: {
                     required: true,
                     content: {
@@ -269,6 +272,9 @@ export const commentRoutes: FastifyPluginAsync = async (fastify) => {
                 description: "Updates the authenticated user's comment.",
                 operationId: "updateComment",
                 parameters: [commentId],
+                requestExample: {
+                    body: "Lorem Ipsum",
+                },
                 requestBody: {
                     required: true,
                     content: { "application/json": { schema: commentBody } },

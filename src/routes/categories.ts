@@ -119,6 +119,11 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                         { $ref: "#/components/schemas/CategoryCreate" } as never,
                         { required: true },
                     ),
+                    requestExample: {
+                        name: "Example category",
+                        slug: "example-category",
+                        description: "An example category.",
+                    },
                     responses: {
                         "201": { description: "Category created successfully." },
                         "400": { $ref: "#/components/responses/BadRequest" },
@@ -202,6 +207,11 @@ export const categoryRoutes: FastifyPluginAsync = async (fastify) => {
                         { $ref: "#/components/schemas/CategoryUpdate" } as never,
                         { required: true },
                     ),
+                    requestExample: {
+                        name: "Updated Category",
+                        slug: "updated-category",
+                        description: "Updated description.",
+                    },
                     responses: {
                         "200": { description: "Category updated successfully." },
                         "400": { $ref: "#/components/responses/BadRequest" },
