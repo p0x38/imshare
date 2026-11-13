@@ -33,7 +33,7 @@ export async function registerAdminMailRoutes(fastify: FastifyInstance): Promise
 
         const body = request.body as { recipient?: unknown } | undefined;
         const recipient = typeof body?.recipient === "string" ? body.recipient.trim() : "";
-        if (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
+        if (!recipient || recipient.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient)) {
             return reply.code(400).send({
                 error: {
                     code: "INVALID_RECIPIENT",
