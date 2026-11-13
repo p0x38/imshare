@@ -1,6 +1,6 @@
 import { Meilisearch } from "meilisearch";
 import { env } from "./env.js";
-import { prisma } from "./auth.js";
+import { prisma } from "./database.js";
 
 interface SearchDocument {
     id: string;

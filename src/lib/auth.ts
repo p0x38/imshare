@@ -4,12 +4,13 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { twoFactor } from "better-auth/plugins";
 
 import { env } from "./env.js";
-import { createPrismaClient } from "./database.js";
+import { prisma } from "./database.js";
 import { loadConfigSync, resolveBaseUrl } from "./config.js";
 import { createOpenIdPlugin } from "./openid.js";
 import { createMailService } from "./mail.js";
 
-export const prisma = createPrismaClient();
+export { prisma };
+
 const config = loadConfigSync();
 const baseUrl = resolveBaseUrl(config);
 const localAdminConfig = config.admin?.local;

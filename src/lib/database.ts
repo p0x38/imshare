@@ -10,3 +10,5 @@ export function createPrismaClient(): PrismaClient {
             : new PrismaBetterSqlite3({ url: env.databaseUrl });
     return new PrismaClient({ adapter });
 }
+
+export const prisma = createPrismaClient();

@@ -8,6 +8,7 @@ import { attachRealtime } from "./realtime.js";
 import { startLocalAdminProxy } from "./local-admin.js";
 import { startCacheCleanup } from "./lib/cache/cleanup.js";
 import { startFederationInboxCleanup } from "./lib/federation/inbox/cleanup.js";
+
 const lockPath = ".lock";
 
 function acquireLock(): void {
@@ -25,17 +26,20 @@ function acquireLock(): void {
         throw error;
     }
 }
+
 function releaseLock(): void {
     try {
         if (readFileSync(lockPath, "utf8").trim() === String(process.pid)) unlinkSync(lockPath);
     } catch {}
 }
+
 acquireLock();
+
 process.once("exit", releaseLock);
 const config = await loadConfig();
 const app = await buildApp();
 
-const stopCacheCleanup = startCacheCleanup(config, (error) => {
+const stopCacheCleanup = startCacheCleanup(config, (error: unknown) => {
     app.log.error({ err: error }, "Cache cleanup failed");
 });
 
