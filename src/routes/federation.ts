@@ -278,49 +278,53 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
         return reply.type(ACTIVITY_JSON).send(asActor(baseUrl, local.user, local.key.publicKeyPem));
     });
 
-    fastify.get("/federation/actors/:handle/outbox", async (request, reply) => {
-        if (!(await requireFederation(reply))) return;
-        const { handle } = request.params as { handle: string };
-        const local = await localActor(baseUrl, handle);
-        if (!local)
-            return reply.code(404).send({
-                error: {
-                    code: "ACTOR_NOT_FOUND",
-                    message: "The requested actor was not found.",
+    fastify.get(
+        "/federation/actors/:handle/outbox",
+        {
+            bodyLimit: 1_048_576,
+        },
+        async (request, reply) => {
+            if (!(await requireFederation(reply))) return;
+            const { handle } = request.params as { handle: string };
+            const local = await localActor(baseUrl, handle);
+            if (!local)
+                return reply.code(404).send({
+                    error: {
+                        code: "ACTOR_NOT_FOUND",
+                        message: "The requested actor was not found.",
+                    },
+                });
+            const posts = await prisma.post.findMany({
+                where: { userId: local.user.id, status: "published", visibility: "public" },
+                orderBy: { publishedAt: "desc" },
+                take: 20,
+                select: {
+                    id: true,
+                    title: true,
+                    description: true,
+                    createdAt: true,
+                    publishedAt: true,
                 },
             });
-        const posts = await prisma.post.findMany({
-            where: { userId: local.user.id, status: "published", visibility: "public" },
-            orderBy: { publishedAt: "desc" },
-            take: 20,
-            select: {
-                id: true,
-                title: true,
-                description: true,
-                createdAt: true,
-                publishedAt: true,
-            },
-        });
-        const items = posts.map((post) => postActivity(baseUrl, local.actor, post));
-        return reply.type(ACTIVITY_JSON).send({
-            "@context": ACTIVITY_STREAMS,
-            id: `${local.actor}/outbox`,
-            type: "OrderedCollection",
-            totalItems: items.length,
-            orderedItems: items,
-        });
-    });
+            const items = posts.map((post) => postActivity(baseUrl, local.actor, post));
+            return reply.type(ACTIVITY_JSON).send({
+                "@context": ACTIVITY_STREAMS,
+                id: `${local.actor}/outbox`,
+                type: "OrderedCollection",
+                totalItems: items.length,
+                orderedItems: items,
+            });
+        },
+    );
 
     fastify.post("/federation/actors/:handle/inbox", async (request, reply) => {
         if (federation?.incomingEnabled === false)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "FEDERATION_INCOMING_DISABLED",
-                        message: "Incoming federation is disabled.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "FEDERATION_INCOMING_DISABLED",
+                    message: "Incoming federation is disabled.",
+                },
+            });
         const { handle } = request.params as { handle: string };
         const local = await localActor(baseUrl, handle);
         if (!local)
@@ -380,14 +384,12 @@ export const federationRoutes: FastifyPluginAsync = async (fastify) => {
 
     fastify.post("/federation/deliver", async (request, reply) => {
         if (federation?.outgoingEnabled === false)
-            return reply
-                .code(404)
-                .send({
-                    error: {
-                        code: "FEDERATION_OUTGOING_DISABLED",
-                        message: "Outgoing federation is disabled.",
-                    },
-                });
+            return reply.code(404).send({
+                error: {
+                    code: "FEDERATION_OUTGOING_DISABLED",
+                    message: "Outgoing federation is disabled.",
+                },
+            });
         const session = await import("../lib/api.js").then(({ getSession }) =>
             getSession(request as FastifyRequest),
         );
