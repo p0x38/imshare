@@ -20,7 +20,7 @@ import {
     BatchSpanProcessor,
     ParentBasedSampler,
     TraceIdRatioBasedSampler,
-} from "@opentelemetry/sdk-trace-base";
+} from "@opentelemetry/sdk-trace";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 export type OtlpProtocol = "grpc" | "http/protobuf";
@@ -296,14 +296,15 @@ export function createObservability(
                 1,
             );
             spanProcessors.push(
-                new BatchSpanProcessor(
-                    createTraceExporter(config.traces?.protocol ?? "http/protobuf", traceEndpoint),
-                    {
-                        maxExportBatchSize: batch.maxExportBatchSize,
-                        maxQueueSize: batch.maxQueueSize,
-                        scheduledDelayMillis: batch.exportIntervalMs,
-                    },
-                ),
+                new BatchSpanProcessor({
+                    exporter: createTraceExporter(
+                        config.traces?.protocol ?? "http/protobuf",
+                        traceEndpoint,
+                    ),
+                    maxExportBatchSize: batch.maxExportBatchSize,
+                    maxQueueSize: batch.maxQueueSize,
+                    scheduledDelayMillis: batch.exportIntervalMs,
+                }),
             );
 
             const instrumentations = [
