@@ -49,6 +49,11 @@ config.imshare
 coverage/
 playwright-report/
 test-results/
+
+# Application data
 cache/
-dev.db.backup-20261111
-dev.db.before-avatar-decorations.bak
+
+# Unusual stuffs
+dev.db.backup*
+dev.db.*
+.unusual-stuffs/
