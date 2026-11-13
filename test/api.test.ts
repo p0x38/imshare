@@ -1,39 +1,5 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
-import path from "node:path";
 import { afterAll, expect, test } from "vitest";
 import packageJson from "../package.json" with { type: "json" };
-
-const root = process.cwd();
-const databasePath = path.join(root, "test-api.db");
-const databaseFiles = [
-    databasePath,
-    `${databasePath}-journal`,
-    `${databasePath}-wal`,
-    `${databasePath}-shm`,
-];
-
-process.env.DATABASE_PROVIDER = "sqlite";
-process.env.DATABASE_URL = "file:./test-api.db";
-process.env.BETTER_AUTH_SECRET = "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
-process.env.IMSHARE_CONFIG = path.join(root, "test", "config.imshare");
-
-for (const file of databaseFiles) if (existsSync(file)) rmSync(file, { force: true });
-
-const prismaCommand = "pnpm exec prisma db push --accept-data-loss";
-if (process.platform === "win32") {
-    execFileSync(process.env.ComSpec ?? "cmd.exe", ["/d", "/s", "/c", prismaCommand], {
-        cwd: root,
-        env: process.env,
-        stdio: "inherit",
-    });
-} else {
-    execFileSync("pnpm", ["exec", "prisma", "db", "push", "--accept-data-loss"], {
-        cwd: root,
-        env: process.env,
-        stdio: "inherit",
-    });
-}
 
 const { collection, ok, parseOrder, parsePagination } = await import("../src/lib/api.js");
 const { prisma } = await import("../src/lib/auth.js");
@@ -41,7 +7,6 @@ const { buildApp } = await import("../src/app.js");
 
 afterAll(async () => {
     await prisma.$disconnect();
-    for (const file of databaseFiles) if (existsSync(file)) rmSync(file, { force: true });
 });
 
 test("ok wraps data", () => expect(ok({ id: "post-1" })).toEqual({ data: { id: "post-1" } }));
@@ -168,7 +133,7 @@ test("authentication requests are rate limited per client IP", async () => {
                 payload: { email: "missing@example.test", password: "invalid" },
             });
             statusCode = response.statusCode;
-            
+
             const limitHeader = response.headers["x-ratelimit-limit"];
             const retryAfterHeader = response.headers["retry-after"];
 
