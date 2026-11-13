@@ -19,8 +19,12 @@ admin {
 storage {
     # Persistent application data root.
     dataDirectory = "data"
-    uploadDirectory = "data/uploads"
-    avatarDirectory = "data/avatars"
+
+    # Optional custom storage locations.
+    # Relative paths are resolved from the working directory.
+    # uploadDirectory = "data/uploads"
+    # avatarDirectory = "data/avatars"
+    
     maxFileSize = 25MiB
 
     cache {
