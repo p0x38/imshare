@@ -13,7 +13,15 @@ export interface ServerConfig {
         uploadDirectory: string;
         avatarDirectory?: string;
         maxFileSize: number;
-        cache?: { ttl?: number; useHashedDirectory?: boolean };
+        cache?: {
+            ttl?: number;
+            useHashedDirectory?: boolean;
+            cleanup?: {
+                enabled?: boolean;
+                intervalMs?: number;
+                maxSizeBytes?: number;
+            };
+        };
     };
     site: { name: string; version: string; description?: string };
     admin?: {
@@ -55,6 +63,14 @@ export interface ServerConfig {
         sharedInboxEnabled?: boolean;
         deliveryTimeoutMs?: number;
         remoteFetchTimeoutMs?: number;
+        inbox?: {
+            retention?: {
+                enabled?: boolean;
+                intervalMs?: number;
+                maxAgeMs?: number;
+                maxSizeBytes?: number;
+            };
+        };
     };
     p2p?: {
         enabled?: boolean;
@@ -125,7 +141,15 @@ const DEFAULTS = {
     storage: {
         dataDirectory: "data",
         avatarDirectory: "data/avatars",
-        cache: { ttl: 30 * 86_400_000, useHashedDirectory: true },
+        cache: {
+            ttl: 30 * 86_400_000,
+            useHashedDirectory: true,
+            cleanup: {
+                enabled: true,
+                intervalMs: 3_600_000,
+                maxSizeBytes: 5 * 1024 ** 3,
+            },
+        },
     },
     site: { description: "Self-hosted image archive and sharing server" },
     admin: { local: { enabled: true, host: "127.0.0.1", port: 5107 } },
@@ -158,6 +182,14 @@ const DEFAULTS = {
         sharedInboxEnabled: true,
         deliveryTimeoutMs: 10_000,
         remoteFetchTimeoutMs: 10_000,
+        inbox: {
+            retention: {
+                enabled: false,
+                intervalMs: 3_600_000,
+                maxAgeMs: 30 * 86_400_000,
+                maxSizeBytes: 1024 ** 3,
+            },
+        },
     },
     p2p: {
         enabled: false,
@@ -261,6 +293,21 @@ function parseConfig(content: string): ServerConfig {
     return normalizeConfig(config);
 }
 
+function isPositiveSafeInteger(value: unknown): value is number {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function isRetentionConfig(value: unknown): boolean {
+    if (!isObject(value)) return false;
+
+    return (
+        (value.enabled === undefined || typeof value.enabled === "boolean") &&
+        (value.intervalMs === undefined || isPositiveSafeInteger(value.intervalMs)) &&
+        (value.maxAgeMs === undefined || isPositiveSafeInteger(value.maxAgeMs)) &&
+        (value.maxSizeBytes === undefined || isPositiveSafeInteger(value.maxSizeBytes))
+    );
+}
+
 function normalizeConfig(config: ServerConfig): ServerConfig {
     return {
         ...config,
@@ -273,7 +320,14 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
             ...config.storage,
             dataDirectory: config.storage.dataDirectory ?? DEFAULTS.storage.dataDirectory,
             avatarDirectory: config.storage.avatarDirectory ?? DEFAULTS.storage.avatarDirectory,
-            cache: { ...DEFAULTS.storage.cache, ...config.storage.cache },
+            cache: {
+                ...DEFAULTS.storage.cache,
+                ...config.storage.cache,
+                cleanup: {
+                    ...DEFAULTS.storage.cache.cleanup,
+                    ...config.storage.cache?.cleanup,
+                },
+            },
         },
         site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
         admin: {
@@ -290,7 +344,18 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
         },
         features: { ...DEFAULTS.features, ...config.features },
         limits: { ...DEFAULTS.limits, ...config.limits },
-        federation: { ...DEFAULTS.federation, ...config.federation },
+        federation: {
+            ...DEFAULTS.federation,
+            ...config.federation,
+            inbox: {
+                ...DEFAULTS.federation.inbox,
+                ...config.federation?.inbox,
+                retention: {
+                    ...DEFAULTS.federation.inbox.retention,
+                    ...config.federation?.inbox?.retention,
+                },
+            },
+        },
         p2p: { ...DEFAULTS.p2p, ...config.p2p },
     };
 }
@@ -330,7 +395,6 @@ function isServerConfig(value: unknown): value is ServerConfig {
         (storage.avatarDirectory === undefined ||
             (typeof storage.avatarDirectory === "string" && storage.avatarDirectory.length > 0)) &&
         storage.uploadDirectory.length > 0 &&
-        storage.uploadDirectory.length > 0 &&
         (storage.cache === undefined ||
             (isObject(storage.cache) &&
                 (storage.cache.ttl === undefined ||
@@ -338,7 +402,19 @@ function isServerConfig(value: unknown): value is ServerConfig {
                         Number.isInteger(storage.cache.ttl) &&
                         storage.cache.ttl > 0)) &&
                 (storage.cache.useHashedDirectory === undefined ||
-                    typeof storage.cache.useHashedDirectory === "boolean"))) &&
+                    typeof storage.cache.useHashedDirectory === "boolean") &&
+                (storage.cache.cleanup === undefined ||
+                    (isObject(storage.cache.cleanup) &&
+                        (storage.cache.cleanup.enabled === undefined ||
+                            typeof storage.cache.cleanup.enabled === "boolean") &&
+                        (storage.cache.cleanup.intervalMs === undefined ||
+                            (typeof storage.cache.cleanup.intervalMs === "number" &&
+                                Number.isSafeInteger(storage.cache.cleanup.intervalMs) &&
+                                storage.cache.cleanup.intervalMs > 0)) &&
+                        (storage.cache.cleanup.maxSizeBytes === undefined ||
+                            (typeof storage.cache.cleanup.maxSizeBytes === "number" &&
+                                Number.isSafeInteger(storage.cache.cleanup.maxSizeBytes) &&
+                                storage.cache.cleanup.maxSizeBytes > 0)))))) &&
         typeof storage.maxFileSize === "number" &&
         Number.isInteger(storage.maxFileSize) &&
         storage.maxFileSize > 0 &&
@@ -427,7 +503,11 @@ function isServerConfig(value: unknown): value is ServerConfig {
                 (federation.remoteFetchTimeoutMs === undefined ||
                     (typeof federation.remoteFetchTimeoutMs === "number" &&
                         Number.isFinite(federation.remoteFetchTimeoutMs) &&
-                        federation.remoteFetchTimeoutMs > 0)))) &&
+                        federation.remoteFetchTimeoutMs > 0)) &&
+                (federation.inbox === undefined ||
+                    (isObject(federation.inbox) &&
+                        (federation.inbox.retention === undefined ||
+                            isRetentionConfig(federation.inbox.retention)))))) &&
         (p2p === undefined ||
             (isObject(p2p) &&
                 (p2p.enabled === undefined || typeof p2p.enabled === "boolean") &&

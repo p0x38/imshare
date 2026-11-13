@@ -15,6 +15,10 @@ const FOLLOWERS_FILE = path.join(DATA_DIR, "followers.json");
 const INBOX_DIR = path.join(DATA_DIR, "inbox");
 const MAX_CLOCK_SKEW_MS = 10 * 60 * 1000;
 
+export function getFederationInboxDirectory(): string {
+    return INBOX_DIR;
+}
+
 function federationTimeoutMs(): number {
     return loadConfigSync().federation?.remoteFetchTimeoutMs ?? 10_000;
 }

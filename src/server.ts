@@ -6,6 +6,8 @@ import { getRegistrationToken } from "./lib/registration-token.js";
 import { buildApp } from "./app.js";
 import { attachRealtime } from "./realtime.js";
 import { startLocalAdminProxy } from "./local-admin.js";
+import { startCacheCleanup } from "./lib/cache/cleanup.js";
+import { startFederationInboxCleanup } from "./lib/federation/inbox/cleanup.js";
 const lockPath = ".lock";
 
 function acquireLock(): void {
@@ -32,6 +34,15 @@ acquireLock();
 process.once("exit", releaseLock);
 const config = await loadConfig();
 const app = await buildApp();
+
+const stopCacheCleanup = startCacheCleanup(config, (error) => {
+    app.log.error({ err: error }, "Cache cleanup failed");
+});
+
+const stopFederationInboxCleanup = startFederationInboxCleanup(config, (error) => {
+    app.log.error({ err: error }, "Federation Inbox cleanup failed");
+});
+
 const io = attachRealtime(app.server);
 let localAdmin: ReturnType<typeof startLocalAdminProxy> = null;
 let shuttingDown = false;
@@ -49,6 +60,8 @@ const shutdown = async (reason: string, exitCode = 0): Promise<void> => {
     app.log.info(`shutting down (${reason})...`);
     try {
         localAdmin?.close();
+        stopCacheCleanup();
+        stopFederationInboxCleanup();
         await io.close();
         await app.observability.shutdown();
         await app.close();
