@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "imshare: server",
+            "name": "imshare: As dev server",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "pnpm",
@@ -12,7 +12,7 @@
             "skipFiles": ["<node_internals>/**"]
         },
         {
-            "name": "imshare: current TypeScript file",
+            "name": "imshare: As current TypeScript file",
             "type": "node",
             "request": "launch",
             "runtimeExecutable": "pnpm",
