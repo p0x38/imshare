@@ -1,6 +1,5 @@
 import "./instrumentation.js";
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { prisma } from "./lib/auth.js";
 import { loadConfig } from "./lib/config.js";
 import { getRegistrationToken } from "./lib/registration-token.js";
@@ -31,22 +30,19 @@ function checkNodeProcess(pid: number): ProcessCheck {
     }
 }
 function acquireLock(): void {
-    if (existsSync(lockPath)) {
-        const pid = Number.parseInt(readFileSync(lockPath, "utf8").trim(), 10);
-        if (Number.isInteger(pid) && pid > 0) {
-            try {
-                process.kill(pid, 0);
-                const processCheck = checkNodeProcess(pid);
-                if (processCheck === "node" || processCheck === "unknown")
-                    throw new Error(`Another instance is already running (PID ${pid}).`);
-            } catch (error) {
-                if (error instanceof Error && error.message.startsWith("Another instance"))
-                    throw error;
-            }
+    try {
+        writeFileSync(lockPath, `${process.pid}\n`, {
+            encoding: "utf8",
+            flag: "wx",
+        });
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code == "EEXIST") {
+            throw new Error(
+                "An instance lock already exists. Check for a running instance and remove the stale .lock file if necessary.",
+            );
         }
-        unlinkSync(lockPath);
+        throw error;
     }
-    writeFileSync(lockPath, `${process.pid}\n`, { encoding: "utf8", flag: "wx" });
 }
 function releaseLock(): void {
     try {
