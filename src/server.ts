@@ -7,28 +7,7 @@ import { buildApp } from "./app.js";
 import { attachRealtime } from "./realtime.js";
 import { startLocalAdminProxy } from "./local-admin.js";
 const lockPath = ".lock";
-type ProcessCheck = "node" | "other" | "unknown";
-function checkNodeProcess(pid: number): ProcessCheck {
-    try {
-        if (process.platform === "win32") {
-            const output = execFileSync(
-                "tasklist.exe",
-                ["/FI", `PID eq ${pid}`, "/FO", "CSV", "/NH"],
-                { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], windowsHide: true },
-            ).trim();
-            if (!output || /^INFO:/i.test(output)) return "other";
-            return /^"node(?:\.exe)?"\s*,/i.test(output) ? "node" : "other";
-        }
-        const output = execFileSync("ps", ["-p", String(pid), "-o", "comm="], {
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "ignore"],
-        }).trim();
-        if (!output) return "other";
-        return /(?:^|\n)\s*node(?:js)?\s*$/i.test(output) ? "node" : "other";
-    } catch {
-        return "unknown";
-    }
-}
+
 function acquireLock(): void {
     try {
         writeFileSync(lockPath, `${process.pid}\n`, {
