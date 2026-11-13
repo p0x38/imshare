@@ -23,6 +23,9 @@ playwright-report/
 test-results/
 coverage/
 
+# Temporary test databases
+.test-data/
+
 # Tool caches
 .vite/
 .eslintcache
