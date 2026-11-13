@@ -1,54 +1,112 @@
+import "dotenv/config";
+
 import { execFileSync } from "node:child_process";
-import { existsSync, rmSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const databasePath = path.join(root, "test.db");
-const databaseFiles = [
-    databasePath,
-    `${databasePath}-journal`,
-    `${databasePath}-wal`,
-    `${databasePath}-shm`,
-];
+const mode = process.argv[2] ?? "unit";
+const extraArgs = process.argv.slice(3);
 
-process.env.DATABASE_PROVIDER = "sqlite";
-process.env.DATABASE_URL = "file:./test.db";
-process.env.BETTER_AUTH_SECRET = "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
+const testRoot = path.join(root, ".test-data");
+const runId = `${process.pid}-${Date.now()}`;
+const runDirectory = path.join(testRoot, runId);
 
-function cleanup(): void {
-    for (const file of databaseFiles) {
-        if (existsSync(file)) rmSync(file, { force: true });
-    }
-}
+const originalEnvironment = new Map(
+    ["DATABASE_PROVIDER", "DATABASE_URL", "BETTER_AUTH_SECRET", "IMSHARE_CONFIG"].map((key) => [
+        key,
+        process.env[key],
+    ]),
+);
 
-cleanup();
+function runPnpm(args: string[]): void {
+    const options = {
+        cwd: root,
+        env: process.env,
+        stdio: "inherit" as const,
+    };
 
-const pnpmOptions = {
-    cwd: root,
-    env: process.env,
-    stdio: "inherit" as const,
-};
-
-try {
     if (process.platform === "win32") {
         execFileSync(
             process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", "pnpm exec prisma migrate deploy"],
-            pnpmOptions,
+            ["/d", "/s", "/c", `pnpm ${args.join(" ")}`],
+            options,
         );
-        execFileSync(
-            process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", "pnpm exec vitest run --config vitest.integration.config.ts"],
-            pnpmOptions,
-        );
-    } else {
-        execFileSync("pnpm", ["exec", "prisma", "migrate", "deploy"], pnpmOptions);
-        execFileSync(
-            "pnpm",
-            ["exec", "vitest", "run", "--config", "vitest.integration.config.ts"],
-            pnpmOptions,
-        );
+        return;
     }
-} finally {
-    cleanup();
+
+    execFileSync("pnpm", args, options);
 }
+
+function restoreEnvironment(): void {
+    for (const [key, value] of originalEnvironment) {
+        if (value === undefined) {
+            delete process.env[key];
+        } else {
+            process.env[key] = value;
+        }
+    }
+}
+
+function getTestArguments(): string[] {
+    switch (mode) {
+        case "unit":
+            return ["exec", "vitest", "run"];
+
+        case "watch":
+            return ["exec", "vitest"];
+
+        case "integration":
+            return ["exec", "vitest", "run", "--config", "vitest.integration.config.ts"];
+
+        case "coverage":
+            return ["exec", "vitest", "run", "--coverage"];
+
+        default:
+            throw new Error(`Unknown test mode: ${mode}`);
+    }
+}
+
+async function main(): Promise<void> {
+    mkdirSync(runDirectory, { recursive: true });
+
+    // Override database configuration before Prisma or application modules load.
+    process.env.DATABASE_PROVIDER = "sqlite";
+    process.env.DATABASE_URL = `file:./.test-data/${runId}/test.db`;
+    process.env.BETTER_AUTH_SECRET =
+        "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
+    process.env.IMSHARE_CONFIG = "test/config.imshare";
+
+    try {
+        // Generate a Prisma Client matching the temporary SQLite provider.
+        runPnpm(["exec", "prisma", "generate"]);
+
+        // Create the isolated test database schema.
+        runPnpm(["exec", "prisma", "migrate", "deploy"]);
+
+        if (mode === "browser") {
+            runPnpm(["build:client"]);
+            runPnpm(["exec", "playwright", "test", ...extraArgs]);
+        } else {
+            runPnpm(getTestArguments());
+        }
+    } finally {
+        // Restore the original environment and regenerate its Prisma Client.
+        restoreEnvironment();
+
+        try {
+            runPnpm(["exec", "prisma", "generate"]);
+        } catch (error) {
+            console.error(
+                "Failed to restore Prisma Client for the configured database provider.",
+                error,
+            );
+            process.exitCode = 1;
+        }
+
+        // Remove only this test run's temporary database.
+        rmSync(runDirectory, { recursive: true, force: true });
+    }
+}
+
+await main();
