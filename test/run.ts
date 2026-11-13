@@ -68,15 +68,17 @@ function getTestArguments(): string[] {
 }
 
 function getPrismaSchema(): string {
-    switch (process.env.DATABASE_PROVIDER) {
+    const provider = process.env.DATABASE_PROVIDER?.trim() || "sqlite";
+
+    switch (provider) {
         case "sqlite":
             return "prisma/sqlite/schema.prisma";
 
-        case "postgres":
+        case "postgresql":
             return "prisma/postgresql/schema.prisma";
 
         default:
-            throw new Error(`Unsupported database provider: ${process.env.DATABASE_PROVIDER}`);
+            throw new Error(`Unsupported database provider: ${provider}`);
     }
 }
 
