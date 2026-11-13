@@ -13,10 +13,9 @@ const runId = `${process.pid}-${Date.now()}`;
 const runDirectory = path.join(testRoot, runId);
 
 const originalEnvironment = new Map(
-    ["DATABASE_PROVIDER", "DATABASE_URL", "BETTER_AUTH_SECRET", "IMSHARE_CONFIG"].map((key) => [
-        key,
-        process.env[key],
-    ]),
+    ["DATABASE_PROVIDER", "DATABASE_URL", "BETTER_AUTH_SECRET", "IMSHARE_CONFIG", "NODE_ENV"].map(
+        (key) => [key, process.env[key]],
+    ),
 );
 
 function runPnpm(args: string[]): void {
@@ -51,7 +50,7 @@ function restoreEnvironment(): void {
 function getTestArguments(): string[] {
     switch (mode) {
         case "unit":
-            return ["exec", "vitest", "run", ...extraArgs];
+            return ["exec", "vitest", "run", "--reporter=verbose", ...extraArgs];
 
         case "watch":
             return ["exec", "vitest"];
@@ -91,6 +90,7 @@ async function main(): Promise<void> {
     process.env.BETTER_AUTH_SECRET =
         "4c7e5a9d2f8b6e1a3d0c9f5b7a2e8c6d1f4a9b3e7c0d5f8a2b6e9c1d4f7a3b8";
     process.env.IMSHARE_CONFIG = "test/config.imshare";
+    process.env.NODE_ENV = "test";
 
     try {
         const schema = getPrismaSchema();
