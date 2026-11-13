@@ -29,6 +29,11 @@ test("validateConfigText applies storage and cache defaults", () => {
     expect(config.storage.cache).toEqual({
         ttl: 30 * 86_400_000,
         useHashedDirectory: true,
+        cleanup: {
+            enabled: true,
+            intervalMs: 3_600_000,
+            maxSizeBytes: 5 * 1024 ** 3,
+        },
     });
 });
 
@@ -63,6 +68,11 @@ auth {
     expect(config.storage.cache).toEqual({
         ttl: 7 * 86_400_000,
         useHashedDirectory: false,
+        cleanup: {
+            enabled: true,
+            intervalMs: 3_600_000,
+            maxSizeBytes: 5 * 1024 ** 3,
+        },
     });
 });
 
@@ -105,7 +115,17 @@ test("validateConfigText applies federation and p2p defaults", () => {
         sharedInboxEnabled: true,
         deliveryTimeoutMs: 10_000,
         remoteFetchTimeoutMs: 10_000,
+
+        inbox: {
+            retention: {
+                enabled: false,
+                intervalMs: 3_600_000,
+                maxAgeMs: 30 * 86_400_000,
+                maxSizeBytes: 1024 ** 3,
+            },
+        },
     });
+
     expect(config.p2p).toEqual({
         enabled: false,
         incomingEnabled: false,
@@ -146,6 +166,15 @@ p2p {
         sharedInboxEnabled: false,
         deliveryTimeoutMs: 2500,
         remoteFetchTimeoutMs: 3500,
+
+        inbox: {
+            retention: {
+                enabled: false,
+                intervalMs: 3_600_000,
+                maxAgeMs: 30 * 86_400_000,
+                maxSizeBytes: 1024 ** 3,
+            },
+        },
     });
     expect(config.p2p).toMatchObject({
         enabled: true,

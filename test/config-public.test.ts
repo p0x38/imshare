@@ -32,10 +32,21 @@ function restoreOidcEnvironment(): void {
     if (originalClientSecret !== undefined) process.env.OIDC_CLIENT_SECRET = originalClientSecret;
 }
 
+function clearOidcEnvironment(): void {
+    for (const key of [
+        "OIDC_PROVIDER_ID",
+        "OIDC_CLIENT_ID",
+        "OIDC_DISCOVERY_URL",
+        "OIDC_CLIENT_SECRET",
+    ]) {
+        delete process.env[key];
+    }
+}
+
 afterEach(restoreOidcEnvironment);
 
 test("public config reports token requirement for private registration", () => {
-    restoreOidcEnvironment();
+    clearOidcEnvironment();
     const config = getPublicConfig(baseConfig);
 
     expect(config.auth.emailAndPasswordEnabled).toBe(true);
@@ -49,7 +60,7 @@ test("public config reports token requirement for private registration", () => {
 });
 
 test("public config does not require a token for public registration", () => {
-    restoreOidcEnvironment();
+    clearOidcEnvironment();
     const config = getPublicConfig({
         ...baseConfig,
         auth: {
@@ -62,7 +73,7 @@ test("public config does not require a token for public registration", () => {
 });
 
 test("public config exposes only the OIDC provider id", () => {
-    restoreOidcEnvironment();
+    clearOidcEnvironment();
     process.env.OIDC_PROVIDER_ID = "test-provider";
     process.env.OIDC_CLIENT_ID = "secret-client-id";
     process.env.OIDC_DISCOVERY_URL = "https://issuer.example/.well-known/openid-configuration";
