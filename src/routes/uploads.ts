@@ -302,7 +302,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                             progress: 100,
                             url: uploadView(upload).url,
                         });
-                        queueThumbnailGeneration(destination, upload.id);
+                        queueThumbnailGeneration(normalized, upload.id);
                     } catch (error) {
                         await unlink(destination).catch(() => undefined);
                         const duplicate = await prisma.upload.findFirst({
