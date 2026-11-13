@@ -9,7 +9,7 @@ export default defineConfig({
         outDir: "dist/client",
         emptyOutDir: true,
         sourcemap: true,
-        rollupOptions: {
+        rolldownOptions: {
             input: {
                 home: path.resolve(process.cwd(), "src/client/entries/home.tsx"),
                 posts: path.resolve(process.cwd(), "src/client/entries/posts.tsx"),
@@ -63,9 +63,19 @@ export default defineConfig({
                 entryFileNames: "[name].js",
                 chunkFileNames: "chunks/[name]-[hash].js",
                 assetFileNames: "assets/[name]-[hash][extname]",
-                manualChunks: {
-                    react: ["react", "react-dom"],
-                    mui: ["@mui/material", "@mui/icons-material"],
+                codeSplitting: {
+                    groups: [
+                        {
+                            name: "react",
+                            test: /[/\\]node_modules[/\\](?:react|react-dom)[/\\]/,
+                            priority: 20,
+                        },
+                        {
+                            name: "mui",
+                            test: /[/\\]node_modules[/\\]@mui[/\\](?:material|icons-material)[/\\]/,
+                            priority: 15,
+                        },
+                    ],
                 },
             },
         },
