@@ -4,7 +4,7 @@ Thanks for contributing to imshare!
 
 ## Before you start
 
-Read the project README and the relevant documentation before making changes. In particular, check `endpoints.md` and `public-endpoints.md` when working on API routes.
+Read the project README and the relevant documentation before making changes. In particular, check `docs/endpoints.md` and `docs/public-endpoints.md` when working on API routes.
 
 For larger changes, open an issue first so the intended behavior and implementation can be discussed before significant work is done.
 
@@ -20,7 +20,7 @@ Install dependencies and create the local environment:
 
 ```sh
 pnpm install
-cp .env.example .env
+cp docs/.env.example .env
 ```
 
 Replace the example `BETTER_AUTH_SECRET` with a strong random value. The development database is configured as a local SQLite database by default. fileciteturn680file0
@@ -58,7 +58,7 @@ When adding or changing an API endpoint:
 
 1. Update the appropriate route in `src/routes/`.
 2. Reuse the existing helpers in `src/lib/` for authentication, permissions, validation, pagination, and API responses.
-3. Update `endpoints.md` and/or `public-endpoints.md` when the public API surface changes.
+3. Update `docs/endpoints.md` and/or `docs/public-endpoints.md` when the public API surface changes.
 4. Add or update tests for the behavior.
 
 When changing frontend behavior, prefer the existing React/MUI shared components under `src/client/components/` and the existing client utilities under `src/client/lib/`. Keep page-specific entry points under `src/client/entries/` rather than duplicating shared UI logic.

@@ -29,13 +29,13 @@ Install dependencies:
 pnpm install
 ```
 
-Create the environment file from `.env.example` and set a strong `BETTER_AUTH_SECRET`.
+Create the environment file from [`docs/.env.example`](docs/.env.example) and set a strong `BETTER_AUTH_SECRET`.
 
 ```sh
-cp .env.example .env
+cp docs/.env.example .env
 ```
 
-The example environment file configures a local SQLite database at `file:./dev.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret. PostgreSQL can be selected with `DATABASE_PROVIDER=postgresql`; see [PostgreSQL setup](docs/postgresql.md).
+The example environment file configures a local SQLite database at `file:./data/imshare.db` and expects `BETTER_AUTH_SECRET` to be replaced with a long random secret. PostgreSQL can be selected with `DATABASE_PROVIDER=postgresql`; see [PostgreSQL setup](docs/postgresql.md).
 
 Generate the Prisma client and create/apply the development database schema:
 
@@ -60,10 +60,10 @@ startup-time settings require restarting imshare.
 
 ### Configuration
 
-imshare uses its own native configuration DSL in `config.imshare`. Copy `config.sample.imshare` and edit it for your deployment.
+imshare uses its own native configuration DSL in `config.imshare`. Copy [`docs/config.sample.imshare`](docs/config.sample.imshare) and edit it for your deployment.
 
 ```sh
-cp config.sample.imshare config.imshare
+cp docs/config.sample.imshare config.imshare
 ```
 
 The DSL uses simple blocks and assignments:
