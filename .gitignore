@@ -51,7 +51,8 @@ playwright-report/
 test-results/
 
 # Application data
-cache/
+/cache/
+/data/
 
 # Unusual stuffs
 dev.db.backup*
