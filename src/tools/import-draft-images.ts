@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { access, mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { access, mkdir, open, readFile, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
 import sharp from "sharp";
@@ -300,17 +300,41 @@ async function createDraft(
         destination = await targetFilename(uploadDirectory, image);
         await mkdir(path.dirname(destination), { recursive: true });
 
-        try {
-            await writeFile(destination, image.normalized, { flag: "wx" });
+        let stored: Buffer;
+
+        const destinationHandle = await open(destination, "wx").catch(
+            (error: NodeJS.ErrnoException) => {
+                if (error.code === "EEXIST") return undefined;
+                throw error;
+            },
+        );
+
+        if (destinationHandle) {
             createdDestination = true;
-        } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+
+            try {
+                await destinationHandle.writeFile(image.normalized);
+                stored = image.normalized;
+            } catch (error) {
+                await destinationHandle.close().catch(() => undefined);
+                await unlink(destination).catch(() => undefined);
+                throw error;
+            }
+
+            await destinationHandle.close();
+        } else {
+            const existingHandle = await open(destination, "r");
+
+            try {
+                stored = await existingHandle.readFile();
+            } finally {
+                await existingHandle.close();
+            }
         }
 
-        const stored = await readFile(destination);
         const storedHash = createHash("sha256").update(stored).digest("hex");
+
         if (storedHash !== image.contentHash) {
-            if (createdDestination) await unlink(destination).catch(() => undefined);
             throw new Error("Destination image failed SHA-256 verification.");
         }
 
