@@ -8,16 +8,25 @@ import { isIP, type LookupFunction } from "node:net";
 import path from "node:path";
 import { loadConfigSync } from "./config.js";
 import ipaddr from "ipaddr.js";
+import { resolveStorageDirectory } from "./storage-directories.js";
 
-const DATA_DIR = path.resolve(process.cwd(), "data", "federation");
-const KEYS_FILE = path.join(DATA_DIR, "keys.json");
-const FOLLOWERS_FILE = path.join(DATA_DIR, "followers.json");
-const INBOX_DIR = path.join(DATA_DIR, "inbox");
-const MAX_CLOCK_SKEW_MS = 10 * 60 * 1000;
+function getFederationDirectory(): string {
+    return resolveStorageDirectory(loadConfigSync(), "federation");
+}
+
+function getFederationKeysFile(): string {
+    return path.join(getFederationDirectory(), "keys.json");
+}
+
+function getFederationFollowersFile(): string {
+    return path.join(getFederationDirectory(), "followers.json");
+}
 
 export function getFederationInboxDirectory(): string {
-    return INBOX_DIR;
+    return path.join(getFederationDirectory(), "inbox");
 }
+
+const MAX_CLOCK_SKEW_MS = 10 * 60 * 1000;
 
 function federationTimeoutMs(): number {
     return loadConfigSync().federation?.remoteFetchTimeoutMs ?? 10_000;
@@ -197,7 +206,7 @@ export async function getOrCreateActorKey(actorId: string, actorUrl: string): Pr
     const cached = cache.get(actorId);
     if (cached && cached.actorUrl === actorUrl) return cached;
 
-    const store = await readJson<KeyStore>(KEYS_FILE, {});
+    const store = await readJson<KeyStore>(getFederationFollowersFile(), {});
     const existing = store[actorId];
     if (
         existing &&
@@ -220,7 +229,7 @@ export async function getOrCreateActorKey(actorId: string, actorUrl: string): Pr
         privateKeyPem: pair.privateKey,
     };
     store[actorId] = key;
-    await writeJson(KEYS_FILE, store);
+    await writeJson(getFederationKeysFile(), store);
     cache.set(actorId, key);
     return key;
 }
@@ -389,21 +398,21 @@ export async function verifyFederationRequest(
 }
 
 export async function getFollowers(userId: string): Promise<FederationFollower[]> {
-    const store = await readJson<FollowerStore>(FOLLOWERS_FILE, {});
+    const store = await readJson<FollowerStore>(getFederationFollowersFile(), {});
     return store[userId] ?? [];
 }
 
 export async function addFollower(userId: string, follower: FederationFollower): Promise<void> {
-    const store = await readJson<FollowerStore>(FOLLOWERS_FILE, {});
+    const store = await readJson<FollowerStore>(getFederationFollowersFile(), {});
     const current = store[userId] ?? [];
     store[userId] = [...current.filter((value) => value.actorId !== follower.actorId), follower];
-    await writeJson(FOLLOWERS_FILE, store);
+    await writeJson(getFederationFollowersFile(), store);
 }
 
 export async function removeFollower(userId: string, actorId: string): Promise<void> {
-    const store = await readJson<FollowerStore>(FOLLOWERS_FILE, {});
+    const store = await readJson<FollowerStore>(getFederationFollowersFile(), {});
     store[userId] = (store[userId] ?? []).filter((value) => value.actorId !== actorId);
-    await writeJson(FOLLOWERS_FILE, store);
+    await writeJson(getFederationFollowersFile(), store);
 }
 
 export async function storeIncomingActivity(activity: unknown): Promise<string> {
@@ -416,7 +425,7 @@ export async function storeIncomingActivity(activity: unknown): Promise<string> 
             ? activity.id
             : `${Date.now()}-${Math.random()}`;
     const digest = createHash("sha256").update(id, "utf8").digest("hex");
-    const file = path.join(INBOX_DIR, `${digest}.json`);
+    const file = path.join(getFederationInboxDirectory(), `${digest}.json`);
     await writeJson(file, JSON.parse(serialized));
     return file;
 }

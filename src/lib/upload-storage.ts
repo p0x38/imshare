@@ -1,15 +1,14 @@
 import path from "node:path";
 import type { ServerConfig } from "./config.js";
+import { resolveStorageDirectory, type StorageArea } from "./storage-directories.js";
 
-export type UploadStorageArea = "uploads" | "avatars";
+export type UploadStorageArea = Extract<StorageArea, "uploads" | "avatars">;
 
 export function uploadStorageDirectory(
     config: ServerConfig,
     area: UploadStorageArea = "uploads",
 ): string {
-    const configured =
-        area === "avatars" ? config.storage.avatarDirectory : config.storage.uploadDirectory;
-    return path.resolve(process.cwd(), configured ?? "data/uploads");
+    return resolveStorageDirectory(config, area);
 }
 
 export function resolveUploadStoragePath(directory: string, filename: string): string | null {
@@ -24,8 +23,9 @@ export function resolveUploadStoragePath(directory: string, filename: string): s
         relative === ".." ||
         relative.startsWith(`..${path.sep}`) ||
         path.isAbsolute(relative)
-    )
+    ) {
         return null;
+    }
 
     return target;
 }

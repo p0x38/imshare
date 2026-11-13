@@ -1,10 +1,13 @@
 import { createHash } from "node:crypto";
 import { mkdir, open as openFile, readdir, stat, unlink, rmdir } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
-import path from "node:path";
 import type { ServerConfig } from "./config.js";
 import { loadConfigSync } from "./config.js";
 import { observability } from "../instrumentation.js";
+import { resolveCacheDirectory } from "./storage-directories.js";
+import path from "node:path";
+
+export { resolveCacheDirectory };
 
 const DEFAULT_TTL = 30 * 86_400_000;
 
@@ -19,12 +22,6 @@ export function getCacheSettings(config?: ServerConfig): CacheSettings {
         ttl: settings?.ttl ?? DEFAULT_TTL,
         useHashedDirectory: settings?.useHashedDirectory ?? true,
     };
-}
-
-export function resolveCacheDirectory(config?: ServerConfig): string {
-    const storage = config?.storage ?? loadConfigSync().storage;
-    const dataDirectory = path.resolve(process.cwd(), storage.dataDirectory ?? "data");
-    return path.join(dataDirectory, "cache");
 }
 
 export async function ensureCacheDirectory(config?: ServerConfig): Promise<string> {

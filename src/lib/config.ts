@@ -10,7 +10,7 @@ export interface ServerConfig {
     server: { host: string; port: number; reverseProxied?: boolean; trustedProxies?: string[] };
     storage: {
         dataDirectory?: string;
-        uploadDirectory: string;
+        uploadDirectory?: string;
         avatarDirectory?: string;
         maxFileSize: number;
         cache?: {
@@ -139,8 +139,6 @@ const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
 const configPath = path.resolve(process.cwd(), CONFIG_FILE);
 const DEFAULTS = {
     storage: {
-        dataDirectory: "data",
-        avatarDirectory: "data/avatars",
         cache: {
             ttl: 30 * 86_400_000,
             useHashedDirectory: true,
@@ -318,8 +316,6 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
         },
         storage: {
             ...config.storage,
-            dataDirectory: config.storage.dataDirectory ?? DEFAULTS.storage.dataDirectory,
-            avatarDirectory: config.storage.avatarDirectory ?? DEFAULTS.storage.avatarDirectory,
             cache: {
                 ...DEFAULTS.storage.cache,
                 ...config.storage.cache,
@@ -391,10 +387,10 @@ function isServerConfig(value: unknown): value is ServerConfig {
         isObject(storage) &&
         (storage.dataDirectory === undefined ||
             (typeof storage.dataDirectory === "string" && storage.dataDirectory.length > 0)) &&
-        typeof storage.uploadDirectory === "string" &&
+        (storage.uploadDirectory === undefined ||
+            (typeof storage.uploadDirectory === "string" && storage.uploadDirectory.length > 0)) &&
         (storage.avatarDirectory === undefined ||
             (typeof storage.avatarDirectory === "string" && storage.avatarDirectory.length > 0)) &&
-        storage.uploadDirectory.length > 0 &&
         (storage.cache === undefined ||
             (isObject(storage.cache) &&
                 (storage.cache.ttl === undefined ||

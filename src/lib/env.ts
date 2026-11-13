@@ -1,4 +1,6 @@
 import "dotenv/config";
+import path from "node:path";
+import { resolveDataDirectory } from "./storage-directories.js";
 
 export type DatabaseProvider = "sqlite" | "postgresql";
 
@@ -30,9 +32,15 @@ if (databaseProvider !== "sqlite" && databaseProvider !== "postgresql")
     throw new Error("DATABASE_PROVIDER must be either sqlite or postgresql.");
 const selectedDatabaseProvider = databaseProvider as DatabaseProvider;
 
+const databaseUrl = optional("DATABASE_URL");
+
+if (selectedDatabaseProvider === "postgresql" && !databaseUrl) {
+    throw new Error("DATABASE_URL must be configured for PostgreSQL.");
+}
+
 export const env = {
     databaseProvider: selectedDatabaseProvider,
-    databaseUrl: required("DATABASE_URL"),
+    databaseUrl: databaseUrl ?? `file:${path.join(resolveDataDirectory(), "imshare.db")}`,
     betterAuthSecret: required("BETTER_AUTH_SECRET"),
     smtp: {
         host: optional("SMTP_HOST"),
