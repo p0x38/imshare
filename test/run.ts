@@ -51,7 +51,7 @@ function restoreEnvironment(): void {
 function getTestArguments(): string[] {
     switch (mode) {
         case "unit":
-            return ["exec", "vitest", "run"];
+            return ["exec", "vitest", "run", ...extraArgs];
 
         case "watch":
             return ["exec", "vitest"];
@@ -67,6 +67,19 @@ function getTestArguments(): string[] {
     }
 }
 
+function getPrismaSchema(): string {
+    switch (process.env.DATABASE_PROVIDER) {
+        case "sqlite":
+            return "prisma/sqlite/schema.prisma";
+
+        case "postgres":
+            return "prisma/postgresql/schema.prisma";
+
+        default:
+            throw new Error(`Unsupported database provider: ${process.env.DATABASE_PROVIDER}`);
+    }
+}
+
 async function main(): Promise<void> {
     mkdirSync(runDirectory, { recursive: true });
 
@@ -78,11 +91,10 @@ async function main(): Promise<void> {
     process.env.IMSHARE_CONFIG = "test/config.imshare";
 
     try {
-        // Generate a Prisma Client matching the temporary SQLite provider.
-        runPnpm(["exec", "prisma", "generate"]);
+        const schema = getPrismaSchema();
 
-        // Create the isolated test database schema.
-        runPnpm(["exec", "prisma", "migrate", "deploy"]);
+        runPnpm(["exec", "prisma", "generate", "--schema", schema]);
+        runPnpm(["exec", "prisma", "migrate", "deploy", "--schema", schema]);
 
         if (mode === "browser") {
             runPnpm(["build:client"]);
@@ -91,11 +103,10 @@ async function main(): Promise<void> {
             runPnpm(getTestArguments());
         }
     } finally {
-        // Restore the original environment and regenerate its Prisma Client.
         restoreEnvironment();
 
         try {
-            runPnpm(["exec", "prisma", "generate"]);
+            runPnpm(["exec", "prisma", "generate", "--schema", getPrismaSchema()]);
         } catch (error) {
             console.error(
                 "Failed to restore Prisma Client for the configured database provider.",
@@ -104,7 +115,6 @@ async function main(): Promise<void> {
             process.exitCode = 1;
         }
 
-        // Remove only this test run's temporary database.
         rmSync(runDirectory, { recursive: true, force: true });
     }
 }
