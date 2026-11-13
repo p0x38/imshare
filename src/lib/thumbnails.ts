@@ -35,7 +35,7 @@ export async function generateThumbHash(source: string): Promise<string> {
     }
 }
 
-export async function generateThumbnails(source: string, uploadId: string): Promise<void> {
+export async function generateThumbnails(source: string | Buffer, uploadId: string): Promise<void> {
     const cacheSettings = getCacheSettings();
     const cacheDir = await ensureCacheDirectory();
     const startedAt = process.hrtime.bigint();
@@ -77,7 +77,7 @@ export async function generateThumbnails(source: string, uploadId: string): Prom
     }
 }
 
-export function queueThumbnailGeneration(source: string, uploadId: string): void {
+export function queueThumbnailGeneration(source: string | Buffer, uploadId: string): void {
     setImmediate(() => {
         void generateThumbnails(source, uploadId).catch((error) => {
             console.error(`thumbnail generation failed for ${uploadId}`, error);

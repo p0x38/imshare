@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 import { thumbHashToRGBA } from "thumbhash";
@@ -283,8 +283,9 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply
                     .code(404)
                     .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+            let sourceContent: Buffer;
             try {
-                await access(source);
+                sourceContent = await readFile(source);
             } catch {
                 return reply
                     .code(404)
@@ -314,7 +315,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     },
                 });
             if (!transformed) {
-                const output = await readFile(source);
+                const output = sourceContent;
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
                 if (request.headers["if-none-match"] === etag) return reply.code(304).send();
                 reply.type(upload.mimeType);
@@ -346,8 +347,8 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     format === "webp" &&
                     [320, 640, 1280].includes(width)
                 )
-                    queueThumbnailGeneration(source, upload.id);
-                let pipeline = sharp(source, { animated: false });
+                    queueThumbnailGeneration(sourceContent, upload.id);
+                let pipeline = sharp(sourceContent, { animated: false });
                 if (width !== undefined || height !== undefined)
                     pipeline = pipeline.resize({ width, height, fit, withoutEnlargement: true });
                 if (format !== undefined) {
