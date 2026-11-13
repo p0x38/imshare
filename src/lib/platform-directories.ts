@@ -9,6 +9,10 @@ export interface PlatformDirectories {
     config: string;
 }
 
+export function getTemporaryDirectory(): string {
+    return path.join(os.tmpdir(), APPLICATION_NAME);
+}
+
 export function getPlatformDirectories(): PlatformDirectories {
     const homeDirectory = os.homedir();
 

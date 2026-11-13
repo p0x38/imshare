@@ -33,7 +33,8 @@
         "import:draft-images": "tsx src/tools/import-draft-images.ts",
         "migrate:cache": "tsx src/tools/migrate-cache.ts",
         "serve:unavailable": "tsx src/tools/serve-service-unavailable.ts",
-        "cache:prune": "tsx src/tools/prune-cache.ts"
+        "cache:prune": "tsx src/tools/prune-cache.ts",
+        "migrate:storage": "tsx scripts/migrate-storage.ts"
     },
     "keywords": [],
     "author": "p0x38",

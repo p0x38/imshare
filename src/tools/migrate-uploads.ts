@@ -6,6 +6,7 @@ import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import sharp from "sharp";
+import { resolveStorageDirectory } from "../lib/storage-directories.js";
 
 interface Options {
     apply: boolean;
@@ -143,7 +144,7 @@ async function findFileByHash(uploadDir: string, contentHash: string): Promise<s
 async function main(): Promise<void> {
     const options = parseOptions(process.argv.slice(2));
     const config = await loadConfig();
-    const uploadDir = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const uploadDir = resolveStorageDirectory(config, "uploads");
     const legacyUploadDir = path.resolve(process.cwd(), "uploads");
     const sourceDirectories = [
         uploadDir,

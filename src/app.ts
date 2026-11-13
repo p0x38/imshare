@@ -27,6 +27,7 @@ import {
     syncMeilisearchUserPosts,
 } from "./lib/meilisearch.js";
 import fastifyRateLimit from "@fastify/rate-limit";
+import { resolveStorageDirectory } from "./lib/storage-directories.js";
 
 const logLevel = process.env.NODE_ENV === "test" ? "error" : "info";
 
@@ -176,7 +177,7 @@ export async function buildApp() {
     const rootDir = process.cwd();
     const publicDir = path.join(rootDir, "public");
     const clientDistDir = path.join(rootDir, "dist", "client");
-    const uploadDir = path.resolve(rootDir, config.storage.uploadDirectory);
+    const uploadDir = resolveStorageDirectory(config, "uploads");
     app.decorate("observability", observability);
     observability.register(app);
     observability.setGaugeReader(async () => {

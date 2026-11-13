@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { createPrismaClient } from "../lib/database.js";
 import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
+import { resolveStorageDirectory } from "../lib/storage-directories.js";
 
 interface ImportMetadata {
     files: string[];
@@ -792,7 +793,7 @@ async function main(): Promise<void> {
     const options = parseOptions(process.argv.slice(2));
     const config = await loadConfig();
     const sourceDirectory = path.resolve(options.directory);
-    const uploadDirectory = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const uploadDirectory = resolveStorageDirectory(config, "uploads");
 
     const sourceStats = await stat(sourceDirectory).catch(() => undefined);
     if (!sourceStats?.isDirectory())

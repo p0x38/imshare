@@ -9,6 +9,7 @@ import { loadConfig } from "../lib/config.js";
 import { generateThumbHash } from "../lib/thumbnails.js";
 import { permalinkBase, type PermalinkIdType } from "../lib/post-permalink.js";
 import { GIF_SHARP_PIXEL_LIMIT, validateGifMetadata } from "../lib/gif-security.js";
+import { resolveStorageDirectory } from "../lib/storage-directories.js";
 
 const IMAGE_EXTENSIONS = new Map<string, string>([
     ["image/jpeg", ".jpg"],
@@ -416,7 +417,7 @@ async function createDraft(
 async function main(): Promise<void> {
     const options = parseOptions(process.argv.slice(2));
     const config = await loadConfig();
-    const uploadDirectory = path.resolve(process.cwd(), config.storage.uploadDirectory);
+    const uploadDirectory = resolveStorageDirectory(config, "uploads");
     const sourceFiles = options.directory
         ? await collectDirectoryFiles(path.resolve(options.directory), options.recursive)
         : options.files.map((file) => path.resolve(file));
@@ -491,7 +492,7 @@ async function main(): Promise<void> {
 
                 const result = await createDraft(
                     prisma,
-                    path.resolve(process.cwd(), config.storage.uploadDirectory),
+                    resolveStorageDirectory(config, "uploads"),
                     user.id,
                     image,
                 );

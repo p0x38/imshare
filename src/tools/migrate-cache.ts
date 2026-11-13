@@ -2,6 +2,7 @@ import { access, mkdir, readdir, rename, rmdir } from "node:fs/promises";
 import path from "node:path";
 import { loadConfig } from "../lib/config.js";
 import { getCacheSettings, resolveCacheDirectory, resolveCachePath } from "../lib/cache.js";
+import { resolveStorageDirectory } from "../lib/storage-directories.js";
 
 async function migrateDirectory(
     source: string,
@@ -42,7 +43,7 @@ async function migrateDirectory(
 async function main(): Promise<void> {
     const config = await loadConfig();
     const settings = getCacheSettings(config);
-    const legacySource = path.resolve(process.cwd(), config.storage.uploadDirectory, ".cache");
+    const legacySource = path.join(resolveStorageDirectory(config, "uploads"), ".cache");
     const cacheDirectory = resolveCacheDirectory(config);
 
     await mkdir(cacheDirectory, { recursive: true });
