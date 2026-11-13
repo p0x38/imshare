@@ -28,8 +28,11 @@ import {
 } from "./lib/meilisearch.js";
 import fastifyRateLimit from "@fastify/rate-limit";
 
+const logLevel = process.env.NODE_ENV === "test" ? "error" : "info";
+
 const logger = process.stdout.isTTY
     ? {
+          level: logLevel,
           transport: {
               target: "pino-pretty",
               options: {
@@ -40,7 +43,9 @@ const logger = process.stdout.isTTY
               },
           },
       }
-    : true;
+    : {
+          level: logLevel,
+      };
 
 function escapeAttribute(value: string) {
     return value.replace(
@@ -372,8 +377,12 @@ export async function buildApp() {
 
     app.addHook("onError", async (request, _reply, error) => {
         const statusCode = error.statusCode ?? 500;
+
+        if (statusCode < 500) return;
+
         const pathname = request.url.split("?", 1)[0] ?? "/";
         const route = request.routeOptions?.url ?? pathname;
+
         request.log.error(
             {
                 event: "http.error",
@@ -423,6 +432,19 @@ export async function buildApp() {
                   ? "delete"
                   : "update";
         observability.recordResourceOperation(resource, operation);
+    });
+
+    app.addHook("onResponse", async (request, reply) => {
+        if (reply.statusCode >= 500) {
+            request.log.error(
+                {
+                    statusCode: reply.statusCode,
+                    method: request.method,
+                    url: request.url,
+                },
+                "HTTP request failed",
+            );
+        }
     });
 
     app.addHook("onSend", async (request, reply, payload) => {
