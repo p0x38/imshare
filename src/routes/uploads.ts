@@ -437,7 +437,7 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 .code(404)
                 .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
 
-        const source = resolveUploadStoragePath(uploadDir, upload.filename);
+        const source = resolveUploadStoragePath(avatarDir, upload.filename);
         if (!source)
             return reply
                 .code(404)
