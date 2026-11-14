@@ -1,5 +1,9 @@
 # imshare
 
+[![CodeQL Advanced](https://github.com/p0x38/imshare/actions/workflows/codeql.yml/badge.svg)](https://github.com/p0x38/imshare/actions/workflows/codeql.yml)
+[![CI](https://github.com/p0x38/imshare/actions/workflows/ci.yml/badge.svg)](https://github.com/p0x38/imshare/actions/workflows/ci.yml)
+[![Release](https://github.com/p0x38/imshare/actions/workflows/release.yml/badge.svg)](https://github.com/p0x38/imshare/actions/workflows/release.yml)
+
 Self-hosted image archive and sharing server built with TypeScript, Fastify, Prisma, SQLite by default (optional PostgreSQL), Better Auth, and a small static frontend.
 
 ## Features
