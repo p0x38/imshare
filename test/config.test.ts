@@ -25,7 +25,7 @@ auth {
 test("validateConfigText applies storage and cache defaults", () => {
     const config = validateConfigText(requiredConfig);
 
-    expect(config.storage.dataDirectory).toBe("data");
+    expect(config.storage.dataDirectory).toBeUndefined();
     expect(config.storage.cache).toEqual({
         ttl: 30 * 86_400_000,
         useHashedDirectory: true,

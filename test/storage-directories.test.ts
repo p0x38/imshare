@@ -24,16 +24,41 @@ test("uses the configured data directory", () => {
     expect(resolveDataDirectory(configured)).toBe(path.resolve(process.cwd(), "contents"));
 });
 
+test("uses the platform data directory by default", () => {
+    const dataDirectory = resolveDataDirectory(config);
+
+    expect(path.isAbsolute(dataDirectory)).toBe(true);
+    expect(dataDirectory).not.toBe(path.resolve("data"));
+});
+
 test("environment override takes precedence over configuration", () => {
     vi.stubEnv("IMSHARE_DATA_DIR", "C:\\ImShareData");
 
-    expect(resolveDataDirectory(config)).toBe(path.resolve("C:\\ImShareData"));
+    const configured = {
+        storage: {
+            dataDirectory: "contents",
+            maxFileSize: 25 * 1024 * 1024,
+        },
+    } as ServerConfig;
+
+    expect(resolveDataDirectory(configured)).toBe(path.resolve("C:\\ImShareData"));
 });
 
-test("derives upload and avatar directories from the data root", () => {
+test("derives upload and avatar directories from the configured data root", () => {
+    const configured = {
+        storage: {
+            dataDirectory: "contents",
+            maxFileSize: 25 * 1024 * 1024,
+        },
+    } as ServerConfig;
+
     const dataDirectory = path.resolve("contents");
 
-    expect(resolveStorageDirectory(config, "uploads")).toBe(path.join(dataDirectory, "uploads"));
+    expect(resolveStorageDirectory(configured, "uploads")).toBe(
+        path.join(dataDirectory, "uploads"),
+    );
 
-    expect(resolveStorageDirectory(config, "avatars")).toBe(path.join(dataDirectory, "avatars"));
+    expect(resolveStorageDirectory(configured, "avatars")).toBe(
+        path.join(dataDirectory, "avatars"),
+    );
 });
