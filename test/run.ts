@@ -26,11 +26,13 @@ function runPnpm(args: string[]): void {
     };
 
     if (process.platform === "win32") {
-        execFileSync(
-            process.env.ComSpec ?? "cmd.exe",
-            ["/d", "/s", "/c", `pnpm ${args.join(" ")}`],
-            options,
-        );
+        const pnpmCliPath = process.env.npm_execpath;
+
+        if (!pnpmCliPath) {
+            throw new Error("Unable to locate pnpm CLI. Run this script through `pnpm`.");
+        }
+
+        execFileSync(process.execPath, [pnpmCliPath, ...args], options);
         return;
     }
 
