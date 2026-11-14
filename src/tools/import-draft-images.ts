@@ -301,42 +301,33 @@ async function createDraft(
         destination = await targetFilename(uploadDirectory, image);
         await mkdir(path.dirname(destination), { recursive: true });
 
-        let stored: Buffer;
-
         const destinationHandle = await open(destination, "wx").catch(
             (error: NodeJS.ErrnoException) => {
-                if (error.code === "EEXIST") return undefined;
+                if (error.code === "EEXIST") {
+                    throw new Error(
+                        "Destination image already exists without a matching upload record. " +
+                            "Inspect the file before retrying the import.",
+                    );
+                }
                 throw error;
             },
         );
 
-        if (destinationHandle) {
-            createdDestination = true;
+        createdDestination = true;
 
-            try {
-                await destinationHandle.writeFile(image.normalized);
-                stored = image.normalized;
-            } catch (error) {
-                await destinationHandle.close().catch(() => undefined);
-                await unlink(destination).catch(() => undefined);
-                throw error;
+        try {
+            await destinationHandle.writeFile(image.normalized);
+
+            const information = await destinationHandle.stat();
+            if (!information.isFile() || information.size !== image.normalized.byteLength) {
+                throw new Error("Destination image was not written completely.");
             }
 
             await destinationHandle.close();
-        } else {
-            const existingHandle = await open(destination, "r");
-
-            try {
-                stored = await existingHandle.readFile();
-            } finally {
-                await existingHandle.close();
-            }
-        }
-
-        const storedHash = createHash("sha256").update(stored).digest("hex");
-
-        if (storedHash !== image.contentHash) {
-            throw new Error("Destination image failed SHA-256 verification.");
+        } catch (error) {
+            await destinationHandle.close().catch(() => undefined);
+            await unlink(destination).catch(() => undefined);
+            throw error;
         }
 
         uploadId = randomUUID();
@@ -348,7 +339,7 @@ async function createDraft(
             if (!uploadId) throw new Error("Internal error: upload ID was not prepared.");
 
             if (!existing) {
-                const thumbhash = await generateThumbHash(destination!);
+                const thumbhash = await generateThumbHash(image.normalized);
 
                 await tx.upload.create({
                     data: {
