@@ -8,7 +8,7 @@ export default defineConfig({
     build: {
         outDir: "dist/client",
         emptyOutDir: true,
-        sourcemap: true,
+        sourcemap: "hidden",
         rolldownOptions: {
             input: {
                 home: path.resolve(process.cwd(), "src/client/entries/home.tsx"),
@@ -68,6 +68,11 @@ export default defineConfig({
                         {
                             name: "react",
                             test: /[/\\]node_modules[/\\](?:react|react-dom)[/\\]/,
+                            priority: 20,
+                        },
+                        {
+                            name: "mui-icons",
+                            test: /[/\\]node_modules[/\\]@mui[/\\]icons-material[/\\]/,
                             priority: 20,
                         },
                         {
