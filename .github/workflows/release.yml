@@ -24,6 +24,10 @@ jobs:
     release:
         name: Create release
         runs-on: ubuntu-latest
+        env:
+            DATABASE_URL: file:./ci.db
+            BETTER_AUTH_SECRET: ci-ci-onyx-only-only-boo-shebang
+            INSHARE_CONFIG: docs/config.sample.imshare
 
         if: github.ref == 'refs/heads/main'
 
