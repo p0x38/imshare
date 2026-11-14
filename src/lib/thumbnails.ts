@@ -12,7 +12,7 @@ import { observability } from "../instrumentation.js";
 
 const SIZES = [320, 640, 1280] as const;
 
-export async function generateThumbHash(source: string): Promise<string> {
+export async function generateThumbHash(source: string | Buffer): Promise<string> {
     const startedAt = process.hrtime.bigint();
     try {
         const { data, info } = await sharp(source)
