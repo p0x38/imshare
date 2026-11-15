@@ -32,7 +32,11 @@ function runPnpm(args: string[]): void {
             throw new Error("Unable to locate pnpm CLI. Run this script through `pnpm`.");
         }
 
-        execFileSync(process.execPath, [pnpmCliPath, ...args], options);
+        if (/\.exe$/i.test(pnpmCliPath)) {
+            execFileSync(pnpmCliPath, args, options);
+        } else {
+            execFileSync(process.execPath, [pnpmCliPath, ...args], options);
+        }
         return;
     }
 

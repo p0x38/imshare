@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import {
     generateApiToken,
+    parseApiTokenExpiry,
     parsePermissions,
     serializePermissions,
     validateTokenName,
@@ -8,14 +9,6 @@ import {
 import { prisma } from "../lib/auth.js";
 import { requireSessionUser, collection, ok } from "../lib/api.js";
 import { openapi, request, parameter, type OpenApiSchema } from "../lib/openapi-route.js";
-
-function parseExpiry(value: unknown): Date | null | undefined {
-    if (value === undefined) return undefined;
-    if (value === null || value === "") return null;
-    if (typeof value !== "string") return undefined;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) || date <= new Date() ? undefined : date;
-}
 
 function publicToken(token: {
     id: string;
@@ -118,16 +111,15 @@ export const apiTokenRoutes: FastifyPluginAsync = async (fastify) => {
             const body = request.body as Record<string, unknown>;
             const name = validateTokenName(body.name),
                 permissions = parsePermissions(body.permissions),
-                expiresAt = parseExpiry(body.expiresAt);
+                expiresAt =
+                    body.expiresAt === undefined ? null : parseApiTokenExpiry(body.expiresAt);
             if (!name || !permissions || expiresAt === undefined)
-                return reply
-                    .code(400)
-                    .send({
-                        error: {
-                            code: "INVALID_API_TOKEN",
-                            message: "Invalid token name, permissions, or expiration.",
-                        },
-                    });
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_API_TOKEN",
+                        message: "Invalid token name, permissions, or expiration.",
+                    },
+                });
             const generated = generateApiToken();
             const token = await prisma.apiToken.create({
                 data: {
@@ -166,11 +158,9 @@ export const apiTokenRoutes: FastifyPluginAsync = async (fastify) => {
             const { tokenId: id } = request.params as { tokenId: string };
             const token = await prisma.apiToken.findFirst({ where: { id, userId: user.id } });
             if (!token)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
+                });
             return ok(publicToken(token));
         },
     );
@@ -209,62 +199,52 @@ export const apiTokenRoutes: FastifyPluginAsync = async (fastify) => {
             const { tokenId: id } = request.params as { tokenId: string };
             const existing = await prisma.apiToken.findFirst({ where: { id, userId: user.id } });
             if (!existing)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
+                });
             const body = request.body as Record<string, unknown>,
                 data: Record<string, unknown> = {};
             if (body.name !== undefined) {
                 const name = validateTokenName(body.name);
                 if (!name)
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_API_TOKEN_NAME",
-                                message: "Token name is invalid.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_API_TOKEN_NAME",
+                            message: "Token name is invalid.",
+                        },
+                    });
                 data.name = name;
             }
             if (body.permissions !== undefined) {
                 const permissions = parsePermissions(body.permissions);
                 if (!permissions)
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_API_TOKEN_PERMISSIONS",
-                                message: "Token permissions are invalid.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_API_TOKEN_PERMISSIONS",
+                            message: "Token permissions are invalid.",
+                        },
+                    });
                 data.permissionsJson = serializePermissions(permissions);
             }
             if (body.expiresAt !== undefined) {
-                const expiresAt = parseExpiry(body.expiresAt);
+                const expiresAt = parseApiTokenExpiry(body.expiresAt);
                 if (expiresAt === undefined)
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_API_TOKEN_EXPIRY",
-                                message: "Expiration must be a future ISO 8601 date-time or null.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_API_TOKEN_EXPIRY",
+                            message: "Expiration must be a future ISO 8601 date-time or null.",
+                        },
+                    });
                 data.expiresAt = expiresAt;
             }
             if (body.enabled !== undefined) {
                 if (typeof body.enabled !== "boolean")
-                    return reply
-                        .code(400)
-                        .send({
-                            error: {
-                                code: "INVALID_API_TOKEN",
-                                message: "enabled must be a boolean.",
-                            },
-                        });
+                    return reply.code(400).send({
+                        error: {
+                            code: "INVALID_API_TOKEN",
+                            message: "enabled must be a boolean.",
+                        },
+                    });
                 data.enabled = body.enabled;
             }
             return ok(publicToken(await prisma.apiToken.update({ where: { id }, data })));
@@ -294,11 +274,9 @@ export const apiTokenRoutes: FastifyPluginAsync = async (fastify) => {
             const { tokenId: id } = request.params as { tokenId: string };
             const existing = await prisma.apiToken.findFirst({ where: { id, userId: user.id } });
             if (!existing)
-                return reply
-                    .code(404)
-                    .send({
-                        error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
-                    });
+                return reply.code(404).send({
+                    error: { code: "API_TOKEN_NOT_FOUND", message: "API token not found." },
+                });
             await prisma.apiToken.delete({ where: { id } });
             return reply.code(204).send();
         },
