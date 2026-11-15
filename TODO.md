@@ -201,6 +201,19 @@
 - [x] Document the generic upload endpoint, token scope, and response URL
 - [x] Test that upload tokens are accepted and unrelated scopes remain denied
 - [x] Add an end-to-end multipart image-upload and response-format test
+- [ ] Support PostyBirb post publishing through its Notification URL
+    - [ ] Review PostyBirb's text-only submission payload and notification behavior
+    - [ ] Define the API contract for external post creation
+    - [ ] Support text-only posts through the post creation API
+    - [ ] Map PostyBirb title, description, text content, tags, and rating metadata
+    - [ ] Support publication status and visibility with safe, documented defaults
+    - [ ] Authenticate using API tokens with `posts: write` permission
+    - [ ] Validate payloads and return useful error responses
+    - [ ] Return the created post URL and identifier
+    - [ ] Handle duplicate submissions and retry behavior
+    - [ ] Add API and integration tests for text-only and media-associated posts
+    - [ ] Document PostyBirb Notification URL configuration
+    - [ ] Update the PostyBirb setup guide with both URL configurations
 
 ## Moderation / safety
 
