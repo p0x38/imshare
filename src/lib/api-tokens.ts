@@ -19,6 +19,15 @@ const TOKEN_RANDOM_BYTES = 32;
 const MAX_NAME_LENGTH = 100;
 const MAX_PERMISSION_KEYS = 32;
 
+export function parseApiTokenExpiry(value: unknown, now = new Date()): Date | null | undefined {
+    if (value === undefined) return undefined;
+    if (value === null || value === "") return null;
+    if (typeof value !== "string") return undefined;
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) || date <= now ? undefined : date;
+}
+
 const tokenContexts = new WeakMap<FastifyRequest, ApiTokenAuth | null>();
 const tokenPresence = new WeakMap<FastifyRequest, boolean>();
 
