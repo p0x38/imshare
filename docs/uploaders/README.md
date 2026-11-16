@@ -12,6 +12,9 @@ imshare supports external applications through its authenticated image upload AP
 
 ## Requirements
 
-All integrations require an API token with the `uploads: write` permission.
+- ShareX and image-upload clients require an API token with `uploads: write`.
+- PostyBirb's Notification URL requires `posts: write`.
+- PostyBirb's File URL requires both `posts: write` and `uploads: write`.
+- To use both PostyBirb URLs with one token, grant it both permissions.
 
 See the individual guides for configuration instructions.
