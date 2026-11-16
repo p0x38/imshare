@@ -55,37 +55,37 @@ test("PostyBirb creates image and text posts", async () => {
     const generated = generateApiToken();
     const postsOnly = generateApiToken();
 
-    await prisma.user.create({
-        data: {
-            id: userId,
-            name: "PostyBirb Test",
-            email: `${suffix}@example.test`,
-        },
-    });
-
-    await prisma.apiToken.createMany({
-        data: [
-            {
-                name: "PostyBirb",
-                tokenPrefix: generated.prefix,
-                tokenHash: generated.hash,
-                permissionsJson: JSON.stringify({
-                    posts: ["write"],
-                    uploads: ["write", "delete"],
-                }),
-                userId,
-            },
-            {
-                name: "Posts only",
-                tokenPrefix: postsOnly.prefix,
-                tokenHash: postsOnly.hash,
-                permissionsJson: JSON.stringify({ posts: ["write"] }),
-                userId,
-            },
-        ],
-    });
-
     try {
+        await prisma.user.create({
+            data: {
+                id: userId,
+                name: "PostyBirb Test",
+                email: `${suffix}@example.test`,
+            },
+        });
+
+        await prisma.apiToken.createMany({
+            data: [
+                {
+                    name: "PostyBirb",
+                    tokenPrefix: generated.prefix,
+                    tokenHash: generated.hash,
+                    permissionsJson: JSON.stringify({
+                        posts: ["write"],
+                        uploads: ["write", "delete"],
+                    }),
+                    userId,
+                },
+                {
+                    name: "Posts only",
+                    tokenPrefix: postsOnly.prefix,
+                    tokenHash: postsOnly.hash,
+                    permissionsJson: JSON.stringify({ posts: ["write"] }),
+                    userId,
+                },
+            ],
+        });
+
         const sharp = (await import("sharp")).default;
         const firstImage = await sharp({
             create: {
@@ -245,13 +245,38 @@ test("PostyBirb creates image and text posts", async () => {
             isNSFW: false,
             allowDownload: false,
         });
-    } finally {
-        await prisma.post.deleteMany({ where: { userId } });
 
+        const notificationDenied = await app.inject({
+            method: "POST",
+            url: "/api/v1/posts/notification",
+            headers: {
+                "content-type": `multipart/form-data; boundary=${textBoundary}`,
+            },
+            payload: textPayload,
+        });
+        expect(notificationDenied.statusCode).toBe(401);
+
+        const emptyImageBoundary = `${suffix}-empty`;
+        const emptyImageResponse = await app.inject({
+            method: "POST",
+            url: "/api/v1/posts/postybirb",
+            headers: {
+                authorization: `Bearer ${generated.token}`,
+                "content-type": `multipart/form-data; boundary=${emptyImageBoundary}`,
+            },
+            payload: makeMultipart(emptyImageBoundary, [
+                { name: "title", value: "Empty image post" },
+            ]),
+        });
+        expect(emptyImageResponse.statusCode).toBe(400);
+    } finally {
         const uploads = await prisma.upload.findMany({
             where: { userId },
             select: { id: true },
         });
+
+        await prisma.post.deleteMany({ where: { userId } });
+
         for (const upload of uploads) {
             await app.inject({
                 method: "DELETE",
