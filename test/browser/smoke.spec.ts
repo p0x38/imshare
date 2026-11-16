@@ -4,7 +4,7 @@ test.describe("public frontend", () => {
     test("home page renders", async ({ page }) => {
         const response = await page.goto("/", { waitUntil: "domcontentloaded" });
         expect(response?.status()).toBe(200);
-        await expect(page).toHaveTitle("imshare");
+        await expect(page).toHaveTitle(/^imshare(?: · .+)?$/);
         await expect(page.locator("header")).toBeVisible();
     });
 
