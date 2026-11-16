@@ -269,6 +269,7 @@ export async function buildApp() {
             (method === "POST" || method === "PUT" || method === "PATCH" || method === "DELETE") &&
             pathname.startsWith("/api/v1/") &&
             pathname !== "/api/v1/uploads" &&
+            pathname !== "/api/v1/posts/postybirb" &&
             applyRateLimit(
                 apiMutationLimiter,
                 300,
@@ -277,7 +278,10 @@ export async function buildApp() {
             )
         )
             return reply;
-        if (request.method === "POST" && pathname === "/api/v1/uploads") {
+        if (
+            request.method === "POST" &&
+            (pathname === "/api/v1/uploads" || pathname === "/api/v1/posts/postybirb")
+        ) {
             const daily = uploadDailyLimiter.consume(key);
             const burst = uploadBurstLimiter.consume(key);
 

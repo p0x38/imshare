@@ -19,7 +19,7 @@ import {
     postMergeBodyJsonSchema,
     postUpdateBodyJsonSchema,
 } from "./schemas-zod.js";
-import { openapi } from "../lib/openapi-route.js";
+import { openapi, request as openApiRequest, parameter } from "../lib/openapi-route.js";
 
 function publicPostWhere() {
     return {
@@ -68,6 +68,57 @@ function permalinkData(body: {
     if (permalinkIdType === "custom" && !customPostId)
         throw new Error("A custom post ID is required when using the custom ID type.");
     return { permalinkPattern, permalinkIdType, customPostId };
+}
+
+function decodePostyBirbEntities(value: string): string {
+    return value.replace(
+        /&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi,
+        (entity, reference: string) => {
+            const normalized = reference.toLowerCase();
+
+            if (normalized.startsWith("#")) {
+                const codePoint = normalized.startsWith("#x")
+                    ? Number.parseInt(normalized.slice(2), 16)
+                    : Number.parseInt(normalized.slice(1), 10);
+
+                if (
+                    !Number.isInteger(codePoint) ||
+                    codePoint <= 0 ||
+                    codePoint > 0x10ffff ||
+                    (codePoint >= 0xd800 && codePoint <= 0xdfff)
+                )
+                    return entity;
+
+                return String.fromCodePoint(codePoint);
+            }
+
+            return (
+                {
+                    amp: "&",
+                    lt: "<",
+                    gt: ">",
+                    quot: '"',
+                    apos: "'",
+                    nbsp: " ",
+                }[normalized] ?? entity
+            );
+        },
+    );
+}
+
+function postyBirbDescriptionToText(value: string): string {
+    const text = value
+        .replace(/<!--[\s\S]*?-->/g, "")
+        .replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
+        .replace(/<br\s\/?>/gi, "\n")
+        .replace(/<\/(?:div|p|li|h[1-6]|blockquote|pre|section|article|ul|ol|tr|td|th)\s*>/gi, "\n")
+        .replace(/<[^>]*>/g, "");
+
+    return decodePostyBirbEntities(text)
+        .replace(/\r\n?/g, "\n")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
 }
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {
@@ -240,6 +291,279 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 });
             });
             return reply.code(201).send(ok(postView(post)));
+        },
+    );
+
+    fastify.post(
+        "/v1/posts/notification",
+        {
+            schema: openapi({
+                tags: "Posts",
+                summary: "Create text post from PostyBirb",
+                description:
+                    "Accepts PostyBirb Custom Website Notification URL submissions using multipart/form-data. Creates a text post without uploading files.",
+                parameters: [
+                    parameter.query(
+                        "status",
+                        {
+                            type: "string",
+                            enum: ["draft", "published"],
+                            default: "draft",
+                        },
+                        {
+                            description: "Publication state. Defaults to draft.",
+                        },
+                    ),
+                    parameter.query(
+                        "visibility",
+                        {
+                            type: "string",
+                            enum: ["public", "unlisted", "private"],
+                            default: "private",
+                        },
+                        {
+                            description: "Post visibility. Defaults to private.",
+                        },
+                    ),
+                ],
+                requestBody: openApiRequest.multipart(
+                    {
+                        type: "object",
+                        properties: {
+                            title: { type: "string", maxLength: 500 },
+                            description: { type: "string", maxLength: 100000 },
+                            tags: { type: "string" },
+                            rating: { type: "string" },
+                        },
+                        required: ["title", "description"],
+                        additionalProperties: true,
+                    },
+                    { required: true },
+                ),
+            }),
+        },
+        async (request, reply) => {
+            const user = await requireUser(request, reply);
+            if (!user) return;
+
+            if (!request.isMultipart()) {
+                return reply.code(415).send({
+                    error: {
+                        code: "UNSUPPORTED_MEDIA_TYPE",
+                        message: "Expected multipart/form-data.",
+                    },
+                });
+            }
+
+            const query = request.query as Record<string, unknown>;
+            const statusOption = query.status ?? "draft";
+            const visibilityOption = query.visibility ?? "private";
+
+            if (statusOption !== "draft" && statusOption !== "published") {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_POST_STATUS",
+                        message: "status must be draft or published.",
+                    },
+                });
+            }
+
+            if (
+                visibilityOption !== "public" &&
+                visibilityOption !== "unlisted" &&
+                visibilityOption !== "private"
+            ) {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_POST_VISIBILITY",
+                        message: "visibility must be public, unlisted, or private.",
+                    },
+                });
+            }
+
+            const fields = new Map<string, string>();
+            const supportedFields = new Set(["title", "description", "tags", "rating"]);
+
+            let hasFile = false;
+            let duplicateField: string | undefined;
+            let truncatedField: string | undefined;
+
+            try {
+                const parts = request.parts({
+                    limits: {
+                        files: 1,
+                        fields: 16,
+                        fieldSize: 128 * 1024,
+                    },
+                });
+
+                for await (const part of parts) {
+                    if (part.type === "file") {
+                        hasFile = true;
+                        part.file.resume();
+                        continue;
+                    }
+
+                    if (!supportedFields.has(part.fieldname)) continue;
+
+                    if (part.valueTruncated) {
+                        truncatedField = part.fieldname;
+                        continue;
+                    }
+
+                    if (fields.has(part.fieldname)) {
+                        duplicateField = part.fieldname;
+                        continue;
+                    }
+
+                    if (typeof part.value !== "string") {
+                        return reply.code(400).send({
+                            error: {
+                                code: "INVALID_FIELD",
+                                message: `The "${part.fieldname}" field must be text.`,
+                            },
+                        });
+                    }
+                    fields.set(part.fieldname, part.value);
+                }
+            } catch (error) {
+                request.log.warn({ err: error }, "Failed to parse PostyBirb notification");
+
+                const statusCode =
+                    error && typeof error === "object"
+                        ? (error as { statusCode?: number }).statusCode
+                        : undefined;
+
+                return reply.code(statusCode === 413 ? 413 : 400).send({
+                    error: {
+                        code: statusCode === 413 ? "MULTIPART_LIMIT_EXCEEDED" : "INVALID_MULTIPART",
+                        message: "Unable to parse the PostyBirb notification.",
+                    },
+                });
+            }
+
+            if (hasFile) {
+                return reply.code(400).send({
+                    error: {
+                        code: "FILES_NOT_SUPPORTED",
+                        message:
+                            "The Notification URL only accepts text submissions. Configure the File URL separately for image uploads.",
+                    },
+                });
+            }
+
+            if (duplicateField) {
+                return reply.code(400).send({
+                    error: {
+                        code: "DUPLICATE_FIELD",
+                        message: `The "${duplicateField}" field must only be provided once.`,
+                    },
+                });
+            }
+
+            if (truncatedField) {
+                return reply.code(413).send({
+                    error: {
+                        code: "FIELD_TOO_LARGE",
+                        message: `The "${truncatedField}" field exceeds the allowed size.`,
+                    },
+                });
+            }
+
+            const title = fields.get("title")?.trim() ?? "";
+            const textContent = postyBirbDescriptionToText(fields.get("description") ?? "");
+
+            if (!title || title.length > 500) {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_TITLE",
+                        message: "A title between 1 and 500 characters is required.",
+                    },
+                });
+            }
+
+            if (!textContent || textContent.length > 100000) {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_DESCRIPTION",
+                        message:
+                            "A non-empty description of at most 100,000 characters is required.",
+                    },
+                });
+            }
+
+            const tagNames = (fields.get("tags") ?? "")
+                .split(",")
+                .map((tag) => tag.trim())
+                .filter(Boolean);
+
+            if (tagNames.length > 100 || tagNames.some((tag) => tag.length > 100)) {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_TAGS",
+                        message:
+                            "A maximum of 100 tags is allowed, with at most 100 characters per tag.",
+                    },
+                });
+            }
+
+            const rating = fields.get("rating")?.trim().toUpperCase() || "GENERAL";
+
+            if (rating.length > 32) {
+                return reply.code(400).send({
+                    error: {
+                        code: "INVALID_RATING",
+                        message: "The rating field is too long.",
+                    },
+                });
+            }
+
+            const tags = await findTags(tagNames);
+            const publishedAt = statusOption === "published" ? new Date() : null;
+
+            const created = await prisma.post.create({
+                data: {
+                    title,
+                    contentType: "text",
+                    textContent,
+                    allowDownload: false,
+                    status: statusOption,
+                    visibility: visibilityOption,
+                    publishedAt,
+                    scheduledAt: null,
+                    isNSFW: rating !== "GENERAL",
+                    userId: user.id,
+                    permalinkPattern: "user",
+                    permalinkIdType: "internalId",
+                    tags: tags.length
+                        ? {
+                              create: tags.map((tag) => ({
+                                  tagId: tag.id,
+                              })),
+                          }
+                        : undefined,
+                },
+                include: postInclude,
+            });
+
+            const post = await prisma.post.update({
+                where: { id: created.id },
+                data: {
+                    permalinkKey: permalinkBase(created, "internalId"),
+                },
+                include: postInclude,
+            });
+
+            const view = postView(post);
+
+            return reply.code(200).send(
+                ok({
+                    id: post.id,
+                    url: view.permalink,
+                    status: post.status,
+                    visibility: post.visibility,
+                }),
+            );
         },
     );
 

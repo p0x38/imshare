@@ -2,6 +2,7 @@ export interface Upload {
     id: string;
     url: string;
     alt?: string | null;
+    sourceUrls?: string[];
     filename?: string;
     originalName?: string;
     mimeType?: string;

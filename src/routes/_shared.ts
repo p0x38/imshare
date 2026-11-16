@@ -3,6 +3,7 @@ import { prisma } from "../lib/auth.js";
 import { postPermalink } from "../lib/post-permalink.js";
 import { userBadges } from "../lib/user-badges.js";
 export { ok } from "../lib/api.js";
+import { readPostyBirbUploadMetadata } from "../lib/postybirb.js";
 
 export const postInclude = {
     user: {
@@ -79,16 +80,22 @@ export function postView(post: any) {
         commentCount: post._count?.comments ?? 0,
         category: post.category,
         tags: post.tags.map((x: any) => x.tag),
-        uploads: post.uploads.map((x: any) => ({
-            id: x.id,
-            filename: x.filename,
-            originalName: x.originalName,
-            mimeType: x.mimeType,
-            size: x.size,
-            createdAt: x.createdAt,
-            thumbhash: x.thumbhash,
-            url: `/v1/posts/image/${encodeURIComponent(x.id)}`,
-        })),
+        uploads: post.uploads.map((x: any) => {
+            const metadata = readPostyBirbUploadMetadata(x.metadataJson);
+
+            return {
+                id: x.id,
+                filename: x.filename,
+                originalName: x.originalName,
+                mimeType: x.mimeType,
+                size: x.size,
+                createdAt: x.createdAt,
+                thumbHash: x.thumbhash,
+                alt: metadata.alt,
+                sourceUrls: metadata.sourceUrls,
+                url: `/v1/posts/image/${encodeURIComponent(x.id)}`,
+            };
+        }),
         reactions: reactionCounts,
     };
 }

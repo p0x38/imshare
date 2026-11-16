@@ -201,19 +201,28 @@
 - [x] Document the generic upload endpoint, token scope, and response URL
 - [x] Test that upload tokens are accepted and unrelated scopes remain denied
 - [x] Add an end-to-end multipart image-upload and response-format test
-- [ ] Support PostyBirb post publishing through its Notification URL
-    - [ ] Review PostyBirb's text-only submission payload and notification behavior
-    - [ ] Define the API contract for external post creation
-    - [ ] Support text-only posts through the post creation API
-    - [ ] Map PostyBirb title, description, text content, tags, and rating metadata
-    - [ ] Support publication status and visibility with safe, documented defaults
+- [ ] Support PostyBirb post publishing through its Custom Website integration
+    - [x] Review PostyBirb's text-only submission payload and notification behavior
+    - [x] Review PostyBirb's File URL submission payload and batch behavior
+    - [x] Define separate API contracts for text and image post creation
+    - [ ] Support text-only posts through the Notification URL
+    - [ ] Support image posts through the File URL
+        - [ ] Accept and validate multiple image files per submission
+        - [ ] Create one image post for each submitted file batch
+        - [ ] Store uploaded images and associate them with the created post
+        - [ ] Map per-image alt text metadata
+        - [ ] Map per-image source URL metadata
+    - [ ] Map PostyBirb title, description, tags, and rating metadata
+    - [ ] Support publication status and visibility with safe defaults
     - [ ] Authenticate using API tokens with `posts: write` permission
     - [ ] Validate payloads and return useful error responses
     - [ ] Return the created post URL and identifier
     - [ ] Handle duplicate submissions and retry behavior
-    - [ ] Add API and integration tests for text-only and media-associated posts
+    - [ ] Add API and integration tests for text-only submissions
+    - [ ] Add integration tests for single-image and multi-image submissions
+    - [ ] Test metadata association across image batches
     - [ ] Document PostyBirb Notification URL configuration
-    - [ ] Update the PostyBirb setup guide with both URL configurations
+    - [ ] Document PostyBirb File URL configuration
 
 ## Moderation / safety
 
