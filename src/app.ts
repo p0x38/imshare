@@ -28,7 +28,8 @@ import {
 } from "./lib/meilisearch.js";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { resolveStorageDirectory } from "./lib/storage-directories.js";
-import { generateSeoMetadata, generateSeoTitle, truncateDescription } from "./utils/seo.js";
+import { generateSeoMetadata, truncateDescription } from "./utils/seo.js";
+import { escapeMeta } from "./utils/html.js";
 import { resolveRequestOrigin } from "./utils/request.js";
 import { postIdsForSearchSync } from "./utils/meilisearch.js";
 import { analyticsBody, analyticsHead } from "./utils/analytics.js";
@@ -505,7 +506,7 @@ export async function buildApp() {
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
 
                     if (post.uploads[0])
-                        metaImage = `${origin}/api/v1/posts/og-image/${encodeURIComponent(post.uploads[0].id)}`;
+                        metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/og`;
 
                     metaType = "article";
 
@@ -668,6 +669,7 @@ export async function buildApp() {
             description: metaDescription,
             canonical,
             siteName: config.site.name,
+            twitterSite: config.site.twitterSite,
             image: metaImage || undefined,
             imageAlt: metaTitle,
             imageWidth: metaImage.endsWith("/og") ? 1200 : undefined,
@@ -685,14 +687,25 @@ export async function buildApp() {
         let enhanced = payload;
 
         if (!enhanced.includes('property="og:title"')) {
-            enhanced = enhanced.replace(
-                /<title>[\s\S]*?<\/title>/i,
-                `<title>${generateSeoTitle(metaTitle, config.site.name)}</title>`,
-            );
+            enhanced = enhanced.replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, "");
+            enhanced = enhanced.replace(/<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>/gi, "");
 
             enhanced = enhanced.replace(/<\/head>/i, `${tags}${analyticsHead(config)}</head>`);
         } else if (crawlerDirectives) {
             enhanced = enhanced.replace(/<\/head>/i, `${crawlerDirectives}</head>`);
+        }
+
+        if (metaType === "article") {
+            const fallback = [
+                "<noscript>",
+                "<main>",
+                `<h1>${escapeMeta(metaTitle)}</h1>`,
+                `<p>${escapeMeta(metaDescription)}</p>`,
+                "</main>",
+                "</noscript>",
+            ].join("");
+
+            enhanced = enhanced.replace(/(<div id="post"><\/div>)/i, `${fallback}$1`);
         }
 
         if (!isReactPage && !enhanced.includes('src="/components.js"'))

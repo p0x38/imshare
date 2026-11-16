@@ -23,7 +23,7 @@ export interface ServerConfig {
             };
         };
     };
-    site: { name: string; version: string; description?: string };
+    site: { name: string; version: string; description?: string; twitterSite?: string };
     admin?: {
         local?: {
             enabled?: boolean;
@@ -325,7 +325,11 @@ function normalizeConfig(config: ServerConfig): ServerConfig {
                 },
             },
         },
-        site: { ...config.site, description: config.site.description ?? DEFAULTS.site.description },
+        site: {
+            ...config.site,
+            description: config.site.description ?? DEFAULTS.site.description,
+            twitterSite: config.site.twitterSite?.trim() || undefined,
+        },
         admin: {
             ...DEFAULTS.admin,
             ...config.admin,

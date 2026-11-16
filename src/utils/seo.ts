@@ -5,6 +5,7 @@ export interface SeoMetadata {
     description: string;
     canonical: string;
     siteName: string;
+    twitterSite?: string;
     image?: string;
     imageAlt?: string;
     imageWidth?: number;
@@ -83,6 +84,9 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
         `<meta name="twitter:card" content="${metadata.image ? "summary_large_image" : "summary"}">`,
         `<meta name="twitter:title" content="${escapeMeta(metadata.title)}">`,
         `<meta name="twitter:description" content="${escapeMeta(description)}">`,
+        metadata.twitterSite
+            ? `<meta name="twitter:site" content="${escapeAttribute(metadata.twitterSite)}">`
+            : "",
 
         metadata.image
             ? `<meta name="twitter:image" content="${escapeAttribute(metadata.image)}">`
