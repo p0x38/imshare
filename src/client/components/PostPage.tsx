@@ -755,7 +755,6 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
             .then((response) => {
                 if (!active) return;
                 setPost(response.data);
-                document.title = `${response.data.title || "Untitled"} · imshare`;
             })
             .catch((cause) => {
                 if (active)
@@ -921,7 +920,12 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                                     <CardMedia
                                                         component="img"
                                                         image={displayImageUrl(upload)}
-                                                        alt={upload.alt || post.title || ""}
+                                                        alt={
+                                                            upload.alt?.trim() ||
+                                                            post.title?.trim() ||
+                                                            upload.originalName ||
+                                                            "Post image"
+                                                        }
                                                         sx={{
                                                             maxHeight: "80vh",
                                                             objectFit: "contain",
