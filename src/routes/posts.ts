@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
+import { postyBirbDescriptionToText } from "../lib/postybirb.js";
 import {
     collection,
     getSession,
@@ -68,66 +69,6 @@ function permalinkData(body: {
     if (permalinkIdType === "custom" && !customPostId)
         throw new Error("A custom post ID is required when using the custom ID type.");
     return { permalinkPattern, permalinkIdType, customPostId };
-}
-
-function decodePostyBirbEntities(value: string): string {
-    return value.replace(
-        /&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp);/gi,
-        (entity, reference: string) => {
-            const normalized = reference.toLowerCase();
-
-            if (normalized.startsWith("#")) {
-                const codePoint = normalized.startsWith("#x")
-                    ? Number.parseInt(normalized.slice(2), 16)
-                    : Number.parseInt(normalized.slice(1), 10);
-
-                if (
-                    !Number.isInteger(codePoint) ||
-                    codePoint <= 0 ||
-                    codePoint > 0x10ffff ||
-                    (codePoint >= 0xd800 && codePoint <= 0xdfff)
-                )
-                    return entity;
-
-                return String.fromCodePoint(codePoint);
-            }
-
-            return (
-                {
-                    amp: "&",
-                    lt: "<",
-                    gt: ">",
-                    quot: '"',
-                    apos: "'",
-                    nbsp: " ",
-                }[normalized] ?? entity
-            );
-        },
-    );
-}
-
-function postyBirbDescriptionToText(value: string): string {
-    let text = value;
-    let previous: string;
-
-    do {
-        previous = text;
-        text = text
-            .replace(/<!--[\s\S]*?-->/g, "")
-            .replace(/<(script|style|iframe|object)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
-            .replace(/<br\s\/?>/gi, "\n")
-            .replace(
-                /<\/(?:div|p|li|h[1-6]|blockquote|pre|section|article|ul|ol|tr|td|th)\s*>/gi,
-                "\n",
-            )
-            .replace(/<[^>]*>/g, "");
-    } while (text !== previous);
-
-    return decodePostyBirbEntities(text)
-        .replace(/\r\n?/g, "\n")
-        .replace(/[ \t]+\n/g, "\n")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
 }
 
 export const postRoutes: FastifyPluginAsync = async (fastify) => {

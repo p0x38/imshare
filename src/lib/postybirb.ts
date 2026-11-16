@@ -1,3 +1,5 @@
+import { Parser } from "htmlparser2";
+
 export interface PostyBirbUploadMetadata {
     alt: string | null;
     sourceUrls: string[];
@@ -9,68 +11,66 @@ function asRecord(value: unknown): Record<string, unknown> {
         : {};
 }
 
-function decodeHtmlEntities(value: string): string {
-    return value.replace(
-        /&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos|nbsp|rsquo|lsquo|rdquo|ldquo|mdash|ndash|hellip);/gi,
-        (entity, reference: string) => {
-            const key = reference.toLowerCase();
+export function postyBirbDescriptionToText(value: string): string {
+    const ignoredElements = new Set(["script", "style", "iframe", "object", "svg", "noscript"]);
+    const blockElements = new Set([
+        "address",
+        "article",
+        "blockquote",
+        "div",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "li",
+        "ol",
+        "p",
+        "pre",
+        "section",
+        "table",
+        "tr",
+        "ul",
+    ]);
 
-            if (key.startsWith("#")) {
-                const codePoint = key.startsWith("#x")
-                    ? Number.parseInt(key.slice(2), 16)
-                    : Number.parseInt(key.slice(1), 10);
+    let text = "";
+    let ignoredDepth = 0;
 
-                if (
-                    !Number.isInteger(codePoint) ||
-                    codePoint <= 0 ||
-                    codePoint > 0x10ffff ||
-                    (codePoint >= 0xd800 && codePoint <= 0xdfff)
-                ) {
-                    return entity;
+    const parser = new Parser(
+        {
+            onopentag(name) {
+                if (ignoredDepth > 0) {
+                    if (ignoredElements.has(name)) ignoredDepth++;
+                    return;
                 }
 
-                return String.fromCodePoint(codePoint);
-            }
+                if (ignoredElements.has(name)) {
+                    ignoredDepth = 1;
+                    return;
+                }
 
-            return (
-                {
-                    amp: "&",
-                    lt: "<",
-                    gt: ">",
-                    quot: '"',
-                    apos: "'",
-                    nbsp: " ",
-                    rsquo: "’",
-                    lsquo: "‘",
-                    rdquo: "”",
-                    ldquo: "“",
-                    mdash: "—",
-                    ndash: "–",
-                    hellip: "…",
-                }[key] ?? entity
-            );
+                if (name === "br") text += "\n";
+            },
+            ontext(value) {
+                if (ignoredDepth === 0) text += value;
+            },
+            onclosetag(name) {
+                if (ignoredDepth > 0) {
+                    if (ignoredElements.has(name)) ignoredDepth--;
+                    return;
+                }
+
+                if (blockElements.has(name)) text += "\n";
+            },
         },
+        { decodeEntities: true },
     );
-}
 
-export function postyBirbDescriptionToText(value: string): string {
-    let text = value;
-    let previous: string;
+    parser.end(value);
 
-    do {
-        previous = text;
-        text = text
-            .replace(/<!--[\s\S]*?-->/g, "")
-            .replace(/<(script|style|iframe|object|svg|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
-            .replace(/<br\s*\/?>/gi, "\n")
-            .replace(
-                /<\/(?:div|p|li|h[1-6]|blockquote|pre|section|article|ul|ol|tr|td|th)\s*>/gi,
-                "\n",
-            )
-            .replace(/<[^>]*>/g, "");
-    } while (text !== previous);
-
-    return decodeHtmlEntities(text)
+    return text
+        .replace(/\r\n?/g, "\n")
         .replace(/\u00a0/g, " ")
         .replace(/[ \t]+\n/g, "\n")
         .replace(/\n[ \t]+/g, "\n")

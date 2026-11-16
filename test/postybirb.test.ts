@@ -1,8 +1,9 @@
-import { afterAll, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vitest";
 
 const { prisma } = await import("../src/lib/auth.js");
 const { generateApiToken } = await import("../src/lib/api-tokens.js");
 const { buildApp } = await import("../src/app.js");
+const { postyBirbDescriptionToText } = await import("../src/lib/postybirb.js");
 
 afterAll(async () => {
     await prisma.$disconnect();
@@ -293,3 +294,17 @@ test("PostyBirb creates image and text posts", async () => {
         await app.close();
     }
 }, 30_000);
+
+describe("postyBirbDescriptionToText", () => {
+    test("removes script elements", () => {
+        expect(postyBirbDescriptionToText("<script>alert(1)</script><p>Safe text</p>")).toBe(
+            "Safe text",
+        );
+    });
+
+    test("decodes HTML entities and preserves block separation", () => {
+        expect(
+            postyBirbDescriptionToText("<div>First &amp; second</div><div>Third&nbsp;line</div>"),
+        ).toBe("First & second\nThird line");
+    });
+});
