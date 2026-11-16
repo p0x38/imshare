@@ -19,6 +19,8 @@ import {
 import { openapi, parameter } from "../lib/openapi-route.js";
 import { observability } from "../instrumentation.js";
 import { resolveCrawlerPolicy } from "../lib/crawler-policy.js";
+import { resolveUploadStoragePath } from "../lib/upload-storage.js";
+import { generateOgImage } from "../utils/og-image.js";
 
 const MAX_DIMENSION = 4096;
 const MIN_DIMENSION = 16;
@@ -194,6 +196,184 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             }
         },
     );
+
+    fastify.get(
+        "/v1/posts/image/:uploadId/og",
+        {
+            schema: openapi({
+                tags: "Images",
+                summary: "Get Open Graph image",
+                description:
+                    "Returns a cached 1200×630 JPEG preview generated from a publicly accessible post image.",
+                operationId: "getOpenGraphImage",
+                parameters: [uploadId, parameter.header("if-none-match", { type: "string" })],
+                security: [{}],
+                responses: {
+                    "200": { description: "1200×630 JPEG preview." },
+                    "304": { description: "Preview has not changed." },
+                    "404": { $ref: "#/components/responses/NotFound" },
+                    "415": { description: "Image processing failed." },
+                },
+            }),
+            config: {
+                rateLimit: {
+                    max: 12_500,
+                    timeWindow: "1 minute",
+                    groupId: "public-image-reads",
+                    onExceeded: () => {
+                        observability.recordRateLimitHit("api_image_get");
+                    },
+                },
+            },
+        },
+        async (request, reply) => {
+            const { uploadId } = request.params as { uploadId: string };
+
+            const upload = await prisma.upload.findUnique({
+                where: { id: uploadId },
+                select: {
+                    filename: true,
+                    storageArea: true,
+                    post: {
+                        select: {
+                            status: true,
+                            visibility: true,
+                            hiddenAt: true,
+                            scheduledAt: true,
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                            user: {
+                                select: {
+                                    allowSearchEngineIndex: true,
+                                    allowAiCrawler: true,
+                                    allowImageCrawler: true,
+                                    allowCustomCrawler: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            const post = upload?.post;
+
+            if (
+                !upload ||
+                upload.storageArea !== "uploads" ||
+                !post ||
+                post.status !== "published" ||
+                !["public", "unlisted"].includes(post.visibility) ||
+                post.hiddenAt ||
+                (post.scheduledAt && post.scheduledAt > new Date())
+            ) {
+                return reply.code(404).send({
+                    error: {
+                        code: "IMAGE_NOT_FOUND",
+                        message: "Open Graph image not found.",
+                    },
+                });
+            }
+
+            const crawlerPolicy = resolveCrawlerPolicy(post.user, post);
+
+            if (!crawlerPolicy.image) {
+                reply.header("X-Robots-Tag", "noindex");
+            }
+
+            const cachePath = resolveCachePath(
+                cacheDir,
+                `${uploadId}-og-1200x630.jpg`,
+                cacheSettings.useHashedDirectory,
+            );
+
+            try {
+                const cached = await readCacheFile(cachePath, cacheSettings.ttl);
+
+                if (cached) {
+                    const etag = setCacheHeaders(reply, cached, cacheSettings.ttl);
+
+                    if (request.headers["if-none-match"] === etag) {
+                        return reply.code(304).send();
+                    }
+
+                    observability.recordImageServed();
+                    return reply.type("image/jpeg").send(cached);
+                }
+            } catch {
+                observability.recordCacheError("og-image");
+            }
+
+            const sourcePath = resolveUploadStoragePath(uploadDir, upload.filename);
+
+            if (!sourcePath) {
+                return reply.code(404).send({
+                    error: {
+                        code: "IMAGE_NOT_FOUND",
+                        message: "Image file not found.",
+                    },
+                });
+            }
+
+            let source: Buffer;
+
+            try {
+                source = await readFile(sourcePath);
+            } catch {
+                return reply.code(404).send({
+                    error: {
+                        code: "IMAGE_NOT_FOUND",
+                        message: "Image file not found.",
+                    },
+                });
+            }
+
+            const startedAt = process.hrtime.bigint();
+
+            try {
+                const output = await generateOgImage(source);
+
+                await mkdir(path.dirname(cachePath), { recursive: true });
+
+                await writeFile(cachePath, output, { flag: "wx" })
+                    .then(() => {
+                        observability.recordCacheWrite("og-image", output.byteLength);
+                    })
+                    .catch((error) => {
+                        if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
+
+                        observability.recordCacheError("og-image");
+                        throw error;
+                    });
+
+                observability.recordImageProcessing(
+                    Number(process.hrtime.bigint() - startedAt) / 1_000_000_000,
+                    "og-image",
+                );
+
+                const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
+
+                if (request.headers["if-none-match"] === etag) {
+                    return reply.code(304).send();
+                }
+
+                observability.recordImageServed();
+                return reply.type("image/jpeg").send(output);
+            } catch (error) {
+                observability.recordImageProcessingError("og-image");
+                request.log.error(error);
+
+                return reply.code(415).send({
+                    error: {
+                        code: "OG_IMAGE_GENERATION_FAILED",
+                        message: "The Open Graph image could not be generated.",
+                    },
+                });
+            }
+        },
+    );
+
     fastify.get(
         "/v1/posts/image/:uploadId",
         {
