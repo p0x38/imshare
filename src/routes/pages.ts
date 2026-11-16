@@ -13,7 +13,7 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 const assetsDir = path.resolve(currentDir, "../assets");
 const templatePath = path.join(assetsDir, "templates", "page.html");
-const faviconPath = path.resolve(assetsDir, "../../public/favicon.svg");
+const faviconPath = path.resolve(assetsDir, "favicon.svg");
 
 const pageTemplate = readFile(templatePath, "utf8");
 
