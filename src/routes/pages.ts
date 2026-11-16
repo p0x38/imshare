@@ -13,10 +13,9 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
 const assetsDir = path.resolve(currentDir, "../assets");
 const templatePath = path.join(assetsDir, "templates", "page.html");
-const faviconPath = path.resolve(currentDir, "../../public/favicon.svg");
+const faviconPath = path.resolve(assetsDir, "../../public/favicon.svg");
 
 const pageTemplate = readFile(templatePath, "utf8");
-const favicon = readFile(faviconPath);
 
 const reactPage = async (entry: string, rootId: string, attributes = ""): Promise<string> => {
     const template = await pageTemplate;
@@ -28,10 +27,9 @@ const reactPage = async (entry: string, rootId: string, attributes = ""): Promis
 };
 
 async function createAppIcon(size: number): Promise<Buffer> {
-    return sharp(await favicon)
-        .resize(size, size)
-        .png()
-        .toBuffer();
+    const favicon = await readFile(faviconPath);
+
+    return sharp(favicon).resize(size, size).png().toBuffer();
 }
 
 const baseUrl = resolveBaseUrl(loadConfigSync());
@@ -235,12 +233,14 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     for (const [from, to] of Object.entries(redirects))
         fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
 
-    fastify.get("/favicon.svg", async (_request, reply) =>
-        reply
+    fastify.get("/favicon.svg", async (_request, reply) => {
+        const favicon = await readFile(faviconPath);
+
+        return reply
             .type("image/svg+xml")
             .header("Cache-Control", "public, max-age=604800")
-            .send(await favicon),
-    );
+            .send(favicon);
+    });
 
     fastify.get("/apple-touch-icon.png", async (_request, reply) => {
         const icon = await createAppIcon(180);
