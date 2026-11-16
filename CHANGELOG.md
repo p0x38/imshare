@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.7.0](https://github.com/p0x38/imshare/compare/v1.6.0...v1.7.0) (2026-11-16)
+
+### Features
+
+* **images:** improve image processing for social previews ([600f986](https://github.com/p0x38/imshare/commit/600f986497d3f1601cca5f1467ef29b912edcbb4))
+
+### Bug Fixes
+
+* **posts:** improve post page metadata and image accessibility ([61efd2e](https://github.com/p0x38/imshare/commit/61efd2e6fdd6f163f1e5596455942916680df2ee))
+* use assetsDir for faviconPath resolving ([eb72c6a](https://github.com/p0x38/imshare/commit/eb72c6acabe57c4c5a93715b2cbcf257379bd175))
+
 ## [1.6.0](https://github.com/p0x38/imshare/compare/v1.5.1...v1.6.0) (2026-11-16)
 
 ### Features
