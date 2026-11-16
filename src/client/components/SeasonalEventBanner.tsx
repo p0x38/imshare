@@ -10,14 +10,14 @@ export default function SeasonalEventBanner() {
         case "godzilla-day":
             return (
                 <Alert severity="info">
-                    Happy Godzilla Day! Celebrate the King of the Monsters.
+                    Happy {event.name}! Celebrate the King of the Monsters.
                 </Alert>
             );
 
         case "april-fools":
             return (
                 <Alert severity="warning">
-                    Happy April Fools' Day! Something feels a little unusual...
+                    Happy {event.name}! Something feels a little unusual...
                 </Alert>
             );
 

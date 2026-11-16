@@ -20,9 +20,12 @@ import { App, useColorMode, useLanguage, useThemeSettings } from "../components/
 import "../i18n";
 import type { AccentColor } from "../theme";
 import { Page } from "../components/Page";
+import { SeasonalEventSettings } from "../components/SeasonalEventSettings";
 import {
+    getSeasonalEventConfigs,
     getSeasonalEventOverride,
     setSeasonalEventOverride,
+    type SeasonalEventConfig,
     type SeasonalEventOverride,
 } from "../../lib/seasonal-events";
 
@@ -32,17 +35,32 @@ function SettingsPage() {
     const { language, setLanguage } = useLanguage();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
     const [saved, setSaved] = useState(false);
+    const [storageError, setStorageError] = useState(false);
 
     const [seasonalEventOverride, setSeasonalEventOverrideState] =
         useState<SeasonalEventOverride>(getSeasonalEventOverride);
+    const [seasonalEventConfigs, setSeasonalEventConfigsState] =
+        useState<SeasonalEventConfig[]>(getSeasonalEventConfigs);
 
     const updateSeasonalEventOverride = (value: SeasonalEventOverride) => {
+        if (!setSeasonalEventOverride(value)) {
+            setStorageError(true);
+            return;
+        }
+
         setSeasonalEventOverrideState(value);
-        setSeasonalEventOverride(value);
         saveNotice();
     };
 
-    const saveNotice = () => setSaved(true);
+    const saveNotice = () => {
+        setSaved(true);
+        setStorageError(false);
+    };
+
+    const handleSeasonalEventConfigSave = () => {
+        setSeasonalEventConfigsState(getSeasonalEventConfigs());
+        saveNotice();
+    };
 
     return (
         <Page>
@@ -53,6 +71,11 @@ function SettingsPage() {
                 {saved ? (
                     <Alert severity="success" onClose={() => setSaved(false)}>
                         {t("settingsSaved")}
+                    </Alert>
+                ) : null}
+                {storageError ? (
+                    <Alert severity="error" onClose={() => setStorageError(false)}>
+                        {t("seasonalEventStorageError")}
                     </Alert>
                 ) : null}
                 <Card variant="outlined">
@@ -206,18 +229,18 @@ function SettingsPage() {
                                         {t("seasonalEventAutomatic")}
                                     </MenuItem>
                                     <MenuItem value="none">{t("seasonalEventNone")}</MenuItem>
-                                    <MenuItem value="godzilla-day">
-                                        {t("seasonalEventGodzillaDay")}
-                                    </MenuItem>
-                                    <MenuItem value="april-fools">
-                                        {t("seasonalEventAprilFools")}
-                                    </MenuItem>
+                                    {seasonalEventConfigs.map((event) => (
+                                        <MenuItem key={event.id} value={event.id}>
+                                            {event.name}
+                                        </MenuItem>
+                                    ))}
                                 </Select>
 
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
                                     {t("seasonalEventOverrideHelp")}
                                 </Typography>
                             </FormControl>
+                            <SeasonalEventSettings onSave={handleSeasonalEventConfigSave} />
                         </Stack>
                     </CardContent>
                 </Card>
