@@ -28,6 +28,10 @@ import {
 } from "./lib/meilisearch.js";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { resolveStorageDirectory } from "./lib/storage-directories.js";
+import { generateSeoMetadata, generateSeoTitle, truncateDescription } from "./utils/seo.js";
+import { resolveRequestOrigin } from "./utils/request.js";
+import { postIdsForSearchSync } from "./utils/meilisearch.js";
+import { analyticsBody, analyticsHead } from "./utils/analytics.js";
 
 const logLevel = process.env.NODE_ENV === "test" ? "error" : "info";
 
@@ -47,92 +51,6 @@ const logger = process.stdout.isTTY
     : {
           level: logLevel,
       };
-
-function escapeAttribute(value: string) {
-    return value.replace(
-        /[&<>"']/g,
-        (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
-    );
-}
-
-function postIdsForSearchSync(request: FastifyRequest, payload: unknown): string[] {
-    const pathname = request.url.split("?", 1)[0] ?? "/";
-    if (!/^\/api\/v1\/(?:posts|texts|admin\/posts)(?:\/|$)/.test(pathname)) return [];
-    if (!["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) return [];
-
-    const ids = new Set<string>();
-    const add = (value: unknown) => {
-        if (typeof value === "string" && value) ids.add(value);
-    };
-    const params = request.params as Record<string, unknown> | undefined;
-    add(params?.postId);
-    add(params?.textId);
-
-    const body = request.body as Record<string, unknown> | undefined;
-    if (Array.isArray(body?.postIds)) body.postIds.forEach(add);
-
-    if (typeof payload === "string") {
-        try {
-            const envelope = JSON.parse(payload) as { data?: unknown };
-            if (Array.isArray(envelope.data)) {
-                for (const post of envelope.data) {
-                    if (post && typeof post === "object") add((post as Record<string, unknown>).id);
-                }
-            } else if (envelope.data && typeof envelope.data === "object") {
-                const data = envelope.data as Record<string, unknown>;
-                add(data.id);
-                if (Array.isArray(data.postIds)) data.postIds.forEach(add);
-            }
-        } catch {
-            return [...ids];
-        }
-    }
-    return [...ids];
-}
-
-function escapeMeta(value: string | null | undefined) {
-    return escapeAttribute((value ?? "").replace(/\s+/g, " ").trim());
-}
-
-function resolveRequestOrigin(
-    config: Awaited<ReturnType<typeof loadConfig>>,
-    request: FastifyRequest,
-) {
-    const configuredOrigin = config.auth.baseUrl?.trim();
-    if (configuredOrigin) {
-        try {
-            return new URL(configuredOrigin).origin;
-        } catch {
-            // Fall back to the request origin when the configured base URL is invalid.
-        }
-    }
-    return `${request.protocol}://${request.hostname}`;
-}
-
-function analyticsHead(config: Awaited<ReturnType<typeof loadConfig>>): string {
-    const gaId = config.analytics?.googleAnalyticsMeasurementId?.trim();
-    const gtmId = config.analytics?.googleTagManagerContainerId?.trim();
-    const parts: string[] = [];
-    if (gaId) {
-        const id = escapeAttribute(gaId);
-        parts.push(
-            `<script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${id}');</script>`,
-        );
-    }
-    if (gtmId) {
-        const id = escapeAttribute(gtmId);
-        parts.push(
-            `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${id}');</script>`,
-        );
-    }
-    return parts.join("");
-}
-
-function analyticsBody(config: Awaited<ReturnType<typeof loadConfig>>): string {
-    const gtmId = config.analytics?.googleTagManagerContainerId?.trim();
-    if (!gtmId) return "";
-    return `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(gtmId)}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`;
-}
 
 export async function buildApp() {
     const config = await loadConfig();
@@ -517,8 +435,10 @@ export async function buildApp() {
         )
             return payload;
         const title = payload.match(/<title>([^<]*)<\/title>/i)?.[1] ?? config.site.name;
-        const description = `${config.site.name} — self-hosted image archive and sharing server`;
-        const origin = `${request.protocol}://${request.hostname}`;
+        const description =
+            config.site.description?.trim() ||
+            `${config.site.name} — self-hosted image archive and sharing server`;
+        const origin = resolveRequestOrigin(config, request);
         let canonical = `${origin}${request.url.split("?", 1)[0]}`;
         const currentPath = request.url.split("?", 1)[0] ?? "/";
         let metaTitle = title;
@@ -526,8 +446,9 @@ export async function buildApp() {
         let metaAuthor = "";
         let metaKeywords = "";
         let metaImage = "";
-        let metaType = "website";
+        let metaType: "website" | "article" = "website";
         let crawlerDirectives = "";
+
         const postMatch = currentPath.match(/^\/posts\/([^/]+)\/?$/);
         const userPermalinkMatch = currentPath.match(/^\/[^/]+\/[^/]+\/?$/);
         if (postMatch) {
@@ -574,13 +495,20 @@ export async function buildApp() {
                 if (post) {
                     canonical = `${origin}${postPermalink(post, post.user)}`;
                     metaTitle = post.title?.trim() || config.site.name;
-                    metaDescription =
-                        post.description?.trim() || post.title?.trim() || config.site.name;
+                    metaDescription = truncateDescription(
+                        post.description?.trim() ||
+                            post.title?.trim() ||
+                            config.site.description ||
+                            config.site.name,
+                    );
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
+
                     if (post.uploads[0])
-                        metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
+                        metaImage = `${origin}/api/v1/posts/og-image/${encodeURIComponent(post.uploads[0].id)}`;
+
                     metaType = "article";
+
                     crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
                 }
             } catch {
@@ -708,7 +636,7 @@ export async function buildApp() {
                 metaAuthor = post.user.name;
                 metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                 if (post.uploads[0])
-                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}`;
+                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/og`;
                 metaType = "article";
             } else {
                 const user = await prisma.user.findFirst({
@@ -735,33 +663,38 @@ export async function buildApp() {
                 }
             }
         }
-        const tags = [
-            `<meta name="description" content="${escapeMeta(metaDescription)}">`,
-            metaAuthor ? `<meta name="author" content="${escapeMeta(metaAuthor)}">` : "",
-            `<meta name="generator" content="${escapeAttribute(config.site.name)}">`,
-            metaKeywords ? `<meta name="keywords" content="${escapeMeta(metaKeywords)}">` : "",
-            `<meta property="og:type" content="${escapeAttribute(metaType)}">`,
-            `<meta property="og:site_name" content="${escapeAttribute(config.site.name)}">`,
-            `<meta property="og:title" content="${escapeMeta(metaTitle)}">`,
-            `<meta property="og:description" content="${escapeMeta(metaDescription)}">`,
-            `<meta property="og:url" content="${escapeAttribute(canonical)}">`,
-            metaImage ? `<meta property="og:image" content="${escapeAttribute(metaImage)}">` : "",
-            metaImage
-                ? `<meta property="og:image:secure_url" content="${escapeAttribute(metaImage)}">`
-                : "",
-            `<link rel="canonical" href="${escapeAttribute(canonical)}">`,
+        const tags = generateSeoMetadata({
+            title: metaTitle,
+            description: metaDescription,
+            canonical,
+            siteName: config.site.name,
+            image: metaImage || undefined,
+            imageAlt: metaTitle,
+            imageWidth: metaImage.endsWith("/og") ? 1200 : undefined,
+            imageHeight: metaImage.endsWith("/og") ? 630 : undefined,
+            author: metaAuthor || undefined,
+            keywords: metaKeywords || undefined,
+            type: metaType,
+            locale: "en_US",
             crawlerDirectives,
-        ].join("");
+        });
+
         const isReactPage = /<script type="module" src="\/client\/[^\"]+"><\/script>/i.test(
             payload,
         );
         let enhanced = payload;
 
         if (!enhanced.includes('property="og:title"')) {
+            enhanced = enhanced.replace(
+                /<title>[\s\S]*?<\/title>/i,
+                `<title>${generateSeoTitle(metaTitle, config.site.name)}</title>`,
+            );
+
             enhanced = enhanced.replace(/<\/head>/i, `${tags}${analyticsHead(config)}</head>`);
         } else if (crawlerDirectives) {
             enhanced = enhanced.replace(/<\/head>/i, `${crawlerDirectives}</head>`);
         }
+
         if (!isReactPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
                 /<\/head>/i,
