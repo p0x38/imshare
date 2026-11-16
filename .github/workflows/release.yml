@@ -55,6 +55,9 @@ jobs:
                   git config user.name "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
+            - name: Install Playwright browsers
+              run: pnpm exec playwright install --with-deps chromium
+
             - name: Run checks
               run: pnpm check
 
