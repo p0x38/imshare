@@ -54,8 +54,12 @@ function decodeHtmlEntities(value: string): string {
 }
 
 export function postyBirbDescriptionToText(value: string): string {
-    return decodeHtmlEntities(
-        value
+    let text = value;
+    let previous: string;
+
+    do {
+        previous = text;
+        text = text
             .replace(/<!--[\s\S]*?-->/g, "")
             .replace(/<(script|style|iframe|object|svg|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
             .replace(/<br\s*\/?>/gi, "\n")
@@ -63,8 +67,10 @@ export function postyBirbDescriptionToText(value: string): string {
                 /<\/(?:div|p|li|h[1-6]|blockquote|pre|section|article|ul|ol|tr|td|th)\s*>/gi,
                 "\n",
             )
-            .replace(/<[^>]*>/g, ""),
-    )
+            .replace(/<[^>]*>/g, "");
+    } while (text !== previous);
+
+    return decodeHtmlEntities(text)
         .replace(/\u00a0/g, " ")
         .replace(/[ \t]+\n/g, "\n")
         .replace(/\n[ \t]+/g, "\n")
