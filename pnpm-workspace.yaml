@@ -2,6 +2,7 @@ allowBuilds:
     "@prisma/engines": true
     better-sqlite3: true
     esbuild: true
+    fs-ext-extra-prebuilt: true
     msgpackr-extract: true
     prisma: true
     protobufjs: true

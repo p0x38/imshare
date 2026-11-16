@@ -1,5 +1,6 @@
 import "./instrumentation.js";
-import { readFileSync, unlinkSync, writeFileSync } from "node:fs";
+import { closeSync, openSync } from "node:fs";
+import { createRequire } from "node:module";
 import { prisma } from "./lib/auth.js";
 import { loadConfig } from "./lib/config.js";
 import { getRegistrationToken } from "./lib/registration-token.js";
@@ -9,28 +10,46 @@ import { startLocalAdminProxy } from "./local-admin.js";
 import { startCacheCleanup } from "./lib/cache/cleanup.js";
 import { startFederationInboxCleanup } from "./lib/federation/inbox/cleanup.js";
 
+const require = createRequire(import.meta.url);
+const fsExt = require("fs-ext-extra-prebuilt") as typeof import("fs-ext-extra-prebuilt");
+
 const lockPath = ".lock";
+let lockFd: number | undefined;
 
 function acquireLock(): void {
+    const fd = openSync(lockPath, "a+");
+
     try {
-        writeFileSync(lockPath, `${process.pid}\n`, {
-            encoding: "utf8",
-            flag: "wx",
-        });
-    } catch (error) {
-        if ((error as NodeJS.ErrnoException).code == "EEXIST") {
-            throw new Error(
-                "An instance lock already exists. Check for a running instance and remove the stale .lock file if necessary.",
-            );
+        if (process.platform === "win32") {
+            const flags =
+                fsExt.constants.LOCKFILE_EXCLUSIVE_LOCK | fsExt.constants.LOCKFILE_FAIL_IMMEDIATELY;
+
+            fsExt.lockFileExSync(fd, flags, 0, 0, 1, 0);
+        } else {
+            fsExt.flockSync(fd, "exnb");
         }
-        throw error;
+
+        lockFd = fd;
+    } catch (error) {
+        try {
+            closeSync(fd);
+        } catch {}
+
+        throw new Error(
+            "Unable to acquire the instance lock. Another imshare instance may already be running.",
+            { cause: error },
+        );
     }
 }
 
 function releaseLock(): void {
+    if (lockFd === undefined) return;
+
     try {
-        if (readFileSync(lockPath, "utf8").trim() === String(process.pid)) unlinkSync(lockPath);
+        closeSync(lockFd);
     } catch {}
+
+    lockFd = undefined;
 }
 
 acquireLock();
