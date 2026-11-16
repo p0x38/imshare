@@ -4,9 +4,35 @@ import { loadConfigSync, resolveBaseUrl } from "../lib/config.js";
 import { hasRole } from "../lib/permissions.js";
 import { prisma } from "../lib/auth.js";
 import { postPermalink } from "../lib/post-permalink.js";
+import sharp from "sharp";
+import path from "node:path";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 
-const reactPage = (entry: string, rootId: string, attributes = "") =>
-    `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /><meta name="theme-color" content="#1976d2" /><link rel="icon" href="/favicon.svg" type="image/svg+xml" /><title>imshare</title><style>html,body{margin:0;min-height:100%}body{background:#fff;color:#111}@media(prefers-color-scheme:dark){body{background:#121212;color:#fff}}#app-loading{min-height:100vh;display:grid;place-items:center;box-sizing:border-box;padding:24px;font:400 14px/1.5 system-ui,sans-serif}#app-loading-content{display:flex;align-items:center;gap:12px;opacity:.72}#app-loading-spinner{width:20px;height:20px;box-sizing:border-box;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:app-loading-spin 700ms linear infinite}@keyframes app-loading-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#app-loading-spinner{animation-duration:1400ms}}</style></head><body ${attributes}><div id="app-loading" role="status" aria-live="polite"><div id="app-loading-content"><span id="app-loading-spinner" aria-hidden="true"></span><span>Loading…</span></div></div><div id="${rootId}"></div><script type="module" src="/client/${entry}.js"></script></body></html>`;
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+
+const assetsDir = path.resolve(currentDir, "../assets");
+const templatePath = path.join(assetsDir, "templates", "page.html");
+const faviconPath = path.resolve(currentDir, "../../public/favicon.svg");
+
+const pageTemplate = readFile(templatePath, "utf8");
+const favicon = readFile(faviconPath);
+
+const reactPage = async (entry: string, rootId: string, attributes = ""): Promise<string> => {
+    const template = await pageTemplate;
+
+    return template
+        .replaceAll("{{BODY_ATTRIBUTES}}", attributes)
+        .replaceAll("{{ROOT_ID}}", rootId)
+        .replaceAll("{{ENTRY}}", entry);
+};
+
+async function createAppIcon(size: number): Promise<Buffer> {
+    return sharp(await favicon)
+        .resize(size, size)
+        .png()
+        .toBuffer();
+}
 
 const baseUrl = resolveBaseUrl(loadConfigSync());
 const baseUrlHostname = new URL(baseUrl).hostname.toLowerCase();
@@ -94,7 +120,7 @@ async function renderPostOrRedirect(request: FastifyRequest, reply: FastifyReply
         if (permalinkPost && (await canViewPost(request, permalinkPost)))
             return reply.redirect("/posts/" + encodeURIComponent(id) + "/", 302);
     }
-    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+    return reply.type("text/html; charset=utf-8").send(await reactPage("post", "post"));
 }
 
 async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyReply) {
@@ -129,14 +155,14 @@ async function renderUserPostPermalink(request: FastifyRequest, reply: FastifyRe
     const permalink = postPermalink(post, post.user);
     const currentPath = request.url.split("?", 1)[0] ?? "/";
     if (currentPath !== permalink) return reply.redirect(permalink, 302);
-    return reply.type("text/html; charset=utf-8").send(reactPage("post", "post"));
+    return reply.type("text/html; charset=utf-8").send(await reactPage("post", "post"));
 }
-const maintenancePage = (reply: FastifyReply) =>
+const maintenancePage = async (reply: FastifyReply) =>
     reply
         .code(503)
         .header("Retry-After", "300")
         .type("text/html; charset=utf-8")
-        .send(reactPage("maintenance", "maintenance-page"));
+        .send(await reactPage("maintenance", "maintenance-page"));
 
 export const pageRoutes: FastifyPluginAsync = async (fastify) => {
     const render =
@@ -145,7 +171,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
             if (isMaintenanceMode(request)) return maintenancePage(reply);
             return reply
                 .type("text/html; charset=utf-8")
-                .send(reactPage(entry, rootId, attributes));
+                .send(await reactPage(entry, rootId, attributes));
         };
     const requireAdminPage =
         (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
@@ -156,7 +182,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
                 prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
             );
             if (!user || !hasRole(user.role, "admin")) return reply.code(403).send("Forbidden");
-            return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId));
+            return reply.type("text/html; charset=utf-8").send(await reactPage(entry, rootId));
         };
     const requireModeratorPage =
         (entry: string, rootId: string) => async (request: FastifyRequest, reply: FastifyReply) => {
@@ -167,7 +193,7 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
                 prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }),
             );
             if (!user || !hasRole(user.role, "moderator")) return reply.code(403).send("Forbidden");
-            return reply.type("text/html; charset=utf-8").send(reactPage(entry, rootId));
+            return reply.type("text/html; charset=utf-8").send(await reactPage(entry, rootId));
         };
     const redirects: Record<string, string> = {
         "/login": "/account/login/",
@@ -205,15 +231,63 @@ export const pageRoutes: FastifyPluginAsync = async (fastify) => {
         "/admin/settings": "/admin/settings/",
         "/admin/analytics": "/admin/analytics/",
     };
+
     for (const [from, to] of Object.entries(redirects))
         fastify.get(from, async (_request, reply) => reply.redirect(to, 300));
+
     fastify.get("/favicon.svg", async (_request, reply) =>
         reply
             .type("image/svg+xml")
-            .send(
-                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#1976d2"/><path fill="#fff" d="M16 17h32v8H24v7h20v8H24v7h24v8H16z"/></svg>',
-            ),
+            .header("Cache-Control", "public, max-age=604800")
+            .send(await favicon),
     );
+
+    fastify.get("/apple-touch-icon.png", async (_request, reply) => {
+        const icon = await createAppIcon(180);
+
+        return reply.type("image/png").header("Cache-Control", "public, max-age=604800").send(icon);
+    });
+
+    fastify.get("/icon-192.png", async (_request, reply) => {
+        const icon = await createAppIcon(192);
+
+        return reply.type("image/png").header("Cache-Control", "public, max-age=604800").send(icon);
+    });
+
+    fastify.get("/icon-512.png", async (_request, reply) => {
+        const icon = await createAppIcon(512);
+
+        return reply.type("image/png").header("Cache-Control", "public, max-age=604800").send(icon);
+    });
+
+    fastify.get("/site.webmanifest", async (_request, reply) => {
+        const config = loadConfigSync();
+
+        return reply
+            .type("application/manifest+json")
+            .header("Cache-Control", "public, max-age=86400")
+            .send({
+                name: config.site.name,
+                short_name: config.site.name.slice(0, 12),
+                start_url: "/",
+                display: "standalone",
+                background_color: "#ffffff",
+                theme_color: "#1976d2",
+                icons: [
+                    {
+                        src: "/icon-192.png",
+                        sizes: "192x192",
+                        type: "image/png",
+                    },
+                    {
+                        src: "/icon-512.png",
+                        sizes: "512x512",
+                        type: "image/png",
+                    },
+                ],
+            });
+    });
+
     fastify.get("/favicon.ico", async (_request, reply) => reply.redirect("/favicon.svg", 302));
     fastify.get("/", render("home", "home-page"));
     fastify.get("/account/", render("account", "account-page"));
