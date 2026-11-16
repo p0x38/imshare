@@ -5,8 +5,10 @@ import {
     CardContent,
     FormControl,
     FormControlLabel,
+    MenuItem,
     Radio,
     RadioGroup,
+    Select,
     Stack,
     Switch,
     Typography,
@@ -18,6 +20,11 @@ import { App, useColorMode, useLanguage, useThemeSettings } from "../components/
 import "../i18n";
 import type { AccentColor } from "../theme";
 import { Page } from "../components/Page";
+import {
+    getSeasonalEventOverride,
+    setSeasonalEventOverride,
+    type SeasonalEventOverride,
+} from "../../lib/seasonal-events";
 
 function SettingsPage() {
     const { t } = useTranslation();
@@ -25,6 +32,15 @@ function SettingsPage() {
     const { language, setLanguage } = useLanguage();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
     const [saved, setSaved] = useState(false);
+
+    const [seasonalEventOverride, setSeasonalEventOverrideState] =
+        useState<SeasonalEventOverride>(getSeasonalEventOverride);
+
+    const updateSeasonalEventOverride = (value: SeasonalEventOverride) => {
+        setSeasonalEventOverrideState(value);
+        setSeasonalEventOverride(value);
+        saveNotice();
+    };
 
     const saveNotice = () => setSaved(true);
 
@@ -158,6 +174,49 @@ function SettingsPage() {
                                         label={t("orange")}
                                     />
                                 </RadioGroup>
+                            </FormControl>
+                        </Stack>
+                    </CardContent>
+                </Card>
+                <Card variant="outlined">
+                    <CardContent>
+                        <Stack spacing={2}>
+                            <Typography variant="h6" component="h2">
+                                {t("developer")}
+                            </Typography>
+
+                            <Typography variant="body2" color="text.secondary">
+                                {t("developerDescription")}
+                            </Typography>
+
+                            <FormControl fullWidth>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    {t("seasonalEventOverride")}
+                                </Typography>
+
+                                <Select
+                                    value={seasonalEventOverride}
+                                    onChange={(event) =>
+                                        updateSeasonalEventOverride(
+                                            event.target.value as SeasonalEventOverride,
+                                        )
+                                    }
+                                >
+                                    <MenuItem value="automatic">
+                                        {t("seasonalEventAutomatic")}
+                                    </MenuItem>
+                                    <MenuItem value="none">{t("seasonalEventNone")}</MenuItem>
+                                    <MenuItem value="godzilla-day">
+                                        {t("seasonalEventGodzillaDay")}
+                                    </MenuItem>
+                                    <MenuItem value="april-fools">
+                                        {t("seasonalEventAprilFools")}
+                                    </MenuItem>
+                                </Select>
+
+                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                                    {t("seasonalEventOverrideHelp")}
+                                </Typography>
                             </FormControl>
                         </Stack>
                     </CardContent>

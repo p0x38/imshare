@@ -13,4 +13,16 @@ describe("getSeasonalEvent", () => {
     it("returns undefined on ordinary days", () => {
         expect(getSeasonalEvent(new Date(2026, 5, 15))).toBeUndefined();
     });
+
+    it("forces Godzilla Day regardless of date", () => {
+        expect(getSeasonalEvent(new Date(2026, 5, 15), "godzilla-day")?.id).toBe("godzilla-day");
+    });
+
+    it("forces April Fools regardless of date", () => {
+        expect(getSeasonalEvent(new Date(2026, 5, 15), "april-fools")?.id).toBe("april-fools");
+    });
+
+    it("disables seasonal events when overridden with none", () => {
+        expect(getSeasonalEvent(new Date(2026, 10, 3), "none")).toBeUndefined();
+    });
 });
