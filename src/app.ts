@@ -506,7 +506,7 @@ export async function buildApp() {
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
 
                     if (post.uploads[0])
-                        metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/og`;
+                        metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
 
                     metaType = "article";
 
@@ -637,7 +637,7 @@ export async function buildApp() {
                 metaAuthor = post.user.name;
                 metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                 if (post.uploads[0])
-                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/og`;
+                    metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
                 metaType = "article";
             } else {
                 const user = await prisma.user.findFirst({

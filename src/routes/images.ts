@@ -20,7 +20,112 @@ import { openapi, parameter } from "../lib/openapi-route.js";
 import { observability } from "../instrumentation.js";
 import { resolveCrawlerPolicy } from "../lib/crawler-policy.js";
 import { resolveUploadStoragePath } from "../lib/upload-storage.js";
-import { generateOgImage } from "../utils/og-image.js";
+import {
+    generateThumbnail,
+    getThumbnailMimeType,
+    type ThumbnailBackgroundStyle,
+    type ThumbnailFit,
+    type ThumbnailFormat,
+    type ThumbnailOptions,
+} from "../utils/thumbnail.js";
+
+const THUMBNAIL_FORMATS = ["jpeg", "webp", "png", "avif"] as const;
+const THUMBNAIL_FITS = ["cover", "contain", "fill", "inside", "outside"] as const;
+const THUMBNAIL_BACKGROUND_STYLES = ["solid", "transparent", "blur"] as const;
+
+const THUMBNAIL_POSITIONS = [
+    "centre",
+    "north",
+    "south",
+    "east",
+    "west",
+    "northeast",
+    "northwest",
+    "southeast",
+    "southwest",
+    "entropy",
+    "attention",
+] as const;
+
+function parseThumbnailOptions(query: Record<string, unknown>): ThumbnailOptions {
+    const parseNumber = (
+        value: unknown,
+        name: string,
+        fallback: number,
+        min: number,
+        max: number,
+    ): number => {
+        if (value === undefined || value === "") return fallback;
+
+        const parsed = Number(value);
+
+        if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+            throw new Error(`INVALID_${name.toUpperCase()}`);
+        }
+
+        return parsed;
+    };
+
+    const parseEnum = <T extends string>(
+        value: unknown,
+        allowed: readonly T[],
+        fallback: T,
+        name: string,
+    ): T => {
+        if (value === undefined || value === "") return fallback;
+
+        if (typeof value !== "string") {
+            throw new Error(`INVALID_${name.toUpperCase()}`);
+        }
+
+        const matched = allowed.find((option) => option === value);
+
+        if (matched === undefined) {
+            throw new Error(`INVALID_${name.toUpperCase()}`);
+        }
+
+        return matched;
+    };
+
+    const background = query.background;
+
+    if (
+        background !== undefined &&
+        (typeof background !== "string" || !/^#[\da-fA-F]{6}([0-9a-fA-F]{2})?$/.test(background))
+    ) {
+        throw new Error("INVALID_BACKGROUND");
+    }
+
+    const width = parseNumber(query.width, "width", 1200, 16, MAX_DIMENSION);
+    const height = parseNumber(query.height, "height", 630, 16, MAX_DIMENSION);
+
+    if (width * height > 16_000_000) {
+        throw new Error("THUMBNAIL_TOO_LARGE");
+    }
+
+    const format = parseEnum(query.format, THUMBNAIL_FORMATS, "jpeg", "format");
+    const backgroundStyle = parseEnum(
+        query.backgroundStyle,
+        THUMBNAIL_BACKGROUND_STYLES,
+        "solid",
+        "backgroundStyle",
+    );
+
+    if (backgroundStyle === "transparent" && format === "jpeg") {
+        throw new Error("TRANSPARENT_BACKGROUND_REQUIRES_ALPHA_FORMAT");
+    }
+
+    return {
+        width,
+        height,
+        fit: parseEnum(query.fit, THUMBNAIL_FITS, "contain", "fit") as ThumbnailFit,
+        format: format as ThumbnailFormat,
+        quality: parseNumber(query.quality, "quality", 82, 1, 100),
+        background: (background as string | undefined) ?? "#121212",
+        backgroundStyle: backgroundStyle as ThumbnailBackgroundStyle,
+        position: parseEnum(query.position, THUMBNAIL_POSITIONS, "centre", "position"),
+    };
+}
 
 const MAX_DIMENSION = 4096;
 const MIN_DIMENSION = 16;
@@ -119,6 +224,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 summary: "Get image placeholder",
                 description: "Returns a PNG placeholder generated from the upload's thumbhash.",
                 operationId: "getImagePlaceholder",
+
                 parameters: [uploadId, parameter.header("if-none-match", { type: "string" })],
                 security: [{}],
                 responses: {
@@ -198,18 +304,65 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
     );
 
     fastify.get(
-        "/v1/posts/image/:uploadId/og",
+        "/v1/posts/image/:uploadId/thumbnail",
         {
             schema: openapi({
                 tags: "Images",
-                summary: "Get Open Graph image",
+                summary: "Get Thumbnail image",
                 description:
-                    "Returns a cached 1200×630 JPEG preview generated from a publicly accessible post image.",
-                operationId: "getOpenGraphImage",
-                parameters: [uploadId, parameter.header("if-none-match", { type: "string" })],
+                    "Returns a cached, customizable thumbnail preview generated from a publicly accessible post image.",
+                operationId: "getThumbnailImage",
+                parameters: [
+                    uploadId,
+                    parameter.query(
+                        "width",
+                        { type: "integer", minimum: 16, maximum: MAX_DIMENSION, default: 1200 },
+                        { description: "Output width in pixels." },
+                    ),
+                    parameter.query(
+                        "height",
+                        { type: "integer", minimum: 16, maximum: MAX_DIMENSION, default: 630 },
+                        { description: "Output height in pixels." },
+                    ),
+                    parameter.query(
+                        "fit",
+                        { type: "string", enum: [...THUMBNAIL_FITS], default: "contain" },
+                        { description: "Image resize strategy." },
+                    ),
+                    parameter.query(
+                        "format",
+                        { type: "string", enum: [...THUMBNAIL_FORMATS], default: "jpeg" },
+                        { description: "Output image format." },
+                    ),
+                    parameter.query(
+                        "quality",
+                        { type: "integer", minimum: 1, maximum: 100, default: 82 },
+                        { description: "Output quality for lossy formats." },
+                    ),
+                    parameter.query(
+                        "background",
+                        { type: "string", pattern: "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$" },
+                        { description: "Solid background color in hexadecimal." },
+                    ),
+                    parameter.query(
+                        "backgroundStyle",
+                        {
+                            type: "string",
+                            enum: [...THUMBNAIL_BACKGROUND_STYLES],
+                            default: "solid",
+                        },
+                        { description: "Background rendering style." },
+                    ),
+                    parameter.query(
+                        "position",
+                        { type: "string", enum: [...THUMBNAIL_POSITIONS], default: "centre" },
+                        { description: "Image crop position." },
+                    ),
+                    parameter.header("if-none-match", { type: "string" }),
+                ],
                 security: [{}],
                 responses: {
-                    "200": { description: "1200×630 JPEG preview." },
+                    "200": { description: "Generated thumbnail preview." },
                     "304": { description: "Preview has not changed." },
                     "404": { $ref: "#/components/responses/NotFound" },
                     "415": { description: "Image processing failed." },
@@ -228,6 +381,29 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
         },
         async (request, reply) => {
             const { uploadId } = request.params as { uploadId: string };
+
+            const query = request.query as Record<string, unknown>;
+            let options: ThumbnailOptions;
+
+            try {
+                options = parseThumbnailOptions(query);
+            } catch (error) {
+                const code = error instanceof Error ? error.message : "INVALID_THUMBNAIL_PARAMETER";
+
+                return reply.code(400).send({
+                    error: {
+                        code,
+                        message: "Invalid thumbnail parameters.",
+                    },
+                });
+            }
+
+            const optionsHash = createHash("sha256")
+                .update(JSON.stringify(options))
+                .digest("hex")
+                .slice(0, 16);
+
+            const format = options.format ?? "jpeg";
 
             const upload = await prisma.upload.findUnique({
                 where: { id: uploadId },
@@ -271,7 +447,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 return reply.code(404).send({
                     error: {
                         code: "IMAGE_NOT_FOUND",
-                        message: "Open Graph image not found.",
+                        message: "Thumbnail source not found.",
                     },
                 });
             }
@@ -284,7 +460,7 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
 
             const cachePath = resolveCachePath(
                 cacheDir,
-                `${uploadId}-og-1200x630.jpg`,
+                `${uploadId}-thumbnail-v1-${optionsHash}.${format}`,
                 cacheSettings.useHashedDirectory,
             );
 
@@ -299,10 +475,10 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                     }
 
                     observability.recordImageServed();
-                    return reply.type("image/jpeg").send(cached);
+                    return reply.type(getThumbnailMimeType(format)).send(cached);
                 }
             } catch {
-                observability.recordCacheError("og-image");
+                observability.recordCacheError("thumbnail");
             }
 
             const sourcePath = resolveUploadStoragePath(uploadDir, upload.filename);
@@ -332,24 +508,24 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             const startedAt = process.hrtime.bigint();
 
             try {
-                const output = await generateOgImage(source);
+                const output = await generateThumbnail(source, options);
 
                 await mkdir(path.dirname(cachePath), { recursive: true });
 
                 await writeFile(cachePath, output, { flag: "wx" })
                     .then(() => {
-                        observability.recordCacheWrite("og-image", output.byteLength);
+                        observability.recordCacheWrite("thumbnail", output.byteLength);
                     })
                     .catch((error) => {
                         if ((error as NodeJS.ErrnoException).code === "EEXIST") return;
 
-                        observability.recordCacheError("og-image");
+                        observability.recordCacheError("thumbnail");
                         throw error;
                     });
 
                 observability.recordImageProcessing(
                     Number(process.hrtime.bigint() - startedAt) / 1_000_000_000,
-                    "og-image",
+                    "thumbnail",
                 );
 
                 const etag = setCacheHeaders(reply, output, cacheSettings.ttl);
@@ -359,15 +535,15 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                 }
 
                 observability.recordImageServed();
-                return reply.type("image/jpeg").send(output);
+                return reply.type(getThumbnailMimeType(format)).send(output);
             } catch (error) {
-                observability.recordImageProcessingError("og-image");
+                observability.recordImageProcessingError("thumbnail");
                 request.log.error(error);
 
                 return reply.code(415).send({
                     error: {
-                        code: "OG_IMAGE_GENERATION_FAILED",
-                        message: "The Open Graph image could not be generated.",
+                        code: "THUMBNAIL_IMAGE_GENERATION_FAILED",
+                        message: "The thumbnail could not be generated.",
                     },
                 });
             }
