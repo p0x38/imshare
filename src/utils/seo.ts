@@ -1,5 +1,16 @@
 import { escapeAttribute, escapeJsonLd, escapeMeta } from "./html.js";
 
+export interface SeoProfileMetadata {
+    name: string;
+    url: string;
+    identifier?: string;
+    alternateName?: string;
+    description?: string;
+    image?: string;
+    dateCreated?: Date;
+    dateModified?: Date;
+}
+
 export interface SeoMetadata {
     title: string;
     description: string;
@@ -15,7 +26,11 @@ export interface SeoMetadata {
     type?: "website" | "article";
     locale?: string;
     crawlerDirectives?: string;
+    structuredDataType?: "WebSite" | "ProfilePage";
+    profile?: SeoProfileMetadata;
+    text?: string;
     datePublished?: Date;
+    dateModified?: Date;
     authorUrl?: string;
 }
 
@@ -31,7 +46,17 @@ export function truncateDescription(value: string, maxLength = 160): string {
 }
 
 export function generateSeoTitle(title: string, siteName: string): string {
-    return `${title} · ${siteName}`;
+    const normalizedTitle = title.trim();
+    const normalizedSiteName = siteName.trim();
+
+    if (!normalizedTitle) return normalizedSiteName;
+    if (!normalizedSiteName || normalizedTitle.toLowerCase() === normalizedSiteName.toLowerCase())
+        return normalizedTitle;
+
+    const suffix = ` · ${normalizedSiteName}`;
+    if (normalizedTitle.toLowerCase().endsWith(suffix.toLowerCase())) return normalizedTitle;
+
+    return `${normalizedTitle} · ${normalizedSiteName}`;
 }
 
 export function generateSeoMetadata(metadata: SeoMetadata): string {
@@ -40,20 +65,69 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
     const imageAlt = metadata.imageAlt?.trim() || metadata.title;
     const type = metadata.type ?? "website";
 
+    const structuredDataType =
+        metadata.structuredDataType ?? (type === "article" ? "SocialMediaPosting" : "WebPage");
     const structuredData = {
         "@context": "https://schema.org",
-        "@type": type === "article" ? "SocialMediaPosting" : "WebPage",
-        name: metadata.title,
-        description,
-        url: metadata.canonical,
-        ...(metadata.image ? { image: metadata.image } : {}),
-        ...(metadata.datePublished ? { datePublished: metadata.datePublished.toISOString() } : {}),
-        ...(metadata.author
+        "@type": structuredDataType,
+        ...(structuredDataType === "WebSite"
+            ? {
+                  name: metadata.siteName,
+                  url: metadata.canonical,
+              }
+            : {
+                  name: metadata.title,
+                  description,
+                  url: metadata.canonical,
+                  ...(structuredDataType === "ProfilePage"
+                      ? {}
+                      : metadata.image
+                        ? { image: metadata.image }
+                        : {}),
+              }),
+        ...(type === "article" && metadata.text ? { text: metadata.text } : {}),
+        ...(type === "article" && metadata.datePublished
+            ? { datePublished: metadata.datePublished.toISOString() }
+            : {}),
+        ...(type === "article" &&
+        metadata.datePublished &&
+        metadata.dateModified &&
+        metadata.dateModified > metadata.datePublished
+            ? { dateModified: metadata.dateModified.toISOString() }
+            : {}),
+        ...(type === "article" && metadata.author
             ? {
                   author: {
                       "@type": "Person",
                       name: metadata.author,
                       ...(metadata.authorUrl ? { url: metadata.authorUrl } : {}),
+                  },
+              }
+            : {}),
+        ...(structuredDataType === "ProfilePage" && metadata.profile
+            ? {
+                  ...(metadata.profile.dateCreated
+                      ? { dateCreated: metadata.profile.dateCreated.toISOString() }
+                      : {}),
+                  ...(metadata.profile.dateModified &&
+                  (!metadata.profile.dateCreated ||
+                      metadata.profile.dateModified > metadata.profile.dateCreated)
+                      ? { dateModified: metadata.profile.dateModified.toISOString() }
+                      : {}),
+                  mainEntity: {
+                      "@type": "Person",
+                      name: metadata.profile.name,
+                      url: metadata.profile.url,
+                      ...(metadata.profile.identifier
+                          ? { identifier: metadata.profile.identifier }
+                          : {}),
+                      ...(metadata.profile.alternateName
+                          ? { alternateName: metadata.profile.alternateName }
+                          : {}),
+                      ...(metadata.profile.description
+                          ? { description: metadata.profile.description }
+                          : {}),
+                      ...(metadata.profile.image ? { image: metadata.profile.image } : {}),
                   },
               }
             : {}),

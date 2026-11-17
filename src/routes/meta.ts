@@ -41,7 +41,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
         async (_request, reply) => {
             const [users, posts, tags, categories] = await Promise.all([
                 prisma.user.findMany({
-                    where: { isPublic: true, showProfile: true },
+                    where: { isPublic: true, showProfile: true, isBanned: false },
                     select: {
                         id: true,
                         handle: true,
@@ -56,7 +56,11 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     where: {
                         status: "published",
                         visibility: "public",
-                        user: { isPublic: true, showPosts: true },
+                        hiddenAt: null,
+                        AND: [
+                            { OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] },
+                        ],
+                        user: { isPublic: true, showPosts: true, isBanned: false },
                     },
                     select: {
                         id: true,
@@ -252,7 +256,13 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                         ? `/users/@${encodeURIComponent(user.handle)}`
                         : `/users/${encodeURIComponent(user.id)}`;
 
-                    if (group.category !== "image" && !userPolicy[group.category]) {
+                    // Search crawlers must be able to fetch pages to read the robots
+                    // meta tag when a user disables search indexing.
+                    if (
+                        group.category !== "image" &&
+                        group.category !== "search" &&
+                        !userPolicy[group.category]
+                    ) {
                         disallowed.add(profilePath);
                     }
 
@@ -267,7 +277,11 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     for (const post of user.posts) {
                         const policy = resolveCrawlerPolicy(user, post);
 
-                        if (group.category !== "image" && !policy[group.category]) {
+                        if (
+                            group.category !== "image" &&
+                            group.category !== "search" &&
+                            !policy[group.category]
+                        ) {
                             disallowed.add(postPermalink(post, user));
                         }
 

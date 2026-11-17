@@ -28,7 +28,7 @@ import {
 } from "./lib/meilisearch.js";
 import fastifyRateLimit from "@fastify/rate-limit";
 import { resolveStorageDirectory } from "./lib/storage-directories.js";
-import { generateSeoMetadata, truncateDescription } from "./utils/seo.js";
+import { generateSeoMetadata, truncateDescription, type SeoProfileMetadata } from "./utils/seo.js";
 import { escapeMeta } from "./utils/html.js";
 import { resolveRequestOrigin } from "./utils/request.js";
 import { postIdsForSearchSync } from "./utils/meilisearch.js";
@@ -448,8 +448,13 @@ export async function buildApp() {
         let metaAuthor = "";
         let metaKeywords = "";
         let metaImage = "";
+        let metaText: string | undefined;
         let metaType: "website" | "article" = "website";
+        let metaStructuredDataType: "WebSite" | "ProfilePage" | undefined =
+            currentPath === "/" ? "WebSite" : undefined;
+        let metaProfile: SeoProfileMetadata | undefined;
         let metaDatePublished: Date | undefined;
+        let metaDateModified: Date | undefined;
         let metaAuthorUrl: string | undefined;
 
         let crawlerDirectives = "";
@@ -467,13 +472,22 @@ export async function buildApp() {
                                 permalinkKey: decodeURIComponent(postMatch[1]!),
                             },
                         ],
+                        status: "published",
+                        visibility: { in: ["public", "unlisted"] },
+                        hiddenAt: null,
+                        AND: [
+                            { OR: [{ scheduledAt: null }, { scheduledAt: { lte: new Date() } }] },
+                        ],
                     },
                     select: {
                         title: true,
                         description: true,
+                        textContent: true,
+                        caption: true,
                         id: true,
                         createdAt: true,
                         publishedAt: true,
+                        updatedAt: true,
                         customPostId: true,
                         permalinkPattern: true,
                         permalinkIdType: true,
@@ -490,6 +504,9 @@ export async function buildApp() {
                                 id: true,
                                 handle: true,
                                 name: true,
+                                isPublic: true,
+                                showProfile: true,
+                                isBanned: true,
                                 allowSearchEngineIndex: true,
                                 allowAiCrawler: true,
                                 allowImageCrawler: true,
@@ -510,16 +527,26 @@ export async function buildApp() {
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                     metaDatePublished = post.publishedAt ?? post.createdAt;
-                    metaAuthorUrl = `${origin}/users/${
-                        post.user.handle
-                            ? `@${encodeURIComponent(post.user.handle)}`
-                            : encodeURIComponent(post.user.id)
-                    }/`;
+                    metaDateModified =
+                        post.updatedAt > metaDatePublished ? post.updatedAt : undefined;
+                    metaText =
+                        post.textContent?.trim() ||
+                        post.caption?.trim() ||
+                        post.description?.trim() ||
+                        undefined;
+                    metaAuthorUrl =
+                        post.user.isPublic && post.user.showProfile && !post.user.isBanned
+                            ? `${origin}/users/${
+                                  post.user.handle
+                                      ? `@${encodeURIComponent(post.user.handle)}`
+                                      : encodeURIComponent(post.user.id)
+                              }/`
+                            : undefined;
 
                     if (post.uploads[0])
                         metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
 
-                    metaType = "article";
+                    if (metaText || metaImage) metaType = "article";
 
                     crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
                 }
@@ -594,20 +621,53 @@ export async function buildApp() {
             const normalizedHandle = userKey.replace(/^@/, "").toLowerCase();
             const user = await prisma.user.findFirst({
                 where: userKey.startsWith("@")
-                    ? { handle: normalizedHandle }
-                    : { OR: [{ id: userKey }, { handle: normalizedHandle }] },
+                    ? {
+                          handle: normalizedHandle,
+                          isPublic: true,
+                          showProfile: true,
+                          isBanned: false,
+                      }
+                    : {
+                          OR: [{ id: userKey }, { handle: normalizedHandle }],
+                          isPublic: true,
+                          showProfile: true,
+                          isBanned: false,
+                      },
                 select: {
                     id: true,
+                    handle: true,
                     name: true,
                     bio: true,
+                    createdAt: true,
                     updatedAt: true,
+                    avatarMode: true,
+                    avatarValue: true,
+                    allowSearchEngineIndex: true,
+                    allowAiCrawler: true,
+                    allowImageCrawler: true,
+                    allowCustomCrawler: true,
                 },
             });
             if (user) {
-                canonical = `${origin}${currentPath}`;
+                const profilePath = user.handle
+                    ? `/users/@${encodeURIComponent(user.handle)}/`
+                    : `/users/${encodeURIComponent(user.id)}/`;
+                canonical = `${origin}${profilePath}`;
                 metaTitle = user.name?.trim() || config.site.name;
                 metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
                 metaImage = `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
+                metaStructuredDataType = "ProfilePage";
+                metaProfile = {
+                    name: user.name,
+                    url: canonical,
+                    identifier: user.id,
+                    alternateName: user.handle ?? undefined,
+                    description: user.bio?.trim() || undefined,
+                    image: user.avatarMode === "custom" && user.avatarValue ? metaImage : undefined,
+                    dateCreated: user.createdAt,
+                    dateModified: user.updatedAt,
+                };
+                crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(user));
             }
         } else if (userPermalinkMatch) {
             const handle = decodeURIComponent(currentPath.split("/")[1] ?? "");
@@ -625,14 +685,34 @@ export async function buildApp() {
                 select: {
                     title: true,
                     description: true,
+                    textContent: true,
+                    caption: true,
                     id: true,
                     createdAt: true,
                     publishedAt: true,
+                    updatedAt: true,
                     customPostId: true,
                     permalinkPattern: true,
                     permalinkIdType: true,
                     permalinkKey: true,
-                    user: { select: { id: true, handle: true, name: true } },
+                    allowSearchEngineIndex: true,
+                    allowAiCrawler: true,
+                    allowImageCrawler: true,
+                    allowCustomCrawler: true,
+                    user: {
+                        select: {
+                            id: true,
+                            handle: true,
+                            name: true,
+                            isPublic: true,
+                            showProfile: true,
+                            isBanned: true,
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                        },
+                    },
                     tags: { select: { tag: { select: { name: true } } } },
                     uploads: {
                         orderBy: { createdAt: "asc" },
@@ -649,23 +729,43 @@ export async function buildApp() {
                 metaAuthor = post.user.name;
                 metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
                 metaDatePublished = post.publishedAt ?? post.createdAt;
-                metaAuthorUrl = `${origin}/users/${
-                    post.user.handle
-                        ? `@${encodeURIComponent(post.user.handle)}`
-                        : encodeURIComponent(post.user.id)
-                }/`;
+                metaDateModified = post.updatedAt > metaDatePublished ? post.updatedAt : undefined;
+                metaText =
+                    post.textContent?.trim() ||
+                    post.caption?.trim() ||
+                    post.description?.trim() ||
+                    undefined;
+                metaAuthorUrl =
+                    post.user.isPublic && post.user.showProfile && !post.user.isBanned
+                        ? `${origin}/users/${
+                              post.user.handle
+                                  ? `@${encodeURIComponent(post.user.handle)}`
+                                  : encodeURIComponent(post.user.id)
+                          }/`
+                        : undefined;
 
                 if (post.uploads[0])
                     metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
-                metaType = "article";
+                if (metaText || metaImage) metaType = "article";
+                crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
             } else {
+                const normalizedHandle = handle.replace(/^@/, "").toLowerCase();
                 const user = await prisma.user.findFirst({
-                    where: { OR: [{ handle }, { id: handle }] },
+                    where: {
+                        OR: [{ handle: normalizedHandle }, { id: handle }],
+                        isPublic: true,
+                        showProfile: true,
+                        isBanned: false,
+                    },
                     select: {
                         id: true,
+                        handle: true,
                         name: true,
                         bio: true,
+                        createdAt: true,
                         updatedAt: true,
+                        avatarMode: true,
+                        avatarValue: true,
                         allowSearchEngineIndex: true,
                         allowAiCrawler: true,
                         allowImageCrawler: true,
@@ -674,10 +774,27 @@ export async function buildApp() {
                 });
 
                 if (user) {
-                    canonical = `${origin}${currentPath}`;
+                    const profilePath = user.handle
+                        ? `/users/@${encodeURIComponent(user.handle)}/`
+                        : `/users/${encodeURIComponent(user.id)}/`;
+                    canonical = `${origin}${profilePath}`;
                     metaTitle = user.name?.trim() || config.site.name;
                     metaDescription = user.bio?.trim() || user.name?.trim() || config.site.name;
                     metaImage = `${origin}/api/v1/users/${encodeURIComponent(user.id)}/avatar?v=${encodeURIComponent(user.updatedAt.toISOString())}`;
+                    metaStructuredDataType = "ProfilePage";
+                    metaProfile = {
+                        name: user.name,
+                        url: canonical,
+                        identifier: user.id,
+                        alternateName: user.handle ?? undefined,
+                        description: user.bio?.trim() || undefined,
+                        image:
+                            user.avatarMode === "custom" && user.avatarValue
+                                ? metaImage
+                                : undefined,
+                        dateCreated: user.createdAt,
+                        dateModified: user.updatedAt,
+                    };
 
                     crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(user));
                 }
@@ -695,7 +812,11 @@ export async function buildApp() {
             imageHeight: metaImage.endsWith("/og") ? 630 : undefined,
             author: metaAuthor || undefined,
             authorUrl: metaAuthorUrl,
+            text: metaText,
             datePublished: metaDatePublished,
+            dateModified: metaDateModified,
+            structuredDataType: metaStructuredDataType,
+            profile: metaProfile,
             keywords: metaKeywords || undefined,
             type: metaType,
             locale: "en_US",

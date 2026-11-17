@@ -51,7 +51,9 @@ export function resolveCrawlerPolicy(
 }
 
 export function crawlerMetaContent(policy: CrawlerPolicy): string {
-    return [!policy.search ? "noindex" : null, !policy.image ? "noimageindex" : null]
+    const directives = [!policy.search ? "noindex" : null, !policy.image ? "noimageindex" : null]
         .filter((directive): directive is string => directive !== null)
         .join(", ");
+
+    return directives ? `<meta name="robots" content="${directives}">` : "";
 }

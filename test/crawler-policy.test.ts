@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveCrawlerPolicy } from "../src/lib/crawler-policy.js";
+import { crawlerMetaContent, resolveCrawlerPolicy } from "../src/lib/crawler-policy.js";
 
 const user = {
     allowSearchEngineIndex: true,
@@ -64,5 +64,22 @@ describe("resolveCrawlerPolicy", () => {
             image: true,
             custom: true,
         });
+    });
+});
+describe("crawlerMetaContent", () => {
+    it("returns a valid robots meta tag for disabled indexing policies", () => {
+        expect(crawlerMetaContent({ search: false, ai: true, image: true, custom: true })).toBe(
+            '<meta name="robots" content="noindex">',
+        );
+    });
+
+    it("combines noindex and noimageindex when both are disabled", () => {
+        expect(crawlerMetaContent({ search: false, ai: true, image: false, custom: true })).toBe(
+            '<meta name="robots" content="noindex, noimageindex">',
+        );
+    });
+
+    it("does not emit a robots tag when no restriction is needed", () => {
+        expect(crawlerMetaContent({ search: true, ai: true, image: true, custom: true })).toBe("");
     });
 });
