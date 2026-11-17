@@ -124,7 +124,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                 ...posts
                     .filter((post) => {
                         const policy = resolveCrawlerPolicy(post.user, post);
-                        return policy.search || policy.image;
+                        return policy.search;
                     })
                     .map((post) => {
                         const policy = resolveCrawlerPolicy(post.user, post);

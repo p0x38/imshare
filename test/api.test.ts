@@ -354,6 +354,16 @@ test("Bearer API tokens authenticate external API requests and enforce permissio
         const uploadedImages = postyBirbUpload.json().data as
             { id: string; url: string }[] | undefined;
         if (uploadedImages?.[0]?.id) {
+            const imageDelivery = await app.inject({
+                method: "GET",
+                url: `/api/v1/posts/image/${encodeURIComponent(uploadedImages[0].id)}`,
+            });
+            expect(imageDelivery.statusCode).toBe(200);
+            expect(imageDelivery.headers["content-type"]).toMatch(/^image\/png/);
+            expect(imageDelivery.rawPayload.subarray(0, 8)).toEqual(
+                Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+            );
+
             const cleanup = await app.inject({
                 method: "DELETE",
                 url: `/api/v1/uploads/${uploadedImages[0].id}`,

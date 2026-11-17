@@ -2,9 +2,11 @@ import { expect, test } from "vitest";
 import {
     RECOMMENDATION_SCORE_MULTIPLIER,
     RECOMMENDATION_WEIGHTS,
+    applyRecommendationDiversity,
     applyRecommendationExploration,
     jitterRecommendationScore,
     scorePersonalizedRecommendation,
+    scoreRecommendation,
     scoreTrending,
     type RecommendationPost,
 } from "../src/lib/recommendation-scorer.js";
@@ -138,4 +140,95 @@ test("recommendation score remains bounded by the ten-point multiplier", () => {
     );
     expect(score.total).toBeGreaterThanOrEqual(0);
     expect(score.total).toBeLessThanOrEqual(RECOMMENDATION_SCORE_MULTIPLIER);
+});
+
+test("related-post scoring includes caption similarity", () => {
+    const source = post({ caption: "A collection of colorful space cats" });
+    const matching = scoreRecommendation(
+        source,
+        post({ caption: "A collection of colorful space cats" }),
+    );
+    const unrelated = scoreRecommendation(
+        source,
+        post({ caption: "A quiet landscape at sunset" }),
+    );
+
+    expect(matching.caption).toBe(1);
+    expect(unrelated.caption).toBe(0);
+    expect(matching.total).toBeGreaterThan(unrelated.total);
+});
+
+test("recommendation diversity prioritizes different authors before author overflow", () => {
+    const items = [
+        {
+            post: post({
+                id: "a-1",
+                user: { id: "author-a", name: "A", handle: "a" },
+                title: "First post",
+            }),
+            score: 10,
+        },
+        {
+            post: post({
+                id: "a-2",
+                user: { id: "author-a", name: "A", handle: "a" },
+                title: "Second post",
+            }),
+            score: 9,
+        },
+        {
+            post: post({
+                id: "b-1",
+                user: { id: "author-b", name: "B", handle: "b" },
+                title: "Third post",
+            }),
+            score: 8,
+        },
+    ];
+
+    const result = applyRecommendationDiversity(items, {
+        maxPerAuthor: 1,
+        maxPerCategory: 10,
+        duplicateThreshold: 1,
+    });
+
+    expect(result.slice(0, 2).map(({ post: item }) => item.id)).toEqual(["a-1", "b-1"]);
+    expect(result.map(({ post: item }) => item.id)).toEqual(["a-1", "b-1", "a-2"]);
+});
+
+test("recommendation diversity removes near-duplicates and breaks ties by post ID", () => {
+    const createdAt = new Date("2026-01-01T00:00:00.000Z");
+    const items = [
+        {
+            post: post({
+                id: "duplicate-a",
+                title: "Same post title",
+                caption: "Same caption",
+                createdAt,
+            }),
+            score: 5,
+        },
+        {
+            post: post({
+                id: "duplicate-b",
+                title: "Same post title",
+                caption: "Same caption",
+                createdAt,
+            }),
+            score: 5,
+        },
+        {
+            post: post({
+                id: "unique",
+                title: "A completely different subject",
+                caption: "Distinct description",
+                createdAt,
+            }),
+            score: 5,
+        },
+    ];
+
+    const result = applyRecommendationDiversity(items);
+
+    expect(result.map(({ post: item }) => item.id)).toEqual(["duplicate-a", "unique"]);
 });

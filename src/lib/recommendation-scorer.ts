@@ -172,14 +172,16 @@ function postSimilarity(source: RecommendationPost, candidate: RecommendationPos
             : 0;
     const title = tokenSimilarity(source.title, candidate.title);
     const description = tokenSimilarity(source.description, candidate.description);
+    const caption = tokenSimilarity(source.caption, candidate.caption);
 
     return (
-        tags * 0.4 +
-        category * 0.2 +
-        author * 0.15 +
+        tags * 0.38 +
+        category * 0.19 +
+        author * 0.14 +
         contentType * 0.1 +
         title * 0.1 +
-        description * 0.05
+        description * 0.045 +
+        caption * 0.045
     );
 }
 
@@ -298,6 +300,7 @@ export interface RelatedPostScore {
     author: number;
     title: number;
     description: number;
+    caption: number;
     recency: number;
     engagement: number;
     total: number;
@@ -313,6 +316,7 @@ export function scoreRecommendation(
     const author = authorSimilarity(source, candidate);
     const title = tokenSimilarity(source.title, candidate.title);
     const description = tokenSimilarity(source.description, candidate.description);
+    const caption = tokenSimilarity(source.caption, candidate.caption);
     const recency = recencyScore(candidate.createdAt);
     const engagement = Math.min(
         (Math.log1p(candidate._count.views) * 0.45 +
@@ -328,6 +332,7 @@ export function scoreRecommendation(
         category * 12 +
         author * 8 +
         description * 7 +
+        caption * 7 +
         contentType * 2 +
         recency * 3 +
         engagement * 2;
@@ -339,8 +344,77 @@ export function scoreRecommendation(
         author,
         title,
         description,
+        caption,
         recency,
         engagement,
         total,
     };
+}
+
+export interface RecommendationDiversityOptions {
+    maxPerAuthor?: number;
+    maxPerCategory?: number;
+    duplicateThreshold?: number;
+}
+
+function recommendationText(post: RecommendationPost): string {
+    return [post.title, post.caption, post.description].filter(Boolean).join(" ");
+}
+
+/**
+ * Reorders a ranked candidate list so its first page is less repetitive.
+ * Author/category overflow is deferred rather than discarded, while near-
+ * duplicate content is removed from the result set.
+ */
+export function applyRecommendationDiversity(
+    items: RecommendationRankedItem<RecommendationPost>[],
+    options: RecommendationDiversityOptions = {},
+): RecommendationRankedItem<RecommendationPost>[] {
+    const maxPerAuthor = Math.max(1, Math.floor(options.maxPerAuthor ?? 2));
+    const maxPerCategory = Math.max(1, Math.floor(options.maxPerCategory ?? 3));
+    const duplicateThreshold = Math.min(Math.max(options.duplicateThreshold ?? 0.94, 0), 1);
+    const ordered = items;
+    const preferred: RecommendationRankedItem<RecommendationPost>[] = [];
+    const deferred: RecommendationRankedItem<RecommendationPost>[] = [];
+    const considered: RecommendationRankedItem<RecommendationPost>[] = [];
+    const authorCounts = new Map<string, number>();
+    const categoryCounts = new Map<string, number>();
+
+    for (const item of ordered) {
+        const text = recommendationText(item.post);
+        const textTokens = tokens(text);
+        const isDuplicate =
+            textTokens.size > 0 &&
+            considered.some((existing) => {
+                const existingText = recommendationText(existing.post);
+                return (
+                    tokens(existingText).size > 0 &&
+                    tokenSimilarity(existingText, text) >= duplicateThreshold
+                );
+            });
+        if (isDuplicate) continue;
+
+        considered.push(item);
+
+        const authorKey =
+            item.post.user.id ??
+            normalizeText(item.post.user.handle ?? item.post.user.name, 200);
+        const categoryKey = item.post.categoryId ?? "";
+        const authorOverflow =
+            Boolean(authorKey) && (authorCounts.get(authorKey) ?? 0) >= maxPerAuthor;
+        const categoryOverflow =
+            Boolean(categoryKey) && (categoryCounts.get(categoryKey) ?? 0) >= maxPerCategory;
+
+        if (authorOverflow || categoryOverflow) {
+            deferred.push(item);
+            continue;
+        }
+
+        preferred.push(item);
+        if (authorKey) authorCounts.set(authorKey, (authorCounts.get(authorKey) ?? 0) + 1);
+        if (categoryKey)
+            categoryCounts.set(categoryKey, (categoryCounts.get(categoryKey) ?? 0) + 1);
+    }
+
+    return [...preferred, ...deferred];
 }

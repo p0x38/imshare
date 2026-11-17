@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { prisma } from "../lib/auth.js";
 import { collection, getSession, parsePagination, requireUser } from "../lib/api.js";
 import {
+    applyRecommendationDiversity,
     applyRecommendationExploration,
     jitterRecommendationScore,
     scoreRecommendation,
@@ -43,7 +44,7 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
                     ...postInclude,
                     _count: { select: { views: true, reactions: true, comments: true } },
                 },
-                orderBy: { createdAt: "desc" },
+                orderBy: [{ createdAt: "desc" }, { id: "asc" }],
             });
 
             let ranked = candidates.map((post) => ({
@@ -159,10 +160,11 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
                 score: jitterRecommendationScore(item.score),
             }));
             const explored = applyRecommendationExploration(rankedWithJitter);
-            const items = explored
+            const diversified = applyRecommendationDiversity(explored);
+            const items = diversified
                 .slice(p.skip, p.skip + p.limit)
                 .map(({ post }) => postView(post));
-            return collection(items, p.page, p.limit, ranked.length);
+            return collection(items, p.page, p.limit, diversified.length);
         },
     );
 
@@ -247,7 +249,9 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
             .map((post) => ({ post, score: scoreRecommendation(source, post).total }))
             .sort(
                 (a, b) =>
-                    b.score - a.score || b.post.createdAt.getTime() - a.post.createdAt.getTime(),
+                    b.score - a.score ||
+                    b.post.createdAt.getTime() - a.post.createdAt.getTime() ||
+                    a.post.id.localeCompare(b.post.id),
             );
 
         const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
@@ -295,7 +299,12 @@ export const recommendationRoutes: FastifyPluginAsync = async (fastify) => {
                     }),
                 };
             })
-            .sort((a, b) => b.score - a.score);
+            .sort(
+                (a, b) =>
+                    b.score - a.score ||
+                    b.post.createdAt.getTime() - a.post.createdAt.getTime() ||
+                    a.post.id.localeCompare(b.post.id),
+            );
         const items = ranked.slice(p.skip, p.skip + p.limit).map(({ post }) => postView(post));
         return collection(items, p.page, p.limit, ranked.length);
     });

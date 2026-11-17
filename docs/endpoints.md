@@ -35,6 +35,16 @@ Authentication uses the Better Auth session cookie. Roles are `user < moderator 
 - `PATCH /v1/me/links/{linkId}` — update owned profile link.
 - `DELETE /v1/me/links/{linkId}` — delete owned profile link; `204`.
 
+## API Tokens
+
+- `GET /v1/me/api-tokens` — list the current account's token metadata. Secrets are never returned.
+- `POST /v1/me/api-tokens` — create a token. The generated secret is returned only in this response; store it securely.
+- `GET /v1/me/api-tokens/{tokenId}` — get one token's metadata.
+- `PATCH /v1/me/api-tokens/{tokenId}` — update its name, permissions, expiration, or enabled state.
+- `DELETE /v1/me/api-tokens/{tokenId}` — permanently revoke a token.
+
+Permissions are an object keyed by API resource, with `read`, `write`, and `delete` actions. For example, `{ "posts": ["read", "write"], "uploads": ["write"] }` allows reading and creating posts and uploading files. A `*` resource key grants the listed actions across resources. `expiresAt` must be a future ISO 8601 date-time or `null` for no expiration. Disabled, expired, or revoked tokens cannot authenticate. Tokens cannot be used for Better Auth endpoints.
+
 ## Users
 
 - `GET /v1/users` — paginated users. Query: `page`, `limit`, `search`, `order`.
