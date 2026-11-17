@@ -194,6 +194,155 @@
     - [ ] Test indexing-write failures and recovery
     - [x] Document setup and reindexing in `docs/meilisearch.md`
 
+## SEO / Search visibility
+
+### Page metadata and site identity
+
+- [ ] Audit SEO metadata across all public page types
+    - [ ] Homepage
+    - [ ] Post pages
+    - [ ] User profile pages
+    - [ ] Tag and category pages
+    - [ ] Search and discovery pages
+    - [ ] Pagination and other indexable listing pages
+- [ ] Generate unique, descriptive page titles that accurately reflect visible page content
+- [ ] Generate page-specific meta descriptions without relying on them being used verbatim as search snippets
+- [ ] Keep document titles, visible headings, and page content consistent
+- [ ] Ensure metadata is present in the initial HTML response
+- [ ] Validate generated `<head>` markup and ensure metadata elements use valid HTML
+- [ ] Audit supported robots and search metadata directives
+    - [ ] `robots`
+    - [ ] `googlebot`
+    - [ ] `nosnippet`
+    - [ ] `max-snippet`
+    - [ ] `data-nosnippet`
+- [ ] Add homepage `WebSite` structured data
+    - [ ] Provide the canonical site name and homepage URL
+    - [ ] Add `alternateName` when a genuine alternative site name exists
+
+### Canonicalization and crawlable links
+
+- [ ] Audit canonical URL generation across all page types
+    - [ ] Use absolute canonical URLs with the configured public origin
+    - [ ] Keep canonical URLs consistent with post permalink generation
+    - [ ] Check custom post IDs and alternative permalink patterns
+    - [ ] Handle query parameters and duplicate URL variants consistently
+    - [ ] Keep canonical URLs consistent with internal links and sitemaps
+- [ ] Audit redirects and URL normalization
+    - [ ] HTTP to HTTPS
+    - [ ] Hostname normalization
+    - [ ] Trailing slash consistency
+    - [ ] Legacy and changed permalink redirects
+- [ ] Ensure important public pages are discoverable through crawlable `<a href>` links
+- [ ] Use descriptive anchor text for links to posts, profiles, tags, and categories
+- [ ] Audit HTTP response status codes for public, unavailable, and deleted pages
+
+### Indexing and crawler policies
+
+- [ ] Define a centralized indexing policy for pages and posts
+    - [ ] Public posts
+    - [ ] Unlisted posts
+    - [ ] Private posts
+    - [ ] Draft posts
+    - [ ] Scheduled posts
+    - [ ] Hidden and deleted posts
+    - [ ] User profiles and profile visibility settings
+    - [ ] Per-user and per-post search-engine indexing preferences
+- [ ] Ensure crawler directives consistently reflect the indexing policy
+- [ ] Distinguish crawling restrictions from indexing restrictions
+    - [ ] Use `noindex` when a crawlable page must not be indexed
+    - [ ] Do not rely on `robots.txt` to prevent indexing
+    - [ ] Avoid blocking pages that Google must crawl to discover `noindex`
+    - [ ] Protect private content with actual access controls
+- [ ] Audit `robots.txt` rules for Googlebot and other supported crawlers
+- [ ] Test indexing directives for representative page visibility states
+
+### Structured data
+
+- [ ] Audit JSON-LD generation for correctness and page-type consistency
+    - [ ] Use structured data that accurately represents visible page content
+    - [ ] Avoid emitting unavailable, fabricated, or misleading properties
+    - [ ] Keep structured data synchronized with the rendered page
+    - [ ] Validate JSON-LD syntax and schema types
+- [ ] Implement or improve `WebSite` structured data on the homepage
+- [ ] Improve post structured data
+    - [ ] Use `SocialMediaPosting` when it accurately represents the post
+    - [ ] Verify the type against `DiscussionForumPosting` where appropriate
+    - [ ] Provide the required `author` and `author.name` properties
+    - [ ] Provide `datePublished` using the actual publication timestamp
+    - [ ] Provide at least one applicable `text`, `image`, or `video` property
+    - [ ] Provide `author.url` when an author profile URL is available
+    - [ ] Provide `dateModified` when a genuine modification timestamp is available
+    - [ ] Keep post titles and other descriptive properties consistent with visible content
+- [ ] Add `ProfilePage` structured data to eligible public profile pages
+    - [ ] Identify the profile subject through `mainEntity`
+    - [ ] Represent the subject using the appropriate `Person` or `Organization` type
+    - [ ] Include available profile information without exposing private data
+- [ ] Evaluate `Article` / `BlogPosting` for editorial content only
+- [ ] Evaluate `QAPage` only if dedicated question-and-answer pages are introduced
+- [ ] Evaluate image license metadata
+    - [ ] Support `ImageObject` where genuine rights and attribution information is available
+    - [ ] Do not infer ownership, creator, or license information from the uploader
+- [ ] Evaluate video indexing support when public video pages are available
+
+### Sitemaps
+
+- [ ] Audit XML sitemap generation and submission
+    - [ ] Include canonical, public, indexable URLs only
+    - [ ] Exclude private, draft, deleted, and otherwise non-indexable content
+    - [ ] Keep sitemap URLs consistent with canonical URLs
+    - [ ] Provide accurate `lastmod` values when meaningful modification timestamps exist
+    - [ ] Support sitemap index files when the number of URLs requires them
+- [ ] Evaluate image sitemap support
+    - [ ] Include relevant crawlable image URLs from indexable pages
+    - [ ] Support multiple images associated with a page where appropriate
+- [ ] Evaluate video sitemap support if public video content is introduced
+- [ ] Verify sitemap accessibility, response status, XML validity, and robots.txt discovery
+
+### Testing and monitoring
+
+- [ ] Add SEO metadata regression tests
+    - [ ] Homepage metadata and site identity
+    - [ ] Post metadata and structured data
+    - [ ] Profile metadata and structured data
+    - [ ] Canonical URL generation
+    - [ ] Robots and indexing directives
+    - [ ] Visibility and publication-state handling
+    - [ ] Sitemap inclusion and exclusion rules
+- [ ] Add structured data validation to the development or CI workflow
+- [ ] Document the SEO validation workflow
+    - [ ] Google Rich Results Test
+    - [ ] Search Console URL Inspection
+    - [ ] Search Console sitemap monitoring
+    - [ ] Search Console indexing and crawling reports
+- [ ] Document known limitations and structured data eligibility per page type
+
+### Google Search Central references
+
+- Site appearance:
+    - [Site names](https://developers.google.com/search/docs/appearance/site-names?hl=ja)
+    - [Snippets and meta descriptions](https://developers.google.com/search/docs/appearance/snippet?hl=ja)
+    - [Title links](https://developers.google.com/search/docs/appearance/title-link?hl=ja)
+- Structured data:
+    - [Introduction to structured data](https://developers.google.com/search/docs/appearance/structured-data/intro-structured-data?hl=ja)
+    - [Article](https://developers.google.com/search/docs/appearance/structured-data/article?hl=ja)
+    - [Discussion Forum and SocialMediaPosting](https://developers.google.com/search/docs/appearance/structured-data/discussion-forum?hl=ja)
+    - [Image license metadata](https://developers.google.com/search/docs/appearance/structured-data/image-license-metadata?hl=ja)
+    - [ProfilePage](https://developers.google.com/search/docs/appearance/structured-data/profile-page?hl=ja)
+    - [QAPage](https://developers.google.com/search/docs/appearance/structured-data/qapage?hl=ja)
+- Crawling and indexing:
+    - [URL structure](https://developers.google.com/search/docs/crawling-indexing/url-structure?hl=ja)
+    - [Crawlable links](https://developers.google.com/search/docs/crawling-indexing/links-crawlable?hl=ja)
+    - [Sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/overview?hl=ja)
+    - [Image sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/image-sitemaps?hl=ja)
+    - [Video sitemaps](https://developers.google.com/search/docs/crawling-indexing/sitemaps/video-sitemaps?hl=ja)
+    - [Troubleshooting crawling errors](https://developers.google.com/search/docs/crawling-indexing/troubleshoot-crawling-errors?hl=ja)
+    - [Robots.txt](https://developers.google.com/search/docs/crawling-indexing/robots/intro?hl=ja)
+    - [Canonicalization](https://developers.google.com/search/docs/crawling-indexing/canonicalization?hl=ja)
+    - [Canonicalization troubleshooting](https://developers.google.com/search/docs/crawling-indexing/canonicalization-troubleshooting?hl=ja)
+    - [Valid page metadata](https://developers.google.com/search/docs/crawling-indexing/valid-page-metadata?hl=ja)
+    - [Supported meta tags and attributes](https://developers.google.com/search/docs/crawling-indexing/special-tags?hl=ja)
+
 ## Uploaders
 
 - [x] Support PostyBirb Custom Website uploads with token auth and compatible multipart handling
