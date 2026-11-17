@@ -111,10 +111,7 @@ function normalizeEventConfig(
     ) {
         return undefined;
     }
-    if (
-        !Array.isArray(value.ranges) ||
-        value.ranges.length > MAX_SEASONAL_EVENT_RANGES
-    ) {
+    if (!Array.isArray(value.ranges) || value.ranges.length > MAX_SEASONAL_EVENT_RANGES) {
         return undefined;
     }
 
@@ -210,9 +207,7 @@ export function resetSeasonalEventConfig(id: SeasonalEventId): boolean {
     const fallback = getDefaultSeasonalEventConfigs().find((event) => event.id === id);
     if (!fallback) return false;
 
-    const next = getSeasonalEventConfigs().map((event) =>
-        event.id === id ? fallback : event,
-    );
+    const next = getSeasonalEventConfigs().map((event) => (event.id === id ? fallback : event));
     return setSeasonalEventConfigs(next);
 }
 
