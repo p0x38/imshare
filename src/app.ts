@@ -442,12 +442,16 @@ export async function buildApp() {
         const origin = resolveRequestOrigin(config, request);
         let canonical = `${origin}${request.url.split("?", 1)[0]}`;
         const currentPath = request.url.split("?", 1)[0] ?? "/";
+
         let metaTitle = title;
         let metaDescription = description;
         let metaAuthor = "";
         let metaKeywords = "";
         let metaImage = "";
         let metaType: "website" | "article" = "website";
+        let metaDatePublished: Date | undefined;
+        let metaAuthorUrl: string | undefined;
+
         let crawlerDirectives = "";
 
         const postMatch = currentPath.match(/^\/posts\/([^/]+)\/?$/);
@@ -469,6 +473,7 @@ export async function buildApp() {
                         description: true,
                         id: true,
                         createdAt: true,
+                        publishedAt: true,
                         customPostId: true,
                         permalinkPattern: true,
                         permalinkIdType: true,
@@ -504,6 +509,12 @@ export async function buildApp() {
                     );
                     metaAuthor = post.user.name;
                     metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
+                    metaDatePublished = post.publishedAt ?? post.createdAt;
+                    metaAuthorUrl = `${origin}/users/${
+                        post.user.handle
+                            ? `@${encodeURIComponent(post.user.handle)}`
+                            : encodeURIComponent(post.user.id)
+                    }/`;
 
                     if (post.uploads[0])
                         metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
@@ -616,6 +627,7 @@ export async function buildApp() {
                     description: true,
                     id: true,
                     createdAt: true,
+                    publishedAt: true,
                     customPostId: true,
                     permalinkPattern: true,
                     permalinkIdType: true,
@@ -636,6 +648,13 @@ export async function buildApp() {
                     post.description?.trim() || post.title?.trim() || config.site.name;
                 metaAuthor = post.user.name;
                 metaKeywords = post.tags.map(({ tag }) => tag.name).join(", ");
+                metaDatePublished = post.publishedAt ?? post.createdAt;
+                metaAuthorUrl = `${origin}/users/${
+                    post.user.handle
+                        ? `@${encodeURIComponent(post.user.handle)}`
+                        : encodeURIComponent(post.user.id)
+                }/`;
+
                 if (post.uploads[0])
                     metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
                 metaType = "article";
@@ -675,6 +694,8 @@ export async function buildApp() {
             imageWidth: metaImage.endsWith("/og") ? 1200 : undefined,
             imageHeight: metaImage.endsWith("/og") ? 630 : undefined,
             author: metaAuthor || undefined,
+            authorUrl: metaAuthorUrl,
+            datePublished: metaDatePublished,
             keywords: metaKeywords || undefined,
             type: metaType,
             locale: "en_US",

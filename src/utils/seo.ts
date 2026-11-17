@@ -15,6 +15,8 @@ export interface SeoMetadata {
     type?: "website" | "article";
     locale?: string;
     crawlerDirectives?: string;
+    datePublished?: Date;
+    authorUrl?: string;
 }
 
 export function truncateDescription(value: string, maxLength = 160): string {
@@ -42,11 +44,19 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
         "@context": "https://schema.org",
         "@type": type === "article" ? "SocialMediaPosting" : "WebPage",
         name: metadata.title,
-        ...(type === "article" ? { headline: metadata.title } : {}),
         description,
         url: metadata.canonical,
         ...(metadata.image ? { image: metadata.image } : {}),
-        ...(metadata.author ? { author: { "@type": "Person", name: metadata.author } } : {}),
+        ...(metadata.datePublished ? { datePublished: metadata.datePublished.toISOString() } : {}),
+        ...(metadata.author
+            ? {
+                  author: {
+                      "@type": "Person",
+                      name: metadata.author,
+                      ...(metadata.authorUrl ? { url: metadata.authorUrl } : {}),
+                  },
+              }
+            : {}),
     };
 
     const tags = [
