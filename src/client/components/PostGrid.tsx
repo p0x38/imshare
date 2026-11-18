@@ -134,7 +134,9 @@ export function PostGrid({
                                         post.thumbnailUrl || post.uploads?.[0]?.url || "",
                                     )}
                                     alt={post.title || ""}
-                                    loading="lazy"
+                                    loading={index < 3 ? "eager" : "lazy"}
+                                    fetchPriority={index === 0 ? "high" : "auto"}
+                                    decoding="async"
                                     sx={{
                                         aspectRatio: "1 / 1",
                                         objectFit: "cover",

@@ -753,6 +753,7 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
         void api<{ data: Post }>(endpoint)
             .then((response) => {
                 if (!active) return;
+                document.getElementById("post-content-fallback")?.remove();
                 setPost(response.data);
             })
             .catch((cause) => {
@@ -919,6 +920,11 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                                     <CardMedia
                                                         component="img"
                                                         image={displayImageUrl(upload)}
+                                                        loading={index === 0 ? "eager" : "lazy"}
+                                                        fetchPriority={
+                                                            index === 0 ? "high" : "auto"
+                                                        }
+                                                        decoding="async"
                                                         alt={
                                                             upload.alt?.trim() ||
                                                             post.title?.trim() ||

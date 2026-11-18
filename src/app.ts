@@ -29,12 +29,55 @@ import {
 import fastifyRateLimit from "@fastify/rate-limit";
 import { resolveStorageDirectory } from "./lib/storage-directories.js";
 import { generateSeoMetadata, truncateDescription, type SeoProfileMetadata } from "./utils/seo.js";
-import { escapeMeta } from "./utils/html.js";
+import { escapeAttribute } from "./utils/html.js";
 import { resolveRequestOrigin } from "./utils/request.js";
 import { postIdsForSearchSync } from "./utils/meilisearch.js";
 import { analyticsBody, analyticsHead } from "./utils/analytics.js";
 
 const logLevel = process.env.NODE_ENV === "test" ? "error" : "info";
+
+interface PostFallbackData {
+    title: string | null;
+    description: string | null;
+    textContent: string | null;
+    caption: string | null;
+}
+
+function renderPostFallback(
+    post: PostFallbackData,
+    imageUrl?: string,
+    imageAlt?: string | null,
+): string {
+    const title = post.title?.trim() || "Untitled";
+    const description = post.description?.trim() || "";
+    const text = post.textContent?.trim() || post.caption?.trim() || "";
+
+    const descriptionHtml =
+        description && description !== text ? `<p>${escapeAttribute(description)}</p>` : "";
+
+    const textHtml = text
+        ? `<div class="post-content-fallback__text" style="white-space: pre-wrap">${escapeAttribute(text)}</div>`
+        : "";
+
+    const imageHtml = imageUrl
+        ? [
+              "<figure>",
+              +`<img src="${escapeAttribute(imageUrl)}" alt="${escapeAttribute(imageAlt?.trim() || title)}" loading="eager" fetchpriority="high" decoding="async" style="max-width: 100%; height: auto; object-fit: contain;">`,
+              +"</figure>",
+          ].join("")
+        : "";
+
+    return [
+        '<main id="post-content-fallback">',
+        "<article>",
+        `<h1>${escapeAttribute(title)}</h1>`,
+        descriptionHtml,
+        textHtml,
+        imageHtml,
+        "</article>",
+        "</main>",
+    ].join("");
+}
 
 const logger = process.stdout.isTTY
     ? {
@@ -449,6 +492,7 @@ export async function buildApp() {
         let metaKeywords = "";
         let metaImage = "";
         let metaText: string | undefined;
+        let metaFallbackHtml = "";
         let metaType: "website" | "article" = "website";
         let metaStructuredDataType: "WebSite" | "ProfilePage" | undefined =
             currentPath === "/" ? "WebSite" : undefined;
@@ -493,7 +537,11 @@ export async function buildApp() {
                         permalinkIdType: true,
                         permalinkKey: true,
                         tags: { select: { tag: { select: { name: true } } } },
-                        uploads: { orderBy: { createdAt: "asc" }, take: 1, select: { id: true } },
+                        uploads: {
+                            orderBy: { createdAt: "asc" },
+                            take: 1,
+                            select: { id: true },
+                        },
                         allowSearchEngineIndex: true,
                         allowAiCrawler: true,
                         allowImageCrawler: true,
@@ -547,6 +595,7 @@ export async function buildApp() {
                         metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
 
                     if (metaText || metaImage) metaType = "article";
+                    metaFallbackHtml = renderPostFallback(post, metaImage || undefined);
 
                     crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
                 }
@@ -746,7 +795,10 @@ export async function buildApp() {
 
                 if (post.uploads[0])
                     metaImage = `${origin}/api/v1/posts/image/${encodeURIComponent(post.uploads[0].id)}/thumbnail`;
+
                 if (metaText || metaImage) metaType = "article";
+                metaFallbackHtml = renderPostFallback(post, metaImage || undefined);
+
                 crawlerDirectives = crawlerMetaContent(resolveCrawlerPolicy(post.user, post));
             } else {
                 const normalizedHandle = handle.replace(/^@/, "").toLowerCase();
@@ -837,18 +889,8 @@ export async function buildApp() {
             enhanced = enhanced.replace(/<\/head>/i, `${crawlerDirectives}</head>`);
         }
 
-        if (metaType === "article") {
-            const fallback = [
-                "<noscript>",
-                "<main>",
-                `<h1>${escapeMeta(metaTitle)}</h1>`,
-                `<p>${escapeMeta(metaDescription)}</p>`,
-                "</main>",
-                "</noscript>",
-            ].join("");
-
-            enhanced = enhanced.replace(/(<div id="post"><\/div>)/i, `${fallback}$1`);
-        }
+        if (metaFallbackHtml)
+            enhanced = enhanced.replace(/(<div id="post"><\/div>)/i, `${metaFallbackHtml}`);
 
         if (!isReactPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
