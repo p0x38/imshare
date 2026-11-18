@@ -1,210 +1,169 @@
-# imshare TODO
+# imshare roadmap
 
-## Current roadmap
+> Last reviewed: 2026-11-19 against `main` at `bf3a38b1ffd62516f6050b3a23113945e25e541c`.
+>
+> Checkmarks reflect functionality found in the current source, tests, or documentation. An implemented feature may still need broader regression or interoperability coverage.
 
-### Authentication
+## Authentication and accounts
 
-- [x] Better Auth integration
-- [x] Email/password authentication
-- [x] Configurable OpenID Connect backend integration
-    - [x] Generic OAuth/OIDC plugin wiring
-    - [x] Discovery URL configuration
-    - [x] Client ID / optional client secret configuration
-    - [x] Add OIDC provider login button to the frontend
-    - [x] Add authenticated-client helper for Better Auth
-    - [ ] Test authorization-code flow end-to-end
-    - [ ] Test account creation/linking from OIDC claims
-    - [x] Document callback URL and scopes in `docs/auth-oidc.md`
+### Authentication and sessions
+
+- [x] Integrate Better Auth
+- [x] Support email/password authentication
+- [x] Support a configurable OpenID Connect backend
+    - [x] Wire the generic OAuth/OIDC provider
+    - [x] Support discovery URL configuration
+    - [x] Support client ID and optional client secret configuration
+    - [x] Add the OIDC provider login button
+    - [x] Add an authenticated-client helper
+    - [x] Document callback URLs and scopes in `docs/auth-oidc.md`
     - [x] Fail clearly on partial OIDC configuration
-- [ ] Account/session management
-    - [x] Account deletion
-    - [x] Session management UI
-    - [ ] Login history
+    - [ ] Test the authorization-code flow end-to-end
+    - [ ] Test account creation and linking from OIDC claims
+- [x] Support account deletion
+- [x] Provide session management UI
+- [x] Provide TOTP authenticator enrollment and recovery-code management
+- [ ] Add login history
 
-### Discovery and recommendations
+### Account preferences and API tokens
+
+- [x] Provide profile privacy settings
+- [x] Provide per-user crawler preferences
+- [x] Support browser push subscription enable/disable and test delivery
+- [ ] Add per-event and per-channel notification preferences
+- [x] Provide API tokens and basic management UI
+    - [x] Create, list, revoke, and expire personal access tokens
+    - [x] Support scoped permissions
+    - [x] Store only a secure token hash and show the secret once
+    - [x] Authenticate API requests with `Authorization: Bearer <token>`
+    - [x] Return token metadata through the API
+    - [x] Revoke individual tokens without invalidating browser sessions
+    - [x] Add API-token route and authorization regression tests
+    - [ ] Show token scopes, creation date, last-used date, and expiration clearly in the management UI
+    - [ ] Add token-specific rate limits and audit events
+    - [ ] Document token permissions and lifecycle in the endpoint reference
+
+## Posts, moderation, and integrations
+
+### Post management
+
+- [x] Edit and delete posts
+- [x] Hide and unhide posts
+- [x] Create and manage draft posts
+- [x] Support public, unlisted, and private visibility
+- [x] Support scheduled publishing
+- [x] Keep post revision history
+- [x] Support content warnings
+
+### Moderation
+
+- [x] Moderation dashboard
+- [x] Report review queue
+- [x] User suspension and bans
+- [x] Post removal workflow
+- [x] Moderation audit log
+- [ ] Block users
+
+### Upload clients and publishing integrations
+
+- [x] Support PostyBirb Custom Website uploads with token authentication and multipart handling
+- [x] Provide a ShareX `.sxcu` template and setup guide
+- [x] Document the generic upload endpoint, token scope, and response URL
+- [x] Test upload-token acceptance and unrelated-scope denial
+- [x] Test multipart image upload and image delivery
+- [x] Support PostyBirb text-only publishing through the Notification URL
+- [x] Support PostyBirb image-post publishing through the File URL
+    - [x] Validate multipart image batches
+    - [x] Create one image post for each submitted file batch
+    - [x] Store uploaded images and associate them with the created post
+    - [x] Map per-image alt text and source URL metadata
+    - [x] Map title, description, tags, and rating metadata
+    - [x] Support publication status and visibility with safe defaults
+    - [x] Authenticate post creation with `posts: write` and image uploads with `uploads: write`
+    - [x] Validate payloads and return useful errors
+    - [x] Return the created post URL and identifier
+    - [x] Test text-only submissions
+    - [x] Test a multi-image submission and metadata association
+    - [x] Document Notification URL and File URL configuration
+    - [ ] Add a dedicated single-image File URL regression test
+    - [ ] Define duplicate-submission and retry/idempotency behavior
+
+## Discovery and search
+
+### Recommendations
 
 - [x] Related posts
-- [x] Multi-signal related-post scorer
-    - [x] Title similarity
-    - [x] Description similarity
-    - [x] Caption similarity
-    - [x] Tag similarity
-    - [x] Category similarity
-    - [x] Author similarity
-    - [x] Content-type similarity
-    - [x] Recency score
-    - [x] Engagement score
-    - [x] Extract reusable recommendation scorer helper
+- [x] Multi-signal related-post scoring
+    - [x] Title, description, and caption similarity
+    - [x] Tag and category similarity
+    - [x] Author and content-type similarity
+    - [x] Recency and engagement signals
+    - [x] Extract a reusable recommendation scorer helper
+- [x] Trending and popular posts
+- [x] Recently viewed posts
+- [x] Use authenticated reaction preferences for recommendation personalization
 - [ ] Improve recommendation ranking quality
-    - [ ] Add explicit Top-N candidate selection/re-ranking stage
-    - [ ] Add diversity / duplicate suppression to avoid near-identical results
-    - [ ] Cap repeated authors/categories in a recommendation page
-    - [ ] Add personalized signals from views/reactions
+    - [ ] Add an explicit Top-N candidate selection and re-ranking stage
+    - [ ] Add diversity and near-duplicate suppression
+    - [ ] Cap repeated authors and categories per recommendation page
+    - [ ] Add view-history signals to personalization
     - [ ] Normalize popularity so older posts do not dominate
     - [ ] Add deterministic tie-breaking
-    - [ ] Add scorer unit tests with representative fixtures
-    - [ ] Benchmark ranking cost with larger candidate pools
-    - [ ] Move expensive similarity work behind a cheaper candidate-retrieval stage
-- [x] Trending/popular posts
-- [x] Recently viewed posts
-- [ ] Add recommendation debug/inspection tooling for development
+    - [ ] Move expensive similarity work behind cheaper candidate retrieval
+- [ ] Add recommendation debug and inspection tooling
 
-## Frontend
+### Search
 
-- [x] Dark mode via system preference
-- [x] Shared client-side API helper
-- [x] Shared components / partials
-- [x] Responsive/mobile layout
-- [x] React + Material UI frontend migration
-    - [x] Navigation/header
-    - [x] Post cards and responsive post grids
-    - [x] Skeleton/loading states
-    - [x] Feedback components
-    - [x] Theme system
-    - [x] Mobile Drawer navigation
-    - [x] Local Vite frontend bundling
-- [x] Page transitions and motion polish
-- [x] Full-width responsive navigation/header layout
-- [x] Recommendation sections and desktop sidebar
-- [x] Better empty states
-- [x] Better loading states
-- [x] Confirm-before-destructive-action dialogs
-- [x] Floating action button for posts page
-- [ ] Make the animation preference control all shared motion components
-- [ ] Make ripple/theme preferences apply consistently to all interactive components
-- [ ] Persist theme preferences to the authenticated account
-- [ ] MUI form components for remaining upload/edit pages
-- [ ] Remove remaining legacy frontend styling where replaced
-- [ ] Browser live reload / HMR
-- [ ] Keyboard navigation improvements
-- [ ] Accessibility regression tests for navigation, dialogs, forms, and interactive cards
-- [ ] Reduced-motion support across custom animations and transitions
-- [x] Image viewer / lightbox
-    - [ ] Zoom
-    - [ ] Pan
-    - [x] Previous/next image
-    - [x] Image metadata
+- [x] Full-text search
+- [x] Search by user, tag, category, date, and MIME type
+- [x] Tag autocomplete
+- [x] Add an optional Meilisearch backend while retaining SQLite FTS5 by default
+    - [x] Keep the Meilisearch URL and API key server-side
+    - [x] Support full reindexing and incremental create/update/delete synchronization
+    - [x] Fall back to SQLite FTS5 when Meilisearch is unconfigured or unavailable
+    - [x] Document setup and reindexing in `docs/meilisearch.md`
+    - [ ] Test indexing-write failures and recovery
 
-## Infrastructure
+## Content formats, rendering, and editing
 
-- [x] Enforce lockfile consistency in CI with `pnpm install --frozen-lockfile`
-- [ ] Add realtime integration tests
-- [ ] Add image upload/proxy tests
-- [ ] Add profile-link tests
-- [x] Add reaction API tests
-- [x] Add migration CI check
-- [ ] Background job system
-- [ ] Image processing queue
-- [ ] Storage abstraction
-    - [ ] Local filesystem
-    - [ ] S3-compatible storage
-- [ ] Automated database backups
-- [x] Health/readiness endpoints
-- [ ] Metrics dashboard
-- [ ] Structured audit logging
-- [x] Security headers
-- [x] CSRF protection
-- [ ] Automated dependency updates
-
-## Database providers (P3: structural change)
-
-- [x] SQLite as the current default (Prisma + `better-sqlite3`)
-- [ ] Evaluate PostgreSQL as the first alternative provider
-    - [x] Add provider-specific Prisma schema, adapter, configuration, and initial migration
-    - [x] Avoid SQLite-only FTS5 SQL when PostgreSQL is selected
-    - [x] Document PostgreSQL setup in `docs/postgresql.md`
-    - [ ] Run provider-specific integration tests against a PostgreSQL server
-    - [ ] Document production backup and upgrade procedures
-- [ ] Decide whether MySQL/MariaDB should be supported
-
-## Testing and quality
-
-- [x] Vitest unit/API test suite
-- [x] Migrate API tests from `node:test` to Vitest
-- [x] Migrate integration tests from `node:test` to Vitest
-- [x] Dedicated integration-test runner with database setup/cleanup
-- [x] Playwright browser test suite
-- [x] Public frontend smoke tests
-- [x] Desktop navigation browser coverage
-- [x] Mobile navigation browser coverage
-- [x] Browser-test single-worker configuration for stable local execution
-- [x] Add Playwright scripts to `package.json`
-- [x] Add VS Code tasks for unit, integration, browser, headed browser, and browser UI tests
-- [x] Add VS Code build task as the default build task
-- [x] Add VS Code formatting and format-check tasks
-- [x] Ignore Playwright, test-results, and coverage artifacts in `.gitignore`
-- [x] Add OIDC configuration unit tests
-- [ ] Add recommendation ranking regression tests
-
-## API / documentation
-
-- [x] OpenAPI documentation generation
-- [x] OpenAPI route filtering/grouping
-- [x] OpenAPI request examples
-- [x] OpenAPI response examples
-- [x] OpenAPI expected status documentation
-- [x] Fix Swagger UI CSP configuration
-- [x] Fix Swagger UI metadata/header interference
-- [x] Fix OpenAPI schema/route tagging issues
-- [x] Document OIDC setup and callback behavior in `docs/auth-oidc.md`
-- [ ] Document recommendation scoring inputs/outputs
-
-## Posts
-
-- [x] Edit post
-- [x] Delete post
-- [x] Hide/unhide post
-- [x] Draft posts
-- [x] Post visibility
-    - [x] Public
-    - [x] Unlisted
-    - [x] Private
-- [x] Scheduled publishing
-- [x] Post revision history
-
-## Content rendering and editing
+### Content format support
 
 - [x] Introduce a shared content-format registry
-- [x] Support Plain text, Markdown, and Wikitext
+- [x] Support plain text, Markdown, and the supported Wikitext subset
 - [x] Normalize unknown content formats to plain text
-- [x] Introduce a reusable ContentEditor
+- [x] Introduce a reusable `ContentEditor`
 - [x] Add Write, Split, and Preview modes
-- [x] Use ContentRenderer for editor previews
+- [x] Use `ContentRenderer` for editor previews
 - [x] Share the editor between text posts and image-post captions/descriptions
-- [ ] Improve ContentRenderer
-    - [ ] Standardize typography and spacing
-    - [ ] Improve code block and inline code presentation
-    - [ ] Improve table rendering and horizontal overflow
-    - [ ] Add renderer regression tests for each supported format
-- [ ] Improve editor toolbar
-    - [x] Add selectable heading levels
-    - [ ] Add fenced code blocks for Markdown
-    - [ ] Add underline support
-    - [x] Add strikethrough support for Markdown
-    - [ ] Add advanced link settings
-        - [x] Link text and URL
-        - [x] Link title for Markdown
-        - [ ] Configurable target
-        - [ ] Configurable rel attributes
-    - [x] Add checklists for Markdown
-    - [x] Add table insertion for Markdown
-    - [x] Add format-aware toolbar capability definitions
-    - [x] Keep unsupported and work-in-progress actions visible but disabled
-    - [x] Explain disabled actions using tooltips
-- [ ] Improve Markdown editing
-    - [x] Heading levels 1–6
-    - [x] Fenced code blocks
-    - [x] Strikethrough using GFM
-    - [x] Checklists using GFM task-list syntax
-    - [x] Tables using GFM
-    - [x] Advanced link insertion with title
-- [ ] Improve Wikitext editing
+
+### Renderer and toolbar
+
+- [x] Standardize renderer typography and spacing
+- [x] Improve code-block and inline-code presentation
+- [x] Improve table rendering and horizontal overflow
+- [ ] Add renderer regression tests for each supported format
+- [x] Add selectable heading levels
+- [x] Add fenced code-block insertion for Markdown
+- [ ] Implement underline support; keep the action visible but disabled until supported
+- [x] Add Markdown strikethrough support
+- [x] Add link insertion with editable link text and URL
+- [x] Add Markdown link-title support
+- [x] Keep external-link `target` and `rel` policy controlled by the renderer rather than exposing arbitrary user overrides
+- [x] Add Markdown checklists and table insertion
+- [x] Add format-aware toolbar capability definitions
+- [x] Keep unsupported and work-in-progress actions visible but disabled
+- [x] Explain disabled actions with tooltips
+
+### Format-specific follow-up
+
+- [x] Markdown headings 1–6, fenced code blocks, GFM strikethrough, checklists, tables, and titled links
+- [ ] Expand Wikitext support
     - [ ] Add code-block syntax and rendering
     - [ ] Add strikethrough
     - [ ] Add checklists
     - [ ] Add tables
-    - [ ] Expand link settings
-- [ ] Add editor accessibility and interaction tests
+    - [ ] Expand link options where compatible with the format
+- [ ] Add editor interaction and accessibility tests
     - [ ] Keyboard navigation and focus restoration
     - [ ] Toolbar labels and disabled-state explanations
     - [ ] Responsive editor behavior
@@ -218,160 +177,130 @@
     - [ ] Define sanitization and security requirements
     - [ ] Define format registration and compatibility behavior
 
-## Federation
+## Frontend, accessibility, and dashboard
 
-- [ ] Plan federation architecture and interoperability model
+### Shared frontend
 
-## Dashboard
+- [x] Support dark mode through system preference
+- [x] Provide a shared client-side API helper
+- [x] Provide shared components and partials
+- [x] Support responsive/mobile layouts
+- [x] Migrate the main frontend to React and Material UI
+    - [x] Navigation and header
+    - [x] Post cards and responsive grids
+    - [x] Skeleton and loading states
+    - [x] Feedback components and theme system
+    - [x] Mobile Drawer navigation
+    - [x] Local Vite frontend bundling
+- [x] Add page transitions and motion polish
+- [x] Add full-width responsive navigation/header layout
+- [x] Add recommendation sections and desktop sidebar
+- [x] Improve empty and loading states
+- [x] Add confirm-before-destructive-action dialogs
+- [x] Add a floating action button for the posts page
+- [ ] Make animation preferences control all shared motion components
+- [ ] Apply ripple and theme preferences consistently to interactive components
+- [ ] Persist appearance preferences to the authenticated account
+- [ ] Support resetting, importing, and exporting appearance preferences
+- [ ] Add reduced-motion support across custom animations and transitions
+- [ ] Migrate remaining upload/edit forms to Material UI
+- [ ] Remove legacy frontend styling where it has been replaced
+- [ ] Integrate server and Vite HMR into one development workflow
+- [ ] Improve keyboard navigation
+
+### Image viewer
+
+- [x] Provide an image viewer/lightbox
+- [x] Support previous/next image navigation
+- [x] Display image metadata
+- [ ] Add zoom
+- [ ] Add pan
+
+### Dashboard migration
 
 - [x] React dashboard landing page
 - [x] React dashboard post listing
-- [ ] React dashboard post management view
-- [ ] React dashboard post editor
-- [x] React dashboard tag management
-- [x] React dashboard category management
+- [x] React dashboard post management view
+- [x] React dashboard post editor
+- [x] React creator analytics page
+- [x] React tag and category management
 - [x] React dashboard settings page
-- [ ] Complete migration of remaining dashboard management pages to React
+- [x] Migrate the current admin dashboard routes to React entries
 
-## Search
+## SEO, indexing, and crawler policies
 
-- [x] Full-text search
-- [x] Search filters
-    - [x] User
-    - [x] Tag
-    - [x] Category
-    - [x] Date
-    - [x] MIME type
-- [x] Tag autocomplete
-- [x] Add an optional Meilisearch backend while retaining SQLite FTS5 as the default
-    - [x] Keep the Meilisearch URL and API key server-side
-    - [x] Add full reindexing and incremental create/update/delete synchronization
-    - [x] Fall back to SQLite FTS5 when Meilisearch is unconfigured or unavailable
-    - [ ] Test indexing-write failures and recovery
-    - [x] Document setup and reindexing in `docs/meilisearch.md`
+### Page metadata and canonical URLs
 
-## SEO / Search visibility
-
-### Page metadata and site identity
-
-- [ ] Audit SEO metadata across all public page types
-    - [ ] Homepage
-    - [ ] Post pages
-    - [ ] User profile pages
-    - [ ] Tag and category pages
-    - [ ] Search and discovery pages
-    - [ ] Pagination and other indexable listing pages
-- [ ] Generate unique, descriptive page titles that accurately reflect visible page content
-- [ ] Generate page-specific meta descriptions without relying on them being used verbatim as search snippets
-- [ ] Keep document titles, visible headings, and page content consistent
-- [ ] Ensure metadata is present in the initial HTML response
-- [ ] Validate generated `<head>` markup and ensure metadata elements use valid HTML
-- [ ] Audit supported robots and search metadata directives
-    - [ ] `robots`
-    - [ ] `googlebot`
-    - [ ] `nosnippet`
-    - [ ] `max-snippet`
-    - [ ] `data-nosnippet`
-- [ ] Add homepage `WebSite` structured data
-    - [ ] Provide the canonical site name and homepage URL
-    - [ ] Add `alternateName` when a genuine alternative site name exists
-
-### Canonicalization and crawlable links
-
-- [ ] Audit canonical URL generation across all page types
-    - [ ] Use absolute canonical URLs with the configured public origin
-    - [ ] Keep canonical URLs consistent with post permalink generation
-    - [ ] Check custom post IDs and alternative permalink patterns
-    - [ ] Handle query parameters and duplicate URL variants consistently
-    - [ ] Keep canonical URLs consistent with internal links and sitemaps
-- [ ] Audit redirects and URL normalization
-    - [ ] HTTP to HTTPS
+- [x] Generate server-side metadata in the initial HTML response
+- [x] Generate descriptive titles and page-specific descriptions for the homepage, posts, profiles, tags, and categories
+- [x] Generate Open Graph and Twitter metadata
+- [x] Generate absolute canonical URLs using the configured request origin
+- [x] Use post permalink generation for post canonical URLs
+- [x] Normalize query-string variants out of canonical URLs
+- [x] Generate canonical links and metadata through a shared SEO utility
+- [ ] Audit metadata for search, discovery, and paginated listing pages
+- [ ] Check consistency between document titles, visible headings, and page content across all public pages
+- [ ] Audit important public links for crawlable `<a href>` markup and descriptive anchor text
+- [ ] Audit redirects and URL normalization across deployments
+    - [ ] HTTP-to-HTTPS behavior
     - [ ] Hostname normalization
-    - [ ] Trailing slash consistency
+    - [ ] Trailing-slash consistency
     - [ ] Legacy and changed permalink redirects
-- [ ] Ensure important public pages are discoverable through crawlable `<a href>` links
-- [ ] Use descriptive anchor text for links to posts, profiles, tags, and categories
-- [ ] Audit HTTP response status codes for public, unavailable, and deleted pages
+- [ ] Audit HTTP status codes for public, unavailable, private, and deleted pages
 
-### Indexing and crawler policies
+### Indexing policy and robots directives
 
-- [ ] Define a centralized indexing policy for pages and posts
-    - [ ] Public posts
-    - [ ] Unlisted posts
-    - [ ] Private posts
-    - [ ] Draft posts
-    - [ ] Scheduled posts
-    - [ ] Hidden and deleted posts
-    - [ ] User profiles and profile visibility settings
-    - [ ] Per-user and per-post search-engine indexing preferences
-- [ ] Ensure crawler directives consistently reflect the indexing policy
-- [ ] Distinguish crawling restrictions from indexing restrictions
-    - [ ] Use `noindex` when a crawlable page must not be indexed
-    - [ ] Do not rely on `robots.txt` to prevent indexing
-    - [ ] Avoid blocking pages that Google must crawl to discover `noindex`
-    - [ ] Protect private content with actual access controls
-- [ ] Audit `robots.txt` rules for Googlebot and other supported crawlers
-- [ ] Test indexing directives for representative page visibility states
+- [x] Centralize user and post crawler preferences
+- [x] Support separate search, AI, image, and custom crawler policy values
+- [x] Support per-post overrides with inheritance from the owning user
+- [x] Emit `noindex` and `noimageindex` directives when the corresponding policy denies indexing
+- [x] Emit `X-Robots-Tag` restrictions for image and avatar resources
+- [x] Generate crawler-specific `robots.txt` groups
+- [x] Keep search crawlers able to fetch public pages whose metadata communicates `noindex`
+- [x] Protect private content with application access controls rather than relying on `robots.txt`
+- [ ] Define and test indexing semantics for unlisted posts, including their treatment outside the sitemap
+- [ ] Add integration tests for public, unlisted, private, draft, scheduled, hidden, and deleted post states
+- [ ] Add integration tests for user-level crawler settings and per-post overrides
 
 ### Structured data
 
-- [ ] Audit JSON-LD generation for correctness and page-type consistency
-    - [ ] Use structured data that accurately represents visible page content
-    - [ ] Avoid emitting unavailable, fabricated, or misleading properties
-    - [ ] Keep structured data synchronized with the rendered page
-    - [ ] Validate JSON-LD syntax and schema types
-- [ ] Implement or improve `WebSite` structured data on the homepage
-- [ ] Improve post structured data
-    - [ ] Use `SocialMediaPosting` when it accurately represents the post
-    - [ ] Verify the type against `DiscussionForumPosting` where appropriate
-    - [ ] Provide the required `author` and `author.name` properties
-    - [ ] Provide `datePublished` using the actual publication timestamp
-    - [ ] Provide at least one applicable `text`, `image`, or `video` property
-    - [ ] Provide `author.url` when an author profile URL is available
-    - [ ] Provide `dateModified` when a genuine modification timestamp is available
-    - [ ] Keep post titles and other descriptive properties consistent with visible content
-- [ ] Add `ProfilePage` structured data to eligible public profile pages
-    - [ ] Identify the profile subject through `mainEntity`
-    - [ ] Represent the subject using the appropriate `Person` or `Organization` type
-    - [ ] Include available profile information without exposing private data
-- [ ] Evaluate `Article` / `BlogPosting` for editorial content only
+- [x] Generate homepage `WebSite` structured data with the configured site name and URL
+- [x] Generate `SocialMediaPosting` structured data for post pages
+- [x] Include available post author, publication date, modification date, text, and image data
+- [x] Generate `ProfilePage` structured data with a `Person` main entity
+- [x] Avoid inventing unavailable profile images or other optional properties
+- [ ] Add `alternateName` for the website only when a genuine alternative site name is configured
+- [ ] Evaluate `Article`/`BlogPosting` for editorial content where it is more accurate than `SocialMediaPosting`
 - [ ] Evaluate `QAPage` only if dedicated question-and-answer pages are introduced
-- [ ] Evaluate image license metadata
-    - [ ] Support `ImageObject` where genuine rights and attribution information is available
-    - [ ] Do not infer ownership, creator, or license information from the uploader
-- [ ] Evaluate video indexing support when public video pages are available
+- [ ] Evaluate image-license metadata only when genuine rights and attribution information is available
+- [ ] Evaluate video indexing if public video pages are introduced
 
 ### Sitemaps
 
-- [ ] Audit XML sitemap generation and submission
-    - [ ] Include canonical, public, indexable URLs only
-    - [ ] Exclude private, draft, deleted, and otherwise non-indexable content
-    - [ ] Keep sitemap URLs consistent with canonical URLs
-    - [ ] Provide accurate `lastmod` values when meaningful modification timestamps exist
-    - [ ] Support sitemap index files when the number of URLs requires them
-- [ ] Evaluate image sitemap support
-    - [ ] Include relevant crawlable image URLs from indexable pages
-    - [ ] Support multiple images associated with a page where appropriate
-- [ ] Evaluate video sitemap support if public video content is introduced
-- [ ] Verify sitemap accessibility, response status, XML validity, and robots.txt discovery
+- [x] Generate an XML sitemap for static pages, eligible public profiles and posts, tags, and categories
+- [x] Exclude private, unlisted, draft, hidden, scheduled, and otherwise non-indexable posts from the sitemap
+- [x] Keep post sitemap URLs aligned with post permalink generation
+- [x] Provide modification timestamps from available update timestamps
+- [x] Include image sitemap entries for eligible post images, including multiple images per post
+- [x] Advertise the sitemap from `robots.txt`
+- [x] Test sitemap responses and basic indexing exclusions
+- [ ] Add sitemap index files if sitemap size or URL count requires them
+- [ ] Add a video sitemap if public video content is introduced
 
-### Testing and monitoring
+### SEO testing and operations
 
-- [ ] Add SEO metadata regression tests
-    - [ ] Homepage metadata and site identity
-    - [ ] Post metadata and structured data
-    - [ ] Profile metadata and structured data
-    - [ ] Canonical URL generation
-    - [ ] Robots and indexing directives
-    - [ ] Visibility and publication-state handling
-    - [ ] Sitemap inclusion and exclusion rules
-- [ ] Add structured data validation to the development or CI workflow
+- [x] Add SEO title and structured-data unit tests
+- [x] Add crawler-policy unit tests
+- [x] Add sitemap, `robots.txt`, and server-rendered post fallback tests
+- [ ] Add page-level metadata and canonical regression tests for all public page types
+- [ ] Expand indexing-state integration tests
+- [ ] Add automated structured-data/schema validation to development or CI
 - [ ] Document the SEO validation workflow
     - [ ] Google Rich Results Test
     - [ ] Search Console URL Inspection
     - [ ] Search Console sitemap monitoring
     - [ ] Search Console indexing and crawling reports
-- [ ] Document known limitations and structured data eligibility per page type
+- [ ] Document known limitations and structured-data eligibility by page type
 
 ### Google Search Central references
 
@@ -399,84 +328,103 @@
     - [Valid page metadata](https://developers.google.com/search/docs/crawling-indexing/valid-page-metadata?hl=ja)
     - [Supported meta tags and attributes](https://developers.google.com/search/docs/crawling-indexing/special-tags?hl=ja)
 
-## Uploaders
+## Federation
 
-- [x] Support PostyBirb Custom Website uploads with token auth and compatible multipart handling
-- [x] Add a ShareX `.sxcu` template and setup guide
-- [x] Document the generic upload endpoint, token scope, and response URL
-- [x] Test that upload tokens are accepted and unrelated scopes remain denied
-- [x] Add an end-to-end multipart image-upload and response-format test
-- [ ] Support PostyBirb post publishing through its Custom Website integration
-    - [x] Review PostyBirb's text-only submission payload and notification behavior
-    - [x] Review PostyBirb's File URL submission payload and batch behavior
-    - [x] Define separate API contracts for text and image post creation
-    - [ ] Support text-only posts through the Notification URL
-    - [ ] Support image posts through the File URL
-        - [ ] Accept and validate multiple image files per submission
-        - [ ] Create one image post for each submitted file batch
-        - [ ] Store uploaded images and associate them with the created post
-        - [ ] Map per-image alt text metadata
-        - [ ] Map per-image source URL metadata
-    - [ ] Map PostyBirb title, description, tags, and rating metadata
-    - [ ] Support publication status and visibility with safe defaults
-    - [ ] Authenticate using API tokens with `posts: write` permission
-    - [ ] Validate payloads and return useful error responses
-    - [ ] Return the created post URL and identifier
-    - [ ] Handle duplicate submissions and retry behavior
-    - [ ] Add API and integration tests for text-only submissions
-    - [ ] Add integration tests for single-image and multi-image submissions
-    - [ ] Test metadata association across image batches
-    - [ ] Document PostyBirb Notification URL configuration
-    - [ ] Document PostyBirb File URL configuration
+- [x] Provide initial ActivityPub federation support
+    - [x] Expose WebFinger and NodeInfo discovery endpoints
+    - [x] Expose Person actors, inbox, outbox, followers, and following endpoints
+    - [x] Expose public posts as `Create` activities containing `Note` objects
+    - [x] Process `Follow`, `Undo`, `Accept`, `Reject`, public `Create`, and `Delete` activities
+    - [x] Sign outbound federation requests and verify inbound signatures
+    - [x] Verify that the activity actor matches the verified signer
+    - [x] Reject federation deliveries to private or local network destinations
+    - [x] Add unit tests for signatures, digest validation, actor matching, and unsafe destinations
+- [ ] Expand federation interoperability and protocol coverage
+    - [ ] Add route-level tests for discovery, actor, inbox, and outbox endpoints
+    - [ ] Test interoperability with other ActivityPub implementations
+    - [ ] Document supported activities and known limitations
 
-## Moderation / safety
+## Platform, storage, and operations
 
-- [x] Moderation dashboard
-- [x] Report review queue
-- [x] User suspension / ban
-- [x] Post removal workflow
-- [x] Moderation audit log
-- [ ] Block users
-- [x] Content warning support
+### Infrastructure and observability
 
-## Accounts
+- [x] Enforce lockfile consistency in CI with `pnpm install --frozen-lockfile`
+- [x] Add migration validation/deployment checks to CI
+- [x] Provide health and readiness endpoints
+- [x] Add security headers
+- [x] Add CSRF protection
+- [x] Provide OpenTelemetry tracing, metrics, and logs configuration with Prometheus support
+- [ ] Add realtime integration tests
+- [x] Add image upload and image-proxy regression coverage
+- [ ] Add profile-link API tests
+- [ ] Implement a managed background job system with bounded concurrency, retries, and shutdown handling
+- [ ] Move thumbnail and image processing from fire-and-forget scheduling to managed jobs
+- [ ] Add an operational metrics dashboard
+- [ ] Add structured audit logging beyond the existing moderation audit log
+- [ ] Add automated dependency updates
 
-- [x] Profile privacy settings
-- [ ] Notification preferences
-- [x] API tokens (API and basic management UI)
-    - [x] Personal access tokens for external API clients and scripts
-    - [x] Create, list, revoke, and expire tokens through the API
-    - [x] Scoped permissions through the API
-    - [x] Store only a secure token hash and show the secret only once
-    - [x] Authenticate with `Authorization: Bearer <token>`
-    - [x] Return per-token name, creation date, last-used date, and expiration in the API
-    - [x] Revoke individual tokens without invalidating browser sessions
-    - [ ] Show token scopes, creation date, and expiration in the management UI
-    - [ ] Add token-specific rate limits and audit events
-    - [x] Document bearer authentication in OpenAPI
-    - [ ] Document token permissions and lifecycle in the endpoint reference
-    - [x] Add API-token management UI
-    - [x] Add API route and authorization regression tests
-- [ ] Account-synced appearance/theme preferences
-- [ ] Reset appearance/theme preferences to defaults
-- [ ] Import/export appearance/theme preferences
+### Storage
 
-## Architecture
+- [x] Support local filesystem storage for uploads and avatars
+- [ ] Introduce a pluggable storage-provider abstraction
+- [ ] Add an S3-compatible storage provider
+
+### Database providers
+
+- [x] Use SQLite as the default provider (`Prisma` + `better-sqlite3`)
+- [x] Add PostgreSQL-specific Prisma schema, adapter, configuration, and initial migration
+- [x] Avoid SQLite-only FTS5 SQL when PostgreSQL is selected
+- [x] Document PostgreSQL setup in `docs/postgresql.md`
+- [ ] Run provider-specific integration tests against a PostgreSQL server
+- [ ] Document production backup and upgrade procedures
+- [ ] Decide whether MySQL/MariaDB should be supported
+- [ ] Add automated database backups
+
+## Testing, quality, and documentation
+
+### Test infrastructure
+
+- [x] Add the Vitest unit/API test suite
+- [x] Migrate API and integration tests from `node:test` to Vitest
+- [x] Add a dedicated integration-test runner with database setup and cleanup
+- [x] Add the Playwright browser test suite
+- [x] Add public frontend smoke tests
+- [x] Add desktop and mobile navigation browser coverage
+- [x] Configure browser tests to use a single worker for stable local execution
+- [x] Add Playwright scripts to `package.json`
+- [x] Add VS Code tasks for unit, integration, browser, headed browser, and browser UI tests
+- [x] Add a VS Code build task as the default build task
+- [x] Add VS Code formatting and format-check tasks
+- [x] Ignore Playwright, test-results, and coverage artifacts in `.gitignore`
+- [x] Add OIDC configuration unit tests
+- [x] Add recommendation API behavior tests for anonymous and reaction-personalized results
+- [ ] Add recommendation scorer unit tests with representative fixtures
+- [ ] Benchmark recommendation ranking cost with larger candidate pools
+- [ ] Add content renderer and editor interaction tests
+- [ ] Add accessibility regression tests for navigation, dialogs, forms, interactive cards, and the editor
+- [ ] Add performance regression tests
+
+### API and project documentation
+
+- [x] Generate OpenAPI documentation
+- [x] Filter and group OpenAPI routes
+- [x] Add OpenAPI request and response examples
+- [x] Document expected response statuses
+- [x] Fix Swagger UI CSP configuration
+- [x] Fix Swagger UI metadata/header interference
+- [x] Fix OpenAPI schema and route tagging issues
+- [x] Document OIDC setup and callback behavior in `docs/auth-oidc.md`
+- [ ] Document recommendation scoring inputs and outputs
+
+## Architecture and developer experience
 
 - [x] Replace runtime `esm.sh` MUI dependencies with local bundling
-- [x] Introduce frontend build pipeline
-- [ ] Add browser HMR/live reload
-- [x] Define frontend component architecture
-- [x] Define API/client state conventions
+- [x] Introduce the frontend build pipeline
+- [x] Define the frontend component architecture
+- [x] Define API and client-state conventions
 - [x] Consolidate duplicated client-side code
-- [x] Add end-to-end tests
-- [ ] Add accessibility regression tests
-- [ ] Add performance regression tests
 - [ ] Define a shared design-token layer for spacing, motion, and accent colors
-- [ ] Keep theme preferences independent from page-specific styling
-
-## Code security / quality
-
-## Configuration DSL
-
-- [ ] Add validator and formatter for .imshare DSL
+- [x] Implement the `config.imshare` parser
+- [x] Validate parsed configuration against the typed server configuration model
+- [x] Implement the `config.imshare` formatter/serializer
+- [x] Add configuration DSL tests for parsing, formatting, round-tripping, duplicate keys, and malformed values
