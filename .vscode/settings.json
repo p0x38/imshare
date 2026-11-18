@@ -47,5 +47,5 @@
     "js/ts.tsserver.maxMemory": 4096,
     "js/ts.tsserver.experimental.enableProjectDiagnostics": false,
     "js/ts.preferences.includePackageJsonAutoImports": "off",
-    "js/ts.suggest.autoImports": true
+    "js/ts.suggest.autoImports": false
 }
