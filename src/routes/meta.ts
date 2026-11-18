@@ -247,7 +247,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
 
             for (const group of groups) {
                 const disallowed = new Set<string>();
-                const allowed = new Set<string>(["/api/v1/posts/image/"]);
+                const allowed = new Set<string>();
 
                 for (const user of users) {
                     const userPolicy = resolveCrawlerPolicy(user);
@@ -285,16 +285,18 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                             disallowed.add(postPermalink(post, user));
                         }
 
-                        if (!policy.image) {
-                            const uploadIds = new Set([
-                                ...post.uploads.map((upload) => upload.id),
-                                ...(post.thumbnailUploadId ? [post.thumbnailUploadId] : []),
-                            ]);
+                        const uploadIds = new Set([
+                            ...post.uploads.map((upload) => upload.id),
+                            ...(post.thumbnailUploadId ? [post.thumbnailUploadId] : []),
+                        ]);
 
-                            for (const uploadId of uploadIds) {
-                                disallowed.add(
-                                    `/api/v1/posts/image/${encodeURIComponent(uploadId)}`,
-                                );
+                        for (const uploadId of uploadIds) {
+                            const imagePath = `/api/v1/posts/image/${encodeURIComponent(uploadId)}`;
+
+                            if (policy.image) {
+                                allowed.add(imagePath);
+                            } else {
+                                disallowed.add(imagePath);
                             }
                         }
                     }
