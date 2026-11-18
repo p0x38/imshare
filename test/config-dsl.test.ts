@@ -50,7 +50,5 @@ test("configuration DSL reports duplicate keys with source positions", () => {
 
 test("configuration DSL rejects unknown units and malformed strings", () => {
     expect(() => parseConfigDsl("storage {\n    maxFileSize = 10XB\n}\n")).toThrow(ConfigDslError);
-    expect(() => parseConfigDsl('site {\n    name = "unterminated\n}\n')).toThrow(
-        ConfigDslError,
-    );
+    expect(() => parseConfigDsl('site {\n    name = "unterminated\n}\n')).toThrow(ConfigDslError);
 });

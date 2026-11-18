@@ -148,10 +148,7 @@ test("related-post scoring includes caption similarity", () => {
         source,
         post({ caption: "A collection of colorful space cats" }),
     );
-    const unrelated = scoreRecommendation(
-        source,
-        post({ caption: "A quiet landscape at sunset" }),
-    );
+    const unrelated = scoreRecommendation(source, post({ caption: "A quiet landscape at sunset" }));
 
     expect(matching.caption).toBe(1);
     expect(unrelated.caption).toBe(0);

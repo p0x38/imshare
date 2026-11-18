@@ -397,8 +397,7 @@ export function applyRecommendationDiversity(
         considered.push(item);
 
         const authorKey =
-            item.post.user.id ??
-            normalizeText(item.post.user.handle ?? item.post.user.name, 200);
+            item.post.user.id ?? normalizeText(item.post.user.handle ?? item.post.user.name, 200);
         const categoryKey = item.post.categoryId ?? "";
         const authorOverflow =
             Boolean(authorKey) && (authorCounts.get(authorKey) ?? 0) >= maxPerAuthor;
