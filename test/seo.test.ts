@@ -90,4 +90,66 @@ describe("generateSeoMetadata structured data", () => {
         });
         expect(data).not.toHaveProperty("mainEntity.image");
     });
+
+    it("assigns stable @id values and links related entities", () => {
+        const data = getStructuredData(
+            generateSeoMetadata({
+                ...baseMetadata,
+                type: "article",
+                author: "Example Author",
+                authorUrl: "https://example.com/users/@author/",
+            }),
+        );
+
+        expect(data["@id"]).toBe("https://example.com/example/#article");
+        expect(data).toMatchObject({
+            isPartOf: {
+                "@id": "https://example.com/#website",
+            },
+            mainEntityOfPage: {
+                "@id": "https://example.com/example/#webpage",
+            },
+            publisher: {
+                "@type": "Organization",
+                "@id": "https://example.com/#organization",
+            },
+            author: {
+                "@type": "Person",
+                "@id": "https://example.com/users/@author#person",
+            },
+        });
+    });
+
+    it("assigns an @id to ProfilePage and its Person entity", () => {
+        const data = getStructuredData(
+            generateSeoMetadata({
+                ...baseMetadata,
+                structuredDataType: "ProfilePage",
+                profile: {
+                    name: "Example Author",
+                    url: "https://example.com/users/@author/",
+                    identifier: "user-123",
+                },
+            }),
+        );
+
+        expect(data["@id"]).toBe("https://example.com/example/#profilepage");
+        expect(data).toMatchObject({
+            mainEntity: {
+                "@type": "Person",
+                "@id": "https://example.com/users/@author#person",
+            },
+        });
+    });
+
+    it("assigns a stable @id to WebSite", () => {
+        const data = getStructuredData(
+            generateSeoMetadata({
+                ...baseMetadata,
+                structuredDataType: "WebSite",
+            }),
+        );
+
+        expect(data["@id"]).toBe("https://example.com/#website");
+    });
 });

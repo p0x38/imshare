@@ -65,11 +65,29 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
     const imageAlt = metadata.imageAlt?.trim() || metadata.title;
     const type = metadata.type ?? "website";
 
+    const canonicalUrl = new URL(metadata.canonical);
+    const siteUrl = canonicalUrl.origin;
+
+    const websiteId = `${siteUrl}/#website`;
+    const organizationId = `${siteUrl}/#organization`;
+    const webpageId = `${metadata.canonical}#webpage`;
+    const articleId = `${metadata.canonical}#article`;
+    const profilePageId = `${metadata.canonical}#profilepage`;
+
     const structuredDataType =
         metadata.structuredDataType ?? (type === "article" ? "SocialMediaPosting" : "WebPage");
+
     const structuredData = {
         "@context": "https://schema.org",
         "@type": structuredDataType,
+        "@id":
+            structuredDataType === "WebSite"
+                ? websiteId
+                : structuredDataType === "ProfilePage"
+                  ? profilePageId
+                  : type === "article"
+                    ? articleId
+                    : webpageId,
         ...(structuredDataType === "WebSite"
             ? {
                   name: metadata.siteName,
@@ -79,12 +97,28 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
                   name: metadata.title,
                   description,
                   url: metadata.canonical,
+                  isPartOf: {
+                      "@id": websiteId,
+                  },
                   ...(structuredDataType === "ProfilePage"
                       ? {}
                       : metadata.image
                         ? { image: metadata.image }
                         : {}),
               }),
+        ...(type === "article"
+            ? {
+                  mainEntityOfPage: {
+                      "@id": webpageId,
+                  },
+                  publisher: {
+                      "@type": "Organization",
+                      "@id": organizationId,
+                      name: metadata.siteName,
+                      url: siteUrl,
+                  },
+              }
+            : {}),
         ...(type === "article" && metadata.text ? { text: metadata.text } : {}),
         ...(type === "article" && metadata.datePublished
             ? { datePublished: metadata.datePublished.toISOString() }
@@ -99,6 +133,9 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
             ? {
                   author: {
                       "@type": "Person",
+                      ...(metadata.authorUrl
+                          ? { "@id": `${metadata.authorUrl.replace(/\/$/, "")}#person` }
+                          : {}),
                       name: metadata.author,
                       ...(metadata.authorUrl ? { url: metadata.authorUrl } : {}),
                   },
@@ -116,6 +153,7 @@ export function generateSeoMetadata(metadata: SeoMetadata): string {
                       : {}),
                   mainEntity: {
                       "@type": "Person",
+                      "@id": `${metadata.profile.url.replace(/\/$/, "")}#person`,
                       name: metadata.profile.name,
                       url: metadata.profile.url,
                       ...(metadata.profile.identifier

@@ -17,6 +17,7 @@ import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
+import { linkifyText } from "../lib/linkify";
 
 function TextPage() {
     const textId = location.pathname.split("/").filter(Boolean).at(-1) || "";
@@ -114,7 +115,7 @@ function TextPage() {
                                     lineHeight: 1.8,
                                 }}
                             >
-                                {text.textContent}
+                                {linkifyText(text.textContent || "")}
                             </Typography>
                             <Stack direction="row" spacing={1}>
                                 <Button

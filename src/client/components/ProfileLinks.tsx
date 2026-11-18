@@ -89,7 +89,7 @@ export function ProfileLinks({ websiteUrl, githubUrl, links = [] }: ProfileLinks
                             <Link
                                 href={entry.url}
                                 target="_blank"
-                                rel="noopener noreferrer"
+                                rel="ugc noopener noreferrer"
                                 underline="hover"
                                 sx={{
                                     fontWeight: 600,

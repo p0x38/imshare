@@ -44,6 +44,7 @@ import { Page } from "./Page";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 import { RecommendationSections } from "./RecommendationSections";
+import { linkifyText } from "../lib/linkify";
 
 interface Comment {
     id: string;
@@ -384,7 +385,7 @@ function PostActions({ post }: { post: Post }) {
                         component="a"
                         href={post.sourceUrl}
                         target="_blank"
-                        rel="noreferrer"
+                        rel="ugc noreferrer"
                         onClick={closeMenu}
                     >
                         <ListItemIcon>
@@ -528,7 +529,7 @@ function CommentItem({
                     </Stack>
                     {comment.body ? (
                         <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                            {comment.body}
+                            {linkifyText(comment.body)}
                         </Typography>
                     ) : null}
                     {comment.attachment ? (
@@ -1008,7 +1009,7 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                                 <>
                                                     <Divider />
                                                     <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                                                        {post.description}
+                                                        {linkifyText(post.description)}
                                                     </Typography>
                                                 </>
                                             ) : null}
