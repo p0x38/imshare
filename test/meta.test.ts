@@ -83,7 +83,7 @@ test("robots.txt allows public image routes without generating per-upload rules"
         expect(googleImageGroup).toContain("Allow: /api/v1/posts/image/");
         expect(googleImageGroup).toContain("Allow: /api/v1/avatars/");
 
-        expect(aiGroup).toContain("Allow: /api/v1/posts/image/");
+        expect(aiGroup).not.toContain("Allow: /api/v1/posts/image/");
 
         expect(response.body).not.toMatch(/(?:Allow|Disallow): \/api\/v1\/posts\/image\/[^\s/]+/);
     } finally {
