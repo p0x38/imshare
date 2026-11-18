@@ -1,4 +1,5 @@
-export type { ContentFormat } from "./content-formats/formats.js";
+import type { ContentFormat } from "./content-formats/formats.js";
+export type { ContentFormat };
 
 export interface Upload {
     id: string;
