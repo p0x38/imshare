@@ -945,12 +945,47 @@ export async function buildApp() {
 
             const upload = await prisma.upload.findFirst({
                 where: { filename: rawPath, storageArea: "uploads" },
-                select: { filename: true, mimeType: true, contentHash: true, size: true },
+                select: {
+                    filename: true,
+                    mimeType: true,
+                    contentHash: true,
+                    size: true,
+                    user: {
+                        select: {
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                        },
+                    },
+                    post: {
+                        select: {
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                            user: {
+                                select: {
+                                    allowSearchEngineIndex: true,
+                                    allowAiCrawler: true,
+                                    allowImageCrawler: true,
+                                    allowCustomCrawler: true,
+                                },
+                            },
+                        },
+                    },
+                },
             });
+
             if (!upload)
                 return reply
                     .code(404)
                     .send({ error: { code: "IMAGE_NOT_FOUND", message: "Image not found." } });
+
+            const crawlerOwner = upload.post?.user ?? upload.user;
+            if (!resolveCrawlerPolicy(crawlerOwner, upload.post).image) {
+                reply.header("X-Robots-Tag", "noindex");
+            }
 
             const source = path.resolve(uploadDir, upload.filename);
             const relative = path.relative(uploadDir, source);

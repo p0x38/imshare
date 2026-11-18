@@ -27,6 +27,7 @@ import {
     postyBirbDescriptionToText,
 } from "../lib/postybirb.js";
 import { findTags, postInclude, postView } from "./_shared.js";
+import { resolveCrawlerPolicy } from "../lib/crawler-policy.js";
 
 const IMAGE_TYPES = new Map([
     [".jpg", "image/jpeg"],
@@ -949,6 +950,14 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                 mimeType: true,
                 contentHash: true,
                 size: true,
+                user: {
+                    select: {
+                        allowSearchEngineIndex: true,
+                        allowAiCrawler: true,
+                        allowImageCrawler: true,
+                        allowCustomCrawler: true,
+                    },
+                },
             },
         });
 
@@ -959,6 +968,10 @@ export const uploadRoutes: FastifyPluginAsync = async (fastify) => {
                     message: "Image not found.",
                 },
             });
+        }
+
+        if (!resolveCrawlerPolicy(upload.user).image) {
+            reply.header("X-Robots-Tag", "noindex");
         }
 
         const source = resolveUploadStoragePath(avatarDir, upload.filename);

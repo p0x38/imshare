@@ -3,6 +3,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 import { prisma } from "../lib/auth.js";
 import { openapi, parameter } from "../lib/openapi-route.js";
+import { resolveCrawlerPolicy } from "../lib/crawler-policy.js";
 
 const MODES = ["default", "initials", "identicon", "gravatar", "custom"] as const;
 type AvatarMode = (typeof MODES)[number];
@@ -71,12 +72,27 @@ export const avatarRoutes: FastifyPluginAsync = async (fastify) => {
             const { userId } = request.params as { userId: string };
             const user = await prisma.user.findUnique({
                 where: { id: userId },
-                select: { name: true, email: true, avatarMode: true, avatarValue: true },
+                select: {
+                    name: true,
+                    email: true,
+                    avatarMode: true,
+                    avatarValue: true,
+                    allowSearchEngineIndex: true,
+                    allowAiCrawler: true,
+                    allowImageCrawler: true,
+                    allowCustomCrawler: true,
+                },
             });
+
             if (!user)
                 return reply
                     .code(404)
                     .send({ error: { code: "USER_NOT_FOUND", message: "User not found." } });
+
+            if (!resolveCrawlerPolicy(user).image) {
+                reply.header("X-Robots-Tag", "noindex");
+            }
+
             const mode = normalizeAvatarMode(user.avatarMode);
             if (mode === "gravatar") {
                 const hash = createHash("md5")

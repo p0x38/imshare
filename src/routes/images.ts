@@ -249,8 +249,35 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
             const { uploadId } = request.params as { uploadId: string };
             const upload = await prisma.upload.findUnique({
                 where: { id: uploadId },
-                select: { thumbhash: true },
+                select: {
+                    thumbhash: true,
+                    user: {
+                        select: {
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                        },
+                    },
+                    post: {
+                        select: {
+                            allowSearchEngineIndex: true,
+                            allowAiCrawler: true,
+                            allowImageCrawler: true,
+                            allowCustomCrawler: true,
+                            user: {
+                                select: {
+                                    allowSearchEngineIndex: true,
+                                    allowAiCrawler: true,
+                                    allowImageCrawler: true,
+                                    allowCustomCrawler: true,
+                                },
+                            },
+                        },
+                    },
+                },
             });
+
             if (!upload?.thumbhash)
                 return reply.code(404).send({
                     error: {
@@ -258,6 +285,12 @@ export const imageRoutes: FastifyPluginAsync = async (fastify) => {
                         message: "Image placeholder is not available.",
                     },
                 });
+
+            const crawlerOwner = upload.post?.user ?? upload.user;
+            if (!resolveCrawlerPolicy(crawlerOwner, upload.post).image) {
+                reply.header("X-Robots-Tag", "noindex");
+            }
+
             try {
                 const cachePath = resolveCachePath(
                     cacheDir,

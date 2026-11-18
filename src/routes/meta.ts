@@ -199,18 +199,11 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                             permalinkPattern: true,
                             permalinkIdType: true,
                             permalinkKey: true,
-                            thumbnailUploadId: true,
 
                             allowSearchEngineIndex: true,
                             allowAiCrawler: true,
                             allowImageCrawler: true,
                             allowCustomCrawler: true,
-
-                            uploads: {
-                                select: {
-                                    id: true,
-                                },
-                            },
                         },
                     },
                 },
@@ -247,7 +240,18 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
 
             for (const group of groups) {
                 const disallowed = new Set<string>();
-                const allowed = new Set<string>();
+
+                // Search and image crawlers must be able to fetch images so
+                // their X-Robots-Tag headers can communicate indexing policy.
+                // AI and custom crawlers remain blocked from /api/ by default.
+                const imageRules =
+                    group.category === "search" || group.category === "image"
+                        ? [
+                              "Allow: /api/v1/posts/image/",
+                              "Allow: /api/v1/users/*/avatar",
+                              "Allow: /api/v1/avatars/",
+                          ]
+                        : [];
 
                 for (const user of users) {
                     const userPolicy = resolveCrawlerPolicy(user);
@@ -266,14 +270,6 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                         disallowed.add(profilePath);
                     }
 
-                    const avatarPath = `/api/v1/users/${encodeURIComponent(user.id)}/avatar`;
-
-                    if (userPolicy.image) {
-                        allowed.add(avatarPath);
-                    } else {
-                        disallowed.add(avatarPath);
-                    }
-
                     for (const post of user.posts) {
                         const policy = resolveCrawlerPolicy(user, post);
 
@@ -283,21 +279,6 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                             !policy[group.category]
                         ) {
                             disallowed.add(postPermalink(post, user));
-                        }
-
-                        const uploadIds = new Set([
-                            ...post.uploads.map((upload) => upload.id),
-                            ...(post.thumbnailUploadId ? [post.thumbnailUploadId] : []),
-                        ]);
-
-                        for (const uploadId of uploadIds) {
-                            const imagePath = `/api/v1/posts/image/${encodeURIComponent(uploadId)}`;
-
-                            if (policy.image) {
-                                allowed.add(imagePath);
-                            } else {
-                                disallowed.add(imagePath);
-                            }
                         }
                     }
                 }
@@ -312,7 +293,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     "Disallow: /login",
                     "Disallow: /signup",
                     "Allow: /api/v1/posts/permalink/",
-                    ...[...allowed].map((pathname) => `Allow: ${pathname}`),
+                    ...imageRules,
                     ...[...disallowed].map((pathname) => `Disallow: ${pathname}`),
                     "",
                 );

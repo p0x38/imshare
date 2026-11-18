@@ -56,7 +56,7 @@ test("sitemap excludes posts that disable search indexing even when image crawli
     }
 }, 30_000);
 
-test("robots.txt allows the public post permalink API while disallowing other API routes", async () => {
+test("robots.txt allows public image routes without generating per-upload rules", async () => {
     const app = await buildApp();
 
     try {
@@ -68,6 +68,24 @@ test("robots.txt allows the public post permalink API while disallowing other AP
         expect(response.statusCode).toBe(200);
         expect(response.body).toContain("Disallow: /api/");
         expect(response.body).toContain("Allow: /api/v1/posts/permalink/");
+
+        const groups = response.body.split(/\n{2,}/);
+        const googleBotGroup = groups.find((group) => group.startsWith("User-agent: Googlebot\n"));
+        const googleImageGroup = groups.find((group) =>
+            group.startsWith("User-agent: Googlebot-Image\n"),
+        );
+        const aiGroup = groups.find((group) => group.startsWith("User-agent: GPTBot\n"));
+
+        expect(googleBotGroup).toContain("Allow: /api/v1/posts/image/");
+        expect(googleBotGroup).toContain("Allow: /api/v1/users/*/avatar");
+        expect(googleBotGroup).toContain("Allow: /api/v1/avatars/");
+
+        expect(googleImageGroup).toContain("Allow: /api/v1/posts/image/");
+        expect(googleImageGroup).toContain("Allow: /api/v1/avatars/");
+
+        expect(aiGroup).toContain("Allow: /api/v1/posts/image/");
+
+        expect(response.body).not.toMatch(/(?:Allow|Disallow): \/api\/v1\/posts\/image\/[^\s/]+/);
     } finally {
         await app.close();
     }
