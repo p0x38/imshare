@@ -3,6 +3,9 @@
     "version": "1.7.0",
     "description": "Self-hosted image archive and sharing server",
     "main": "dist/server.js",
+    "bin": {
+        "imshare-cli": "./dist/cli/index.js"
+    },
     "scripts": {
         "dev": "nodemon --watch src --watch views --ext ts,tsx,ejs --exec \"tsx src/server.ts\"",
         "dev:client": "vite --host 0.0.0.0",
@@ -36,7 +39,8 @@
         "migrate:cache": "tsx src/tools/migrate-cache.ts",
         "serve:unavailable": "tsx src/tools/serve-service-unavailable.ts",
         "cache:prune": "tsx src/tools/prune-cache.ts",
-        "migrate:storage": "tsx scripts/migrate-storage.ts"
+        "migrate:storage": "tsx scripts/migrate-storage.ts",
+        "cli": "tsx src/cli/index.ts"
     },
     "keywords": [],
     "author": "p0x38",

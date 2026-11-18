@@ -428,3 +428,9 @@
 - [x] Validate parsed configuration against the typed server configuration model
 - [x] Implement the `config.imshare` formatter/serializer
 - [x] Add configuration DSL tests for parsing, formatting, round-tripping, duplicate keys, and malformed values
+- [x] Add the `imshare-cli` configuration commands
+    - [x] Validate configuration files
+    - [x] Show individual effective configuration properties
+    - [x] List effective values with file/default/environment provenance
+    - [x] Resolve and display the selected configuration path
+    - [x] Support `IMSHARE__...` environment overrides in both the CLI and server

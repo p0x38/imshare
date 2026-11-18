@@ -103,6 +103,17 @@ The parser is intentionally small and format-specific to imshare, while the appl
 
 Existing JSON/YAML/TOML configuration files are no longer the runtime configuration format. Move the values from an older configuration into `config.imshare` before starting the server.
 
+Use the `imshare-cli` command to validate and inspect the effective configuration:
+
+```sh
+pnpm cli -- config validate
+pnpm cli -- config list
+pnpm cli -- config show server.port
+pnpm cli -- config path
+```
+
+See [CLI documentation](docs/cli.md) for configuration paths, environment overrides, and command options.
+
 ## Development
 
 The repository provides separate commands for the server, frontend client, checks, tests, database work, and maintenance tasks.

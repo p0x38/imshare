@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { readFile, rename, writeFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import path from "node:path";
 import { parseConfigDsl, stringifyConfigDsl } from "./config-dsl.js";
 import { getOpenIdProviderId } from "./openid.js";
@@ -135,8 +136,31 @@ export interface PublicConfig {
     limits: { textPostCharacters: number };
 }
 
-const CONFIG_FILE = process.env.IMSHARE_CONFIG?.trim() || "config.imshare";
-const configPath = path.resolve(process.cwd(), CONFIG_FILE);
+export type ConfigValueSource =
+    { type: "file" } | { type: "default" } | { type: "environment"; name: string };
+
+export interface ConfigSnapshot {
+    path: string;
+    config: ServerConfig;
+    sources: Record<string, ConfigValueSource>;
+}
+
+export function resolveConfigPath(
+    configFile?: string,
+    cwd = process.cwd(),
+    environment: NodeJS.ProcessEnv = process.env,
+): string {
+    const selected = configFile?.trim() || environment.IMSHARE_CONFIG?.trim() || "config.imshare";
+    const expanded =
+        selected === "~"
+            ? homedir()
+            : selected.startsWith("~/") || selected.startsWith("~\\")
+              ? path.join(homedir(), selected.slice(2))
+              : selected;
+
+    return path.resolve(cwd, expanded);
+}
+
 const DEFAULTS = {
     storage: {
         cache: {
@@ -198,37 +222,66 @@ const DEFAULTS = {
     },
 } as const;
 
-export async function readConfigText(): Promise<string> {
-    return readFile(configPath, "utf8");
+export async function readConfigText(configFilePath = resolveConfigPath()): Promise<string> {
+    return readFile(configFilePath, "utf8");
 }
 
-export function validateConfigText(content: string): ServerConfig {
-    return parseConfig(content);
+export function validateConfigText(
+    content: string,
+    configFilePath = resolveConfigPath(),
+    environment: NodeJS.ProcessEnv = process.env,
+): ServerConfig {
+    return parseConfigSnapshot(content, configFilePath, environment).config;
 }
 
-export async function saveConfigText(content: string): Promise<ServerConfig> {
-    const validated = validateConfigText(content);
-    const temporaryPath = `${configPath}.tmp`;
+export async function saveConfigText(
+    content: string,
+    configFilePath = resolveConfigPath(),
+): Promise<ServerConfig> {
+    const validated = validateConfigText(content, configFilePath);
+    const temporaryPath = `${configFilePath}.tmp`;
     await writeFile(temporaryPath, content.trimEnd() + "\n", "utf8");
-    await rename(temporaryPath, configPath);
+    await rename(temporaryPath, configFilePath);
     return validated;
 }
 
 export async function loadConfig(): Promise<ServerConfig> {
-    return parseConfig(await readFile(configPath, "utf8"));
+    return (await loadConfigSnapshot()).config;
 }
 
 export function loadConfigSync(): ServerConfig {
-    return parseConfig(readFileSync(configPath, "utf8"));
+    return loadConfigSnapshotSync().config;
+}
+
+export async function loadConfigSnapshot(
+    configFilePath = resolveConfigPath(),
+    environment: NodeJS.ProcessEnv = process.env,
+): Promise<ConfigSnapshot> {
+    const resolvedPath = path.resolve(configFilePath);
+    const content = await readFile(resolvedPath, "utf8");
+
+    return parseConfigSnapshot(content, resolvedPath, environment);
+}
+
+export function loadConfigSnapshotSync(
+    configFilePath = resolveConfigPath(),
+    environment: NodeJS.ProcessEnv = process.env,
+): ConfigSnapshot {
+    const resolvedPath = path.resolve(configFilePath);
+
+    return parseConfigSnapshot(readFileSync(resolvedPath, "utf8"), resolvedPath, environment);
 }
 
 export async function updateConfig(
     update: (config: ServerConfig) => ServerConfig,
 ): Promise<ServerConfig> {
-    const next = normalizeConfig(update(await loadConfig()));
-    if (!isServerConfig(next)) throw new Error(`Invalid server configuration: ${configPath}`);
-    await writeFile(configPath, stringifyConfigDsl(next), "utf8");
-    return next;
+    const targetPath = resolveConfigPath();
+    const current = parseConfigSnapshot(await readFile(targetPath, "utf8"), targetPath, {}).config;
+    const next = normalizeConfig(update(current));
+    if (!isServerConfig(next)) throw new Error(`Invalid server configuration: ${targetPath}`);
+    const content = stringifyConfigDsl(next);
+    await writeFile(targetPath, content, "utf8");
+    return parseConfigSnapshot(content, targetPath, process.env).config;
 }
 
 export const getConfig = loadConfig;
@@ -285,12 +338,161 @@ function hasExplicitPort(value: string): boolean {
     return host.startsWith("[") ? /^\[[^\]]+\]:\d+$/.test(host) : /:\d+$/.test(host);
 }
 
-function parseConfig(content: string): ServerConfig {
-    const config = parseConfigDsl(content);
-    if (!isServerConfig(config)) throw new Error(`Invalid server configuration: ${configPath}`);
-    return normalizeConfig(config);
+function parseConfigSnapshot(
+    content: string,
+    configFilePath: string,
+    environment: NodeJS.ProcessEnv,
+): ConfigSnapshot {
+    const fileConfig = parseConfigDsl(content);
+    if (!isServerConfig(fileConfig))
+        throw new Error(
+            `Invalid server configuration: ${configFilePath}. Check required properties, value types, and constraints.`,
+        );
+
+    const config = normalizeConfig(fileConfig);
+    const fileValues = flattenConfigLeaves(fileConfig);
+    const sources: Record<string, ConfigValueSource> = {};
+
+    for (const propertyPath of flattenConfigLeaves(config).keys()) {
+        sources[propertyPath] = fileValues.has(propertyPath)
+            ? { type: "file" }
+            : { type: "default" };
+    }
+
+    applyEnvironmentOverrides(config, environment, sources);
+
+    if (!isServerConfig(config)) {
+        throw new Error(
+            `Invalid server configuration after applying environment overrides: ${configFilePath}. Check the overridden property types and constraints.`,
+        );
+    }
+
+    return { path: configFilePath, config, sources };
 }
 
+function flattenConfigLeaves(value: unknown, prefix = ""): Map<string, unknown> {
+    const result = new Map<string, unknown>();
+
+    if (Array.isArray(value) || !isObject(value)) {
+        if (prefix) result.set(prefix, value);
+        return result;
+    }
+
+    for (const [key, child] of Object.entries(value)) {
+        const childPath = prefix ? `${prefix}.${key}` : key;
+        for (const [propertyPath, propertyValue] of flattenConfigLeaves(child, childPath)) {
+            result.set(propertyPath, propertyValue);
+        }
+    }
+
+    return result;
+}
+
+function environmentPropertyPath(name: string): string {
+    const suffix = name.slice("IMSHARE__".length);
+    const segments = suffix.split("__");
+
+    if (!suffix || segments.some((segment) => !/^[A-Z0-9]+(?:_[A-Z0-9]+)*$/.test(segment)))
+        throw new Error(`Invalid configuration environment variable name: ${name}`);
+
+    return segments
+        .map((segment) => {
+            const [first = "", ...rest] = segment.toLowerCase().split("_");
+            return (
+                first + rest.map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join("")
+            );
+        })
+        .join(".");
+}
+
+function getConfigProperty(config: ServerConfig, segments: string[]): unknown {
+    let current: unknown = config;
+
+    for (const segment of segments) {
+        if (!isObject(current) || !Object.prototype.hasOwnProperty.call(current, segment)) {
+            return undefined;
+        }
+
+        current = current[segment];
+    }
+
+    return current;
+}
+
+function setConfigProperty(config: ServerConfig, segments: string[], value: unknown): void {
+    let current: Record<string, unknown> = config as unknown as Record<string, unknown>;
+
+    for (const segment of segments.slice(0, -1)) {
+        const child = current[segment];
+        if (!isObject(child))
+            throw new Error(
+                `Cannot override a non-object configuration path: ${segments.join(".")}`,
+            );
+        current = child;
+    }
+
+    const finalKey = segments.at(-1);
+    if (!finalKey)
+        throw new Error("Configuration environment override has an empty property path.");
+    current[finalKey] = value;
+}
+
+function parseEnvironmentValue(raw: string, current: unknown, name: string): unknown {
+    if (typeof current === "string") return raw;
+
+    if (typeof current === "boolean") {
+        if (raw.toLowerCase() === "true") return true;
+        if (raw.toLowerCase() === "false") return false;
+        throw new Error(`${name} must be either 'true' or 'false'.`);
+    }
+
+    if (typeof current === "number" || Array.isArray(current)) {
+        let parsed: unknown;
+
+        try {
+            parsed = (parseConfigDsl(`value = ${raw}`) as Record<string, unknown>).value;
+        } catch (error) {
+            throw new Error(
+                `Unable to parse ${name}: ${error instanceof Error ? error.message : String(error)}`,
+            );
+        }
+
+        if (typeof current === "number" && typeof parsed !== "number") {
+            throw new Error(`${name} must contain a numeric value.`);
+        }
+        if (Array.isArray(current) && !Array.isArray(parsed)) {
+            throw new Error(`${name} must contain a configuration DSL array.`);
+        }
+
+        return parsed;
+    }
+
+    throw new Error(`${name} cannot override an unset or unsupported configuration property.`);
+}
+
+function applyEnvironmentOverrides(
+    config: ServerConfig,
+    environment: NodeJS.ProcessEnv,
+    sources: Record<string, ConfigValueSource>,
+): void {
+    for (const [name, raw] of Object.entries(environment)) {
+        if (!name.startsWith("IMSHARE__") || raw === undefined) continue;
+
+        const propertyPath = environmentPropertyPath(name);
+        const segments = propertyPath.split(".");
+        const current = getConfigProperty(config, segments);
+
+        if (current === undefined) {
+            throw new Error(
+                `${name} refers to an unknown or unset configuration property (${propertyPath}).`,
+            );
+        }
+
+        const value = parseEnvironmentValue(raw, current, name);
+        setConfigProperty(config, segments, value);
+        sources[propertyPath] = { type: "environment", name };
+    }
+}
 function isPositiveSafeInteger(value: unknown): value is number {
     return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
