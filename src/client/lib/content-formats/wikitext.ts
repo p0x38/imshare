@@ -3,19 +3,31 @@ export function wikitextToMarkdown(source: string): string {
         const heading = /^(={2,6})\s*(.*?)\s*\1\s*$/.exec(line);
 
         if (heading) {
-            return `${"#".repeat(heading[1].length)} ${heading[2]}`;
+            const [, level, title] = heading;
+
+            if (level !== undefined && title !== undefined) {
+                return `${"#".repeat(level.length)} ${title}`;
+            }
         }
 
         const unorderedList = /^(\*{1,3})\s+(.+)$/.exec(line);
 
         if (unorderedList) {
-            return `${"  ".repeat(unorderedList[1].length - 1)}- ${unorderedList[2]}`;
+            const [, level, content] = unorderedList;
+
+            if (level !== undefined && content !== undefined) {
+                return `${"  ".repeat(level.length - 1)}- ${content}`;
+            }
         }
 
         const orderedList = /^(#{1,3})\s+(.+)$/.exec(line);
 
         if (orderedList) {
-            return `${"  ".repeat(orderedList[1].length - 1)}1. ${orderedList[2]}`;
+            const [, level, content] = orderedList;
+
+            if (level !== undefined && content !== undefined) {
+                return `${"  ".repeat(level.length - 1)}1. ${content}`;
+            }
         }
 
         return line;
