@@ -309,6 +309,7 @@ export const metaRoutes: FastifyPluginAsync = async (fastify) => {
                     "Disallow: /notifications/",
                     "Disallow: /login",
                     "Disallow: /signup",
+                    "Allow: /api/v1/posts/permalink/",
                     ...[...allowed].map((pathname) => `Allow: ${pathname}`),
                     ...[...disallowed].map((pathname) => `Disallow: ${pathname}`),
                     "",
