@@ -32,7 +32,7 @@ import { generateSeoMetadata, truncateDescription, type SeoProfileMetadata } fro
 import { escapeAttribute } from "./utils/html.js";
 import { resolveRequestOrigin } from "./utils/request.js";
 import { postIdsForSearchSync } from "./utils/meilisearch.js";
-import { analyticsBody, analyticsHead } from "./utils/analytics.js";
+import { analyticsConfigHead } from "./utils/analytics.js";
 
 const logLevel = process.env.NODE_ENV === "test" ? "error" : "info";
 
@@ -884,7 +884,7 @@ export async function buildApp() {
             enhanced = enhanced.replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, "");
             enhanced = enhanced.replace(/<link\b(?=[^>]*\brel=["']canonical["'])[^>]*>/gi, "");
 
-            enhanced = enhanced.replace(/<\/head>/i, `${tags}${analyticsHead(config)}</head>`);
+            enhanced = enhanced.replace(/<\/head>/i, `${tags}</head>`);
         } else if (crawlerDirectives) {
             enhanced = enhanced.replace(/<\/head>/i, `${crawlerDirectives}</head>`);
         }
@@ -897,13 +897,12 @@ export async function buildApp() {
                 /<\/head>/i,
                 '<script src="/components.js" defer></script></head>',
             );
-        if (
-            !enhanced.includes("googletagmanager.com/gtag/js") &&
-            !enhanced.includes("googletagmanager.com/gtm.js")
-        )
-            enhanced = enhanced.replace(/<\/head>/i, `${analyticsHead(config)}</head>`);
-        if (analyticsBody(config))
-            enhanced = enhanced.replace(/<body([^>]*)>/i, `<body$1>${analyticsBody(config)}`);
+
+        const analyticsConfig = analyticsConfigHead(config);
+        if (analyticsConfig && !enhanced.includes('name="imshare-analytics-config"')) {
+            enhanced = enhanced.replace(/<\/head>/i, `${analyticsConfig}</head>`);
+        }
+
         return enhanced;
     });
 

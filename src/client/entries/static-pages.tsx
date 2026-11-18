@@ -370,8 +370,8 @@ function PrivacyPage({ ja }: { ja: boolean }) {
                 >
                     <Typography variant="body2" color="text.secondary">
                         {ja
-                            ? "管理者はGoogle Analytics 4やGoogle Tag Managerを設定できます。これらが有効かどうかはインスタンスの設定によります。"
-                            : "Administrators can configure Google Analytics 4 and Google Tag Manager. Whether these services are enabled depends on the instance configuration."}
+                            ? "管理者はGoogle Analytics 4やGoogle Tag Managerを設定できます。有効な場合、GoogleタグはAdvanced Consent Modeで読み込まれます。アクセス解析用ストレージは初期状態で拒否されますが、同意前にもCookieを使用しない限定的なシグナルが送信される場合があります。設定は画面右下のプライバシー設定からいつでも変更できます。"
+                            : "Administrators can configure Google Analytics 4 and Google Tag Manager. When configured, Google tags load using Advanced Consent Mode. Analytics storage is denied by default, but limited cookieless signals may still be sent before consent. Visitors can change this choice at any time using Privacy settings."}
                     </Typography>
                 </SectionCard>
             </Stack>

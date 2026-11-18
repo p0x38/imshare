@@ -3,34 +3,86 @@ import { escapeAttribute } from "./html.js";
 
 type AppConfig = Awaited<ReturnType<typeof loadConfig>>;
 
-export function analyticsHead(config: AppConfig): string {
-    const gaId = config.analytics?.googleAnalyticsMeasurementId?.trim();
-    const gtmId = config.analytics?.googleTagManagerContainerId?.trim();
-    const parts: string[] = [];
+export function analyticsConfigHead(config: AppConfig): string {
+    const configuredGaId = config.analytics?.googleAnalyticsMeasurementId?.trim();
+    const configuredGtmId = config.analytics?.googleTagManagerContainerId?.trim();
 
-    if (gaId) {
-        const id = escapeAttribute(gaId);
+    const gaId =
+        configuredGaId && /^G-[A-Z0-9]+$/i.test(configuredGaId) ? configuredGaId : undefined;
 
-        parts.push(
-            `<script async src="https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaId)}"></script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${id}');</script>`,
-        );
-    }
+    const gtmId =
+        configuredGtmId && /^GTM-[A-Z0-9]+$/i.test(configuredGtmId) ? configuredGtmId : undefined;
 
-    if (gtmId) {
-        const id = escapeAttribute(gtmId);
+    if (!gaId && !gtmId) return "";
 
-        parts.push(
-            `<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${id}');</script>`,
-        );
-    }
+    const metadata = [
+        '<meta name="imshare-analytics-config"',
+        ` data-ga-id="${escapeAttribute(gaId ?? "")}"`,
+        ` data-gtm-id="${escapeAttribute(gtmId ?? "")}">`,
+    ].join("");
 
-    return parts.join("");
-}
+    const bootstrap = `
+<script>
+    (function () {
+        var config = document.querySelector('meta[name="imshare-analytics-config"]');
+        if (!config) return;
 
-export function analyticsBody(config: AppConfig): string {
-    const gtmId = config.analytics?.googleTagManagerContainerId?.trim();
+        var gaId = config.dataset.gaId || "";
+        var gtmId = config.dataset.gtmId || "";
+        var analyticsConsent = "denied";
 
-    if (!gtmId) return "";
+        try {
+            if (window.localStorage.getItem("imshare-analytics-consent-v1") === "accepted") {
+                analyticsConsent = "granted";
+            }
+        } catch {}
 
-    return `<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=${encodeURIComponent(gtmId)}" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>`;
+        window.dataLayer = window.dataLayer || [];
+
+        function gtag() {
+            window.dataLayer.push(arguments);
+        }
+
+        window.gtag = window.gtag || gtag;
+
+        window.gtag("consent", "default", {
+            analytics_storage: analyticsConsent,
+            ad_storage: "denied",
+            ad_user_data: "denied",
+            ad_personalization: "denied"
+        });
+
+        window.gtag("set", "ads_data_redaction", true);
+        window.gtag("js", new Date());
+
+        if (gaId) {
+            window.gtag("config", gaId);
+
+            var gaScript = document.createElement("script");
+            gaScript.async = true;
+            gaScript.src =
+                "https://www.googletagmanager.com/gtag/js?id=" +
+                encodeURIComponent(gaId);
+            
+            document.head.appendChild(gaScript);
+        }
+        
+        if (gtmId) {
+            window.dataLayer.push({
+                "gtm.start": new Date().getTime(),
+                event: "gtm.js"
+            });
+
+            var gtmScript = document.createElement("script");
+            gtmScript.async = true;
+            gtmScript.src =
+                "https://www.googletagmanager.com/gtm.js?id=" +
+                encodeURIComponent(gtmId);
+            
+            document.head.appendChild(gtmScript);
+        }
+    })();
+</script>`;
+
+    return metadata + bootstrap;
 }

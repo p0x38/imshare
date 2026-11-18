@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import { buildDailyAnalytics } from "../src/lib/analytics.js";
+import { analyticsConfigHead } from "../src/utils/analytics.js";
 
 beforeEach(() => {
     vi.useFakeTimers();
@@ -51,4 +52,43 @@ test("buildDailyAnalytics uses the last value when a metric is repeated for a da
 
 test("buildDailyAnalytics returns no days for a non-positive range", () => {
     expect(buildDailyAnalytics(0, [])).toEqual([]);
+});
+
+test("analytics bootstrap sets default consent before loading Google tags", () => {
+    const config = {
+        analytics: {
+            googleAnalyticsMeasurementId: "G-ABC123",
+            googleTagManagerContainerId: "GTM-ABC123",
+        },
+    } as Parameters<typeof analyticsConfigHead>[0];
+
+    const html = analyticsConfigHead(config);
+
+    const consentIndex = html.indexOf('window.gtag("consent", "default"');
+    const gaScriptIndex = html.indexOf("googletagmanager.com/gtag/js?id=");
+    const gtmScriptIndex = html.indexOf("googletagmanager.com/gtm.js?id=");
+
+    expect(html).toContain('name="imshare-analytics-config"');
+    expect(html).toContain('data-ga-id="G-ABC123"');
+    expect(html).toContain('data-gtm-id="GTM-ABC123"');
+    expect(html).toContain("analytics_storage: analyticsConsent");
+    expect(html).toContain('ad_storage: "denied"');
+    expect(html).toContain('ad_user_data: "denied"');
+    expect(html).toContain('ad_personalization: "denied"');
+    expect(html).toContain('localStorage.getItem("imshare-analytics-consent-v1")');
+    expect(html).toContain('window.gtag("config", gaId)');
+    expect(html).toContain("googletagmanager.com/gtag/js?id=");
+    expect(html).toContain("googletagmanager.com/gtm.js?id=");
+
+    expect(consentIndex).toBeGreaterThanOrEqual(0);
+    expect(gaScriptIndex).toBeGreaterThan(consentIndex);
+    expect(gtmScriptIndex).toBeGreaterThan(consentIndex);
+});
+
+test("analytics configuration is omitted when no providers are configured", () => {
+    const config = {
+        analytics: {},
+    } as Parameters<typeof analyticsConfigHead>[0];
+
+    expect(analyticsConfigHead(config)).toBe("");
 });
