@@ -36,6 +36,7 @@ export function postView(post: any) {
         id: post.id,
         title: post.title,
         contentType: post.contentType ?? (post.uploads?.length ? "image" : "text"),
+        contentFormat: post.contentFormat ?? "plain",
         textContent: post.textContent ?? null,
         description: post.description,
         caption: post.caption,

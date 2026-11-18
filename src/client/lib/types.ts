@@ -1,3 +1,5 @@
+export type ContentFormat = "plain" | "markdown" | "wikitext" | "tiptap" | (string & {});
+
 export interface Upload {
     id: string;
     url: string;
@@ -27,6 +29,7 @@ export interface Post {
     id: string;
     title?: string | null;
     contentType?: "image" | "text";
+    contentFormat?: ContentFormat;
     textContent?: string | null;
     description?: string | null;
     caption?: string | null;

@@ -1,6 +1,8 @@
 import { createSchema } from "zod-openapi";
 import { z } from "zod";
 
+export const contentFormatSchema = z.enum(["plain", "markdown", "wikitext"]);
+
 const lifecycleProperties = {
     status: z
         .enum(["draft", "published"])
@@ -79,7 +81,6 @@ const permalinkProperties = {
         .optional()
         .meta({ description: "Custom public identifier when permalinkIdType is custom." }),
 };
-
 export const postCreateInput = z
     .object({
         title: z.string().min(1).max(500).meta({ description: "Post title." }),
@@ -87,6 +88,9 @@ export const postCreateInput = z
             .enum(["image", "text"])
             .optional()
             .meta({ description: "Post content type. Image is the default." }),
+        contentFormat: contentFormatSchema.optional().meta({
+            description: "Markup format used to interpret the text content.",
+        }),
         textContent: z
             .string()
             .max(100000)
@@ -164,6 +168,9 @@ export const postUpdateInput = z
             .optional()
             .meta({ description: "Replacement post title." }),
         contentType: z.enum(["image", "text"]).optional(),
+        contentFormat: contentFormatSchema.optional().meta({
+            description: "Markup format used to interpret the text content.",
+        }),
         textContent: z
             .string()
             .max(100000)

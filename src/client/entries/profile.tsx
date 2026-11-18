@@ -30,6 +30,7 @@ import { LoadingState } from "../components/States";
 import { ProfileLinks } from "../components/ProfileLinks";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
+import { ContentRenderer } from "../lib/content-formats/ContentRenderer";
 
 interface Profile {
     id: string;
@@ -273,9 +274,7 @@ function ProfilePage() {
                                     </Link>
                                 ) : null}
                                 {profile.bio ? (
-                                    <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                                        {profile.bio}
-                                    </Typography>
+                                    <ContentRenderer content={profile.bio} format="plain" />
                                 ) : null}
                             </Stack>
                             {profile.canFollow ? (
@@ -386,9 +385,7 @@ function ProfilePage() {
                                 {profile.bio ? (
                                     <Box>
                                         <Typography variant="subtitle2">About</Typography>
-                                        <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                                            {profile.bio}
-                                        </Typography>
+                                        <ContentRenderer content={profile.bio} format="plain" />
                                     </Box>
                                 ) : (
                                     <Typography color="text.secondary">

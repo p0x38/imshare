@@ -374,6 +374,7 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
             title?: unknown;
             description?: unknown;
             caption?: unknown;
+            contentFormat?: unknown;
             contentWarning?: unknown;
             visibility?: unknown;
             status?: unknown;
@@ -395,10 +396,24 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
             return reply.code(400).send({
                 error: { code: "INVALID_VISIBILITY", message: "Invalid post visibility." },
             });
+
+        if (
+            body.contentFormat !== undefined &&
+            !["plain", "markdown", "wikitext"].includes(String(body.contentFormat))
+        )
+            return reply.code(400).send({
+                error: {
+                    code: "INVALID_CONTENT_FORMAT",
+                    message: "Invalid post content format.",
+                },
+            });
+
         await prisma.postRevision.create({
             data: {
                 postId,
                 title: post.title,
+                textContent: post.textContent,
+                contentFormat: post.contentFormat,
                 description: post.description,
                 caption: post.caption,
                 sourceUrl: post.sourceUrl,
@@ -413,6 +428,8 @@ UNION ALL SELECT date("createdAt") AS day, 'uploads' AS metric, COUNT(*) AS valu
             where: { id: postId },
             data: {
                 title: typeof body.title === "string" ? body.title.trim() : undefined,
+                contentFormat:
+                    typeof body.contentFormat === "string" ? body.contentFormat : undefined,
                 description:
                     typeof body.description === "string"
                         ? body.description

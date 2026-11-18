@@ -13,12 +13,14 @@ import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { api } from "../lib/api";
+import type { ContentFormat } from "../lib/types";
 
 function TextEditor() {
     const editing = location.pathname.includes("/edit/");
     const textId = editing ? location.pathname.split("/").filter(Boolean).at(-2) : null;
     const [title, setTitle] = useState("");
     const [textContent, setTextContent] = useState("");
+    const [contentFormat, setContentFormat] = useState<ContentFormat>("plain");
     const [status, setStatus] = useState("published");
     const [visibility, setVisibility] = useState("public");
     const [permalinkPattern, setPermalinkPattern] = useState<"user" | "posts">("user");
@@ -34,6 +36,7 @@ function TextEditor() {
             .then(({ data }) => {
                 setTitle(data.title || "");
                 setTextContent(data.textContent || "");
+                setContentFormat(data.contentFormat || "plain");
                 setStatus(data.status || "published");
                 setVisibility(data.visibility || "public");
                 setPermalinkPattern(data.permalinkPattern || "user");
@@ -52,6 +55,7 @@ function TextEditor() {
             const body = JSON.stringify({
                 title: title.trim(),
                 textContent: textContent.trim(),
+                contentFormat,
                 status,
                 visibility,
                 permalinkPattern,
@@ -98,6 +102,19 @@ function TextEditor() {
                     minRows={12}
                     inputProps={{ maxLength: 100000 }}
                 />
+                <FormControl fullWidth>
+                    <InputLabel id="content-format-label">Content format</InputLabel>
+                    <Select
+                        labelId="content-format-label"
+                        value={contentFormat}
+                        label="Content format"
+                        onChange={(event) => setContentFormat(event.target.value as ContentFormat)}
+                    >
+                        <MenuItem value="plain">Plain text</MenuItem>
+                        <MenuItem value="markdown">Markdown</MenuItem>
+                        <MenuItem value="wikitext">Wikitext</MenuItem>
+                    </Select>
+                </FormControl>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                     <FormControl fullWidth>
                         <InputLabel>Status</InputLabel>

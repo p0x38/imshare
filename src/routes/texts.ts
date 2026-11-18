@@ -80,6 +80,7 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
             const body = request.body as {
                 title: string;
                 contentType?: string;
+                contentFormat?: "plain" | "markdown" | "wikitext";
                 textContent?: string | null;
                 description?: string;
                 caption?: string;
@@ -112,6 +113,7 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
                 data: {
                     title: body.title.trim(),
                     contentType: "text",
+                    contentFormat: body.contentFormat ?? "plain",
                     textContent,
                     description: body.description,
                     caption: body.caption,
@@ -185,6 +187,7 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
             const body = request.body as {
                 title?: string;
                 contentType?: string;
+                contentFormat?: "plain" | "markdown" | "wikitext";
                 textContent?: string | null;
                 description?: string | null;
                 caption?: string | null;
@@ -232,6 +235,8 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
                     data: {
                         postId: textId,
                         title: existing.title,
+                        textContent: existing.textContent,
+                        contentFormat: existing.contentFormat,
                         description: existing.description,
                         caption: existing.caption,
                         sourceUrl: existing.sourceUrl,
@@ -249,6 +254,7 @@ export const textRoutes: FastifyPluginAsync = async (fastify) => {
                         title: body.title?.trim(),
                         textContent:
                             body.textContent === undefined ? undefined : body.textContent?.trim(),
+                        contentFormat: body.contentFormat,
                         description: body.description,
                         caption: body.caption,
                         sourceUrl: body.sourceUrl,

@@ -177,6 +177,7 @@ model Post {
   id                     String         @id @default(cuid())
   title                  String
   contentType            String         @default("image")
+  contentFormat          String         @default("plain")
   textContent            String?
   description            String?
   caption                String?
@@ -229,6 +230,8 @@ model PostRevision {
   id                     String    @id @default(cuid())
   postId                 String
   title                  String
+  textContent            String?
+  contentFormat          String    @default("plain")
   description            String?
   caption                String?
   sourceUrl              String?

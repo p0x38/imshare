@@ -1,5 +1,6 @@
 import {
     Alert,
+    Box,
     Button,
     Card,
     CardContent,
@@ -17,7 +18,7 @@ import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
-import { linkifyText } from "../lib/linkify";
+import { ContentRenderer } from "../lib/content-formats/ContentRenderer";
 
 function TextPage() {
     const textId = location.pathname.split("/").filter(Boolean).at(-1) || "";
@@ -107,16 +108,18 @@ function TextPage() {
                                 </Typography>
                             </Stack>
                             <Divider />
-                            <Typography
+                            <Box
                                 sx={{
-                                    whiteSpace: "pre-wrap",
-                                    overflowWrap: "anywhere",
                                     fontSize: "1.08rem",
                                     lineHeight: 1.8,
+                                    overflowWrap: "anywhere",
                                 }}
                             >
-                                {linkifyText(text.textContent || "")}
-                            </Typography>
+                                <ContentRenderer
+                                    content={text.textContent || ""}
+                                    format={text.contentFormat || "plain"}
+                                />
+                            </Box>
                             <Stack direction="row" spacing={1}>
                                 <Button
                                     startIcon={<ShareOutlinedIcon />}

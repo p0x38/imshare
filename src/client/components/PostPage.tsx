@@ -44,7 +44,7 @@ import { Page } from "./Page";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 import { RecommendationSections } from "./RecommendationSections";
-import { linkifyText } from "../lib/linkify";
+import { ContentRenderer } from "../lib/content-formats/ContentRenderer";
 
 interface Comment {
     id: string;
@@ -528,9 +528,7 @@ function CommentItem({
                         </Stack>
                     </Stack>
                     {comment.body ? (
-                        <Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-                            {linkifyText(comment.body)}
-                        </Typography>
+                        <ContentRenderer content={comment.body} format="plain" />
                     ) : null}
                     {comment.attachment ? (
                         <Card variant="outlined" sx={{ overflow: "hidden" }}>
@@ -1008,9 +1006,10 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                             {post.description ? (
                                                 <>
                                                     <Divider />
-                                                    <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                                                        {linkifyText(post.description)}
-                                                    </Typography>
+                                                    <ContentRenderer
+                                                        content={post.description}
+                                                        format="plain"
+                                                    />
                                                 </>
                                             ) : null}
                                             {post.tags?.length || post.categories?.length ? (

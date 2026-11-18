@@ -70,6 +70,23 @@ Permissions are an object keyed by API resource, with `read`, `write`, and `dele
 - `PUT /v1/posts/{postId}/category` — set category; owner only.
 - `DELETE /v1/posts/{postId}/category` — clear category; owner only; `204`.
 
+## Texts
+
+- `GET /v1/texts` — paginated public text posts. Query: `page`, `limit`, `user`, `tag`, `category`, `search`, `order`.
+- `POST /v1/texts` — create a text post; authenticated.
+- `GET /v1/texts/{textId}` — get a public or owned text post.
+- `PATCH /v1/texts/{textId}` — update an owned text post.
+
+Text posts accept `title`, `textContent`, `contentFormat`, `status`, `visibility`, `tags`, and the supported post metadata fields.
+
+`contentFormat` accepts:
+
+- `plain` — ordinary text; the default for existing and new content.
+- `markdown` — CommonMark with GitHub Flavored Markdown extensions.
+- `wikitext` — the currently supported MediaWiki-inspired syntax subset.
+
+The selected format is returned as `contentFormat` in the post response. Changing it creates a revision that preserves the previous `textContent` and `contentFormat`.
+
 ## Reactions
 
 Post reaction types are `like`, `favorite`, and `save`.

@@ -18,6 +18,14 @@ Public post archive.
 
 Public post page.
 
+### `GET /texts/`
+
+Public text archive.
+
+### `GET /texts/{textId}`
+
+Public text post page.
+
 ### `GET /users/`
 
 Public user directory.

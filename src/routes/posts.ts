@@ -690,6 +690,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                         data: {
                             postId: post.id,
                             title: post.title,
+                            textContent: post.textContent,
+                            contentFormat: post.contentFormat,
                             description: post.description,
                             caption: post.caption,
                             sourceUrl: post.sourceUrl,
@@ -1091,6 +1093,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     .send({ error: { code: "FORBIDDEN", message: "You do not own this post." } });
             const body = request.body as {
                 title?: string;
+                contentFormat?: "plain" | "markdown" | "wikitext";
                 description?: string | null;
                 caption?: string | null;
                 sourceUrl?: string | null;
@@ -1189,6 +1192,8 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     data: {
                         postId,
                         title: existing.title,
+                        textContent: existing.textContent,
+                        contentFormat: existing.contentFormat,
                         description: existing.description,
                         caption: existing.caption,
                         sourceUrl: existing.sourceUrl,
@@ -1209,6 +1214,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                     where: { id: postId },
                     data: {
                         title: body.title?.trim(),
+                        contentFormat: body.contentFormat,
                         description: body.description,
                         caption: body.caption,
                         sourceUrl: body.sourceUrl,

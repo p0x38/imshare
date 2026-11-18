@@ -20,6 +20,7 @@ import { Page } from "../components/Page";
 import { ErrorState, SkeletonGrid } from "../components/States";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
+import { ContentRenderer } from "../lib/content-formats/ContentRenderer";
 
 const TEXT_LIMIT = 500;
 interface TextsResponse {
@@ -197,20 +198,23 @@ function TextCard({ text }: { text: Post }) {
                                 · {text.createdAt ? new Date(text.createdAt).toLocaleString() : ""}
                             </Typography>
                         </Stack>
-                        <Typography
+                        <Box
                             component="a"
                             href={`/texts/${encodeURIComponent(text.id)}/`}
                             sx={{
                                 color: "inherit",
                                 textDecoration: "none",
-                                whiteSpace: "pre-wrap",
-                                overflowWrap: "anywhere",
                                 display: "block",
+                                overflowWrap: "anywhere",
                                 mt: 0.75,
                             }}
                         >
-                            {text.textContent}
-                        </Typography>
+                            <ContentRenderer
+                                content={text.textContent || ""}
+                                format={text.contentFormat || "plain"}
+                                interactive={false}
+                            />
+                        </Box>
                         {error ? (
                             <Typography
                                 variant="caption"

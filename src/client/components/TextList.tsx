@@ -1,10 +1,11 @@
-import { Avatar, Checkbox, IconButton, Stack, Typography } from "@mui/material";
+import { Avatar, Box, Checkbox, IconButton, Stack, Typography } from "@mui/material";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import ShareOutlinedIcon from "@mui/icons-material/ShareOutlined";
 import { useEffect, useState } from "react";
 import type { Post } from "../lib/types";
 import { api } from "../lib/api";
+import { ContentRenderer } from "../lib/content-formats/ContentRenderer";
 
 function TextCard({
     text,
@@ -130,19 +131,22 @@ function TextCard({
                         · {text.createdAt ? new Date(text.createdAt).toLocaleString() : ""}
                     </Typography>
                 </Stack>
-                <Typography
+                <Box
                     component="a"
                     href={hrefForText(text)}
                     sx={{
                         color: "inherit",
                         textDecoration: "none",
-                        whiteSpace: "pre-wrap",
-                        overflowWrap: "anywhere",
                         display: "block",
+                        overflowWrap: "anywhere",
                     }}
                 >
-                    {text.textContent}
-                </Typography>
+                    <ContentRenderer
+                        content={text.textContent || ""}
+                        format={text.contentFormat || "plain"}
+                        interactive={false}
+                    />
+                </Box>
                 {error ? (
                     <Typography variant="caption" color="error">
                         {error}
