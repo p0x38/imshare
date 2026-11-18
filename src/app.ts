@@ -890,7 +890,7 @@ export async function buildApp() {
         }
 
         if (metaFallbackHtml)
-            enhanced = enhanced.replace(/(<div id="post"><\/div>)/i, `${metaFallbackHtml}`);
+            enhanced = enhanced.replace(/(<div id="post"><\/div>)/i, `${metaFallbackHtml}$1`);
 
         if (!isReactPage && !enhanced.includes('src="/components.js"'))
             enhanced = enhanced.replace(
