@@ -13,7 +13,7 @@ export function MarkdownRenderer({ content, interactive }: MarkdownRendererProps
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeSanitize]}
             components={{
-                a: ({ href, children }) => {
+                a: ({ href, title, children }) => {
                     if (!interactive || !href) {
                         return <>{children}</>;
                     }
@@ -41,6 +41,7 @@ export function MarkdownRenderer({ content, interactive }: MarkdownRendererProps
                     return (
                         <a
                             href={href}
+                            title={title}
                             target={external ? "_blank" : undefined}
                             rel={external ? "ugc noopener noreferrer" : "ugc"}
                         >

@@ -981,6 +981,15 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                                 </Stack>
                                             </Stack>
                                             <PostActions post={post} />
+                                            {post.caption ? (
+                                                <>
+                                                    <Divider />
+                                                    <ContentRenderer
+                                                        content={post.caption}
+                                                        format={post.contentFormat ?? "plain"}
+                                                    />
+                                                </>
+                                            ) : null}
                                             {post.originalCreator || post.originalCreatedAt ? (
                                                 <>
                                                     <Divider />
@@ -1014,7 +1023,7 @@ export function PostPage({ postId, permalinkKey }: { postId?: string; permalinkK
                                                     <Divider />
                                                     <ContentRenderer
                                                         content={post.description}
-                                                        format="plain"
+                                                        format={post.contentFormat ?? "plain"}
                                                     />
                                                 </>
                                             ) : null}

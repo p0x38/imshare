@@ -162,6 +162,62 @@
 - [x] Scheduled publishing
 - [x] Post revision history
 
+## Content rendering and editing
+
+- [x] Introduce a shared content-format registry
+- [x] Support Plain text, Markdown, and Wikitext
+- [x] Normalize unknown content formats to plain text
+- [x] Introduce a reusable ContentEditor
+- [x] Add Write, Split, and Preview modes
+- [x] Use ContentRenderer for editor previews
+- [x] Share the editor between text posts and image-post captions/descriptions
+- [ ] Improve ContentRenderer
+    - [ ] Standardize typography and spacing
+    - [ ] Improve code block and inline code presentation
+    - [ ] Improve table rendering and horizontal overflow
+    - [ ] Add renderer regression tests for each supported format
+- [ ] Improve editor toolbar
+    - [x] Add selectable heading levels
+    - [ ] Add fenced code blocks for Markdown
+    - [ ] Add underline support
+    - [x] Add strikethrough support for Markdown
+    - [ ] Add advanced link settings
+        - [x] Link text and URL
+        - [x] Link title for Markdown
+        - [ ] Configurable target
+        - [ ] Configurable rel attributes
+    - [x] Add checklists for Markdown
+    - [x] Add table insertion for Markdown
+    - [x] Add format-aware toolbar capability definitions
+    - [x] Keep unsupported and work-in-progress actions visible but disabled
+    - [x] Explain disabled actions using tooltips
+- [ ] Improve Markdown editing
+    - [x] Heading levels 1–6
+    - [x] Fenced code blocks
+    - [x] Strikethrough using GFM
+    - [x] Checklists using GFM task-list syntax
+    - [x] Tables using GFM
+    - [x] Advanced link insertion with title
+- [ ] Improve Wikitext editing
+    - [ ] Add code-block syntax and rendering
+    - [ ] Add strikethrough
+    - [ ] Add checklists
+    - [ ] Add tables
+    - [ ] Expand link settings
+- [ ] Add editor accessibility and interaction tests
+    - [ ] Keyboard navigation and focus restoration
+    - [ ] Toolbar labels and disabled-state explanations
+    - [ ] Responsive editor behavior
+- [ ] Evaluate a Tiptap-based WYSIWYG editor
+    - [ ] Define a versioned structured-document schema
+    - [ ] Define storage and API compatibility
+    - [ ] Implement a read-only structured-document renderer
+    - [ ] Implement editing and format conversion
+- [ ] Design an extension API for custom markup parsers and renderers
+    - [ ] Define parser and renderer interfaces
+    - [ ] Define sanitization and security requirements
+    - [ ] Define format registration and compatibility behavior
+
 ## Federation
 
 - [ ] Plan federation architecture and interoperability model

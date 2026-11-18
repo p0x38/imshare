@@ -89,7 +89,8 @@ export const postCreateInput = z
             .optional()
             .meta({ description: "Post content type. Image is the default." }),
         contentFormat: contentFormatSchema.optional().meta({
-            description: "Markup format used to interpret the text content.",
+            description:
+                "Markup format used to interpret text content, captions, and descriptions.",
         }),
         textContent: z
             .string()
@@ -169,7 +170,8 @@ export const postUpdateInput = z
             .meta({ description: "Replacement post title." }),
         contentType: z.enum(["image", "text"]).optional(),
         contentFormat: contentFormatSchema.optional().meta({
-            description: "Markup format used to interpret the text content.",
+            description:
+                "Markup format used to interpret text content, captions, and descriptions.",
         }),
         textContent: z
             .string()

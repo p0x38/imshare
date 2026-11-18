@@ -1,4 +1,4 @@
-export type ContentFormat = "plain" | "markdown" | "wikitext" | "tiptap" | (string & {});
+export type { ContentFormat } from "./content-formats/formats.js";
 
 export interface Upload {
     id: string;

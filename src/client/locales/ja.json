@@ -1,5 +1,17 @@
 {
     "settings": "設定",
+    "privacyConsent": {
+        "title": "プライバシーとCookieの設定",
+        "message": "このサイトではGoogleタグを使用してアクセス状況を測定します。アクセス解析用ストレージが拒否されている間も、Googleに限定的なCookieを使用しないシグナルが送信される場合があります。許可するとアクセス解析用ストレージが有効になります。",
+        "details": "アクセス解析用ストレージが拒否されている場合、Googleタグはページ情報や同意状態などのCookieを使用しない測定シグナルを送信する場合があります。許可するとアクセス解析用Cookieが使用されることがあります。広告関連の同意は常に拒否されます。Tag Managerコンテナ内のその他のタグは、運営者の設定によって動作が異なる場合があります。",
+        "analytics": "アクセス解析用ストレージを許可する",
+        "analyticsHelp": "選択内容はこのブラウザーに保存され、いつでも変更できます。",
+        "allow": "アクセス解析を許可",
+        "reject": "アクセス解析用ストレージを拒否",
+        "customize": "カスタマイズ",
+        "save": "設定を保存",
+        "settings": "プライバシー設定"
+    },
     "language": "言語",
     "english": "English",
     "japanese": "日本語",
@@ -254,7 +266,7 @@
         "administrators": "管理者",
         "moderators": "モデレーター",
         "analytics": "アクセス解析",
-        "analyticsDescription": "アプリケーションコードを変更せずに Google Analytics 4 と Google Tag Manager を設定します。",
+        "analyticsDescription": "Google Analytics 4 と Google Tag Manager を設定します。GoogleタグはAdvanced Consent Modeで動作し、アクセス解析用ストレージは初期状態で拒否されます。同意前にもCookieを使用しない限定的なシグナルが送信される場合があります。",
         "gaId": "Google Analytics 測定ID",
         "gaHelp": "空欄にすると Google Analytics を無効にします。",
         "gtmId": "Google Tag Manager コンテナID",

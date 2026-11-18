@@ -27,7 +27,9 @@ import { Page } from "../components/Page";
 import { TagAutocomplete } from "../components/AutocompleteFields";
 import { ProfilePictureCropper } from "../components/ProfilePictureCropper";
 import { api } from "../lib/api";
-import type { Post } from "../lib/types";
+import type { ContentFormat, Post } from "../lib/types";
+import { ContentEditor } from "../lib/content-formats/ContentEditor";
+import { normalizeContentFormat } from "../lib/content-formats/formats";
 
 interface Category {
     id: string;
@@ -83,6 +85,7 @@ function PostEditor() {
     const [title, setTitle] = useState("");
     const [caption, setCaption] = useState("");
     const [description, setDescription] = useState("");
+    const [contentFormat, setContentFormat] = useState<ContentFormat>("plain");
     const [sourceUrl, setSourceUrl] = useState("");
     const [originalCreator, setOriginalCreator] = useState("");
     const [originalCreatedAt, setOriginalCreatedAt] = useState("");
@@ -147,6 +150,7 @@ function PostEditor() {
                     setTitle(value.title ?? "");
                     setCaption(value.caption ?? "");
                     setDescription(value.description ?? "");
+                    setContentFormat(normalizeContentFormat(value.contentFormat));
                     setSourceUrl(value.sourceUrl ?? "");
                     setOriginalCreator(value.originalCreator ?? "");
                     setOriginalCreatedAt(
@@ -214,6 +218,7 @@ function PostEditor() {
                 title: postTitle,
                 caption: caption || null,
                 description: description || null,
+                contentFormat,
                 sourceUrl: sourceUrl || null,
                 originalCreator: originalCreator.trim() || null,
                 originalCreatedAt: originalCreatedAtValue(),
@@ -296,6 +301,7 @@ function PostEditor() {
                         title: title.trim() || null,
                         caption: caption || null,
                         description: description || null,
+                        contentFormat,
                         sourceUrl: sourceUrl || null,
                         originalCreator: originalCreator.trim() || null,
                         originalCreatedAt: originalCreatedAtValue(),
@@ -386,6 +392,45 @@ function PostEditor() {
                                 onChange={(event) => setContentWarning(event.target.value)}
                                 helperText="Optional text shown with the warning."
                                 fullWidth
+                            />
+                            <FormControl fullWidth>
+                                <InputLabel id="post-content-format-label">
+                                    Content format
+                                </InputLabel>
+                                <Select
+                                    labelId="post-content-format-label"
+                                    value={contentFormat}
+                                    label="Content format"
+                                    onChange={(event) => {
+                                        setContentFormat(
+                                            normalizeContentFormat(event.target.value),
+                                        );
+                                    }}
+                                >
+                                    <MenuItem value="plain">Plain text</MenuItem>
+                                    <MenuItem value="markdown">Markdown</MenuItem>
+                                    <MenuItem value="wikitext">Wikitext</MenuItem>
+                                </Select>
+                            </FormControl>
+                            <ContentEditor
+                                label="Caption"
+                                value={caption}
+                                onChange={setCaption}
+                                format={contentFormat}
+                                showFormatSelector={false}
+                                required={false}
+                                minRows={3}
+                                defaultMode="write"
+                            />
+                            <ContentEditor
+                                label="Description"
+                                value={description}
+                                onChange={setDescription}
+                                format={contentFormat}
+                                showFormatSelector={false}
+                                required={false}
+                                minRows={5}
+                                defaultMode="write"
                             />
                         </Stack>
                         <Stack spacing={1.5}>

@@ -128,6 +128,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
             if (!user) return;
             const body = request.body as {
                 title: string;
+                contentFormat?: "plain" | "markdown" | "wikitext";
                 description?: string;
                 caption?: string;
                 sourceUrl?: string;
@@ -204,6 +205,7 @@ export const postRoutes: FastifyPluginAsync = async (fastify) => {
                 const created = await tx.post.create({
                     data: {
                         title: body.title.trim(),
+                        contentFormat: body.contentFormat ?? "plain",
                         description: body.description,
                         caption: body.caption,
                         sourceUrl: body.sourceUrl,

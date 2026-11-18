@@ -14,6 +14,8 @@ import { App } from "../components/App";
 import { Page } from "../components/Page";
 import { api } from "../lib/api";
 import type { ContentFormat } from "../lib/types";
+import { ContentEditor } from "../lib/content-formats/ContentEditor";
+import { normalizeContentFormat } from "../lib/content-formats/formats";
 
 function TextEditor() {
     const editing = location.pathname.includes("/edit/");
@@ -36,7 +38,7 @@ function TextEditor() {
             .then(({ data }) => {
                 setTitle(data.title || "");
                 setTextContent(data.textContent || "");
-                setContentFormat(data.contentFormat || "plain");
+                setContentFormat(normalizeContentFormat(data.contentFormat));
                 setStatus(data.status || "published");
                 setVisibility(data.visibility || "public");
                 setPermalinkPattern(data.permalinkPattern || "user");
@@ -92,29 +94,15 @@ function TextEditor() {
                     required
                     fullWidth
                 />
-                <TextField
+                <ContentEditor
                     label="Text"
                     value={textContent}
-                    onChange={(event) => setTextContent(event.target.value)}
-                    required
-                    fullWidth
-                    multiline
+                    onChange={setTextContent}
+                    format={contentFormat}
+                    onFormatChange={setContentFormat}
                     minRows={12}
-                    inputProps={{ maxLength: 100000 }}
+                    maxLength={100000}
                 />
-                <FormControl fullWidth>
-                    <InputLabel id="content-format-label">Content format</InputLabel>
-                    <Select
-                        labelId="content-format-label"
-                        value={contentFormat}
-                        label="Content format"
-                        onChange={(event) => setContentFormat(event.target.value as ContentFormat)}
-                    >
-                        <MenuItem value="plain">Plain text</MenuItem>
-                        <MenuItem value="markdown">Markdown</MenuItem>
-                        <MenuItem value="wikitext">Wikitext</MenuItem>
-                    </Select>
-                </FormControl>
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                     <FormControl fullWidth>
                         <InputLabel>Status</InputLabel>

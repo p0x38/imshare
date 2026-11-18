@@ -59,9 +59,7 @@ Permissions are an object keyed by API resource, with `read`, `write`, and `dele
 ## Posts
 
 - `GET /v1/posts` — public paginated posts. Query: `page`, `limit`, `user`, `tag`, `category`, `search`, `order`. Search matches title, description, and caption.
-- `POST /v1/posts` — create post; authenticated. Fields: `title` (1–500), `description` (≤10000), `caption` (≤10000), `sourceUrl` (≤4096), `originalCreator` (nullable, 1–500), `originalCreatedAt` (nullable ISO date-time), `allowDownload`, `tags` (≤100), `categoryId`, `uploadIds` (≤100). Uploads must be owned and unused.
-- `GET /v1/posts/{postId}` — public post view.
-- `PATCH /v1/posts/{postId}` — update own post; supports `originalCreator` and `originalCreatedAt` in addition to the regular post fields.
+- `POST /v1/posts` — create post; authenticated. Fields: `title` (1–500), `contentFormat`, `description` (≤10000), `caption` (≤10000), `sourceUrl` (≤4096), `originalCreator` (nullable, 1–500), `originalCreatedAt` (nullable ISO date-time), `allowDownload`, `tags` (≤100), `categoryId`, `uploadIds` (≤100). Uploads must be owned and unused.- `PATCH /v1/posts/{postId}` — update own post; supports `originalCreator` and `originalCreatedAt` in addition to the regular post fields.
 - `DELETE /v1/posts/{postId}` — delete own post; `204`.
 - `GET /v1/posts/{postId}/tags` — public post tags.
 - `POST /v1/posts/{postId}/tags` — add tag; owner only; body `{ "tagId": "..." }`; upserted.
@@ -77,7 +75,7 @@ Permissions are an object keyed by API resource, with `read`, `write`, and `dele
 - `GET /v1/texts/{textId}` — get a public or owned text post.
 - `PATCH /v1/texts/{textId}` — update an owned text post.
 
-Text posts accept `title`, `textContent`, `contentFormat`, `status`, `visibility`, `tags`, and the supported post metadata fields.
+Text posts accept `title`, `textContent`, `contentFormat`, `status`, `visibility`, `tags`, and the supported post metadata fields. Image posts can also set `contentFormat` to control how their caption and description are rendered.
 
 `contentFormat` accepts:
 

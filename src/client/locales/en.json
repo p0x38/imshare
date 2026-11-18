@@ -1,5 +1,17 @@
 {
     "settings": "Settings",
+    "privacyConsent": {
+        "title": "Privacy and cookie settings",
+        "message": "This site uses Google tags for measurement. While analytics storage is denied, Google may still receive limited cookieless signals. Allowing analytics enables analytics storage.",
+        "details": "When analytics storage is denied, Google tags may send cookieless measurement signals, including page context and consent status. When granted, analytics cookies may be used. Advertising-related consent remains denied. Other tags in a Tag Manager container may have separate behavior depending on administrator configuration.",
+        "analytics": "Allow analytics storage",
+        "analyticsHelp": "Your choice is saved in this browser and can be changed at any time.",
+        "allow": "Allow analytics",
+        "reject": "Reject analytics storage",
+        "customize": "Customize",
+        "save": "Save preferences",
+        "settings": "Privacy settings"
+    },
     "language": "Language",
     "english": "English",
     "japanese": "日本語",
@@ -254,7 +266,7 @@
         "administrators": "Administrators",
         "moderators": "Moderators",
         "analytics": "Analytics",
-        "analyticsDescription": "Configure Google Analytics 4 and Google Tag Manager without changing application code.",
+        "analyticsDescription": "Configure Google Analytics 4 and Google Tag Manager. Google tags use Advanced Consent Mode: analytics storage is denied by default, while limited cookieless signals may be sent before consent.",
         "gaId": "Google Analytics measurement ID",
         "gaHelp": "Leave empty to disable Google Analytics.",
         "gtmId": "Google Tag Manager container ID",

@@ -1,6 +1,7 @@
+import type { ComponentType } from "react";
 import { Box } from "@mui/material";
 import { linkifyText } from "../linkify";
-import type { ContentFormat } from "../types";
+import { normalizeContentFormat, type ContentFormat } from "./formats";
 import { MarkdownRenderer } from "./MarkdownRenderer";
 import { wikitextToMarkdown } from "./wikitext";
 
@@ -8,6 +9,11 @@ interface ContentRendererProps {
     content: string;
     format?: ContentFormat;
     interactive?: boolean;
+}
+
+interface FormatRendererProps {
+    content: string;
+    interactive: boolean;
 }
 
 const contentSx = {
@@ -25,10 +31,47 @@ const contentSx = {
         p: 1.5,
         borderRadius: 1,
         bgcolor: "action.hover",
+        "& code": {
+            p: 0,
+            bgcolor: "transparent",
+        },
+    },
+    "& code": {
+        px: 0.5,
+        py: 0.125,
+        borderRadius: 0.5,
+        bgcolor: "action.hover",
+        fontFamily: "monospace",
+        overflowWrap: "anywhere",
     },
     "& img": {
         maxWidth: "100%",
         height: "auto",
+    },
+    "& p": {
+        mt: 0,
+        mb: 1.25,
+        "&:last-child": {
+            mb: 0,
+        },
+    },
+    "& h1, & h2, & h3, & h4, & h5, & h6": {
+        lineHeight: 1.3,
+        mt: 2,
+        mb: 1,
+    },
+    "& ul, & ol": {
+        pl: 3,
+    },
+    "& blockquote": {
+        ml: 0,
+        pl: 2,
+        borderLeft: 3,
+        borderColor: "divider",
+        color: "text.secondary",
+    },
+    "& a": {
+        overflowWrap: "anywhere",
     },
     "& table": {
         display: "block",
@@ -43,34 +86,28 @@ const contentSx = {
     },
 };
 
+const formatRenderers: Record<ContentFormat, ComponentType<FormatRendererProps>> = {
+    plain: ({ content, interactive }) => (
+        <Box sx={{ whiteSpace: "pre-wrap" }}>{interactive ? linkifyText(content) : content}</Box>
+    ),
+    markdown: ({ content, interactive }) => (
+        <MarkdownRenderer content={content} interactive={interactive} />
+    ),
+    wikitext: ({ content, interactive }) => (
+        <MarkdownRenderer content={wikitextToMarkdown(content)} interactive={interactive} />
+    ),
+};
+
 export function ContentRenderer({
     content,
     format = "plain",
     interactive = true,
 }: ContentRendererProps) {
-    switch (format) {
-        case "plain":
-            return (
-                <Box sx={{ ...contentSx, whiteSpace: "pre-wrap" }}>
-                    {interactive ? linkifyText(content) : content}
-                </Box>
-            );
+    const Renderer = formatRenderers[normalizeContentFormat(format)];
 
-        case "markdown":
-            return (
-                <Box sx={contentSx}>
-                    <MarkdownRenderer content={content} interactive={interactive} />
-                </Box>
-            );
-
-        case "wikitext":
-            return (
-                <Box sx={contentSx}>
-                    <MarkdownRenderer
-                        content={wikitextToMarkdown(content)}
-                        interactive={interactive}
-                    />
-                </Box>
-            );
-    }
+    return (
+        <Box sx={contentSx}>
+            <Renderer content={content} interactive={interactive} />
+        </Box>
+    );
 }
