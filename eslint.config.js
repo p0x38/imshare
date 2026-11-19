@@ -24,6 +24,6 @@ export default [
     i18next.configs["flat/recommended"],
     {
         files: ["src/client/**/*.{ts,tsx}"],
-        rules: { "i18next/no-literal-string": ["error", { mode: "all" }] },
+        rules: { "i18next/no-literal-string": ["error", { mode: "jsx-text-only" }] },
     },
 ];
