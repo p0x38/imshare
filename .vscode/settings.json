@@ -44,8 +44,17 @@
     "npm.packageManager": "pnpm",
     "vitest.rootConfig": "./vitest.config.ts",
     "i18n-ally.localesPaths": ["src/client/locales"],
+    "i18n-ally.sourceLanguage": "en",
+    "i18n-ally.displayLanguage": "ja",
+    "i18n-ally.keystyle": "nested",
+    "i18n-ally.namespace": true,
+    "i18n-ally.pathMatcher": "{locale}/{namespace}.json",
     "js/ts.tsserver.maxMemory": 4096,
     "js/ts.tsserver.experimental.enableProjectDiagnostics": false,
     "js/ts.preferences.includePackageJsonAutoImports": "off",
-    "js/ts.suggest.autoImports": false
+    "js/ts.suggest.autoImports": false,
+    "i18n-ally.extract.ignoredByFiles": {
+        "src\\client\\components\\ApiTokens.tsx": ["*"]
+    },
+    "i18n-ally.extract.autoDetect": false
 }

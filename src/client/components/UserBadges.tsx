@@ -38,7 +38,7 @@ export function UserBadges({
     size?: "small" | "medium";
     compact?: boolean;
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["badges"]);
     if (!user.badges?.length) return null;
     return (
         <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>

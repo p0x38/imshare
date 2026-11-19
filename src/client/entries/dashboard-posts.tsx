@@ -72,7 +72,7 @@ function postOriginalUrl(post: Post): string | null {
     return url.href;
 }
 function DashboardPostsPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(['dashboard', 'common']);
     const [posts, setPosts] = useState<Post[] | null>(null);
     const [error, setError] = useState("");
     const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
@@ -680,12 +680,12 @@ function DashboardPostsPage() {
                                                             </Stack>
                                                         ) : null}
                                                         <Typography variant="subtitle1" noWrap>
-                                                            {post.title || t("common.untitled")}
+                                                            {post.title || t("common:common.untitled")}
                                                             {" · "}
                                                             {post.author?.name ||
                                                                 post.author?.username ||
                                                                 post.authorName ||
-                                                                t("common.unknownAuthor")}
+                                                                t("common:common.unknownAuthor")}
                                                         </Typography>
                                                         <Stack
                                                             direction="row"
@@ -1178,7 +1178,7 @@ function DashboardPostsPage() {
                                         }
                                     />
                                 }
-                                label={draft.title || t("common.untitled")}
+                                label={draft.title || t("common:common.untitled")}
                             />
                         ))}
                     </Stack>

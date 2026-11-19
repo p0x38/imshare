@@ -1,5 +1,6 @@
 allowBuilds:
     "@prisma/engines": true
+    '@swc/core': true
     better-sqlite3: true
     esbuild: true
     fs-ext-extra-prebuilt: true
@@ -13,3 +14,11 @@ overrides:
     mysql2: "3.24.6"
     "minimatch@10.2.6": "11.0.8"
     "get-uri@8.0.1>basic-ftp": "6.2.6"
+
+permissions:
+  dotenv:
+    skills: [dotenv, dotenvx]
+
+skills:
+  dirs:
+    - .agents/skills

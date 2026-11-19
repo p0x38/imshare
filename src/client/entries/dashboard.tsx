@@ -8,7 +8,7 @@ import { LoadingState } from "../components/States";
 import { api } from "../lib/api";
 import type { User } from "../lib/types";
 function DashboardPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["dashboard", "account", "common"]);
     const [user, setUser] = useState<User | false | null>(null);
     const [error, setError] = useState("");
     useEffect(() => {
@@ -42,7 +42,7 @@ function DashboardPage() {
                         </Typography>
                         <Typography paragraph>{t("dashboardPage.signInMessage")}</Typography>
                         <Button variant="contained" component="a" href="/account/login/">
-                            {t("accountPage.logIn")}
+                            {t("account:accountPage.logIn")}
                         </Button>
                     </CardContent>
                 </Card>
@@ -55,7 +55,7 @@ function DashboardPage() {
                     {t("dashboardPage.dashboard")}
                 </Typography>
                 <Typography color="text.secondary">
-                    {t("dashboardPage.welcomeBack", { name: user.name || t("common.user") })}
+                    {t("dashboardPage.welcomeBack", { name: user.name || t("common:common.user") })}
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap">
                     <Button variant="contained" component="a" href="/posts/new/">

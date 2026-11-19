@@ -8,7 +8,7 @@ interface VersionResponse {
 }
 
 export function Footer() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["navigation", "common", "admin"]);
     const [version, setVersion] = useState<VersionResponse["data"]>();
     useEffect(() => {
         let active = true;
@@ -64,17 +64,17 @@ export function Footer() {
                     </Link>
                     <Typography color="text.secondary">·</Typography>
                     <Link href="/docs/" underline="hover">
-                        {t("admin.apiDocs")}
+                        {t("admin:admin.apiDocs")}
                     </Link>
                     <Typography
-                        aria-label={t("common.version")}
+                        aria-label={t("common:common.version")}
                         variant="body2"
                         color="text.secondary"
                         title={version?.commitMessage ?? undefined}
                     >
                         {version?.version
-                            ? `${t("common.version")} ${version.version}`
-                            : t("common.version")}
+                            ? `${t("common:common.version")} ${version.version}`
+                            : t("common:common.version")}
                         {buildLabel ? ` · ${buildLabel}` : ""}
                     </Typography>
                 </Stack>

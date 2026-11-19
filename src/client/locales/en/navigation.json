@@ -1,0 +1,33 @@
+{
+    "nav": {
+        "posts": "Posts",
+        "users": "Users",
+        "tags": "Tags",
+        "categories": "Categories",
+        "search": "Search",
+        "openNavigation": "Open navigation",
+        "closeNavigation": "Close navigation",
+        "useLightMode": "Use light mode",
+        "useDarkMode": "Use dark mode",
+        "notifications": "Notifications",
+        "unreadNotifications": "{{count}} unread notifications",
+        "account": "Account: {{name}}",
+        "badges": "Badges",
+        "texts": "Texts"
+    },
+    "menuItems": {
+        "dashboard": "Dashboard",
+        "dashboardSettings": "Settings",
+        "profile": "Profile",
+        "account": "Account",
+        "notifications": "Notifications"
+    },
+    "footer": {
+        "about": "About",
+        "faq": "FAQ",
+        "github": "GitHub",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "badges": "Badges"
+    }
+}

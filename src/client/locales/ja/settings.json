@@ -1,0 +1,19 @@
+{
+    "settings": "設定",
+    "language": "言語",
+    "english": "English",
+    "japanese": "日本語",
+    "appearance": "外観",
+    "light": "ライト",
+    "dark": "ダーク",
+    "automaticDevice": "デバイスに合わせる",
+    "interfaceAnimations": "インターフェースのアニメーションを有効にする",
+    "buttonRipple": "ボタンのリップルエフェクトを有効にする",
+    "accentColor": "アクセントカラー",
+    "default": "デフォルト",
+    "blue": "青",
+    "purple": "紫",
+    "green": "緑",
+    "orange": "オレンジ",
+    "settingsSaved": "設定を保存しました。"
+}

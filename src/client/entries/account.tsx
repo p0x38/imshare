@@ -39,7 +39,7 @@ interface EditableProfileLink {
     url: string;
 }
 function AccountPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["account", "common", "settings"]);
     const [user, setUser] = useState<User | false | null>(null);
     const [error, setError] = useState("");
     const [name, setName] = useState("");
@@ -212,9 +212,9 @@ function AccountPage() {
                 {error && <Alert severity="error">{error}</Alert>}
                 <Card variant="outlined">
                     <Tabs value={tab} onChange={(_, value) => setTab(value)} variant="fullWidth">
-                        <Tab label="Profile" />
-                        <Tab label="Settings" />
-                        <Tab label="Devices & Security" />
+                        <Tab label={t("accountPage.profile")} />
+                        <Tab label={t("accountPreferences.title")} />
+                        <Tab label={t("accountPreferences.security")} />
                         <Tab label="API Tokens" />
                     </Tabs>
                 </Card>
@@ -231,7 +231,7 @@ function AccountPage() {
                                     </Avatar>
                                     <Stack>
                                         <Typography variant="h6">
-                                            {user.name || t("common.account")}
+                                            {user.name || t("common:common.account")}
                                         </Typography>
                                         <Typography color="text.secondary">
                                             {user.handle ? `@${user.handle}` : user.email}

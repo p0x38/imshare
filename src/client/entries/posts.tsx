@@ -23,7 +23,7 @@ interface PostsResponse {
     pagination?: { page?: number; totalPages?: number };
 }
 function PostsPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts", "common", "dashboard"]);
     const params = new URLSearchParams(location.search);
     const [query, setQuery] = useState(params.get("search") || "");
     const [page, setPage] = useState(Number(params.get("page")) || 1);
@@ -47,7 +47,7 @@ function PostsPage() {
             historyParams.set("page", String(response.pagination?.page || page));
             history.replaceState(null, "", `?${historyParams}`);
             document.title = query.trim()
-                ? `${t("search")}: ${query.trim()} · imshare`
+                ? `${t("common:search")}: ${query.trim()} · imshare`
                 : `${t("postsPage.title")} · imshare`;
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : t("postsPage.loadError"));
@@ -84,7 +84,7 @@ function PostsPage() {
                         href="/posts/new/"
                         variant="extended"
                         color="primary"
-                        aria-label={t("dashboardPosts.newPost")}
+                        aria-label={t("dashboard:dashboardPosts.newPost")}
                         sx={{
                             position: "fixed",
                             right: { xs: 2, sm: 3 },
@@ -93,7 +93,7 @@ function PostsPage() {
                         }}
                     >
                         <Add sx={{ mr: 1 }} />
-                        {t("dashboardPosts.newPost")}
+                        {t("dashboard:dashboardPosts.newPost")}
                     </Fab>
                 </Portal>
             ) : null}
@@ -153,7 +153,7 @@ function PostsPage() {
                         disabled={page <= 1}
                         onClick={() => setPage((value) => Math.max(1, value - 1))}
                     >
-                        {t("common.previous")}
+                        {t("common:common.previous")}
                     </Button>
                     <Typography color="text.secondary">
                         {t("postsPage.page", { page, totalPages })}
@@ -162,7 +162,7 @@ function PostsPage() {
                         disabled={page >= totalPages}
                         onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
                     >
-                        {t("common.next")}
+                        {t("common:common.next")}
                     </Button>
                 </Stack>
             </Stack>

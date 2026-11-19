@@ -49,7 +49,7 @@ interface Category {
 }
 
 export function AccountPreferences() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["account"]);
     const [preferences, setPreferences] = useState<Preferences | null>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [tab, setTab] = useState(0);

@@ -1,0 +1,113 @@
+{
+    "common": {
+        "account": "Account",
+        "unknownAuthor": "Unknown author",
+        "untitled": "Untitled",
+        "none": "None",
+        "loading": "Loading…",
+        "saving": "Saving…",
+        "deleting": "Deleting…",
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "edit": "Edit",
+        "create": "Create",
+        "close": "Close",
+        "previous": "Previous",
+        "next": "Next",
+        "version": "Version",
+        "user": "user",
+        "users": "users",
+        "post": "post",
+        "image": "image",
+        "images": "images"
+    },
+    "profileTabSection": {
+        "followers": "Followers {{followers}}",
+        "following": "Following {{following}}",
+        "posts": "Posts",
+        "texts": "Texts",
+        "about": "About"
+    },
+    "profileMetadata": {
+        "followers": "{{count}} followers",
+        "following": "{{count}} following",
+        "joinedAt": "Joined {{date}}",
+        "posts": "{{count}} posts"
+    },
+    "postMetadata": {
+        "title": "Title",
+        "image": "Image",
+        "isNSFW": "Is content NSFW",
+        "contentWarningType": "Type of Content Warning",
+        "contentWarning": "Content Warning",
+        "contentFormat": "Content format",
+        "caption": "Caption",
+        "description": "Description",
+        "customThumbnail": "Custom thumbnail",
+        "sourceURL": "Source URL",
+        "originalCreator": "Original creator",
+        "originalCreatedAt": "Original created at",
+        "allowDownloads": "Allow users to download",
+        "status": "Post status",
+        "visibility": "Post visibility",
+        "permalinkPattern": "Permalink pattern",
+        "permalinkIdType": "Permalink ID type",
+        "customPostId": "Custom post ID",
+        "category": "Category"
+    },
+    "permalinkIdType": {
+        "internalId": "Internal ID",
+        "normalizedTitle": "Normalized title",
+        "creationDate": "Creation date",
+        "custom": "Custom"
+    },
+    "permalinkPatternType": {
+        "user": "User",
+        "posts": "Posts"
+    },
+    "visibilityType": {
+        "public": "Public",
+        "unlisted": "Unlisted",
+        "private": "Private"
+    },
+    "statusType": {
+        "draft": "Draft",
+        "published": "Published"
+    },
+    "crawlerAccessMetadata": {
+        "description": "Crawler access",
+        "help": "Choose which crawlers may access this post. Inherited settings follow your account defaults.",
+        "useAccountDefault": "Use account default",
+        "allow": "Allow",
+        "deny": "Deny",
+        "allowSearchEngineIndex": "Web search crawlers",
+        "allowAiCrawler": "AI crawlers",
+        "allowImageCrawler": "Image crawlers",
+        "allowCustomCrawler": "Custom crawlers"
+    },
+    "postMetadataDescription": {
+        "contentWarning": "Optional text shown with the warning.",
+        "customThumbnail": "Choose a thumbnail image and crop it to an exact 1:1 square.",
+        "customThumbnailAlt": "Custom thumbnail preview"
+    },
+    "contentWarningType": {
+        "none": "None",
+        "sexual": "Sexual content",
+        "violence": "Violence",
+        "gore": "Gore",
+        "drugs": "Drugs",
+        "flashing": "Flashing lights",
+        "spoilers": "Spoilers",
+        "other": "Other"
+    },
+    "contentFormatType": {
+        "plain": "Plain text",
+        "markdown": "Markdown",
+        "wikitext": "Wikitext"
+    },
+    "states": {
+        "loadingPosts": "Loading posts"
+    },
+    "posts": "Posts",
+    "search": "Search"
+}

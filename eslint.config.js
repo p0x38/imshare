@@ -1,4 +1,5 @@
 import eslint from "@eslint/js";
+import i18next from "eslint-plugin-i18next";
 
 export default [
     {
@@ -12,4 +13,9 @@ export default [
         ],
     },
     eslint.configs.recommended,
+    i18next.configs["flat/recommended"],
+    {
+        files: ["src/client/**/*.{ts,tsx}"],
+        rules: { "i18next/no-literal-string": ["error", { mode: "all" }] },
+    },
 ];

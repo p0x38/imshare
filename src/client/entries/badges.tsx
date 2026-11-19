@@ -21,7 +21,7 @@ const badges = [
 ] as const;
 
 function BadgeCard({ badge, kind }: { badge: string; kind: "automatic" | "manual" }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["badges"]);
     return (
         <Card variant="outlined">
             <CardContent>
@@ -51,7 +51,7 @@ function BadgeCard({ badge, kind }: { badge: string; kind: "automatic" | "manual
 }
 
 function BadgesPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["badges"]);
     return (
         <Page maxWidth="md" title={t("badges.title")}>
             <Stack spacing={2}>

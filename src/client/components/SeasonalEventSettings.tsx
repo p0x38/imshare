@@ -45,7 +45,7 @@ function fromDateInputValue(value: string): SeasonalDate | undefined {
 }
 
 export function SeasonalEventSettings({ onSave }: SeasonalEventSettingsProps) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["developer"]);
     const [configs, setConfigs] = useState<SeasonalEventConfig[]>(getSeasonalEventConfigs);
     const [error, setError] = useState("");
 

@@ -51,7 +51,7 @@ const manualBadgeKeys = [
 ] as const;
 
 function AdminUsersPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(['admin', 'common']);
     const [users, setUsers] = useState<User[]>([]);
     const [error, setError] = useState("");
     const [target, setTarget] = useState<User | null>(null);
@@ -346,7 +346,7 @@ function AdminUsersPage() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setAction(null)} disabled={busy}>
-                        {t("common.cancel")}
+                        {t("common:common.cancel")}
                     </Button>
                     <Button
                         onClick={() => void submit()}

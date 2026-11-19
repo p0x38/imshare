@@ -145,7 +145,7 @@ function useReducedMotion() {
 }
 
 function PostActions({ post }: { post: Post }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts"]);
     const [busy, setBusy] = useState("");
     const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
     const [reportOpen, setReportOpen] = useState(false);
@@ -579,7 +579,7 @@ function CommentItem({
 }
 
 function Comments({ postId }: { postId: string }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts"]);
     const [comments, setComments] = useState<Comment[]>([]);
     const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
     const [body, setBody] = useState("");

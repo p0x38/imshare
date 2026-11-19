@@ -41,7 +41,7 @@ function StatCard({ label, value, href }: { label: string; value: number; href: 
 }
 
 function AdminPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["admin"]);
     const [overview, setOverview] = useState<Overview | null>(null);
     const [error, setError] = useState("");
 

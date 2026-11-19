@@ -30,7 +30,7 @@ import {
 } from "../../lib/seasonal-events";
 
 function SettingsPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["settings", "developer", "account", "dashboard"]);
     const { preference, setPreference } = useColorMode();
     const { language, setLanguage } = useLanguage();
     const { settings, setAnimations, setRipple, setAccentColor } = useThemeSettings();
@@ -75,7 +75,7 @@ function SettingsPage() {
                 ) : null}
                 {storageError ? (
                     <Alert severity="error" onClose={() => setStorageError(false)}>
-                        {t("seasonalEventStorageError")}
+                        {t("developer:seasonalEventStorageError")}
                     </Alert>
                 ) : null}
                 <Card variant="outlined">
@@ -205,16 +205,16 @@ function SettingsPage() {
                     <CardContent>
                         <Stack spacing={2}>
                             <Typography variant="h6" component="h2">
-                                {t("developer")}
+                                {t("developer:developer")}
                             </Typography>
 
                             <Typography variant="body2" color="text.secondary">
-                                {t("developerDescription")}
+                                {t("developer:developerDescription")}
                             </Typography>
 
                             <FormControl fullWidth>
                                 <Typography variant="subtitle2" gutterBottom>
-                                    {t("seasonalEventOverride")}
+                                    {t("developer:seasonalEventOverride")}
                                 </Typography>
 
                                 <Select
@@ -226,9 +226,11 @@ function SettingsPage() {
                                     }
                                 >
                                     <MenuItem value="automatic">
-                                        {t("seasonalEventAutomatic")}
+                                        {t("developer:seasonalEventAutomatic")}
                                     </MenuItem>
-                                    <MenuItem value="none">{t("seasonalEventNone")}</MenuItem>
+                                    <MenuItem value="none">
+                                        {t("developer:seasonalEventNone")}
+                                    </MenuItem>
                                     {seasonalEventConfigs.map((event) => (
                                         <MenuItem key={event.id} value={event.id}>
                                             {event.name}
@@ -237,7 +239,7 @@ function SettingsPage() {
                                 </Select>
 
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                                    {t("seasonalEventOverrideHelp")}
+                                    {t("developer:seasonalEventOverrideHelp")}
                                 </Typography>
                             </FormControl>
                             <SeasonalEventSettings onSave={handleSeasonalEventConfigSave} />
@@ -246,10 +248,10 @@ function SettingsPage() {
                 </Card>
                 <Stack direction="row" spacing={1}>
                     <Button variant="outlined" component="a" href="/dashboard/">
-                        {t("dashboard")}
+                        {t("dashboard:dashboard")}
                     </Button>
                     <Button component="a" href="/account/">
-                        {t("accountProfile")}
+                        {t("account:accountProfile")}
                     </Button>
                 </Stack>
             </Stack>

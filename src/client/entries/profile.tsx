@@ -20,6 +20,7 @@ import {
     Pagination,
 } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { createRoot } from "react-dom/client";
 import { App } from "../components/App";
 import { Page } from "../components/Page";
@@ -61,6 +62,7 @@ interface RelationshipUser {
 type ProfileTab = "posts" | "about" | "followers" | "following";
 
 function RelationshipList({ value, kind }: { value: string; kind: "followers" | "following" }) {
+    const { t } = useTranslation(["profile"]);
     const [items, setItems] = useState<RelationshipUser[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
@@ -77,17 +79,23 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
                 setTotalPages(response.totalPages ?? 1);
             })
             .catch((cause) =>
-                setError(cause instanceof Error ? cause.message : `Unable to load ${kind}.`),
+                setError(
+                    cause instanceof Error
+                        ? cause.message
+                        : t("relationshipList.uncaughtException", { kind: kind }),
+                ),
             )
             .finally(() => setLoading(false));
     }, [value, kind, page]);
-    if (loading) return <LoadingState label={`Loading ${kind}…`} />;
+    if (loading) return <LoadingState label={t("relationshipList.loading", { kind: kind })} />;
     if (error) return <Alert severity="error">{error}</Alert>;
     if (!items.length)
         return (
             <Card variant="outlined">
                 <CardContent>
-                    <Typography color="text.secondary">No {kind} to show.</Typography>
+                    <Typography color="text.secondary">
+                        {t("relationshipList.noResult", { kind: kind })}
+                    </Typography>
                 </CardContent>
             </Card>
         );
@@ -144,6 +152,7 @@ function RelationshipList({ value, kind }: { value: string; kind: "followers" | 
 }
 
 function ProfilePage() {
+    const { t } = useTranslation(["profile", "common"]);
     const value = decodeURIComponent(location.pathname.split("/").filter(Boolean).at(-1) ?? "");
     const [profile, setProfile] = useState<Profile | null>(null);
     const [posts, setPosts] = useState<Post[]>([]);
@@ -169,7 +178,7 @@ function ProfilePage() {
                 setPostsTotalPages(postsResponse.pagination?.totalPages ?? 1);
             } else setPosts([]);
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to load profile.");
+            setError(cause instanceof Error ? cause.message : t("profile.uncaughtException"));
         }
     }
     useEffect(() => {
@@ -198,7 +207,7 @@ function ProfilePage() {
             });
             await load();
         } catch (cause) {
-            setError(cause instanceof Error ? cause.message : "Unable to update follow status.");
+            setError(cause instanceof Error ? cause.message : t("profile.followUpdateFailed"));
         } finally {
             setBusy(false);
         }
@@ -212,17 +221,31 @@ function ProfilePage() {
     if (!profile)
         return (
             <Page>
-                <LoadingState label="Loading profile…" />
+                <LoadingState label={t("profile.loading")} />
             </Page>
         );
     const visibleTabs: Array<{ value: ProfileTab; label: string }> = [
         { value: "posts", label: "Posts" },
         { value: "about", label: "About" },
         ...(profile.stats.followers !== null
-            ? [{ value: "followers" as const, label: `Followers ${profile.stats.followers}` }]
+            ? [
+                  {
+                      value: "followers" as const,
+                      label: t("common:profileTabSection.followers", {
+                          followers: profile.stats.followers,
+                      }),
+                  },
+              ]
             : []),
         ...(profile.stats.following !== null
-            ? [{ value: "following" as const, label: `Following ${profile.stats.following}` }]
+            ? [
+                  {
+                      value: "following" as const,
+                      label: t("common:profileTabSection.following", {
+                          following: profile.stats.following,
+                      }),
+                  },
+              ]
             : []),
     ];
     const validTab = visibleTabs.some((item) => item.value === tab) ? tab : "posts";
@@ -295,10 +318,10 @@ function ProfilePage() {
                                     disabled={busy}
                                 >
                                     {pending(profile.followStatus)
-                                        ? "Requested"
+                                        ? t("profile.followRequested")
                                         : profile.isFollowing
-                                          ? "Following"
-                                          : "Follow"}
+                                          ? t("profile.followingUser")
+                                          : t("profile.followUser")}
                                 </Button>
                             ) : null}
                         </Stack>
@@ -309,19 +332,29 @@ function ProfilePage() {
                             useFlexGap
                             sx={{ mt: 2 }}
                         >
-                            <Chip label={`${profile.stats.posts.toLocaleString()} posts`} />
+                            <Chip
+                                label={t("common:profileMetadata.posts", {
+                                    count: profile.stats.posts.toLocaleString(),
+                                })}
+                            />
                             {profile.stats.followers !== null ? (
                                 <Chip
-                                    label={`${profile.stats.followers.toLocaleString()} followers`}
+                                    label={t("common:profileMetadata.followers", {
+                                        count: profile.stats.followers.toLocaleString(),
+                                    })}
                                 />
                             ) : null}
                             {profile.stats.following !== null ? (
                                 <Chip
-                                    label={`${profile.stats.following.toLocaleString()} following`}
+                                    label={t("common:profileMetadata.following", {
+                                        count: profile.stats.following.toLocaleString(),
+                                    })}
                                 />
                             ) : null}
                             <Chip
-                                label={`Joined ${new Date(profile.createdAt).toLocaleDateString()}`}
+                                label={t("common:profileMetadata.joinedAt", {
+                                    date: new Date(profile.createdAt).toLocaleDateString(),
+                                })}
                             />
                         </Stack>
                         <ProfileLinks
@@ -349,7 +382,7 @@ function ProfilePage() {
                         {imagePosts.length ? (
                             <Stack spacing={1.5}>
                                 <Typography variant="h5" component="h2">
-                                    Posts
+                                    {t("common:profileTabSection.posts")}
                                 </Typography>
                                 <PostGrid posts={imagePosts} />
                             </Stack>
@@ -364,7 +397,7 @@ function ProfilePage() {
                         {texts.length ? (
                             <Stack spacing={1.5}>
                                 <Typography variant="h5" component="h2">
-                                    Texts
+                                    {t("common:profileTabSection.texts")}
                                 </Typography>
                                 <TextList texts={texts} />
                             </Stack>
@@ -372,7 +405,9 @@ function ProfilePage() {
                         {!imagePosts.length && !texts.length ? (
                             <Card variant="outlined">
                                 <CardContent>
-                                    <Typography color="text.secondary">No public posts.</Typography>
+                                    <Typography color="text.secondary">
+                                        {t("profile.noPostResult")}
+                                    </Typography>
                                 </CardContent>
                             </Card>
                         ) : null}
@@ -384,12 +419,14 @@ function ProfilePage() {
                             <Stack spacing={2}>
                                 {profile.bio ? (
                                     <Box>
-                                        <Typography variant="subtitle2">About</Typography>
+                                        <Typography variant="subtitle2">
+                                            {t("common:profileTabSection.about")}
+                                        </Typography>
                                         <ContentRenderer content={profile.bio} format="plain" />
                                     </Box>
                                 ) : (
                                     <Typography color="text.secondary">
-                                        No profile description.
+                                        {t("profile.noProfileDescription")}
                                     </Typography>
                                 )}
                                 {profile.websiteUrl ||

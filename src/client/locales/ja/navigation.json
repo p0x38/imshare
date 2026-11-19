@@ -1,0 +1,26 @@
+{
+    "nav": {
+        "posts": "投稿",
+        "users": "ユーザー",
+        "tags": "タグ",
+        "categories": "カテゴリー",
+        "search": "検索",
+        "openNavigation": "ナビゲーションを開く",
+        "closeNavigation": "ナビゲーションを閉じる",
+        "useLightMode": "ライトモードにする",
+        "useDarkMode": "ダークモードにする",
+        "notifications": "通知",
+        "unreadNotifications": "未読通知 {{count}} 件",
+        "account": "アカウント: {{name}}",
+        "badges": "バッジ",
+        "texts": "テキスト"
+    },
+    "footer": {
+        "about": "概要",
+        "faq": "FAQ",
+        "github": "GitHub",
+        "privacy": "プライバシー",
+        "terms": "利用規約",
+        "badges": "バッジ"
+    }
+}

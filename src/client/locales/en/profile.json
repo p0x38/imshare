@@ -1,0 +1,17 @@
+{
+    "relationshipList": {
+        "uncaughtException": "Unable to load {{kind}}.",
+        "loading": "Loadin {{kind}}…",
+        "noResult": "No {{kind}} to show."
+    },
+    "profile": {
+        "uncaughtException": "Unable to load profile.",
+        "followUpdateFailed": "Unable to update follow status.",
+        "loading": "Loading profile…",
+        "followRequested": "Requested",
+        "followingUser": "Following",
+        "followUser": "Follow",
+        "noPostResult": "No public posts.",
+        "noProfileDescription": "No profile description."
+    }
+}

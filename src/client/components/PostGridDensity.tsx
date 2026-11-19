@@ -66,7 +66,7 @@ export function PostGridDensityControl({
     density: PostGridDensity;
     onChange: (density: PostGridDensity) => void;
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts"]);
 
     return (
         <ToggleButtonGroup

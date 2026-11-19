@@ -69,7 +69,7 @@ export function PostGrid({
     posts: Post[] | { posts?: Post[] };
     density?: PostGridDensity;
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts", "common"]);
     const posts = normalizePosts(input).filter((post) => post.contentType !== "text");
     const { columns, gap } = densitySettings[density];
 
@@ -166,12 +166,12 @@ export function PostGrid({
                                     noWrap
                                     sx={{ fontSize: { xs: "0.9rem", sm: "1rem" } }}
                                 >
-                                    {post.title || t("common.untitled")}
+                                    {post.title || t("common:common.untitled")}
                                     {" · "}
                                     {post.author?.name ||
                                         post.author?.username ||
                                         post.authorName ||
-                                        t("common.unknownAuthor")}
+                                        t("common:common.unknownAuthor")}
                                 </Typography>
                                 <Stack
                                     direction="row"

@@ -31,7 +31,7 @@ interface PostResponse {
 }
 
 function HomePage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts", "home"]);
     const [posts, setPosts] = useState<Post[]>([]);
     const [recommendations, setRecommendations] = useState<Post[]>([]);
     const [trending, setTrending] = useState<Post[]>([]);
@@ -106,7 +106,7 @@ function HomePage() {
                 sx={{ mb: 2 }}
             >
                 <Typography variant="h4" component="h1">
-                    {t("home.recentPosts")}
+                    {t("home:home.recentPosts")}
                 </Typography>
                 <ToggleButtonGroup
                     size="small"
@@ -159,7 +159,7 @@ function HomePage() {
                     {recentPosts.length ? (
                         <Stack spacing={1.5}>
                             <Typography variant="h5" component="h2">
-                                {t("home.recentPosts")}
+                                {t("home:home.recentPosts")}
                             </Typography>
                             <PostGrid posts={recentPosts} density={density} />
                         </Stack>

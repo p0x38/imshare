@@ -19,7 +19,7 @@ export function LoadingState({
     label?: string;
     fullHeight?: boolean;
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["common"]);
     const text = label ?? t("common.loading");
     return (
         <Fade in appear timeout={280}>
@@ -45,7 +45,7 @@ export function ErrorState({ message }: { message: string }) {
     );
 }
 export function SkeletonGrid({ count = 8 }: { count?: number }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["common"]);
     return (
         <Box
             display="grid"

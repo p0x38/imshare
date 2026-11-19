@@ -41,7 +41,7 @@ const links = [
 ] as const;
 
 export function Navigation() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["navigation", "common", "admin", "dashboard", "account"]);
     const { mode, toggle } = useColorMode();
     const [user, setUser] = useState<User | null>(null);
     const [authLoading, setAuthLoading] = useState(true);
@@ -67,7 +67,7 @@ export function Navigation() {
         };
     }, []);
 
-    const displayName = user?.name || user?.username || t("common.account");
+    const displayName = user?.name || user?.username || t("common:common.account");
     const initials =
         displayName
             .split(/\s+/)
@@ -157,7 +157,7 @@ export function Navigation() {
                             size="small"
                             sx={{ minHeight: 40, px: 1.25 }}
                         >
-                            {t("admin.administration")}
+                            {t("admin:admin.administration")}
                         </Button>
                     ) : null}
                 </Stack>
@@ -217,7 +217,9 @@ export function Navigation() {
                         transformOrigin={{ vertical: "top", horizontal: "right" }}
                         slotProps={{ paper: { sx: { minWidth: 220, mt: 1 } } }}
                     >
-                        {authLoading ? <MenuItem disabled>{t("common.loading")}</MenuItem> : null}
+                        {authLoading ? (
+                            <MenuItem disabled>{t("common:common.loading")}</MenuItem>
+                        ) : null}
 
                         {user ? (
                             <MenuItem disabled sx={{ opacity: "1 !important", fontWeight: 600 }}>
@@ -227,9 +229,11 @@ export function Navigation() {
 
                         {user ? (
                             <>
-                                <MenuItem onClick={() => goTo("/dashboard/")}>Dashboard</MenuItem>
+                                <MenuItem onClick={() => goTo("/dashboard/")}>
+                                    {t("dashboard:dashboard")}
+                                </MenuItem>
                                 <MenuItem onClick={() => goTo("/dashboard/settings/")}>
-                                    Settings
+                                    {t("settings:settings")}
                                 </MenuItem>
                                 {user.handle ? (
                                     <MenuItem
@@ -237,36 +241,40 @@ export function Navigation() {
                                             goTo(`/users/@${encodeURIComponent(user.handle!)}`)
                                         }
                                     >
-                                        Profile
+                                        {t("account:accountProfile")}
                                     </MenuItem>
                                 ) : null}
-                                <MenuItem onClick={() => goTo("/account/")}>Account</MenuItem>
+                                <MenuItem onClick={() => goTo("/account/")}>
+                                    {t("account:accountPage.account")}
+                                </MenuItem>
                                 <MenuItem onClick={() => goTo("/notifications/")}>
-                                    Notifications
+                                    {t("nav.notifications")}
                                     {unreadNotifications > 0 ? ` (${unreadNotifications})` : ""}
                                 </MenuItem>
                                 {canAccessAdmin ? (
                                     <MenuItem onClick={() => goTo("/admin/")}>
-                                        {t("admin.administration")}
+                                        {t("admin:admin.administration")}
                                     </MenuItem>
                                 ) : null}
                             </>
                         ) : null}
 
                         {!authLoading && !user ? (
-                            <MenuItem onClick={() => goTo("/account/login/")}>Log in</MenuItem>
+                            <MenuItem onClick={() => goTo("/account/login/")}>
+                                {t("account:accountPage.logIn")}
+                            </MenuItem>
                         ) : null}
 
                         {!authLoading && !user ? (
                             <MenuItem onClick={() => goTo("/account/register/")}>
-                                Create account
+                                {t("account:accountPage.createAccount")}
                             </MenuItem>
                         ) : null}
 
                         {user ? (
                             <MenuItem onClick={() => void logout()}>
                                 <Logout fontSize="small" sx={{ mr: 1 }} />
-                                Log out
+                                {t("account:accountPage.logOut")}
                             </MenuItem>
                         ) : null}
                     </MuiMenu>
@@ -320,7 +328,7 @@ export function Navigation() {
                             onClick={() => setDrawerOpen(false)}
                             sx={{ minHeight: 48, borderRadius: 1.5 }}
                         >
-                            <ListItemText primary={t("admin.administration")} />
+                            <ListItemText primary={t("admin:admin.administration")} />
                         </ListItemButton>
                     ) : null}
                 </List>

@@ -29,7 +29,7 @@ function slugify(value: string) {
     );
 }
 function TaxonomyPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts", "common"]);
     const taxonomy = document.body.dataset.taxonomy === "categories" ? "categories" : "tags";
     const label = t(`taxonomy.${taxonomy}`);
     const item =
@@ -135,7 +135,7 @@ function TaxonomyPage() {
                             >
                                 <Typography>{entry.name}</Typography>
                                 <Button color="error" onClick={() => void remove(entry.id)}>
-                                    {t("common.delete")}
+                                    {t("common:common.delete")}
                                 </Button>
                             </CardContent>
                         </Card>

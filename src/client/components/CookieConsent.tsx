@@ -33,7 +33,7 @@ function readConsentChoice(): ConsentChoice {
 }
 
 export function CookieConsent() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["privacy"]);
     const [choice, setChoice] = useState<ConsentChoice>(readConsentChoice);
     const [analyticsEnabled, setAnalyticsEnabled] = useState(choice === "accepted");
     const [settingsOpen, setSettingsOpen] = useState(false);

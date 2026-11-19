@@ -1,0 +1,61 @@
+{
+    "postsPage": {
+        "title": "Posts",
+        "searchPosts": "Search posts",
+        "search": "Search",
+        "page": "Page {{page}} / {{totalPages}}",
+        "loading": "Loading posts…",
+        "loadError": "Unable to load posts.",
+        "gridDensity": "Grid density",
+        "compact": "Compact",
+        "comfortable": "Comfortable",
+        "spacious": "Spacious",
+        "threeByThree": "3×3",
+        "fourByFour": "4×4",
+        "sixBySix": "6×6"
+    },
+    "postGrid": {
+        "noPosts": "No posts found",
+        "noPostsDescription": "There are no posts matching this view yet."
+    },
+    "recommendations": {
+        "error": "Some recommendation sections could not be loaded.",
+        "related": "Related posts",
+        "recommended": "Recommended for you",
+        "trending": "Trending",
+        "recentlyViewed": "Recently viewed"
+    },
+    "taxonomy": {
+        "categories": "Categories",
+        "tags": "Tags",
+        "manage": "Manage {{label}}",
+        "newItem": "New {{item}}",
+        "create": "Create",
+        "deleteConfirm": "Delete this {{item}}?",
+        "loadError": "Unable to load {{items}}.",
+        "createError": "Unable to create {{item}}.",
+        "deleteError": "Unable to delete {{item}}."
+    },
+    "postUi": {
+        "like": "Like",
+        "favorite": "Favorite",
+        "save": "Save",
+        "moreActions": "More actions",
+        "copyLink": "Copy link",
+        "openNewTab": "Open in new tab",
+        "openSource": "Open source",
+        "edit": "Edit post",
+        "report": "Report post",
+        "reportTitle": "Report post",
+        "reason": "Reason",
+        "noComments": "No comments yet.",
+        "linkCopied": "Link copied to clipboard.",
+        "reportSubmitted": "Report submitted. Thank you.",
+        "deleteConfirm": "Delete this post? This cannot be undone.",
+        "download": "Download",
+        "downloadImage": "Download image {{number}}",
+        "likes": "Likes",
+        "favorites": "Favorites",
+        "saves": "Saves"
+    }
+}

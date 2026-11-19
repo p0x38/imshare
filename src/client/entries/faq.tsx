@@ -31,7 +31,7 @@ const sections = [
 type SectionKey = (typeof sections)[number][0];
 
 function FaqSection({ section, count }: { section: SectionKey; count: number }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["faq"]);
 
     return (
         <Card variant="outlined">
@@ -68,7 +68,7 @@ function FaqSection({ section, count }: { section: SectionKey; count: number }) 
 }
 
 function FaqPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["faq"]);
 
     return (
         <Page maxWidth="md">

@@ -43,7 +43,7 @@ export function RecommendationSections({
     density?: PostGridDensity;
     storageKey?: string;
 }) {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["posts"]);
     const [related, setRelated] = useState<Post[]>([]);
     const [recommended, setRecommended] = useState<Post[]>([]);
     const [trending, setTrending] = useState<Post[]>([]);

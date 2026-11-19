@@ -8,7 +8,7 @@ import { LoadingState } from "../components/States";
 import { api } from "../lib/api";
 import type { Post } from "../lib/types";
 function DashboardPostPage() {
-    const { t } = useTranslation();
+    const { t } = useTranslation(["dashboard", "common"]);
     const id = decodeURIComponent(location.pathname.split("/").filter(Boolean).at(-1)!);
     const [post, setPost] = useState<Post | null>(null);
     const [error, setError] = useState("");
@@ -46,14 +46,14 @@ function DashboardPostPage() {
     if (!post)
         return (
             <Page>
-                <LoadingState label={t("common.loading")} />
+                <LoadingState label={t("common:common.loading")} />
             </Page>
         );
     return (
         <Page maxWidth="md">
             <Stack spacing={2}>
                 <Typography variant="h4" component="h1">
-                    {post.title || t("common.untitled")}
+                    {post.title || t("common:common.untitled")}
                 </Typography>
                 <Typography color="text.secondary">
                     {t("dashboardPost.manageDescription")}
@@ -67,7 +67,7 @@ function DashboardPostPage() {
                                 component="a"
                                 href={`/dashboard/posts/${encodeURIComponent(post.id)}/edit/`}
                             >
-                                {t("common.edit")}
+                                {t("common:common.edit")}
                             </Button>
                             <Button
                                 variant="outlined"
@@ -77,7 +77,7 @@ function DashboardPostPage() {
                                 {t("dashboardPost.viewPublic")}
                             </Button>
                             <Button color="error" onClick={() => void remove()} disabled={deleting}>
-                                {deleting ? t("common.deleting") : t("common.delete")}
+                                {deleting ? t("common:common.deleting") : t("common:common.delete")}
                             </Button>
                         </Stack>
                     </CardContent>

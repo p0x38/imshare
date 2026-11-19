@@ -1,0 +1,61 @@
+{
+    "postsPage": {
+        "title": "投稿",
+        "searchPosts": "投稿を検索",
+        "search": "検索",
+        "page": "{{page}} / {{totalPages}} ページ",
+        "loading": "投稿を読み込み中…",
+        "loadError": "投稿を読み込めませんでした。",
+        "gridDensity": "グリッド密度",
+        "compact": "コンパクト",
+        "comfortable": "標準",
+        "spacious": "ゆったり",
+        "threeByThree": "3×3",
+        "fourByFour": "4×4",
+        "sixBySix": "6×6"
+    },
+    "postGrid": {
+        "noPosts": "投稿が見つかりません",
+        "noPostsDescription": "この表示に一致する投稿はまだありません。"
+    },
+    "recommendations": {
+        "error": "一部のおすすめセクションを読み込めませんでした。",
+        "related": "関連する投稿",
+        "recommended": "おすすめ",
+        "trending": "トレンド",
+        "recentlyViewed": "最近見た投稿"
+    },
+    "taxonomy": {
+        "categories": "カテゴリー",
+        "tags": "タグ",
+        "manage": "{{label}}を管理",
+        "newItem": "新しい{{item}}",
+        "create": "作成",
+        "deleteConfirm": "この{{item}}を削除しますか？",
+        "loadError": "{{items}}を読み込めませんでした。",
+        "createError": "{{item}}を作成できませんでした。",
+        "deleteError": "{{item}}を削除できませんでした。"
+    },
+    "postUi": {
+        "like": "いいね",
+        "favorite": "お気に入り",
+        "save": "保存",
+        "moreActions": "その他の操作",
+        "copyLink": "リンクをコピー",
+        "openNewTab": "新しいタブで開く",
+        "openSource": "ソースを開く",
+        "edit": "投稿を編集",
+        "report": "投稿を報告",
+        "reportTitle": "投稿を報告",
+        "reason": "理由",
+        "noComments": "まだコメントはありません。",
+        "linkCopied": "リンクをクリップボードにコピーしました。",
+        "reportSubmitted": "報告を送信しました。ありがとうございます。",
+        "deleteConfirm": "この投稿を削除しますか？この操作は取り消せません。",
+        "download": "ダウンロード",
+        "downloadImage": "画像 {{number}} をダウンロード",
+        "likes": "いいね",
+        "favorites": "お気に入り",
+        "saves": "保存"
+    }
+}

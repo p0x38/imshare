@@ -1,0 +1,30 @@
+{
+    "dashboard": "Dashboard",
+    "dashboardPage": {
+        "dashboard": "Dashboard",
+        "signInMessage": "Sign in to manage your content.",
+        "welcomeBack": "Welcome back, {{name}}.",
+        "newPost": "New post",
+        "managePosts": "Manage posts",
+        "manageTags": "Manage tags",
+        "manageCategories": "Manage categories",
+        "settings": "Settings",
+        "loading": "Loading dashboard…",
+        "loadError": "Unable to load dashboard."
+    },
+    "dashboardPosts": {
+        "managePosts": "Manage Posts",
+        "postCount": "{{count}} posts",
+        "newPost": "New post",
+        "empty": "You have not created any posts yet",
+        "createFirst": "Create your first post",
+        "loading": "Loading your posts…",
+        "loadError": "Unable to load your posts."
+    },
+    "dashboardPost": {
+        "manageDescription": "Manage your post and its public page.",
+        "viewPublic": "View public post",
+        "deleteConfirm": "Delete this post? This cannot be undone.",
+        "deleteError": "Unable to delete post."
+    }
+}

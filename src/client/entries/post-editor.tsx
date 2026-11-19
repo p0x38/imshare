@@ -30,6 +30,7 @@ import { api } from "../lib/api";
 import type { ContentFormat, Post } from "../lib/types";
 import { ContentEditor } from "../lib/content-formats/ContentEditor";
 import { normalizeContentFormat } from "../lib/content-formats/formats";
+import { useTranslation } from "react-i18next";
 
 interface Category {
     id: string;
@@ -45,19 +46,15 @@ type CrawlerOverride = "inherit" | "allow" | "deny";
 const crawlerOptions = [
     {
         key: "allowSearchEngineIndex",
-        label: "Web search crawlers",
     },
     {
         key: "allowAiCrawler",
-        label: "AI crawlers",
     },
     {
         key: "allowImageCrawler",
-        label: "Image crawlers",
     },
     {
         key: "allowCustomCrawler",
-        label: "Custom crawlers",
     },
 ] as const;
 
@@ -76,6 +73,7 @@ function fromCrawlerOverride(value: CrawlerOverride): boolean | null {
 }
 
 function PostEditor() {
+    const { t } = useTranslation(["editor", "common"]);
     const editing = location.pathname.includes("/edit/");
     const postId = editing
         ? decodeURIComponent(location.pathname.split("/").filter(Boolean).at(-2)!)
@@ -341,23 +339,19 @@ function PostEditor() {
     }
 
     return (
-        <Page title={editing ? "Edit post" : "Create post"}>
+        <Page title={editing ? t("postEditor.editPost") : t("postEditor.newPost")}>
             <Card>
                 <CardContent component="form" onSubmit={submit}>
                     <Stack spacing={2}>
                         {error ? <Alert severity="error">{error}</Alert> : null}
                         <Stack spacing={1.5}>
                             <Typography variant="h6" component="h2">
-                                Image
+                                {t("common:postMetadata.image")}
                             </Typography>
                             {initialUploadId ? (
-                                <Alert severity="success">
-                                    Image uploaded. Finish the post details below.
-                                </Alert>
+                                <Alert severity="success">{t("postEditor.uploadSuccess")}</Alert>
                             ) : (
-                                <Alert severity="info">
-                                    Use the upload box above to add an image.
-                                </Alert>
+                                <Alert severity="info">{t("postEditor.dropImageAbove")}</Alert>
                             )}
                         </Stack>
                         <Stack spacing={1}>
@@ -368,52 +362,74 @@ function PostEditor() {
                                         onChange={(event) => setIsNSFW(event.target.checked)}
                                     />
                                 }
-                                label="Is content NSFW?"
+                                label={t("common:postMetadata.isNSFW")}
                             />
                             <TextField
                                 select
-                                label="Type of Content Warning"
+                                label={t("common:postMetadata.contentWarningType")}
                                 value={contentWarningType}
                                 onChange={(event) => setContentWarningType(event.target.value)}
                                 fullWidth
                             >
-                                <MenuItem value="none">None</MenuItem>
-                                <MenuItem value="sexual">Sexual content</MenuItem>
-                                <MenuItem value="violence">Violence</MenuItem>
-                                <MenuItem value="gore">Gore</MenuItem>
-                                <MenuItem value="drugs">Drugs</MenuItem>
-                                <MenuItem value="flashing">Flashing lights</MenuItem>
-                                <MenuItem value="spoilers">Spoilers</MenuItem>
-                                <MenuItem value="other">Other</MenuItem>
+                                <MenuItem value="none">
+                                    {t("common:contentWarningType.none")}
+                                </MenuItem>
+                                <MenuItem value="sexual">
+                                    {t("common:contentWarningType.sexual")}
+                                </MenuItem>
+                                <MenuItem value="violence">
+                                    {t("common:contentWarningType.violence")}
+                                </MenuItem>
+                                <MenuItem value="gore">
+                                    {t("common:contentWarningType.gore")}
+                                </MenuItem>
+                                <MenuItem value="drugs">
+                                    {t("common:contentWarningType.drugs")}
+                                </MenuItem>
+                                <MenuItem value="flashing">
+                                    {t("common:contentWarningType.flashing")}
+                                </MenuItem>
+                                <MenuItem value="spoilers">
+                                    {t("common:contentWarningType.spoilers")}
+                                </MenuItem>
+                                <MenuItem value="other">
+                                    {t("common:contentWarningType.other")}
+                                </MenuItem>
                             </TextField>
                             <TextField
-                                label="Content Warning"
+                                label={t("common:postMetadata.contentWarning")}
                                 value={contentWarning}
                                 onChange={(event) => setContentWarning(event.target.value)}
-                                helperText="Optional text shown with the warning."
+                                helperText={t("common:postMetadataDescription.contentWarning")}
                                 fullWidth
                             />
                             <FormControl fullWidth>
                                 <InputLabel id="post-content-format-label">
-                                    Content format
+                                    {t("common:postMetadata.contentFormat")}
                                 </InputLabel>
                                 <Select
                                     labelId="post-content-format-label"
                                     value={contentFormat}
-                                    label="Content format"
+                                    label={t("common:postMetadata.contentFormat")}
                                     onChange={(event) => {
                                         setContentFormat(
                                             normalizeContentFormat(event.target.value),
                                         );
                                     }}
                                 >
-                                    <MenuItem value="plain">Plain text</MenuItem>
-                                    <MenuItem value="markdown">Markdown</MenuItem>
-                                    <MenuItem value="wikitext">Wikitext</MenuItem>
+                                    <MenuItem value="plain">
+                                        {t("common:contentFormatType.plain")}
+                                    </MenuItem>
+                                    <MenuItem value="markdown">
+                                        {t("common:contentFormatType.markdown")}
+                                    </MenuItem>
+                                    <MenuItem value="wikitext">
+                                        {t("common:contentFormatType.wikitext")}
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
                             <ContentEditor
-                                label="Caption"
+                                label={t("common:postMetadata.caption")}
                                 value={caption}
                                 onChange={setCaption}
                                 format={contentFormat}
@@ -423,7 +439,7 @@ function PostEditor() {
                                 defaultMode="write"
                             />
                             <ContentEditor
-                                label="Description"
+                                label={t("common:postMetadata.description")}
                                 value={description}
                                 onChange={setDescription}
                                 format={contentFormat}
@@ -435,10 +451,10 @@ function PostEditor() {
                         </Stack>
                         <Stack spacing={1.5}>
                             <Typography variant="h6" component="h2">
-                                Custom thumbnail
+                                {t("common:postMetadata.customThumbnail")}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                                Choose a thumbnail image and crop it to an exact 1:1 square.
+                                {t("common:postMetadataDescription.customThumbnail")}
                             </Typography>
                             <Card
                                 variant="outlined"
@@ -462,7 +478,7 @@ function PostEditor() {
                                     <Box
                                         component="img"
                                         src={thumbnailPreviewUrl}
-                                        alt="Custom thumbnail preview"
+                                        alt={t("common:postMetadataDescription.customThumbnailAlt")}
                                         sx={{
                                             width: "100%",
                                             maxHeight: 260,
@@ -477,11 +493,10 @@ function PostEditor() {
                                         sx={{ p: 3, textAlign: "center" }}
                                     >
                                         <Typography fontWeight={600}>
-                                            Drop an image here or choose one
+                                            {t("postEditor.dropImages")}
                                         </Typography>
                                         <Typography variant="body2" color="text.secondary">
-                                            The same four-point 1:1 crop box used for profile
-                                            pictures.
+                                            {t("postEditor.squareImage")}
                                         </Typography>
                                     </Stack>
                                 )}
@@ -496,7 +511,9 @@ function PostEditor() {
                                         transform: "translateX(-50%)",
                                     }}
                                 >
-                                    {thumbnailPreviewUrl ? "Replace thumbnail" : "Choose thumbnail"}
+                                    {thumbnailPreviewUrl
+                                        ? t("postEditor.replaceThumbnail")
+                                        : t("postEditor.chooseThumbnail")}
                                     <input
                                         hidden
                                         type="file"
@@ -515,24 +532,24 @@ function PostEditor() {
                                     onClick={clearThumbnail}
                                     disabled={thumbnailUploading}
                                 >
-                                    Remove custom thumbnail
+                                    {t("postEditor.removeThumbnail")}
                                 </Button>
                             ) : null}
                         </Stack>
                         <TextField
-                            label="Title"
+                            label={t("common:postMetadata.title")}
                             value={title}
                             onChange={(event) => setTitle(event.target.value)}
                             fullWidth
                         />
                         <TextField
-                            label="Caption"
+                            label={t("common:postMetadata.caption")}
                             value={caption}
                             onChange={(event) => setCaption(event.target.value)}
                             fullWidth
                         />
                         <TextField
-                            label="Description"
+                            label={t("common:postMetadata.description")}
                             value={description}
                             onChange={(event) => setDescription(event.target.value)}
                             multiline
@@ -540,19 +557,19 @@ function PostEditor() {
                             fullWidth
                         />
                         <TextField
-                            label="Source URL"
+                            label={t("common:postMetadata.sourceURL")}
                             value={sourceUrl}
                             onChange={(event) => setSourceUrl(event.target.value)}
                             fullWidth
                         />
                         <TextField
-                            label="Original creator"
+                            label={t("common:postMetadata.originalCreator")}
                             value={originalCreator}
                             onChange={(event) => setOriginalCreator(event.target.value)}
                             fullWidth
                         />
                         <TextField
-                            label="Original created at"
+                            label={t("common:postMetadata.originalCreatedAt")}
                             type="datetime-local"
                             value={originalCreatedAt}
                             onChange={(event) => setOriginalCreatedAt(event.target.value)}
@@ -566,28 +583,29 @@ function PostEditor() {
                                     onChange={(event) => setAllowDownload(event.target.checked)}
                                 />
                             }
-                            label="Allow downloads"
+                            label={t("common:postMetadata.allowDownloads")}
                         />
                         <Card variant="outlined">
                             <CardContent>
                                 <Stack spacing={2}>
                                     <Typography variant="h6" component="h2">
-                                        Crawler access
+                                        {t("common:crawlerAccessMetadata.description")}
                                     </Typography>
 
                                     <Typography variant="body2" color="text.secondary">
-                                        Choose which crawlers may access this post. Inherited
-                                        settings follow your account defaults.
+                                        {t("common:crawlerAccessMetadata.help")}
                                     </Typography>
 
-                                    {crawlerOptions.map(({ key, label }) => (
+                                    {crawlerOptions.map(({ key }) => (
                                         <FormControl fullWidth key={key}>
-                                            <InputLabel id={`${key}-label`}>{label}</InputLabel>
+                                            <InputLabel id={`${key}-label`}>
+                                                {t(`common:crawlerAccessMetadata.${key}`)}
+                                            </InputLabel>
 
                                             <Select
                                                 labelId={`${key}-label`}
                                                 value={crawlerOverrides[key]}
-                                                label={label}
+                                                label={t(`common:crawlerAccessMetadata.${key}`)}
                                                 onChange={(event) => {
                                                     setCrawlerOverrides((current) => ({
                                                         ...current,
@@ -597,12 +615,18 @@ function PostEditor() {
                                                 }}
                                             >
                                                 <MenuItem value="inherit">
-                                                    Use account default
+                                                    {t(
+                                                        "common:crawlerAccessMetadata.useAccountDefault",
+                                                    )}
                                                 </MenuItem>
 
-                                                <MenuItem value="allow">Allow</MenuItem>
+                                                <MenuItem value="allow">
+                                                    {t("common:crawlerAccessMetadata.allow")}
+                                                </MenuItem>
 
-                                                <MenuItem value="deny">Deny</MenuItem>
+                                                <MenuItem value="deny">
+                                                    {t("common:crawlerAccessMetadata.deny")}
+                                                </MenuItem>
                                             </Select>
                                         </FormControl>
                                     ))}
@@ -614,15 +638,19 @@ function PostEditor() {
                             <Select
                                 labelId="post-status-label"
                                 value={status}
-                                label="Status"
+                                label={t("common:postMetadata.status")}
                                 onChange={(event) => setStatus(event.target.value as PostStatus)}
                             >
-                                <MenuItem value="draft">Draft</MenuItem>
-                                <MenuItem value="published">Published</MenuItem>
+                                <MenuItem value="draft">{t("common:statusType.draft")}</MenuItem>
+                                <MenuItem value="published">
+                                    {t("common:statusType.published")}
+                                </MenuItem>
                             </Select>
                         </FormControl>
                         <FormControl fullWidth>
-                            <InputLabel id="post-visibility-label">Visibility</InputLabel>
+                            <InputLabel id="post-visibility-label">
+                                {t("common:postMetadata.visibility")}
+                            </InputLabel>
                             <Select
                                 labelId="post-visibility-label"
                                 value={visibility}
@@ -631,50 +659,68 @@ function PostEditor() {
                                     setVisibility(event.target.value as PostVisibility)
                                 }
                             >
-                                <MenuItem value="public">Public</MenuItem>
-                                <MenuItem value="unlisted">Unlisted</MenuItem>
-                                <MenuItem value="private">Private</MenuItem>
+                                <MenuItem value="public">
+                                    {t("common:visibilityType.public")}
+                                </MenuItem>
+                                <MenuItem value="unlisted">
+                                    {t("common:visibilityType.unlisted")}
+                                </MenuItem>
+                                <MenuItem value="private">
+                                    {t("common:visibilityType.private")}
+                                </MenuItem>
                             </Select>
                         </FormControl>
                         <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                             <FormControl fullWidth>
                                 <InputLabel id="permalink-pattern-label">
-                                    Permalink pattern
+                                    {t("common:postMetadata.permalinkPattern")}
                                 </InputLabel>
                                 <Select
                                     labelId="permalink-pattern-label"
                                     value={permalinkPattern}
-                                    label="Permalink pattern"
+                                    label={t("common:postMetadata.permalinkPattern")}
                                     onChange={(event) =>
                                         setPermalinkPattern(event.target.value as PermalinkPattern)
                                     }
                                 >
-                                    <MenuItem value="user">User</MenuItem>
-                                    <MenuItem value="posts">Posts</MenuItem>
+                                    <MenuItem value="user">
+                                        {t("common:permalinkPatternType.user")}
+                                    </MenuItem>
+                                    <MenuItem value="posts">
+                                        {t("common:permalinkPatternType.posts")}
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
                             <FormControl fullWidth>
                                 <InputLabel id="permalink-id-type-label">
-                                    Permalink ID type
+                                    {t("common:postMetadata.permalinkIdType")}
                                 </InputLabel>
                                 <Select
                                     labelId="permalink-id-type-label"
-                                    value={permalinkIdType}
+                                    value={t("common:postMetadata.permalinkIdType")}
                                     label="Permalink ID type"
                                     onChange={(event) =>
                                         setPermalinkIdType(event.target.value as PermalinkIdType)
                                     }
                                 >
-                                    <MenuItem value="internalId">Internal ID</MenuItem>
-                                    <MenuItem value="normalizedTitle">Normalized title</MenuItem>
-                                    <MenuItem value="creationDate">Creation date</MenuItem>
-                                    <MenuItem value="custom">Custom</MenuItem>
+                                    <MenuItem value="internalId">
+                                        {t("common:permalinkIdType.internalId")}
+                                    </MenuItem>
+                                    <MenuItem value="normalizedTitle">
+                                        {t("common:permalinkIdType.normalizedTitle")}
+                                    </MenuItem>
+                                    <MenuItem value="creationDate">
+                                        {t("common:permalinkIdType.creationDate")}
+                                    </MenuItem>
+                                    <MenuItem value="custom">
+                                        {t("common:permalinkIdType.custom")}
+                                    </MenuItem>
                                 </Select>
                             </FormControl>
                         </Stack>
                         {permalinkIdType === "custom" ? (
                             <TextField
-                                label="Custom post ID"
+                                label={t("common:postMetadata.customPostId")}
                                 value={customPostId}
                                 onChange={(event) => setCustomPostId(event.target.value)}
                                 fullWidth
@@ -682,14 +728,16 @@ function PostEditor() {
                         ) : null}
                         <TagAutocomplete value={tags} onChange={setTags} />
                         <FormControl fullWidth>
-                            <InputLabel id="post-category-label">Category</InputLabel>
+                            <InputLabel id="post-category-label">
+                                {t("common:postMetadata.category")}
+                            </InputLabel>
                             <Select
                                 labelId="post-category-label"
                                 value={categoryId}
-                                label="Category"
+                                label={t("common:postMetadata.category")}
                                 onChange={(event) => setCategoryId(event.target.value)}
                             >
-                                <MenuItem value="">None</MenuItem>
+                                <MenuItem value="">{t("postEditor.noCategory")}</MenuItem>
                                 {categories.map((category) => (
                                     <MenuItem key={category.id} value={category.id}>
                                         {category.name}
@@ -706,10 +754,14 @@ function PostEditor() {
                                     }
                                 />
                             }
-                            label="Continue editing after save"
+                            label={t("postEditor.keepEditingModeAfterSave")}
                         />
                         <Button type="submit" variant="contained" disabled={saving}>
-                            {saving ? "Saving…" : editing ? "Save changes" : "Create post"}
+                            {saving
+                                ? t("postEditor.saving")
+                                : editing
+                                  ? t("postEditor.saveChanges")
+                                  : t("postEditor.submitNewPost")}
                         </Button>
                     </Stack>
                 </CardContent>
@@ -722,13 +774,13 @@ function PostEditor() {
                 maxWidth="sm"
                 fullWidth
             >
-                <DialogTitle>Crop custom thumbnail</DialogTitle>
+                <DialogTitle>{t("postEditor.cropThumbnail")}</DialogTitle>
                 <DialogContent>
                     {thumbnailFile ? (
                         <ProfilePictureCropper
                             file={thumbnailFile}
                             showCircle={false}
-                            actionLabel="Use this thumbnail"
+                            actionLabel={t("postEditor.useThisThumbnail")}
                             onCancel={() => setThumbnailFile(null)}
                             onConfirm={uploadThumbnail}
                         />
