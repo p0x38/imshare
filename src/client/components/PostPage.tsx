@@ -62,6 +62,7 @@ interface Comment {
         id: string;
         name?: string | null;
         username?: string | null;
+        avatarUrl?: string | null;
     } | null;
 }
 
@@ -496,6 +497,8 @@ function CommentItem({
     const [busy, setBusy] = useState(false);
     const ownComment = currentUser?.id === comment.author?.id;
     const reducedMotion = useReducedMotion();
+    const authorName = comment.author?.name || comment.author?.username || "Unknown author";
+
     const run = async (callback: () => Promise<unknown>) => {
         if (busy) return;
         setBusy(true);
@@ -511,17 +514,15 @@ function CommentItem({
             <CardContent>
                 <Stack spacing={1.5}>
                     <Stack direction="row" spacing={1} alignItems="center">
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                            {(comment.author?.name || comment.author?.username || "?")
-                                .charAt(0)
-                                .toUpperCase()}
+                        <Avatar
+                            src={comment.author?.avatarUrl || undefined}
+                            alt={authorName}
+                            sx={{ width: 32, height: 32 }}
+                        >
+                            {authorName.charAt(0).toUpperCase()}
                         </Avatar>
                         <Stack>
-                            <Typography variant="subtitle2">
-                                {comment.author?.name ||
-                                    comment.author?.username ||
-                                    "Unknown author"}
-                            </Typography>
+                            <Typography variant="subtitle2">{authorName}</Typography>
                             <Typography variant="caption" color="text.secondary">
                                 {new Date(comment.createdAt).toLocaleString()}
                             </Typography>
